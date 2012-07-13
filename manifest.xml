@@ -1,0 +1,17 @@
+<package>
+  <description brief="strawlab_freeflight_experiments">
+
+     strawlab_freeflight_experiments
+
+  </description>
+  <author>strawlab</author>
+  <license>unknown</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/no_url</url>
+
+  <depend package="std_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="rospy"/>
+  <depend package="rxbag"/>
+  <depend package="vros_display"/>
+</package>
