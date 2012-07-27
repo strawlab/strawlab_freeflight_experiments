@@ -14,4 +14,5 @@
   <depend package="rospy"/>
   <depend package="rxbag"/>
   <depend package="vros_display"/>
+  <depend package="ros_flydra"/>
 </package>
