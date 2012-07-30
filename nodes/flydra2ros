@@ -28,7 +28,7 @@ class Node(object):
         latencies = [ 
             ('no_prediction',   'pose_no_prediction'),
             (0,    'pose_now'),
-            (0.02, 'pose_in_20_msec' ),
+            (0.02, 'pose' ),
             ]
         self.latency_pubs = {}
         for (latency_sec, topic_name) in latencies:
