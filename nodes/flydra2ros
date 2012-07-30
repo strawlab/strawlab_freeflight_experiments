@@ -1,35 +1,138 @@
 #!/usr/bin/env python
 
+import threading
+import numpy as np
+
 # ROS imports
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 from ros_flydra.msg import flydra_mainbrain_super_packet
 from geometry_msgs.msg import Pose
+from std_msgs.msg import UInt32
 import rospy
 
 import display_client
+
+IMPOSSIBLE_OBJ_ID = 0
 
 class Node(object):
     def __init__(self):
         rospy.init_node('flydra2ros')
         rospy.Subscriber("flydra_mainbrain_super_packets",
                          flydra_mainbrain_super_packet,
-                         self.tracking_data_callback)
-        self.pub = rospy.Publisher('pose', Pose)
+                         self.on_flydra_mainbrain_super_packets)
+        rospy.Subscriber("lock_object",
+                         UInt32,
+                         self.on_lock_object)
 
+        self.timeout = 0.5 # seconds before object is dropped
+        latencies = [ 
+            ('no_prediction',   'pose_no_prediction'),
+            (0,    'pose_now'),
+            (0.02, 'pose_in_20_msec' ),
+            ]
+        self.latency_pubs = {}
+        for (latency_sec, topic_name) in latencies:
+            self.latency_pubs[latency_sec] = rospy.Publisher(topic_name, Pose,
+                                                             tcp_nodelay=True)
+        self.lock = threading.Lock()
+        self._clear_object()
+        self.pos_est = np.nan*np.zeros((3,))
+        self.vel_est = np.nan*np.zeros((3,))
+        self._timer = rospy.Timer(rospy.Duration(1.0/200.0),
+                                  self._send_updates)
+
+    def _clear_object(self):
+        with self.lock:
+            self._current_obj_id = IMPOSSIBLE_OBJ_ID
+            self._current_obj_start_mytime = rospy.get_time()
+            self._current_obj_last_seen_mytime = 0
+            self._current_obj_last_seen_acquire_stamp = None
+            self._current_obj_last_seen_framenumber = 0
+
+    def on_lock_object(self,msg):
+        if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
+            rospy.loginfo( 'request to stop lock obj_id %d'%(self._current_obj_id,) )
+
+        self._current_obj_id = msg.value
+        self._current_obj_start_mytime = rospy.get_time()
+        self._current_obj_last_seen_mytime = 0
+        self._current_obj_last_seen_acquire_stamp = None
+        self._current_obj_last_seen_framenumber = 0
+        
     def run(self):
-        rospy.spin()
+        r = rospy.Rate(10) # 10hz
+        while not rospy.is_shutdown():
+            # check for stale object ID
+            if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
+                now = rospy.get_time()
+                with self.lock:
+                    duration_without_new_data = now - self._current_obj_last_seen_mytime
+                if duration_without_new_data > self.timeout:
+                    # data is too old. drop this object.
+                    rospy.loginfo( 'timeout on obj_id %d'%(self._current_obj_id,) )
+                    self._clear_object()
 
-    def tracking_data_callback(self,data):
+            r.sleep()
+
+    def _send_updates(self,evt=None):
+        now = rospy.get_time()
+        with self.lock:
+            acquire_stamp = self._current_obj_last_seen_acquire_stamp
+            pos_est = self.pos_est
+            vel_est = self.vel_est
+
+        if acquire_stamp is not None:
+            dt = now - acquire_stamp.to_sec()
+        else:
+            dt = 0.0
+
+        for latency_sec, pub in self.latency_pubs.iteritems():
+            # if pub.get_num_connections()==0:
+            #     continue
+
+            if latency_sec=='no_prediction':
+                est = pos_est
+            else:
+                est = pos_est + vel_est*(dt+latency_sec)
+
+            msg = Pose()
+            msg.position.x, msg.position.y, msg.position.z = est
+            pub.publish(msg)
+
+    def on_flydra_mainbrain_super_packets(self,data):
+        now = rospy.get_time()
         for packet in data.packets:
             framenumber = packet.framenumber
+            acquire_stamp = packet.acquire_stamp
             for obj in packet.objects:
-                # FIXME: should check and lock on to objects obj.obj_id
-                print 'obj_id:',obj.obj_id
-                msg = Pose()
-                msg.position.x=obj.position.x
-                msg.position.y=obj.position.y
-                msg.position.z=obj.position.z
-                self.pub.publish(msg)
+                update = False
+                if self._current_obj_id == IMPOSSIBLE_OBJ_ID:
+                    # no object: lock on to the next available object
+                    update = True
+                    with self.lock:
+                        self._current_obj_id = obj.obj_id
+                        self._current_obj_start_mytime = now
+                        update = True
+                    rospy.loginfo( 'locked on to obj_id %d'%(obj.obj_id,) )
+
+                elif self._current_obj_id == obj.obj_id:
+                    update = True
+                if update:
+                    with self.lock:
+                        assert framenumber > self._current_obj_last_seen_framenumber
+                        if self._current_obj_last_seen_acquire_stamp is not None:
+                            assert acquire_stamp > self._current_obj_last_seen_acquire_stamp
+
+                        self._current_obj_last_seen_mytime = now
+                        self._current_obj_last_seen_acquire_stamp = acquire_stamp
+                        self._current_obj_last_seen_framenumber = framenumber
+                        self.pos_est = np.array( (obj.position.x,
+                                                  obj.position.y,
+                                                  obj.position.z))
+                        self.vel_est = np.array( (obj.velocity.x,
+                                                  obj.velocity.y,
+                                                  obj.velocity.z))
+                    self._send_updates() # send upon data receive to minimize lag
 
 if __name__ == '__main__':
     n = Node()
