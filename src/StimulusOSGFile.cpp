@@ -54,11 +54,11 @@ std::string join_path(std::string a,std::string b) {
     }
 }
 
-class StimulusOSGFileVirtualEnvironment: public StimulusInterface
+class StimulusOSGFile: public StimulusInterface
 {
 public:
 std::string name() const {
-    return "StimulusOSGFileVirtualEnvironment";
+    return "StimulusOSGFile";
 }
 
 void _load_stimulus_filename( std::string osg_filename ) {
@@ -218,7 +218,7 @@ private:
 
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusOSGFileVirtualEnvironment)
+POCO_EXPORT_CLASS(StimulusOSGFile)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

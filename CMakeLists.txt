@@ -52,3 +52,7 @@ FIND_PACKAGE(jansson)
 rosbuild_add_library(StimulusAltitudeEdge src/StimulusAltitudeEdge.cpp)
 target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
 rosbuild_link_boost(StimulusAltitudeEdge system filesystem)
+
+rosbuild_add_library(StimulusOSGFile src/StimulusOSGFile.cpp)
+target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
+rosbuild_link_boost(StimulusOSGFile system filesystem)
