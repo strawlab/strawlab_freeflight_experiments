@@ -15,4 +15,6 @@
   <depend package="rxbag"/>
   <depend package="vros_display"/>
   <depend package="ros_flydra"/>
+
+  <rosdep name="python-rospkg"/>
 </package>
