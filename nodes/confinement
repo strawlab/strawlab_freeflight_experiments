@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import numpy as np
+
+PACKAGE='strawlab_freeflight_experiments'
+import roslib
+roslib.load_manifest(PACKAGE)
+import display_client # from vros_projectors package
+from std_msgs.msg import String, UInt32
+rospack = rospkg.RosPack()
+pkg_dir = rospack.get_path(PACKAGE)
+
+STIM_FILENAME = os.path.join(pkg_dir,'data/checkerboard.png.osg')
+BLANK_FILENAME = os.path.join(pkg_dir,'data/midgray.osg')
+
+TIMEOUT = 0.5
+IMPOSSIBLE_OBJ_ID = 0
+
+class Node(object):
+    def __init__(self):
+        rospy.init_node("confinement")
+        rospy.Subscriber("flydra_mainbrain_super_packets",
+                         flydra_mainbrain_super_packet,
+                         self.on_flydra_mainbrain_super_packets)
+
+        self.display_server = display_client.DisplayServerProxy()
+        self.display_server.set_mode('StimulusOSGFile')
+
+        self.lock_object = rospy.Publisher('lock_object', UInt32)
+
+        self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
+        self.stimulus_pub.publish( BLANK_FILENAME )
+        self.currently_locked_obj_id = None
+
+    def run(self):
+        r = rospy.Rate(10) # 10hz
+        while not rospy.is_shutdown():
+            if self.currently_locked_obj_id is not None:
+                now = rospy.get_time()
+                if now-self.last_seen_time > TIMEOUT:
+                    self.drop_lock_on()
+            r.sleep()
+
+    def is_in_trigger_volume(self,pos):
+        c = np.array( (0,0,0.5) )
+        p = np.array( (pos.x, pos.y, pos.z) )
+        dist = np.sqrt(np.sum((c-p)**2))
+        if dist < 0.2:
+            return True
+        return False
+
+    def on_flydra_mainbrain_super_packets(self,data):
+        now = rospy.get_time()
+        for packet in data.packets:
+            for obj in packet.objects:
+
+                if self.currently_locked_obj_id is not None:
+                    if obj.obj_id == self.currently_locked_obj_id:
+                        self.last_seen_time = now
+                else:
+                    if self.is_in_trigger_volume(obj.position):
+                        self.lock_on(obj)
+
+    def lock_on(self,obj):
+        rospy.loginfo('locked object %d'%obj.obj_id)
+        now = rospy.get_time()
+        self.currently_locked_obj_id = obj.obj_id
+        self.last_seen_time = now
+        self.stimulus_pub.publish( STIM_FILENAME )
+        self.lock_object.publish( obj.obj_id )
+
+    def drop_lock_on(self):
+        rospy.loginfo('dropping locked object')
+        self.currently_locked_obj_id = None
+        self.stimulus_pub.publish( BLANK_FILENAME )
+        self.lock_object.publish( IMPOSSIBLE_OBJ_ID )
+
+def main():
+    node = Node()
+    return node.run()
+
+if __name__=='__main__':
+    main()
