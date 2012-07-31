@@ -128,11 +128,10 @@ void _load_skybox_basename( std::string basename ) {
 virtual void post_init(std::string config_data_dir) {
   top = new osg::MatrixTransform; top->addDescription("virtual world top node");
 
+  // when we first start, don't load any model, but create a node that is later deleted.
   switch_node = new osg::MatrixTransform;
   top->addChild(switch_node);
 
-  std::string osg_filename = join_path(config_data_dir,"osgfile.osg");
-  _load_stimulus_filename( osg_filename );
   _virtual_world = top;
 
 }
