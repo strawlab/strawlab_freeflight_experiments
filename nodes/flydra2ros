@@ -25,7 +25,7 @@ class Node(object):
                          self.on_lock_object)
 
         self.timeout = 0.5 # seconds before object is dropped
-        latencies = [ 
+        latencies = [
             ('no_prediction',   'pose_no_prediction'),
             (0,    'pose_now'),
             (0.02, 'pose' ),
@@ -61,7 +61,7 @@ class Node(object):
         self._current_obj_last_seen_mytime = 0
         self._current_obj_last_seen_acquire_stamp = None
         self._current_obj_last_seen_framenumber = 0
-        
+
     def run(self):
         r = rospy.Rate(10) # 10hz
         while not rospy.is_shutdown():
