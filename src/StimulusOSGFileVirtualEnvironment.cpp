@@ -22,6 +22,28 @@
 
 #include <jansson.h>
 
+// this function from http://stackoverflow.com/a/8098080
+std::string string_format(const std::string &fmt, ...) {
+    int size=100;
+    std::string str;
+    va_list ap;
+    while (1) {
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *)str.c_str(), size, fmt.c_str(), ap);
+        va_end(ap);
+        if (n > -1 && n < size) {
+            str.resize(n);
+            return str;
+        }
+        if (n > -1)
+            size=n+1;
+        else
+            size*=2;
+    }
+}
+
+
 std::string join_path(std::string a,std::string b) {
     // roughly inspired by Python's os.path.join
     char pathsep = '/'; // TODO: FIXME: not OK on Windows.
@@ -61,7 +83,7 @@ void _load_stimulus_filename( std::string osg_filename ) {
     if (tmp!=NULL) {
         switch_node->addChild( tmp );
     } else {
-        throw std::runtime_error("could not read figure model");
+        throw std::runtime_error(string_format("File %s not found",osg_filename.c_str()));
     }
 
     top->addChild(switch_node);
@@ -143,8 +165,7 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
     root = json_loads(json_message.c_str(), 0, &error);
     if(!root) {
-        fprintf(stderr, "error: in %s(%d) on json line %d: %s\n", __FILE__, __LINE__, error.line, error.text);
-        throw std::runtime_error("error in json");
+        throw std::runtime_error(string_format("error: in %s(%d) on json line %d: %s\n", __FILE__, __LINE__, error.line, error.text));
     }
 
     if (topic_name=="stimulus_filename") {
@@ -153,8 +174,7 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
         data_json = json_object_get(root, "data");
         if(!json_is_string(data_json)){
-            fprintf(stderr, "error: in %s(%d): expected string\n", __FILE__, __LINE__);
-            throw std::runtime_error("error in json");
+            throw std::runtime_error(string_format("error: in %s(%d): expected string\n", __FILE__, __LINE__));
         }
         std::string stimulus_filename = json_string_value( data_json );
         std::cerr << "loading filename: " << stimulus_filename << std::endl;
@@ -165,15 +185,13 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
         data_json = json_object_get(root, "data");
         if(!json_is_string(data_json)){
-            fprintf(stderr, "error: in %s(%d): expected string\n", __FILE__, __LINE__);
-            throw std::runtime_error("error in json");
+            throw std::runtime_error(string_format("error: in %s(%d): expected string\n", __FILE__, __LINE__));
         }
         std::string skybox_basename = json_string_value( data_json );
         std::cerr << "loading skybox filename: " << skybox_basename << std::endl;
         _load_skybox_basename( skybox_basename );
     } else {
-        fprintf(stderr, "error: in %s(%d): unknown topic\n", __FILE__, __LINE__);
-        throw std::runtime_error("error in json");
+        throw std::runtime_error( string_format( "error: in %s(%d): unknown topic\n", __FILE__, __LINE__));
     }
 }
 
@@ -185,7 +203,7 @@ std::string get_message_type(const std::string& topic_name) const {
     } else if (topic_name=="skybox_basename") {
         result = "std_msgs/String";
     } else {
-        throw std::runtime_error("unknown topic name");
+        throw std::runtime_error(string_format("unknown topic name: %s",topic_name.c_str()));
     }
     return result;
 
