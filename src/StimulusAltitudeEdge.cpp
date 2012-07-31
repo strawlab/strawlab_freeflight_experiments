@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 #include "vros_display/stimulus_interface.h"
 
 #include "Poco/ClassLibrary.h"
@@ -75,21 +75,19 @@ StimulusAltitudeEdge::StimulusAltitudeEdge() : _edge_height(0.5) {
 }
 
 void StimulusAltitudeEdge::post_init(std::string config_data_dir) {
+	std::string osg_filename = join_path(config_data_dir,
+										 "data/StimulusAltitudeEdge.osg");
 
-	osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+	osg::ref_ptr<osg::Node> drawn_geometry_node = osgDB::readNodeFile(osg_filename);
+	if (!drawn_geometry_node.valid()) {
+		std::ostringstream os;
+		os << "could not load file " << osg_filename;
+		throw std::runtime_error(os.str());
+	}
+
 	{
-		osg::ref_ptr<osg::TessellationHints> hints = new osg::TessellationHints;
-		hints->setDetailRatio(2.0f);
-		osg::ref_ptr<osg::ShapeDrawable> shape;
 
-		osg::ref_ptr<osg::Shape> cyl = new osg::Cylinder(
-												  osg::Vec3(0.0f, 0.0f, 0.0f), // center
-												  0.5, //radius
-												  1.0); //height
-		shape = new osg::ShapeDrawable( cyl, hints.get());
-		geode->addDrawable(shape.get());
-
-		osg::StateSet* state = geode->getOrCreateStateSet();
+		osg::StateSet* state = drawn_geometry_node->getOrCreateStateSet();
 		state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
 		osg::Program* AltitudeProgram;
@@ -113,7 +111,7 @@ void StimulusAltitudeEdge::post_init(std::string config_data_dir) {
 	}
 
   _group = new osg::Group;
-  _group->addChild(geode);
+  _group->addChild(drawn_geometry_node);
   _group->setName("StimulusAltitudeEdge._group");
 }
 
