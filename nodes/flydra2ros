@@ -37,7 +37,7 @@ class Node(object):
 
         self._ori = Quaternion(0,0,0,1) # a valid orientation
 
-        self.lock = threading.Lock()
+        #self.lock = threading.Lock()
         self._clear_object()
         self.pos_est = np.nan*np.zeros((3,))
         self.vel_est = np.nan*np.zeros((3,))
@@ -45,7 +45,8 @@ class Node(object):
                                   self._send_updates)
 
     def _clear_object(self):
-        with self.lock:
+        if 1:
+        #with self.lock:
             self._current_obj_id = IMPOSSIBLE_OBJ_ID
             self._current_obj_start_mytime = rospy.get_time()
             self._current_obj_last_seen_mytime = 0
@@ -68,7 +69,8 @@ class Node(object):
             # check for stale object ID
             if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
                 now = rospy.get_time()
-                with self.lock:
+                if 1:
+                #with self.lock:
                     duration_without_new_data = now - self._current_obj_last_seen_mytime
                 if duration_without_new_data > self.timeout:
                     # data is too old. drop this object.
@@ -79,7 +81,8 @@ class Node(object):
 
     def _send_updates(self,evt=None):
         now = rospy.get_time()
-        with self.lock:
+        if 1:
+        #with self.lock:
             acquire_stamp = self._current_obj_last_seen_acquire_stamp
             pos_est = self.pos_est
             vel_est = self.vel_est
@@ -113,7 +116,8 @@ class Node(object):
                 if self._current_obj_id == IMPOSSIBLE_OBJ_ID:
                     # no object: lock on to the next available object
                     update = True
-                    with self.lock:
+                    if 1:
+                    #with self.lock:
                         self._current_obj_id = obj.obj_id
                         self._current_obj_start_mytime = now
                         update = True
@@ -122,7 +126,8 @@ class Node(object):
                 elif self._current_obj_id == obj.obj_id:
                     update = True
                 if update:
-                    with self.lock:
+                    if 1:
+                    #with self.lock:
                         if framenumber > self._current_obj_last_seen_framenumber: # only take most recent data
                             #assert framenumber > self._current_obj_last_seen_framenumber
                             if self._current_obj_last_seen_acquire_stamp is not None:
