@@ -37,9 +37,22 @@ class Node(object):
 
         self.lock_object = rospy.Publisher('lock_object', UInt32)
 
+        self.condition_pub = rospy.Publisher('confinement_condition', String)
         self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
         self.stimulus_pub.publish( BLANK_FILENAME )
         self.currently_locked_obj_id = None
+        self.condition = 'control'
+        self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
+                                  self._switch_conditions)
+        self._switch_conditions(None)
+
+    def _switch_conditions(self,event):
+        if self.condition=='confinement':
+            self.condition='control'
+        else:
+            self.condition='confinement'
+        rospy.loginfo('confinement condition: %s'%self.condition )
+        self.condition_pub.publish( self.condition )
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -75,7 +88,10 @@ class Node(object):
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
-        self.stimulus_pub.publish( STIM_FILENAME )
+        if self.condition=='confinement':
+            self.stimulus_pub.publish( STIM_FILENAME )
+        else:
+            self.stimulus_pub.publish( BLANK_FILENAME )
         self.lock_object.publish( obj.obj_id )
 
     def drop_lock_on(self):
