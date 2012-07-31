@@ -56,7 +56,7 @@ class Node(object):
         if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
             rospy.loginfo( 'request to stop lock obj_id %d'%(self._current_obj_id,) )
 
-        self._current_obj_id = msg.value
+        self._current_obj_id = msg.data
         self._current_obj_start_mytime = rospy.get_time()
         self._current_obj_last_seen_mytime = 0
         self._current_obj_last_seen_acquire_stamp = None
