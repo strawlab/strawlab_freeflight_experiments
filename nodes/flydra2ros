@@ -26,9 +26,9 @@ class Node(object):
 
         self.timeout = 0.5 # seconds before object is dropped
         latencies = [
-            ('no_prediction',   'pose_no_prediction'),
+            ('no_prediction',   'pose'),
             (0,    'pose_now'),
-            (0.02, 'pose' ),
+            (0.02, 'pose_20_msec' ),
             ]
         self.latency_pubs = {}
         for (latency_sec, topic_name) in latencies:
