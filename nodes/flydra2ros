@@ -72,6 +72,12 @@ class Node(object):
                 if 1:
                 #with self.lock:
                     duration_without_new_data = now - self._current_obj_last_seen_mytime
+
+                    data_t = self._current_obj_last_seen_acquire_stamp
+                    if data_t is not None:
+                        latency = now - data_t.to_sec()
+                        print 'latency: %.1f msec'%(latency*1000.0,)
+
                 if duration_without_new_data > self.timeout:
                     # data is too old. drop this object.
                     rospy.loginfo( 'timeout on obj_id %d'%(self._current_obj_id,) )
