@@ -65,12 +65,17 @@ class Node(object):
                     self.drop_lock_on()
             r.sleep()
 
-    def is_in_trigger_volume(self,pos):
+    def is_in_trigger_volume(self,pos,expanded=False):
         c = np.array( (0,0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        print dist
-        if (dist < 0.16) and (abs(pos.z-0.5) < 0.4):
+        radius = 0.16
+        zdist = 0.4
+        if expanded:
+            radius += 0.05
+            zdist += 0.05
+
+        if (dist < radius) and (abs(pos.z-0.5) < zdist):
             return True
         return False
 
@@ -79,6 +84,8 @@ class Node(object):
         for packet in data.packets:
             for obj in packet.objects:
                 if self.currently_locked_obj_id is not None:
+                    if not self.is_in_trigger_volume(obj.position,expanded=True):
+                        self.drop_lock_on()
                     if obj.obj_id == self.currently_locked_obj_id:
                         self.last_seen_time = now
                 else:
