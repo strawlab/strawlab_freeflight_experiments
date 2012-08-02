@@ -36,7 +36,7 @@ Group {
     num_drawables 1
     ShapeDrawable {
       Cylinder {
-        Center 0 0 0
+        Center 0 0 0.5
         Radius 0.5
         Height 1
         Rotation 0 0 0 1
