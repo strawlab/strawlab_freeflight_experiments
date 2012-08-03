@@ -2,6 +2,7 @@
 
 import threading
 import numpy as np
+import warnings
 
 # ROS imports
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
@@ -39,8 +40,6 @@ class Node(object):
 
         #self.lock = threading.Lock()
         self._clear_object()
-        self.pos_est = np.nan*np.zeros((3,))
-        self.vel_est = np.nan*np.zeros((3,))
         self._timer = rospy.Timer(rospy.Duration(1.0/200.0),
                                   self._send_updates)
 
@@ -52,6 +51,8 @@ class Node(object):
             self._current_obj_last_seen_mytime = 0
             self._current_obj_last_seen_acquire_stamp = None
             self._current_obj_last_seen_framenumber = 0
+        self.pos_est = np.nan*np.zeros((3,))
+        self.vel_est = np.nan*np.zeros((3,))
 
     def on_lock_object(self,msg):
         if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
@@ -107,6 +108,10 @@ class Node(object):
             else:
                 est = pos_est + vel_est*(dt+latency_sec)
 
+            if np.isnan(est[0]):
+                warnings.warn('nan position hack')
+                est = 0, 0, 0.5
+            
             msg = Pose()
             msg.position.x, msg.position.y, msg.position.z = est
             msg.orientation = self._ori
