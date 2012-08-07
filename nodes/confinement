@@ -2,6 +2,7 @@
 
 import os
 import numpy as np
+import time
 
 PACKAGE='strawlab_freeflight_experiments'
 import roslib
@@ -21,6 +22,37 @@ BLANK_FILENAME = os.path.join(pkg_dir,'data/midgray.osg')
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
 
+class Logger:
+    def __init__(self,fname=None):
+        if fname is None:
+            fname = time.strftime('DATA%Y%m%d_%H%M%S.csv')
+        self.fd = open(fname,mode='w')
+        rospy.loginfo( 'saving to %s'%fname )
+        self.state = [0,0,0]
+
+        self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
+        self.condition_pub = rospy.Publisher('confinement_condition', String)
+        self.lock_object = rospy.Publisher('lock_object', UInt32)
+
+    def update(self):
+        t = rospy.get_rostime()
+        self.fd.write( '%s,%s,%s,%d,%d\n' % ( self.state[0],
+                                              self.state[1],
+                                              self.state[2],
+                                              t.secs,
+                                              t.nsecs ))
+        self.fd.flush()
+        self.lock_object.publish( self.state[2] )
+        self.stimulus_pub.publish( self.state[0] )
+        self.condition_pub.publish( self.state[1] )
+
+    def stim(self,mstim):
+        self.state[0] = mstim
+    def condition(self,mcondition):
+        self.state[1] = mcondition
+    def lock(self,obj_id):
+        self.state[2] = obj_id
+
 class Node(object):
     def __init__(self):
         rospy.init_node("confinement")
@@ -32,11 +64,10 @@ class Node(object):
             dsc.set_mode('StimulusOSGFile')
             self.display_server.append( dsc )
 
-        self.lock_object = rospy.Publisher('lock_object', UInt32)
+        self.log = Logger()
 
-        self.condition_pub = rospy.Publisher('confinement_condition', String)
-        self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
-        self.stimulus_pub.publish( BLANK_FILENAME )
+
+        self.log.stim( BLANK_FILENAME )
         self.currently_locked_obj_id = None
         self.condition = 'control'
         self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
@@ -53,7 +84,7 @@ class Node(object):
         else:
             self.condition='confinement'
         rospy.loginfo('confinement condition: %s'%self.condition )
-        self.condition_pub.publish( self.condition )
+        self.log.condition( self.condition )
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -84,12 +115,15 @@ class Node(object):
         for packet in data.packets:
             for obj in packet.objects:
                 if self.currently_locked_obj_id is not None:
-                    if not self.is_in_trigger_volume(obj.position,expanded=True):
-                        self.drop_lock_on()
+                    # if not self.is_in_trigger_volume(obj.position,expanded=True):
+                    #     self.drop_lock_on()
                     if obj.obj_id == self.currently_locked_obj_id:
                         self.last_seen_time = now
+                    #print obj
                 else:
                     if self.is_in_trigger_volume(obj.position):
+                        #print '*'*200
+                        #print obj
                         self.lock_on(obj)
 
     def lock_on(self,obj):
@@ -98,16 +132,18 @@ class Node(object):
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
         if self.condition=='confinement':
-            self.stimulus_pub.publish( STIM_FILENAME )
+            self.log.stim( STIM_FILENAME )
         else:
-            self.stimulus_pub.publish( BLANK_FILENAME )
-        self.lock_object.publish( obj.obj_id )
+            self.log.stim( BLANK_FILENAME )
+        self.log.lock( obj.obj_id )
+        self.log.update()
 
     def drop_lock_on(self):
         rospy.loginfo('dropping locked object')
         self.currently_locked_obj_id = None
-        self.stimulus_pub.publish( BLANK_FILENAME )
-        self.lock_object.publish( IMPOSSIBLE_OBJ_ID )
+        self.log.stim(BLANK_FILENAME)
+        self.log.lock(IMPOSSIBLE_OBJ_ID )
+        self.log.update()
 
 def main():
     node = Node()
