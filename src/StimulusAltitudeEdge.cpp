@@ -21,17 +21,7 @@
 
 #include <jansson.h>
 
-std::string join_path(std::string a,std::string b);
 void LoadShaderSource( osg::Shader* shader, const std::string& fileName );
-std::string join_path(std::string a,std::string b) {
-    // roughly inspired by Python's os.path.join
-    char pathsep = '/'; // TODO: FIXME: not OK on Windows.
-    if (a.at(a.size()-1)==pathsep) {
-        return a+b;
-    } else {
-        return a+std::string("/")+b;
-    }
-}
 
 // load source from a file.
 void LoadShaderSource( osg::Shader* shader, const std::string& fileName )
@@ -56,7 +46,7 @@ public:
     StimulusAltitudeEdge();
 
     std::string name() const { return "StimulusAltitudeEdge"; }
-    void post_init(std::string config_data_dir);
+    void post_init();
 
     osg::ref_ptr<osg::Group> get_3d_world() {return _group; }
 
@@ -74,19 +64,9 @@ private:
 StimulusAltitudeEdge::StimulusAltitudeEdge() : _edge_height(0.5) {
 }
 
-void StimulusAltitudeEdge::post_init(std::string config_data_dir) {
-    std::string osg_filename = join_path(config_data_dir,
-                                         "data/StimulusAltitudeEdge.osg");
-
-    osg::ref_ptr<osg::Node> drawn_geometry_node = osgDB::readNodeFile(osg_filename);
-    if (!drawn_geometry_node.valid()) {
-        std::ostringstream os;
-        os << "could not load file " << osg_filename;
-        throw std::runtime_error(os.str());
-    }
-
+void StimulusAltitudeEdge::post_init() {
+    osg::ref_ptr<osg::Node> drawn_geometry_node = load_osg_file("StimulusAltitudeEdge.osg");
     {
-
         osg::StateSet* state = drawn_geometry_node->getOrCreateStateSet();
         state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
@@ -101,9 +81,8 @@ void StimulusAltitudeEdge::post_init(std::string config_data_dir) {
         AltitudeProgram->addShader( AltitudeFragObj );
         AltitudeProgram->addShader( AltitudeVertObj );
 
-        std::string shader_dir = join_path( config_data_dir, "src/shaders" );
-        LoadShaderSource( AltitudeVertObj, join_path(shader_dir,"altitude.vert" ));
-        LoadShaderSource( AltitudeFragObj, join_path(shader_dir, "altitude.frag" ));
+        load_shader_source( AltitudeVertObj, "altitude.vert" );
+        load_shader_source( AltitudeFragObj, "altitude.frag" );
 
         state->setAttributeAndModes(AltitudeProgram, osg::StateAttribute::ON);
         edge_height_uniform = new osg::Uniform( osg::Uniform::FLOAT, "edge_height" );
