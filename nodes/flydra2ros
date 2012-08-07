@@ -139,8 +139,11 @@ class Node(object):
                 if update:
                     if 1:
                     #with self.lock:
-                        if framenumber > self._current_obj_last_seen_framenumber: # only take most recent data
-                            #assert framenumber > self._current_obj_last_seen_framenumber
+                        if np.isnan( obj.position.x ):
+                            # signal that object is lost
+                            self._clear_object()
+                        elif framenumber > self._current_obj_last_seen_framenumber: # only take most recent data
+
                             if self._current_obj_last_seen_acquire_stamp is not None:
                                 assert acquire_stamp > self._current_obj_last_seen_acquire_stamp
 
