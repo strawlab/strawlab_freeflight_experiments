@@ -13,8 +13,8 @@ import display_client # from vros_projectors package
 class Node(object):
     def __init__(self):
         rospy.init_node("altitude_test")
-        self.display_server = display_client.DisplayServerProxy()
-        self.display_server.set_mode('StimulusAltitudeEdge')
+        display_client.DisplayServerProxy.set_stimulus_mode(
+            'StimulusAltitudeEdge')
         self.pub = rospy.Publisher('edge_height', Float32)
 
     def run(self):
