@@ -1,0 +1,237 @@
+#!/usr/bin/env python
+
+# ROS imports
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+from ros_flydra.msg import flydra_mainbrain_super_packet
+from std_msgs.msg import String, Float32, UInt32
+import rospy
+
+import display_client
+
+# other imports
+import datetime
+import time
+import os
+import sys
+
+class Node(object):
+    def __init__(self):
+        rospy.init_node('main_node')#, anonymous=True)
+        
+        for i in (0,1,3):
+            dsc = display_client.DisplayServerProxy('/display_server%d' % i,wait=True)
+            dsc.set_mode('StimulusAltitudeEdge')
+        
+        # settings
+        max_tracking_time = 9.0        # maximum time span (in sec) for tracking after trigger onset
+        stimulus_modi_list = ['edge', 'grating', 'starfield']    # stimulus modi
+        speed_list = [-0.05,0.0,0.05,0.1]   # list of speed stimuli
+        default_edge_height = 0.5     # start height of edge (in m)
+        pub_time_delay = 0.005        # time delay between publishing of two stimulus messages
+        csv_fullpath = os.path.expanduser('~/FLYDRA')
+        if not os.path.exists(csv_fullpath):
+            os.makedirs(csv_fullpath)
+        now_unix = rospy.get_time()
+        now_realtime = datetime.datetime.fromtimestamp(now_unix).strftime('%Y%m%d_%H%M%S')
+        csv_fname = 'DATA' + now_realtime + '.csv'
+        
+        ffa_radius = 0.5   # measurements of free flight arena
+        ffa_z_min = 0.0
+        ffa_z_max = 1.0
+        trigger_radius = 0.4   # condition for trigger -> middle of arena
+        trigger_z_min = 0.35
+        trigger_z_max = 0.65
+        min_distance_from_wall = 0.05    # minimal distance from wall before alarm condition
+        FPS = 100   # frames per second
+
+        # instance variables
+        self.locked_on = False      # currently locked on to obj_id?
+        self.locked_obj_id = 0      # currently tracked obj_id
+        self.passed_time = 0.0        # time passed since trigger onset
+        self.max_tracking_time = max_tracking_time
+        self.stimulus_modi_list = stimulus_modi_list
+        self.stimulus_modi_index = 0    # default modus = edge
+        self.speed_list = speed_list
+        self.speed_index = 0     # index of first stimulus
+        self.default_edge_height = default_edge_height
+        self.current_edge_height = default_edge_height
+        self.pub_time_delay = pub_time_delay  
+        self.csv_fullpath = csv_fullpath
+        self.csv_fname = csv_fname
+        self.ffa_radius = ffa_radius   # measurements of free flight arena
+        self.ffa_z_min = ffa_z_min
+        self.ffa_z_max = ffa_z_max
+        self.trigger_radius = trigger_radius   # condition for trigger
+        self.trigger_z_min = trigger_z_min
+        self.trigger_z_max = trigger_z_max
+        self.min_distance_from_wall = min_distance_from_wall    # minimal distance from wall before alarm condition
+        self.FPS = FPS
+        
+        # open new csv-file for saving metadata
+        self.csv_file = open(os.path.join(self.csv_fullpath, self.csv_fname),'wb')
+        self.csv_file.write('obj_id,trigger,speed\n')
+        self.csv_file.flush()
+        
+        print 'INITIALIZATION COMPLETED'
+        # start subscribing to flydra_mainbrain
+        rospy.Subscriber("flydra_mainbrain_super_packets", flydra_mainbrain_super_packet, self.tracking_data_callback)
+
+    def run(self):
+        # start publishing stimulus 
+        # type of stimulus
+        pub_stimulus_modus = rospy.Publisher('stimulus_modus', String)
+        # height of edge
+        pub_stimulus_data = rospy.Publisher('edge_height', Float32)
+        # which object to lock onto
+        pub_locked_obj = rospy.Publisher('lock_object', UInt32)
+        r = rospy.Rate(1/self.pub_time_delay) # Hz
+        while not rospy.is_shutdown(): 
+            pub_stimulus_modus.publish(self.get_stimulus_modus_msg())
+            pub_stimulus_data.publish(self.get_stimulus_data_msg())
+            pub_locked_obj.publish(self.get_locked_obj_msg())
+            r.sleep()
+        
+    # return current stimulus data message
+    def get_stimulus_data_msg(self):
+        # get edge data
+        if self.stimulus_modi_list[self.stimulus_modi_index] == 'edge':
+            msg = Float32() 
+            msg.data = self.current_edge_height
+
+            # when locked_on, set new edge height
+            if self.locked_on and (self.passed_time >= 0.5) and (self.passed_time <= 1.5):  # locked on to objid and stationary phase for 0.5 sec, stimulus phase for 1.0 sec
+                # set new edge height
+                self.current_edge_height = self.current_edge_height + self.speed_list[self.speed_index] * self.pub_time_delay
+        # get grating data
+        #elif self.stimulus_modi_list[self.stimulus_modi_index] == 'grating':
+        # get starfield data
+        #elif self.stimulus_modi_list[self.stimulus_modi_index] == 'starfield':
+        return msg
+
+    # return current modus message
+    def get_stimulus_modus_msg(self):
+        msg = String()
+        msg.data = self.stimulus_modi_list[self.stimulus_modi_index]
+        return msg
+
+    # return current locked object message
+    def get_locked_obj_msg(self):
+        msg = UInt32()
+        # if not locked on to any obj, return 0
+        msg.data = self.locked_obj_id
+        return msg
+
+    # check if position of object meets tracking start condition
+    def meets_condition(self, x, y, z, velocity):
+        # middle of arena (maybe also near to edge?, certain velocity?)
+        if ( (x**2 + y**2) <= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
+            return True
+        else:
+            return False
+
+
+    # check if position of fly meets alarm condition
+    def meets_alarm(self, x, y, z, velocity):
+        if ( (x**2 + y**2) > (self.ffa_radius - self.min_distance_from_wall)**2 ) or ( z < (self.ffa_z_min + self.min_distance_from_wall) ) or ( z > (self.ffa_z_max - self.min_distance_from_wall) ):
+            return True
+        else:
+            return False
+
+    # manage tracking, stimulus publishing, data saving
+    def tracking_data_callback(self,data):
+        for packet in data.packets:
+            framenumber = packet.framenumber
+            #print
+            #print
+            #print 'framenumber', framenumber
+            # multiple obj_ids, if locked_on, check if the locked_on obj_id is still amongst those
+            locked_objid_still_tracked = False
+            if self.locked_on:
+                for obj in packet.objects:
+                    obj_id = obj.obj_id
+                    print 'obj_id in package', obj_id
+                    if obj_id == self.locked_obj_id:
+                        locked_objid_still_tracked = True
+                        #print 'locked_objid_still_tracked = True'
+            
+            for obj in packet.objects:
+                obj_id = obj.obj_id
+                #print 'obj_id', obj_id
+                if locked_objid_still_tracked and obj_id != self.locked_obj_id:
+                    continue
+                velocity = obj.velocity
+                x = obj.position.x
+                y = obj.position.y
+                z = obj.position.z
+                #print "obj_id:%d   x:%f y:%f z:%f" % (obj_id, x, y, z)
+                
+                
+                # if no currently locked_on obj_i, check for trigger condition
+                if not self.locked_on:
+                    if self.meets_condition (x,y,z,velocity):
+                        # provide next stimulus
+                        self.speed_index = self.speed_index + 1
+                        if self.speed_index == 4:
+                            self.speed_index = 0
+                        # lock on to obj_id and save obj_id + trigger
+                        print
+                        print 'locked_on to %i in frame %i' % (obj_id, framenumber)
+                        print 'current stimulus %f' % self.speed_list[self.speed_index]
+                        self.locked_on = True
+                        self.locked_obj_id = obj_id
+                        self.passed_time = 0.0
+                        # send start signal to stimulus
+                        #print 'send start signal to stimulus'
+                        # save obj_id, trigger, speed to csv-file
+                        self.csv_file.write('%s,%s,%s\n'%(obj_id, framenumber, self.speed_list[self.speed_index]))
+                        self.csv_file.flush()
+                        #print 'save data of obj_id %i, trigger=%i, speed=%f' % (obj_id, framenumber, self.speed_list[self.speed_index])
+      
+                        # continue to next packet (frame)
+                        break
+                    # cond. not met? - continue to next obj in packet
+                    else:
+                        #print 'trigger condition not met, continue'
+                        continue
+
+                # obj_id already locked_on
+                else:
+                    # count time
+                    self.passed_time = self.passed_time + float(1)/float(self.FPS)
+                    # check if obj_id is not being tracked or timeout is reached or alarm condition is met
+                    if (obj_id <> self.locked_obj_id):
+                        print 'objid lost, send stop signal to stimulus after secs', self.passed_time
+                        #print 'framenumber', framenumber
+                        print 'obj_id of current flydra package', obj_id
+                        print 'self.locked_obj_id', self.locked_obj_id
+                        self.locked_on = False
+                        self.locked_obj_id = 0
+                        self.passed_time = 0.0
+                        self.current_edge_height = self.default_edge_height
+                    elif self.meets_alarm (x,y,z,velocity):
+                        print 'alarm condition, send stop signal to stimulus after secs', self.passed_time
+                        self.locked_on = False
+                        self.locked_obj_id = 0
+                        self.passed_time = 0.0
+                        self.current_edge_height = self.default_edge_height
+                    elif self.passed_time > self.max_tracking_time:
+                        print 'max tracking time reached, send stop signal to stimulus after secs', self.passed_time
+                        self.locked_on = False
+                        self.locked_obj_id = 0
+                        self.passed_time = 0.0
+                        self.current_edge_height = self.default_edge_height
+                    else:
+                        # continue to next packet (frame)
+                        break
+
+        #print 'current edge height', self.current_edge_height
+
+def main():
+    n = Node()
+    n.run()
+    
+if __name__ == '__main__':
+    main()
+
+
+
