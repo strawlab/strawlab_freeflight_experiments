@@ -21,25 +21,6 @@
 
 #include <jansson.h>
 
-void LoadShaderSource( osg::Shader* shader, const std::string& fileName );
-
-// load source from a file.
-void LoadShaderSource( osg::Shader* shader, const std::string& fileName )
-{
-    std::string fqFileName = osgDB::findDataFile(fileName);
-    if( fqFileName.length() != 0 )
-    {
-        shader->loadShaderSourceFromFile( fqFileName.c_str() );
-    }
-    else
-    {
-        std::stringstream ss;
-        ss << "File \"" << fileName << "\" not found.";
-        throw std::ios_base::failure(ss.str());
-    }
-}
-
-
 class StimulusAltitudeEdge: public StimulusInterface
 {
 public:
