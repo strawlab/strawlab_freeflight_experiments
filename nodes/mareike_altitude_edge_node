@@ -18,9 +18,8 @@ class Node(object):
     def __init__(self):
         rospy.init_node('main_node')#, anonymous=True)
         
-        for i in (0,1,3):
-            dsc = display_client.DisplayServerProxy('/display_server%d' % i,wait=True)
-            dsc.set_mode('StimulusAltitudeEdge')
+        display_client.DisplayServerProxy.set_stimulus_mode(
+            'StimulusAltitudeEdge')
         
         # settings
         max_tracking_time = 9.0        # maximum time span (in sec) for tracking after trigger onset
@@ -34,6 +33,7 @@ class Node(object):
         now_unix = rospy.get_time()
         now_realtime = datetime.datetime.fromtimestamp(now_unix).strftime('%Y%m%d_%H%M%S')
         csv_fname = 'DATA' + now_realtime + '.csv'
+        csv_notes_fname = 'DATA' + now_realtime + '_notes.csv'
         
         ffa_radius = 0.5   # measurements of free flight arena
         ffa_z_min = 0.0
@@ -41,13 +41,15 @@ class Node(object):
         trigger_radius = 0.4   # condition for trigger -> middle of arena
         trigger_z_min = 0.35
         trigger_z_max = 0.65
-        min_distance_from_wall = 0.05    # minimal distance from wall before alarm condition
+        min_distance_from_wall = 0.01    # minimal distance from wall before alarm condition
         FPS = 100   # frames per second
 
         # instance variables
         self.locked_on = False      # currently locked on to obj_id?
         self.locked_obj_id = 0      # currently tracked obj_id
         self.passed_time = 0.0        # time passed since trigger onset
+        self.max_frames_without_tracking = 2    # max frames with no tracking of currently locked on obj_id, if higher stimulus is stopped
+        self.number_frames_without_tracking = 0
         self.max_tracking_time = max_tracking_time
         self.stimulus_modi_list = stimulus_modi_list
         self.stimulus_modi_index = 0    # default modus = edge
@@ -58,6 +60,7 @@ class Node(object):
         self.pub_time_delay = pub_time_delay  
         self.csv_fullpath = csv_fullpath
         self.csv_fname = csv_fname
+        self.csv_notes_fname = csv_notes_fname
         self.ffa_radius = ffa_radius   # measurements of free flight arena
         self.ffa_z_min = ffa_z_min
         self.ffa_z_max = ffa_z_max
@@ -71,6 +74,8 @@ class Node(object):
         self.csv_file = open(os.path.join(self.csv_fullpath, self.csv_fname),'wb')
         self.csv_file.write('obj_id,trigger,speed\n')
         self.csv_file.flush()
+        # open new csv-file for saving notes
+        self.csv_notes_file = open(os.path.join(self.csv_fullpath, self.csv_notes_fname),'wb')
         
         print 'INITIALIZATION COMPLETED'
         # start subscribing to flydra_mainbrain
@@ -144,12 +149,25 @@ class Node(object):
             #print
             #print
             #print 'framenumber', framenumber
+            #self.csv_notes_file.write('\n')
+            #self.csv_notes_file.write('framenumber %s\n'%(framenumber))
+            #self.csv_notes_file.flush()
             # multiple obj_ids, if locked_on, check if the locked_on obj_id is still amongst those
             locked_objid_still_tracked = False
+            
+            if self.locked_on:
+                self.csv_notes_file.write('locked on: current package %i contains ids: ' % (framenumber))
+                for obj in packet.objects:
+                    self.csv_notes_file.write(str(obj.obj_id) + ', ')
+                self.csv_notes_file.write('\n')
+                self.csv_notes_file.flush()
+                    
             if self.locked_on:
                 for obj in packet.objects:
                     obj_id = obj.obj_id
-                    print 'obj_id in package', obj_id
+                    #print 'locked on: check if obj_id %i in package %i is currently locked on obj_id %i' % (obj_id, framenumber, self.locked_obj_id)
+                    self.csv_notes_file.write('locked on: check if obj_id %i in package %i is currently locked on obj_id %i\n'%(obj_id, framenumber, self.locked_obj_id))
+                    self.csv_notes_file.flush()
                     if obj_id == self.locked_obj_id:
                         locked_objid_still_tracked = True
                         #print 'locked_objid_still_tracked = True'
@@ -157,7 +175,10 @@ class Node(object):
             for obj in packet.objects:
                 obj_id = obj.obj_id
                 #print 'obj_id', obj_id
-                if locked_objid_still_tracked and obj_id != self.locked_obj_id:
+                if self.locked_on and locked_objid_still_tracked and obj_id != self.locked_obj_id:
+                    #print 'locked on and skip obj_id %i' % obj_id
+                    self.csv_notes_file.write('locked on and skip obj_id %i\n'%(obj_id))
+                    self.csv_notes_file.flush()
                     continue
                 velocity = obj.velocity
                 x = obj.position.x
@@ -166,7 +187,7 @@ class Node(object):
                 #print "obj_id:%d   x:%f y:%f z:%f" % (obj_id, x, y, z)
                 
                 
-                # if no currently locked_on obj_i, check for trigger condition
+                # if no currently locked_on obj_id, check for trigger condition
                 if not self.locked_on:
                     if self.meets_condition (x,y,z,velocity):
                         # provide next stimulus
@@ -177,9 +198,13 @@ class Node(object):
                         print
                         print 'locked_on to %i in frame %i' % (obj_id, framenumber)
                         print 'current stimulus %f' % self.speed_list[self.speed_index]
+                        self.csv_notes_file.write('locked_on to %i in frame %i\n'%(obj_id, framenumber))
+                        self.csv_notes_file.write('current stimulus %f\n'%(self.speed_list[self.speed_index]))
+                        self.csv_notes_file.flush()
                         self.locked_on = True
                         self.locked_obj_id = obj_id
                         self.passed_time = 0.0
+                        self.number_frames_without_tracking = 0
                         # send start signal to stimulus
                         #print 'send start signal to stimulus'
                         # save obj_id, trigger, speed to csv-file
@@ -200,28 +225,47 @@ class Node(object):
                     self.passed_time = self.passed_time + float(1)/float(self.FPS)
                     # check if obj_id is not being tracked or timeout is reached or alarm condition is met
                     if (obj_id <> self.locked_obj_id):
-                        print 'objid lost, send stop signal to stimulus after secs', self.passed_time
-                        #print 'framenumber', framenumber
-                        print 'obj_id of current flydra package', obj_id
-                        print 'self.locked_obj_id', self.locked_obj_id
-                        self.locked_on = False
-                        self.locked_obj_id = 0
-                        self.passed_time = 0.0
-                        self.current_edge_height = self.default_edge_height
+                        self.number_frames_without_tracking = self.number_frames_without_tracking + 1
+                        if (self.number_frames_without_tracking > self.max_frames_without_tracking):
+                            #print 'self.number_frames_without_tracking', self.number_frames_without_tracking
+                            print 'objid lost, send stop signal to stimulus after secs', self.passed_time
+                            self.csv_notes_file.write('self.number_frames_without_tracking %i\n'%(self.number_frames_without_tracking))
+                            self.csv_notes_file.write('objid lost, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                            self.csv_notes_file.flush()
+                            #print 'framenumber', framenumber#print 'framenumber', framenumber
+                            #print 'obj_id of current flydra package', obj_id
+                            #print 'self.locked_obj_id', self.locked_obj_id
+                            self.csv_notes_file.write('obj_id of current flydra package %i\n'%(obj_id))
+                            self.csv_notes_file.write('self.locked_obj_id %i\n'%(self.locked_obj_id))
+                            self.csv_notes_file.flush()
+                            self.locked_on = False
+                            self.locked_obj_id = 0
+                            self.passed_time = 0.0
+                            self.current_edge_height = self.default_edge_height
+                        else:
+                            # continue to next packet (frame)
+                            self.csv_notes_file.write('obj_id lost, but continue tracking: self.number_frames_without_tracking = %i\n'%(self.number_frames_without_tracking))
+                            self.csv_notes_file.flush()
+                            break
                     elif self.meets_alarm (x,y,z,velocity):
                         print 'alarm condition, send stop signal to stimulus after secs', self.passed_time
+                        self.csv_notes_file.write('alarm condition, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                        self.csv_notes_file.flush()
                         self.locked_on = False
                         self.locked_obj_id = 0
                         self.passed_time = 0.0
                         self.current_edge_height = self.default_edge_height
                     elif self.passed_time > self.max_tracking_time:
                         print 'max tracking time reached, send stop signal to stimulus after secs', self.passed_time
+                        self.csv_notes_file.write('max tracking time reached, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                        self.csv_notes_file.flush()
                         self.locked_on = False
                         self.locked_obj_id = 0
                         self.passed_time = 0.0
                         self.current_edge_height = self.default_edge_height
                     else:
                         # continue to next packet (frame)
+                        self.number_frames_without_tracking = 0
                         break
 
         #print 'current edge height', self.current_edge_height
