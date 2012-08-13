@@ -79,7 +79,8 @@ void _load_stimulus_filename( std::string osg_filename ) {
 
     // now load it with new contents
     std::cerr << "reading .osg file: " << osg_filename << std::endl;
-    osg::Node* tmp = osgDB::readNodeFile(osg_filename);
+
+    osg::Node* tmp = load_osg_file(osg_filename);
     if (tmp!=NULL) {
         switch_node->addChild( tmp );
     } else {
@@ -125,7 +126,7 @@ void _load_skybox_basename( std::string basename ) {
 }
 
 
-virtual void post_init(std::string config_data_dir) {
+virtual void post_init() {
   top = new osg::MatrixTransform; top->addDescription("virtual world top node");
 
   // when we first start, don't load any model, but create a node that is later deleted.
