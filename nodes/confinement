@@ -16,8 +16,8 @@ import rospkg
 rospack = rospkg.RosPack()
 pkg_dir = rospack.get_path(PACKAGE)
 
-STIM_FILENAME = os.path.join(pkg_dir,'data/checkerboard.png.osg')
-BLANK_FILENAME = os.path.join(pkg_dir,'data/midgray.osg')
+STIM_FILENAME = 'checkerboard.png.osg'
+BLANK_FILENAME = 'midgray.osg'
 
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
