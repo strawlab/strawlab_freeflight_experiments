@@ -27,8 +27,9 @@ class Logger:
         if fname is None:
             fname = time.strftime('DATA%Y%m%d_%H%M%S.csv')
         self.fd = open(fname,mode='w')
+        self.fd.write('stimulus_filename,confinement_condition,lock_object,framenumber,t_sec,t_nsec\n')
         rospy.loginfo( 'saving to %s'%fname )
-        self.state = [0,0,0]
+        self.state = [0,0,0,0]
 
         self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
         self.condition_pub = rospy.Publisher('confinement_condition', String)
@@ -36,11 +37,12 @@ class Logger:
 
     def update(self):
         t = rospy.get_rostime()
-        self.fd.write( '%s,%s,%s,%d,%d\n' % ( self.state[0],
-                                              self.state[1],
-                                              self.state[2],
-                                              t.secs,
-                                              t.nsecs ))
+        self.fd.write( '%s,%s,%s,%d,%d,%d\n' % ( self.state[0],
+                                                 self.state[1],
+                                                 self.state[2],
+                                                 self.state[3],
+                                                 t.secs,
+                                                 t.nsecs ))
         self.fd.flush()
         self.lock_object.publish( self.state[2] )
         self.stimulus_pub.publish( self.state[0] )
@@ -50,8 +52,9 @@ class Logger:
         self.state[0] = mstim
     def condition(self,mcondition):
         self.state[1] = mcondition
-    def lock(self,obj_id):
+    def lock(self,obj_id,framenumber):
         self.state[2] = obj_id
+        self.state[3] = framenumber
 
 class Node(object):
     def __init__(self):
@@ -121,10 +124,10 @@ class Node(object):
                     if self.is_in_trigger_volume(obj.position):
                         #print '*'*200
                         #print obj
-                        self.lock_on(obj)
+                        self.lock_on(obj,packet.framenumber)
 
-    def lock_on(self,obj):
-        rospy.loginfo('locked object %d'%obj.obj_id)
+    def lock_on(self,obj,framenumber):
+        rospy.loginfo('locked object %d at frame %d'%(obj.obj_id,framenumber))
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
@@ -132,14 +135,14 @@ class Node(object):
             self.log.stim( STIM_FILENAME )
         else:
             self.log.stim( BLANK_FILENAME )
-        self.log.lock( obj.obj_id )
+        self.log.lock( obj.obj_id, framenumber )
         self.log.update()
 
     def drop_lock_on(self):
         rospy.loginfo('dropping locked object')
         self.currently_locked_obj_id = None
         self.log.stim(BLANK_FILENAME)
-        self.log.lock(IMPOSSIBLE_OBJ_ID )
+        self.log.lock(IMPOSSIBLE_OBJ_ID, 0 )
         self.log.update()
 
 def main():
