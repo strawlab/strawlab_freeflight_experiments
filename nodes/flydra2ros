@@ -142,6 +142,9 @@ class Node(object):
                         if np.isnan( obj.position.x ):
                             # signal that object is lost
                             self._clear_object()
+                        # MF: check if position of object is inside cylinder
+                        elif ( (obj.position.z < 0.05) or (obj.position.z > 0.95) ) or ( (obj.position.x**2 + obj.position.y**2) > 0.45**2 ):
+                            self._clear_object()
                         elif framenumber > self._current_obj_last_seen_framenumber: # only take most recent data
 
                             if self._current_obj_last_seen_acquire_stamp is not None:
