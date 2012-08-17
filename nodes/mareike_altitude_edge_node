@@ -17,10 +17,10 @@ import sys
 class Node(object):
     def __init__(self):
         rospy.init_node('main_node')#, anonymous=True)
-        
+
         display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusAltitudeEdge')
-        
+
         # settings
         max_tracking_time = 5.0        # maximum time span (in sec) for tracking after trigger onset
         max_frames_without_tracking = 2    # max frames with no tracking of currently locked on obj_id, if higher stimulus is stopped
@@ -36,7 +36,7 @@ class Node(object):
         now_realtime = datetime.datetime.fromtimestamp(now_unix).strftime('%Y%m%d_%H%M%S')
         csv_fname = 'DATA' + now_realtime + '.csv'
         csv_notes_fname = 'DATA' + now_realtime + '_notes.csv'
-        
+
         ffa_radius = 0.5   # measurements of free flight arena
         ffa_z_min = 0.0
         ffa_z_max = 1.0
@@ -45,7 +45,7 @@ class Node(object):
         trigger_z_max = default_edge_height + 0.1
         min_distance_from_wall = 0.01    # minimal distance from wall before alarm condition
         FPS = 100   # frames per second
-        
+
         duration_stationary_phase = 0.5 # duration of stationary phase before moving of wall
         duration_stimulus_phase = 1.0   # duration of stimulus
 
@@ -62,7 +62,7 @@ class Node(object):
         self.speed_index = 0     # index of first stimulus
         self.default_edge_height = default_edge_height
         self.current_edge_height = default_edge_height
-        self.pub_time_delay = pub_time_delay  
+        self.pub_time_delay = pub_time_delay
         self.csv_fullpath = csv_fullpath
         self.csv_fname = csv_fname
         self.csv_notes_fname = csv_notes_fname
@@ -74,10 +74,10 @@ class Node(object):
         self.trigger_z_max = trigger_z_max
         self.min_distance_from_wall = min_distance_from_wall    # minimal distance from wall before alarm condition
         self.FPS = FPS
-        
+
         self.duration_stationary_phase = duration_stationary_phase
         self.duration_stimulus_phase = duration_stimulus_phase
-        
+
         # open new csv-file for saving metadata
         self.csv_file = open(os.path.join(self.csv_fullpath, self.csv_fname),'wb')
         self.csv_file.write('obj_id,trigger,speed\n')
@@ -95,13 +95,13 @@ class Node(object):
         self.csv_notes_file.write('speed_list: %f, %f, %f, %f\n' % (self.speed_list[0], self.speed_list[1], self.speed_list[2], self.speed_list[3]))
         self.csv_notes_file.write('\n')
         self.csv_notes_file.flush()
-        
+
         print 'INITIALIZATION COMPLETED'
         # start subscribing to flydra_mainbrain
         rospy.Subscriber("flydra_mainbrain_super_packets", flydra_mainbrain_super_packet, self.tracking_data_callback)
 
     def run(self):
-        # start publishing stimulus 
+        # start publishing stimulus
         # type of stimulus
         pub_stimulus_modus = rospy.Publisher('stimulus_modus', String)
         # height of edge
@@ -109,23 +109,23 @@ class Node(object):
         # which object to lock onto
         pub_locked_obj = rospy.Publisher('lock_object', UInt32)
         r = rospy.Rate(1/self.pub_time_delay) # Hz
-        while not rospy.is_shutdown(): 
+        while not rospy.is_shutdown():
             pub_stimulus_modus.publish(self.get_stimulus_modus_msg())
             pub_stimulus_data.publish(self.get_stimulus_data_msg())
             pub_locked_obj.publish(self.get_locked_obj_msg())
             #print 'current edge height %f at sec %f', (self.current_edge_height, (rospy.get_time() - self.start_time))
             r.sleep()
-        
+
     # return current stimulus data message
     def get_stimulus_data_msg(self):
         # get edge data
         if self.stimulus_modi_list[self.stimulus_modi_index] == 'edge':
-            msg = Float32() 
+            msg = Float32()
             msg.data = self.current_edge_height
 
             # when locked_on, set new edge height
             passed_time = rospy.get_time() - self.start_time
-            if self.locked_on and (passed_time > self.duration_stationary_phase) and (passed_time <= (self.duration_stationary_phase + self.duration_stimulus_phase)):  # locked on to objid and stationary phase then stimulus phase 
+            if self.locked_on and (passed_time > self.duration_stationary_phase) and (passed_time <= (self.duration_stationary_phase + self.duration_stimulus_phase)):  # locked on to objid and stationary phase then stimulus phase
                 # set new edge height
                 self.current_edge_height = self.default_edge_height + self.speed_list[self.speed_index] * (passed_time - self.duration_stationary_phase)
         # get grating data
@@ -150,7 +150,7 @@ class Node(object):
     # check if position of object meets tracking start condition
     def meets_condition(self, x, y, z, velocity):
         if 1:
-            # middle of arena 
+            # middle of arena
             if ( (x**2 + y**2) <= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
                 return True
             else:
@@ -171,14 +171,14 @@ class Node(object):
 
     # manage tracking, stimulus publishing, data saving
     def tracking_data_callback(self,data):
-        
+
         # in case flydra is not sending any packets anymore
         # if locked_on: check max_tracking time
         if self.locked_on and ( (rospy.get_time() - self.start_time) > self.max_tracking_time ):
             print 'in callback: max tracking time reached, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
             self.csv_notes_file.write('in callback: max tracking time reached, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
             self.csv_notes_file.flush()
-        
+
         for packet in data.packets:
             framenumber = packet.framenumber
             #print
@@ -189,7 +189,7 @@ class Node(object):
             #self.csv_notes_file.flush()
             # multiple obj_ids, if locked_on, check if the locked_on obj_id is still amongst those
             locked_objid_still_tracked = False
-            
+
             """
             if self.locked_on:
                 self.csv_notes_file.write('locked on: current package %i contains ids: ' % (framenumber))
@@ -198,7 +198,7 @@ class Node(object):
                 self.csv_notes_file.write('\n')
                 self.csv_notes_file.flush()
             """
-                    
+
             if self.locked_on:
                 for obj in packet.objects:
                     obj_id = obj.obj_id
@@ -208,7 +208,7 @@ class Node(object):
                     if obj_id == self.locked_obj_id:
                         locked_objid_still_tracked = True
                         #print 'locked_objid_still_tracked = True'
-            
+
             for obj in packet.objects:
                 obj_id = obj.obj_id
                 #print 'obj_id', obj_id
@@ -222,8 +222,8 @@ class Node(object):
                 y = obj.position.y
                 z = obj.position.z
                 #print "obj_id:%d   x:%f y:%f z:%f" % (obj_id, x, y, z)
-                
-                
+
+
                 # if no currently locked_on obj_id, check for trigger condition
                 if not self.locked_on:
                     if self.meets_condition (x,y,z,velocity):
@@ -248,7 +248,7 @@ class Node(object):
                         self.csv_file.write('%s,%s,%s\n'%(obj_id, framenumber, self.speed_list[self.speed_index]))
                         self.csv_file.flush()
                         #print 'save data of obj_id %i, trigger=%i, speed=%f' % (obj_id, framenumber, self.speed_list[self.speed_index])
-      
+
                         # continue to next packet (frame)
                         break
                     # cond. not met? - continue to next obj in packet
@@ -308,11 +308,11 @@ class Node(object):
                 print 'current edge height %f at time %f' % (self.current_edge_height, (rospy.get_time() - self.start_time))
                 self.csv_notes_file.write('current edge height %f at time %f\n' % (self.current_edge_height, (rospy.get_time() - self.start_time)))
                 self.csv_notes_file.flush()
-        
+
 def main():
     n = Node()
     n.run()
-    
+
 if __name__ == '__main__':
     main()
 
