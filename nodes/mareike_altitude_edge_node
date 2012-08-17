@@ -22,11 +22,12 @@ class Node(object):
             'StimulusAltitudeEdge')
         
         # settings
-        max_tracking_time = 20.0        # maximum time span (in sec) for tracking after trigger onset
+        max_tracking_time = 5.0        # maximum time span (in sec) for tracking after trigger onset
         max_frames_without_tracking = 2    # max frames with no tracking of currently locked on obj_id, if higher stimulus is stopped
         stimulus_modi_list = ['edge', 'grating', 'starfield']    # stimulus modi
-        speed_list = [-0.05,0.0,0.05,0.1]   # list of speed stimuli
-        default_edge_height = 0.5     # start height of edge (in m)
+        #speed_list = [-0.05,0.0,0.05,0.1]   # list of speed stimuli
+        speed_list = [-0.1,-0.05,0.0,0.05]   # list of speed stimuli
+        default_edge_height = 0.8     # start height of edge (in m)
         pub_time_delay = 0.005        # time delay between publishing of two stimulus messages
         csv_fullpath = os.path.expanduser('~/FLYDRA')
         if not os.path.exists(csv_fullpath):
@@ -39,19 +40,19 @@ class Node(object):
         ffa_radius = 0.5   # measurements of free flight arena
         ffa_z_min = 0.0
         ffa_z_max = 1.0
-        trigger_radius = 0.4   # condition for trigger -> middle of arena
-        trigger_z_min = 0.35
-        trigger_z_max = 0.65
-        min_distance_from_wall = 0.05    # minimal distance from wall before alarm condition
+        trigger_radius = 0.4   # condition for trigger -> around middle
+        trigger_z_min = default_edge_height - 0.1
+        trigger_z_max = default_edge_height + 0.1
+        min_distance_from_wall = 0.01    # minimal distance from wall before alarm condition
         FPS = 100   # frames per second
         
-        duration_stationary_phase = 1.0 # duration of stationary phase before moving of wall
-        duration_stimulus_phase = 2.0   # duration of stimulus
+        duration_stationary_phase = 0.5 # duration of stationary phase before moving of wall
+        duration_stimulus_phase = 1.0   # duration of stimulus
 
         # instance variables
         self.locked_on = False      # currently locked on to obj_id?
         self.locked_obj_id = 0      # currently tracked obj_id
-        self.passed_time = 0.0        # time passed since trigger onset
+        self.start_time = 0.0        # time at trigger onset
         self.max_frames_without_tracking = max_frames_without_tracking
         self.number_frames_without_tracking = 0
         self.max_tracking_time = max_tracking_time
@@ -91,6 +92,8 @@ class Node(object):
         self.csv_notes_file.write('min_distance_from_wall: %f\n' % (self.min_distance_from_wall))
         self.csv_notes_file.write('duration_stationary_phase: %f\n' % (self.duration_stationary_phase))
         self.csv_notes_file.write('duration_stimulus_phase: %f\n' % (self.duration_stimulus_phase))
+        self.csv_notes_file.write('speed_list: %f, %f, %f, %f\n' % (self.speed_list[0], self.speed_list[1], self.speed_list[2], self.speed_list[3]))
+        self.csv_notes_file.write('\n')
         self.csv_notes_file.flush()
         
         print 'INITIALIZATION COMPLETED'
@@ -110,6 +113,7 @@ class Node(object):
             pub_stimulus_modus.publish(self.get_stimulus_modus_msg())
             pub_stimulus_data.publish(self.get_stimulus_data_msg())
             pub_locked_obj.publish(self.get_locked_obj_msg())
+            #print 'current edge height %f at sec %f', (self.current_edge_height, (rospy.get_time() - self.start_time))
             r.sleep()
         
     # return current stimulus data message
@@ -120,9 +124,10 @@ class Node(object):
             msg.data = self.current_edge_height
 
             # when locked_on, set new edge height
-            if self.locked_on and (self.passed_time >= self.duration_stationary_phase) and (self.passed_time <= (self.duration_stationary_phase + self.duration_stimulus_phase)):  # locked on to objid and stationary phase then stimulus phase 
+            passed_time = rospy.get_time() - self.start_time
+            if self.locked_on and (passed_time > self.duration_stationary_phase) and (passed_time <= (self.duration_stationary_phase + self.duration_stimulus_phase)):  # locked on to objid and stationary phase then stimulus phase 
                 # set new edge height
-                self.current_edge_height = self.current_edge_height + self.speed_list[self.speed_index] * self.pub_time_delay
+                self.current_edge_height = self.default_edge_height + self.speed_list[self.speed_index] * (passed_time - self.duration_stationary_phase)
         # get grating data
         #elif self.stimulus_modi_list[self.stimulus_modi_index] == 'grating':
         # get starfield data
@@ -144,12 +149,18 @@ class Node(object):
 
     # check if position of object meets tracking start condition
     def meets_condition(self, x, y, z, velocity):
-        # middle of arena (maybe also near to edge?, certain velocity?)
-        if ( (x**2 + y**2) <= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
-            return True
-        else:
-            return False
-
+        if 1:
+            # middle of arena 
+            if ( (x**2 + y**2) <= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
+                return True
+            else:
+                return False
+        if 0:
+            # near wall
+            if ( (x**2 + y**2) >= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
+                return True
+            else:
+                return False
 
     # check if position of fly meets alarm condition
     def meets_alarm(self, x, y, z, velocity):
@@ -160,6 +171,14 @@ class Node(object):
 
     # manage tracking, stimulus publishing, data saving
     def tracking_data_callback(self,data):
+        
+        # in case flydra is not sending any packets anymore
+        # if locked_on: check max_tracking time
+        if self.locked_on and ( (rospy.get_time() - self.start_time) > self.max_tracking_time ):
+            print 'in callback: max tracking time reached, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+            self.csv_notes_file.write('in callback: max tracking time reached, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
+            self.csv_notes_file.flush()
+        
         for packet in data.packets:
             framenumber = packet.framenumber
             #print
@@ -221,7 +240,7 @@ class Node(object):
                         self.csv_notes_file.flush()
                         self.locked_on = True
                         self.locked_obj_id = obj_id
-                        self.passed_time = 0.0
+                        self.start_time = rospy.get_time()
                         self.number_frames_without_tracking = 0
                         # send start signal to stimulus
                         #print 'send start signal to stimulus'
@@ -240,15 +259,15 @@ class Node(object):
                 # obj_id already locked_on
                 else:
                     # count time
-                    self.passed_time = self.passed_time + float(1)/float(self.FPS)
+                    passed_time = rospy.get_time() - self.start_time
                     # check if obj_id is not being tracked or timeout is reached or alarm condition is met
                     if (obj_id <> self.locked_obj_id):
                         self.number_frames_without_tracking = self.number_frames_without_tracking + 1
                         if (self.number_frames_without_tracking > self.max_frames_without_tracking):
                             #print 'self.number_frames_without_tracking', self.number_frames_without_tracking
-                            print 'objid lost, send stop signal to stimulus after secs', self.passed_time
+                            print 'objid lost, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
                             #self.csv_notes_file.write('self.number_frames_without_tracking %i\n'%(self.number_frames_without_tracking))
-                            self.csv_notes_file.write('objid lost, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                            self.csv_notes_file.write('objid lost, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
                             self.csv_notes_file.flush()
                             #print 'framenumber', framenumber#print 'framenumber', framenumber
                             #print 'obj_id of current flydra package', obj_id
@@ -258,7 +277,7 @@ class Node(object):
                             #self.csv_notes_file.flush()
                             self.locked_on = False
                             self.locked_obj_id = 0
-                            self.passed_time = 0.0
+                            self.start_time = 0.0
                             self.current_edge_height = self.default_edge_height
                         else:
                             # continue to next packet (frame)
@@ -266,31 +285,30 @@ class Node(object):
                             self.csv_notes_file.flush()
                             break
                     elif self.meets_alarm (x,y,z,velocity):
-                        print 'alarm condition, send stop signal to stimulus after secs', self.passed_time
-                        self.csv_notes_file.write('alarm condition, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                        print 'alarm condition, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                        self.csv_notes_file.write('alarm condition for obj_id %i, position x:%f y:%f z:%f, send stop signal to stimulus after secs %f\n'%(obj_id, x, y, z, (rospy.get_time() - self.start_time)))
                         self.csv_notes_file.flush()
                         self.locked_on = False
                         self.locked_obj_id = 0
-                        self.passed_time = 0.0
+                        self.start_time = 0.0
                         self.current_edge_height = self.default_edge_height
-                    elif self.passed_time > self.max_tracking_time:
-                        print 'max tracking time reached, send stop signal to stimulus after secs', self.passed_time
-                        self.csv_notes_file.write('max tracking time reached, send stop signal to stimulus after secs %f\n'%(self.passed_time))
+                    elif (rospy.get_time() - self.start_time) > self.max_tracking_time:
+                        print 'max tracking time reached, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                        self.csv_notes_file.write('max tracking time reached, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
                         self.csv_notes_file.flush()
                         self.locked_on = False
                         self.locked_obj_id = 0
-                        self.passed_time = 0.0
+                        self.start_time = 0.0
                         self.current_edge_height = self.default_edge_height
                     else:
                         # continue to next packet (frame)
                         self.number_frames_without_tracking = 0
                         break
-
-        if self.current_edge_height != 0.5:
-            print 'current edge height', self.current_edge_height
-            self.csv_notes_file.write('current edge height: %f\n'%(self.current_edge_height))
-            self.csv_notes_file.flush()
-
+            if self.current_edge_height != self.default_edge_height:
+                print 'current edge height %f at time %f' % (self.current_edge_height, (rospy.get_time() - self.start_time))
+                self.csv_notes_file.write('current edge height %f at time %f\n' % (self.current_edge_height, (rospy.get_time() - self.start_time)))
+                self.csv_notes_file.flush()
+        
 def main():
     n = Node()
     n.run()
