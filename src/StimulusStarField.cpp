@@ -15,20 +15,8 @@
 #include <osg/Light>
 #include <osg/LightSource>
 #include <osg/LightModel>
-
-#include <osgParticle/Particle>
-#include <osgParticle/ParticleSystem>
-#include <osgParticle/ParticleSystemUpdater>
-#include <osgParticle/ModularEmitter>
-#include <osgParticle/ModularProgram>
-
-#include <osgParticle/Operator>
-#include <osgParticle/SinkOperator>
-
-#include <osgParticle/Shooter>
-
-#include <osgParticle/Placer>
-#include <osgParticle/BoxPlacer>
+#include <osg/Texture2D>
+#include <osg/BlendFunc>
 
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
@@ -38,65 +26,34 @@
 
 #include <jansson.h>
 
-// -----------------------------------------------------------
-//
-// Geez, this seems way more complicated than necessary. Maybe we
-// should just write our own simple particle system instead of writing
-// custom plugin classes for OSG's particle system code.
-//
-// -----------------------------------------------------------
-
-// -----------------------------------------------------------
-// class VelocityOperator - update velocity of existing particles
-// -----------------------------------------------------------
-
-class VelocityOperator : public osgParticle::Operator {
+class MyGeometryCallback :
+    public osg::Drawable::UpdateCallback,
+    public osg::Drawable::AttributeFunctor {
 public:
-    VelocityOperator() : Operator() {_velocity.set(1.0f, 1.0f, 1.0f);}
-    VelocityOperator( const VelocityOperator& copy, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY )
-    :   Operator(copy, copyop), _velocity(copy._velocity)
-    {}
-    META_Object( osgParticle, VelocityOperator );
+    MyGeometryCallback() :  _firstCall(true) {}
 
-    void setVelocity( float x, float y, float z ) { _velocity.set(x, y, z); }
-    void setVelocity( const osg::Vec3& velocity ) { _velocity = velocity; }
-    /// Apply the acceleration to a particle. Do not call this method manually.
-    inline void operate( osgParticle::Particle* P, double dt ) {P->setVelocity( _velocity );}
+    virtual void update(osg::NodeVisitor* nv,osg::Drawable* drawable) {
+        const osg::FrameStamp* fs = nv->getFrameStamp();
+        double simulationTime = fs->getSimulationTime();
+        if (_firstCall) {
+            _firstCall = false;
+            _startTime = simulationTime;
+        }
 
-protected:
-    virtual ~VelocityOperator() {}
-    VelocityOperator& operator=( const VelocityOperator& ) { return *this; }
+        _time = simulationTime-_startTime;
 
-    osg::Vec3 _velocity;
-};
-
-// -----------------------------------------------------------
-// class ConstantShooter - set velocity of new particles
-// -----------------------------------------------------------
-
-class ConstantShooter: public osgParticle::Shooter {
-public:
-    inline ConstantShooter() : Shooter(), _velocity(0.0f, 0.0f, 0.0f) {}
-    inline ConstantShooter(const ConstantShooter& copy, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY) : Shooter(copy, copyop), _velocity(copy._velocity) {}
-    META_Object(osgParticle, ConstantShooter);
-
-    /// Set the range of possible values for initial rotational speed of particles.
-    inline void setVelocity(const osg::Vec3& v) {_velocity=v;}
-
-    /// Shoot a particle. Do not call this method manually.
-    inline void shoot(osgParticle::Particle* P) const { P->setVelocity(_velocity); }
-
-protected:
-    virtual ~ConstantShooter() {}
-    ConstantShooter& operator=(const ConstantShooter&) { return *this; }
-
+        drawable->accept(*this);
+        drawable->dirtyBound();
+        osg::Geometry* this_geom = dynamic_cast<osg::Geometry*>(drawable);
+        if (this_geom!=NULL) {
+            osg::Vec3Array* vertices = dynamic_cast<osg::Vec3Array*>(this_geom->getVertexArray());
+            vertices->at(0).set( sin(_time), cos(_time), 0.0);
+        }
+    }
 private:
-    osg::Vec3 _velocity;
+    double _time, _startTime;
+    bool _firstCall;
 };
-
-// -----------------------------------------------------------
-// class StimulusStarField
-// -----------------------------------------------------------
 
 class StimulusStarField: public StimulusInterface
 {
@@ -105,8 +62,6 @@ public:
 
     std::string name() const { return "StimulusStarField"; }
     void post_init();
-
-    void createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program );
 
     osg::ref_ptr<osg::Group> get_3d_world() {return _group; }
 
@@ -121,78 +76,78 @@ public:
 private:
     osg::ref_ptr<osg::Group> _group;
     osg::Vec3 _starfield_velocity;
-    osg::ref_ptr<ConstantShooter> _shooter;
-    osg::ref_ptr<osgParticle::Placer> _placer;
-    osg::ref_ptr<VelocityOperator> _vel_operator;
 };
 
 StimulusStarField::StimulusStarField() {
-    _shooter = new ConstantShooter;
-    _placer = new osgParticle::BoxPlacer;
-    _vel_operator = new VelocityOperator;
-
     setVelocity( 0.0, 0.0, 0.0);
 }
 
 void StimulusStarField::post_init() {
-    // this is based on the OSG example osgparticleshader.cpp
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+    osg::Texture2D* tex = new osg::Texture2D;
+    {
+        osg::Image* im = osgDB::readImageFile(get_plugin_data_path("star.png"));
+        vros_assert(im!=NULL);
+        tex->setImage(im);
+    }
 
-    osg::ref_ptr<osgParticle::ParticleSystem> ps = new osgParticle::ParticleSystem;
-    ps->getDefaultParticleTemplate().setLifeTime( 5.0f );
-    ps->getDefaultParticleTemplate().setShape( osgParticle::Particle::POINT );
-    ps->setVisibilityDistance( -1.0f );
+    {
+        osg::ref_ptr<osg::Geometry> this_geom = new osg::Geometry;
 
-    std::string textureFile = get_plugin_data_path("star.png");
-    ps->setDefaultAttributesUsingShaders( textureFile, true, 0 );
+        osg::Vec3Array* vertices = new osg::Vec3Array;
+        for (int i=0;i<1000;i++) {
+            vertices->push_back( osg::Vec3( fmod(i,10.0), fmod(i/10.0,10.0), fmod(i/100.0,10.0) ) );
+        }
+        this_geom->setVertexArray(vertices);
+        this_geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,vertices->size()));
+        this_geom->setDataVariance( osg::Object::DYNAMIC );
+        this_geom->setSupportsDisplayList(false);
+        this_geom->setUpdateCallback(new MyGeometryCallback());
+        geode->addDrawable(this_geom.get());
+    }
 
-    osg::StateSet* stateset = ps->getOrCreateStateSet();
-    stateset->setAttribute( new osg::Point(5.0f) ); // pointSize
-    stateset->setTextureAttributeAndModes( 0, new osg::PointSprite, osg::StateAttribute::ON );
+    {
+        osg::StateSet* state = geode->getOrCreateStateSet();
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
-    osg::ref_ptr<osgParticle::ModularEmitter> emitter = new osgParticle::ModularEmitter;
-    emitter->setParticleSystem( ps.get() );
+        osg::BlendFunc *fn = new osg::BlendFunc();
+        state->setAttributeAndModes(fn, osg::StateAttribute::ON);
 
-    osg::ref_ptr<osgParticle::ModularProgram> program = new osgParticle::ModularProgram;
-    program->setParticleSystem( ps.get() );
-    program->addOperator( _vel_operator.get() );
+        osg::PointSprite *sprite = new osg::PointSprite();
+        state->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
 
-    createStarfieldEffect( emitter.get(), program.get() );
+        osg::Point* _point = new osg::Point;
+        _point->setSize(20.0f);
+        state->setAttribute(_point);
 
-    osg::ref_ptr<osg::MatrixTransform> parent = new osg::MatrixTransform;
-    parent->addChild( emitter.get() );
-    parent->addChild( program.get() );
+        state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
 
-    osg::ref_ptr<osgParticle::ParticleSystemUpdater> updater = new osgParticle::ParticleSystemUpdater;
+        osg::Program* Program;
+        osg::Shader*  VertObj;
+        osg::Shader*  FragObj;
+
+        Program = new osg::Program;
+        Program->setName( "starfield" );
+        VertObj = new osg::Shader( osg::Shader::VERTEX );
+        FragObj = new osg::Shader( osg::Shader::FRAGMENT );
+        Program->addShader( FragObj );
+        Program->addShader( VertObj );
+
+        load_shader_source( VertObj, "starfield.vert" );
+        load_shader_source( FragObj, "starfield.frag" );
+
+        state->setAttributeAndModes(Program, osg::StateAttribute::ON);
+
+        osg::Uniform* sampler = new osg::Uniform( osg::Uniform::SAMPLER_2D,
+                                                  "star_tex" );
+        state->addUniform( sampler );
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
 
     osg::ref_ptr<osg::Group> root = new osg::Group;
-    root->addChild( parent.get() );
-    root->addChild( updater.get() );
-
-    updater->addParticleSystem( ps.get() );
-
-    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-    geode->addDrawable( ps.get() );
-    root->addChild( geode.get() );
-
+    root->addChild(geode);
     _group = root;
     _group->setName("StimulusStarField._group");
-}
-
-void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
-    // Emit specific number of particles every frame
-    osg::ref_ptr<osgParticle::RandomRateCounter> rrc = new osgParticle::RandomRateCounter;
-    rrc->setRateRange( 500, 2000 );
-
-    // Kill particles going inside/outside of specified domains.
-    osg::ref_ptr<osgParticle::SinkOperator> sink = new osgParticle::SinkOperator;
-    sink->setSinkStrategy( osgParticle::SinkOperator::SINK_OUTSIDE );
-    sink->addSphereDomain( osg::Vec3(), 20.0f );
-
-    emitter->setCounter( rrc.get() );
-    emitter->setShooter( _shooter.get() );
-    emitter->setPlacer( _placer.get() );
-
-    program->addOperator( sink.get() );
 }
 
 osg::Vec4 StimulusStarField::get_clear_color() const {
@@ -236,8 +191,6 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
 
 void StimulusStarField::setVelocity(double x, double y, double z) {
     _starfield_velocity = osg::Vec3(x,y,z);
-    _shooter->setVelocity( _starfield_velocity );
-    _vel_operator->setVelocity( _starfield_velocity );
 }
 
 std::string StimulusStarField::get_message_type(const std::string& topic_name) const {
