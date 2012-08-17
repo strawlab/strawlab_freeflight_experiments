@@ -108,11 +108,16 @@ class Node(object):
         pub_stimulus_data = rospy.Publisher('edge_height', Float32)
         # which object to lock onto
         pub_locked_obj = rospy.Publisher('lock_object', UInt32)
+        _published_obj_id = None
         r = rospy.Rate(1/self.pub_time_delay) # Hz
         while not rospy.is_shutdown():
             pub_stimulus_modus.publish(self.get_stimulus_modus_msg())
             pub_stimulus_data.publish(self.get_stimulus_data_msg())
-            pub_locked_obj.publish(self.get_locked_obj_msg())
+            current_obj_id = self.get_locked_obj()
+            if current_obj_id != _published_obj_id:
+                # only publish obj_id if it changed.
+                pub_locked_obj.publish(current_obj_id)
+                _published_obj_id_value = current_obj_id
             #print 'current edge height %f at sec %f', (self.current_edge_height, (rospy.get_time() - self.start_time))
             r.sleep()
 
@@ -141,11 +146,9 @@ class Node(object):
         return msg
 
     # return current locked object message
-    def get_locked_obj_msg(self):
-        msg = UInt32()
+    def get_locked_obj(self):
         # if not locked on to any obj, return 0
-        msg.data = self.locked_obj_id
-        return msg
+        return self.locked_obj_id
 
     # check if position of object meets tracking start condition
     def meets_condition(self, x, y, z, velocity):
