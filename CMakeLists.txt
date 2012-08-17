@@ -40,8 +40,9 @@ FIND_PACKAGE(osgTerrain)
 FIND_PACKAGE(osgViewer)
 FIND_PACKAGE(osgGA)
 FIND_PACKAGE(osgWidget)
+FIND_PACKAGE(osgParticle)
 
-SET(OSG_LIBS ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGWIDGET_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGTEXT_LIBRARIES})
+SET(OSG_LIBS ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGWIDGET_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGTEXT_LIBRARIES} ${OSGPARTICLE_LIBRARIES})
 
 SET(POCO_FIND_REQUIRED 1)
 FIND_PACKAGE(Poco)
@@ -56,3 +57,7 @@ rosbuild_link_boost(StimulusAltitudeEdge system filesystem)
 rosbuild_add_library(StimulusOSGFile src/StimulusOSGFile.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
 rosbuild_link_boost(StimulusOSGFile system filesystem)
+
+rosbuild_add_library(StimulusStarField src/StimulusStarField.cpp)
+target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
+rosbuild_link_boost(StimulusStarField system filesystem)
