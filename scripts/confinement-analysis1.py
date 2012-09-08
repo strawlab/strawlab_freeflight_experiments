@@ -4,9 +4,6 @@ from matplotlib.mlab import csv2rec
 import matplotlib.pyplot as plt
 import argparse
 
-CONFINEMENT_RADIUS = 0.2
-CONFINEMENT_X = 0.25
-
 def append_col(arr_in, col, name):
     dtype_in = arr_in.dtype
     print dir(dtype_in)
@@ -50,10 +47,8 @@ if __name__=='__main__':
         t_stop = t[i+1]
         assert next_row['lock_object']==IMPOSSIBLE_OBJ_ID
         assert str(next_row['stimulus_filename']).endswith('midgray.osg')
-        if current_condition=='confinementr':
-            assert str(row['stimulus_filename']).endswith('checkerboardr.png.osg')
-        elif current_condition=='confinementl':
-            assert str(row['stimulus_filename']).endswith('checkerboardl.png.osg')
+        if current_condition=='confinement':
+            assert str(row['stimulus_filename']).endswith('checkerboard.png.osg')
         else:
             assert str(row['stimulus_filename']).endswith('midgray.osg')
 
@@ -131,18 +126,9 @@ if __name__=='__main__':
             for (x0,y0,obj_id) in r['start_obj_ids']:
                 ax.text( x0, y0, str(obj_id) )
 
-            for radius in [0.5]:
+            for radius in [0.16, 0.5]:
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( radius*np.cos(theta), radius*np.sin(theta), 'r-',
-                         lw=2, alpha=0.3 )
-            for radius in [CONFINEMENT_RADIUS]:
-                if current_condition=='confinementl':
-                    sign = +1
-                else:
-                    assert current_condition=='confinementr'
-                    sign = -1
-                theta = np.linspace(0, 2*np.pi, 100)
-                ax.plot( radius*np.cos(theta)+sign*CONFINEMENT_X, radius*np.sin(theta), 'r-',
                          lw=2, alpha=0.3 )
             ax.set_xlim(-limit,limit)
             ax.set_ylim(-limit,limit)
@@ -178,17 +164,9 @@ if __name__=='__main__':
             ax.imshow(hdata.T, extent=extent, interpolation='nearest',
                       origin='lower')#, cmap=plt.get_cmap('Reds'))
 
-            for radius in [0.5]:
+            for radius in [0.16, 0.5]:
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( radius*np.cos(theta), radius*np.sin(theta), 'w:', lw=2 )
-            for radius in [CONFINEMENT_RADIUS]:
-                if current_condition=='confinementl':
-                    sign = +1
-                else:
-                    assert current_condition=='confinementr'
-                    sign = -1
-                theta = np.linspace(0, 2*np.pi, 100)
-                ax.plot( radius*np.cos(theta)+sign*CONFINEMENT_X, radius*np.sin(theta), 'w:', lw=2 )
             ax.set_aspect('equal')
             ax.set_title('%s: %.1f sec, n=%d'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
