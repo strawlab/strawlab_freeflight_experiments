@@ -24,7 +24,7 @@ if __name__=='__main__':
         'data_file', type=str)
     args = parser.parse_args()
 
-    metadata = csv2rec( args.metadata_file, names=['stimulus_filename','confinement_condition','lock_object','t_sec','t_nsec'])
+    metadata = csv2rec( args.metadata_file )
     with h5py.File(args.data_file) as h5:
         trajectories = h5['trajectories'][:]
         starts = h5['trajectory_start_times'][:]
