@@ -16,7 +16,8 @@ import rospkg
 rospack = rospkg.RosPack()
 pkg_dir = rospack.get_path(PACKAGE)
 
-STIM_FILENAME = 'checkerboard.png.osg'
+STIMR_FILENAME = 'checkerboardr.png.osg'
+STIML_FILENAME = 'checkerboardl.png.osg'
 BLANK_FILENAME = 'midgray.osg'
 
 TIMEOUT = 0.5
@@ -66,10 +67,9 @@ class Node(object):
 
         self.log = Logger()
 
-
         self.log.stim( BLANK_FILENAME )
         self.currently_locked_obj_id = None
-        self.condition = 'control'
+        self.condition = 'confinementl'
         self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
                                   self._switch_conditions)
         self._switch_conditions(None)
@@ -79,10 +79,11 @@ class Node(object):
                          self.on_flydra_mainbrain_super_packets)
 
     def _switch_conditions(self,event):
-        if self.condition=='confinement':
-            self.condition='control'
+        if self.condition=='confinementr':
+            self.condition='confinementl'
         else:
-            self.condition='confinement'
+            assert self.condition=='confinementl'
+            self.condition='confinementr'
         rospy.loginfo('confinement condition: %s'%self.condition )
         self.log.condition( self.condition )
 
@@ -97,10 +98,15 @@ class Node(object):
             r.sleep()
 
     def is_in_trigger_volume(self,pos,expanded=False):
-        c = np.array( (0,0) )
+        xr = 0.25
+        if self.condition=='confinementr':
+            c = np.array( (-xr,0) )
+        else:
+            assert self.condition=='confinementl'
+            c = np.array( (xr,0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        radius = 0.16
+        radius = 0.2
         zdist = 0.4
         if expanded:
             radius += 0.05
@@ -131,8 +137,10 @@ class Node(object):
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
-        if self.condition=='confinement':
-            self.log.stim( STIM_FILENAME )
+        if self.condition=='confinementr':
+            self.log.stim( STIMR_FILENAME )
+        elif self.condition=='confinementl':
+            self.log.stim( STIML_FILENAME )
         else:
             self.log.stim( BLANK_FILENAME )
         self.log.lock( obj.obj_id, framenumber )
