@@ -16,7 +16,7 @@ import sys
 
 class Node(object):
     def __init__(self):
-        rospy.init_node('main_node')#, anonymous=True)
+        rospy.init_node('mareike_altitude_edge_node')#, anonymous=True)
 
         display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusAltitudeEdge')
@@ -43,7 +43,7 @@ class Node(object):
         trigger_radius = 0.4   # condition for trigger -> around middle
         trigger_z_min = default_edge_height - 0.1
         trigger_z_max = default_edge_height + 0.1
-        min_distance_from_wall = 0.01    # minimal distance from wall before alarm condition
+        min_distance_from_wall = 0.01    # minimal distance from wall before abort condition
         FPS = 100   # frames per second
 
         duration_stationary_phase = 0.5 # duration of stationary phase before moving of wall
@@ -72,7 +72,7 @@ class Node(object):
         self.trigger_radius = trigger_radius   # condition for trigger
         self.trigger_z_min = trigger_z_min
         self.trigger_z_max = trigger_z_max
-        self.min_distance_from_wall = min_distance_from_wall    # minimal distance from wall before alarm condition
+        self.min_distance_from_wall = min_distance_from_wall    # minimal distance from wall before abort condition
         self.FPS = FPS
 
         self.duration_stationary_phase = duration_stationary_phase
@@ -117,7 +117,7 @@ class Node(object):
             if current_obj_id != _published_obj_id:
                 # only publish obj_id if it changed.
                 pub_locked_obj.publish(current_obj_id)
-                _published_obj_id_value = current_obj_id
+                _published_obj_id = current_obj_id
             #print 'current edge height %f at sec %f', (self.current_edge_height, (rospy.get_time() - self.start_time))
             r.sleep()
 
@@ -165,8 +165,8 @@ class Node(object):
             else:
                 return False
 
-    # check if position of fly meets alarm condition
-    def meets_alarm(self, x, y, z, velocity):
+    # check if position of fly meets abort condition
+    def meets_abort(self, x, y, z, velocity):
         if ( (x**2 + y**2) > (self.ffa_radius - self.min_distance_from_wall)**2 ) or ( z < (self.ffa_z_min + self.min_distance_from_wall) ) or ( z > (self.ffa_z_max - self.min_distance_from_wall) ):
             return True
         else:
@@ -263,8 +263,8 @@ class Node(object):
                 else:
                     # count time
                     passed_time = rospy.get_time() - self.start_time
-                    # check if obj_id is not being tracked or timeout is reached or alarm condition is met
-                    if (obj_id <> self.locked_obj_id):
+                    # check if obj_id is not being tracked or timeout is reached or abort condition is met
+                    if (obj_id != self.locked_obj_id):
                         self.number_frames_without_tracking = self.number_frames_without_tracking + 1
                         if (self.number_frames_without_tracking > self.max_frames_without_tracking):
                             #print 'self.number_frames_without_tracking', self.number_frames_without_tracking
@@ -287,9 +287,9 @@ class Node(object):
                             self.csv_notes_file.write('obj_id lost, but continue tracking: self.number_frames_without_tracking = %i\n'%(self.number_frames_without_tracking))
                             self.csv_notes_file.flush()
                             break
-                    elif self.meets_alarm (x,y,z,velocity):
-                        print 'alarm condition, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
-                        self.csv_notes_file.write('alarm condition for obj_id %i, position x:%f y:%f z:%f, send stop signal to stimulus after secs %f\n'%(obj_id, x, y, z, (rospy.get_time() - self.start_time)))
+                    elif self.meets_abort (x,y,z,velocity):
+                        print 'abort condition, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                        self.csv_notes_file.write('abort condition for obj_id %i, position x:%f y:%f z:%f, send stop signal to stimulus after secs %f\n'%(obj_id, x, y, z, (rospy.get_time() - self.start_time)))
                         self.csv_notes_file.flush()
                         self.locked_on = False
                         self.locked_obj_id = 0
