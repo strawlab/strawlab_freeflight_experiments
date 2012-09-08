@@ -1,0 +1,295 @@
+#!/usr/bin/env python
+
+# ROS imports
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+from ros_flydra.msg import flydra_mainbrain_super_packet
+from std_msgs.msg import String, Float32, UInt32
+from geometry_msgs.msg import Vector3
+
+import rospy
+
+import display_client
+
+# other imports
+import datetime
+import time
+import os
+import sys
+import random
+
+class Node(object):
+    def __init__(self):
+        rospy.init_node('mareike_altitude_starfield_node')#, anonymous=True)
+
+        display_client.DisplayServerProxy.set_stimulus_mode(
+            'StimulusStarField')
+
+        # settings
+        max_tracking_time = 5.0        # maximum time span (in sec) for tracking after trigger onset
+        max_frames_without_tracking = 2    # max frames with no tracking of currently locked on obj_id, if higher stimulus is stopped
+        stimulus_list = [0.0,-0.5, 0.5]   # list of speed stimuli
+        pub_time_delay = 0.005        # time delay between publishing of two stimulus messages
+        csv_fullpath = os.path.expanduser('~/FLYDRA')
+        if not os.path.exists(csv_fullpath):
+            os.makedirs(csv_fullpath)
+        now_unix = rospy.get_time() 
+        now_realtime = datetime.datetime.fromtimestamp(now_unix).strftime('%Y%m%d_%H%M%S')
+        csv_fname = 'DATA' + now_realtime + '.csv'
+        csv_notes_fname = 'DATA' + now_realtime + '_notes.csv'
+        print 'save data to %s and %s' % (csv_fname, csv_notes_fname)
+
+        if 0:
+            rostime = 1345615048.244017
+            realtime = datetime.datetime.fromtimestamp(rostime).strftime('%Y%m%d_%H%M%S')
+            print 'realtime', realtime
+            1/0
+        
+        ffa_radius = 0.5   # measurements of free flight arena
+        ffa_z_min = 0.0
+        ffa_z_max = 1.0
+        trigger_radius = 0.35   # condition for trigger -> around middle
+        trigger_z_min = 0.2
+        trigger_z_max = 0.8
+        FPS = 100   # frames per second
+        duration_stationary_phase = 1.0 # duration of stationary phase before moving starfield
+        
+        # instance variables
+        self.locked_on = False      # currently locked on to obj_id?
+        self.locked_obj_id = 0      # currently tracked obj_id
+        self.start_time = 0.0        # time at trigger onset
+        self.max_frames_without_tracking = max_frames_without_tracking
+        self.number_frames_without_tracking = 0
+        self.max_tracking_time = max_tracking_time
+        self.stimulus_list = stimulus_list
+        self.stimulus_index = 0     # index of first stimulus
+        self.pub_time_delay = pub_time_delay
+        self.csv_fullpath = csv_fullpath
+        self.csv_fname = csv_fname
+        self.csv_notes_fname = csv_notes_fname
+        self.ffa_radius = ffa_radius   # measurements of free flight arena
+        self.ffa_z_min = ffa_z_min
+        self.ffa_z_max = ffa_z_max
+        self.trigger_radius = trigger_radius   # condition for trigger
+        self.trigger_z_min = trigger_z_min
+        self.trigger_z_max = trigger_z_max
+        self.FPS = FPS
+        self.duration_stationary_phase = duration_stationary_phase
+        
+        # open new csv-file for saving metadata
+        self.csv_file = open(os.path.join(self.csv_fullpath, self.csv_fname),'wb')
+        self.csv_file.write('obj_id,trigger,speed\n')
+        self.csv_file.flush()
+        # open new csv-file for saving notes
+        self.csv_notes_file = open(os.path.join(self.csv_fullpath, self.csv_notes_fname),'wb')
+        self.csv_notes_file.write('max_tracking_time: %f\n' % (self.max_tracking_time))
+        self.csv_notes_file.write('max_frames_without_tracking: %i\n' % (self.max_frames_without_tracking))
+        self.csv_notes_file.write('trigger_radius: %f\n' % (self.trigger_radius))
+        self.csv_notes_file.write('trigger_z_min: %f\n' % (self.trigger_z_min))
+        self.csv_notes_file.write('trigger_z_max: %f\n' % (self.trigger_z_max))
+        self.csv_notes_file.write('duration_stationary_phase: %f\n' % (self.duration_stationary_phase))
+        self.csv_notes_file.write('stimulus_list: ')
+        for stimulus in stimulus_list:
+            self.csv_notes_file.write('%f, ' % (stimulus) )
+        self.csv_notes_file.write('\n')
+        self.csv_notes_file.write('\n')
+        self.csv_notes_file.flush()
+
+        print 'INITIALIZATION COMPLETED'
+        # start subscribing to flydra_mainbrain
+        rospy.Subscriber("flydra_mainbrain_super_packets", flydra_mainbrain_super_packet, self.tracking_data_callback)
+
+    def run(self):
+        time = rospy.get_time()
+        # start publishing stimulus
+        # velocity vector of starfield
+        pub_starfield_velocity = rospy.Publisher('velocity', Vector3)
+        # which object to lock onto
+        pub_locked_obj = rospy.Publisher('lock_object', UInt32)
+        _published_obj_id = None
+        r = rospy.Rate(1/self.pub_time_delay) # Hz
+        while not rospy.is_shutdown():
+            # publish starfield velocity vector
+            pub_starfield_velocity.publish(self.get_starfield_velocity_vector(time))
+            # publish locked on obj_id
+            current_obj_id = self.get_locked_obj()
+            if current_obj_id != _published_obj_id:
+                # only publish obj_id if it changed.
+                pub_locked_obj.publish(current_obj_id)
+                _published_obj_id = current_obj_id
+            r.sleep()
+
+    # return starfield velocity vector
+    def get_starfield_velocity_vector(self, time):
+        # if no ongoing trial, just show stationary starfield
+        msg = Vector3()
+        msg.x = 0
+        msg.y = 0
+        msg.z = 0
+        # if locked_on, show moving starfield
+        passed_time = rospy.get_time() - time
+        if (10 <= passed_time <= 20) or (30 <= passed_time <= 40) or (50 <= passed_time <= 60):
+            msg.z = 0.5
+        else:
+            msg.z = 0.0
+        return msg
+
+    # return current locked object message
+    def get_locked_obj(self):
+        # if not locked on to any obj, return 0
+        return self.locked_obj_id
+
+    # check if position of object meets tracking start condition
+    def meets_condition(self, x, y, z, velocity):
+        if 1:
+            # middle of arena
+            if ( (x**2 + y**2) <= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
+                return True
+            else:
+                return False
+        if 0:
+            # near wall
+            if ( (x**2 + y**2) >= self.trigger_radius**2 ) and ( (z >= self.trigger_z_min) and (z <= self.trigger_z_max) ):
+                return True
+            else:
+                return False
+
+    # manage tracking, stimulus publishing, data saving
+    def tracking_data_callback(self,data):
+
+        # in case flydra is not sending any packets anymore
+        # if locked_on: check max_tracking time
+        if self.locked_on and ( (rospy.get_time() - self.start_time) > self.max_tracking_time ):
+            print 'in callback: max tracking time reached, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+            self.csv_notes_file.write('in callback: max tracking time reached, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
+            self.csv_notes_file.flush()
+            self.locked_on = False
+            self.locked_obj_id = 0
+            self.start_time = 0.0
+            
+
+        for packet in data.packets:
+            framenumber = packet.framenumber
+            #print
+            #print
+            #print 'framenumber', framenumber
+            #self.csv_notes_file.write('\n')
+            #self.csv_notes_file.write('framenumber %s\n'%(framenumber))
+            #self.csv_notes_file.flush()
+            # multiple obj_ids, if locked_on, check if the locked_on obj_id is still amongst those
+            locked_objid_still_tracked = False
+
+            """
+            if self.locked_on:
+                self.csv_notes_file.write('locked on: current package %i contains ids: ' % (framenumber))
+                for obj in packet.objects:
+                    self.csv_notes_file.write(str(obj.obj_id) + ', ')
+                self.csv_notes_file.write('\n')
+                self.csv_notes_file.flush()
+            """
+
+            if self.locked_on:
+                for obj in packet.objects:
+                    obj_id = obj.obj_id
+                    #print 'locked on: check if obj_id %i in package %i is currently locked on obj_id %i' % (obj_id, framenumber, self.locked_obj_id)
+                    #self.csv_notes_file.write('locked on: check if obj_id %i in package %i is currently locked on obj_id %i\n'%(obj_id, framenumber, self.locked_obj_id))
+                    #self.csv_notes_file.flush()
+                    if obj_id == self.locked_obj_id:
+                        locked_objid_still_tracked = True
+                        #print 'locked_objid_still_tracked = True'
+
+            for obj in packet.objects:
+                obj_id = obj.obj_id
+                #print 'obj_id', obj_id
+                if self.locked_on and locked_objid_still_tracked and obj_id != self.locked_obj_id:
+                    #print 'locked on and skip obj_id %i' % obj_id
+                    #self.csv_notes_file.write('locked on and skip obj_id %i\n'%(obj_id))
+                    #self.csv_notes_file.flush()
+                    continue
+                velocity = obj.velocity
+                x = obj.position.x
+                y = obj.position.y
+                z = obj.position.z
+                #print "obj_id:%d   x:%f y:%f z:%f" % (obj_id, x, y, z)
+
+
+                # if no currently locked_on obj_id, check for trigger condition
+                if not self.locked_on:
+                    # condition met
+                    if self.meets_condition (x,y,z,velocity):
+                        # provide next stimulus
+                        self.stimulus_index = random.randint(0, len(self.stimulus_list)-1)
+                        # lock on to obj_id and save obj_id + trigger
+                        print
+                        print 'locked_on to %i in frame %i' % (obj_id, framenumber)
+                        print 'current stimulus %f' % self.stimulus_list[self.stimulus_index]
+                        self.csv_notes_file.write('locked_on to %i in frame %i\n'%(obj_id, framenumber))
+                        self.csv_notes_file.write('current stimulus %f\n'%(self.stimulus_list[self.stimulus_index]))
+                        self.csv_notes_file.flush()
+                        self.locked_on = True
+                        self.locked_obj_id = obj_id
+                        self.start_time = rospy.get_time()
+                        self.number_frames_without_tracking = 0
+                        # save obj_id, trigger, stimulus to csv-file
+                        self.csv_file.write('%s,%s,%s\n'%(obj_id, framenumber, self.stimulus_list[self.stimulus_index]))
+                        self.csv_file.flush()
+                        # continue to next packet (frame)
+                        break
+
+                    # cond. not met - continue to next obj in packet
+                    else:
+                        #print 'trigger condition not met, continue'
+                        continue
+
+                # obj_id already locked_on
+                else:
+                    # count time
+                    passed_time = rospy.get_time() - self.start_time
+                    # check if obj_id is not being tracked or timeout is reached or abort condition (i.e. fly leaves trigger area) is met
+                    if (obj_id != self.locked_obj_id):
+                        self.number_frames_without_tracking = self.number_frames_without_tracking + 1
+                        if (self.number_frames_without_tracking > self.max_frames_without_tracking):
+                            print 'objid lost, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                            self.csv_notes_file.write('objid lost, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
+                            self.csv_notes_file.flush()
+                            #print 'framenumber', framenumber#print 'framenumber', framenumber
+                            #print 'obj_id of current flydra package', obj_id
+                            #print 'self.locked_obj_id', self.locked_obj_id
+                            #self.csv_notes_file.write('obj_id of current flydra package %i\n'%(obj_id))
+                            #self.csv_notes_file.write('self.locked_obj_id %i\n'%(self.locked_obj_id))
+                            #self.csv_notes_file.flush()
+                            self.locked_on = False
+                            self.locked_obj_id = 0
+                            self.start_time = 0.0
+                        else:
+                            # continue to next packet (frame)
+                            self.csv_notes_file.write('obj_id lost, but continue tracking: self.number_frames_without_tracking = %i\n'%(self.number_frames_without_tracking))
+                            self.csv_notes_file.flush()
+                            break
+                    elif not self.meets_condition (x,y,z,velocity):
+                        print 'abort condition, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                        self.csv_notes_file.write('abort condition for obj_id %i, position x:%f y:%f z:%f, send stop signal to stimulus after secs %f\n'%(obj_id, x, y, z, (rospy.get_time() - self.start_time)))
+                        self.csv_notes_file.flush()
+                        self.locked_on = False
+                        self.locked_obj_id = 0
+                        self.start_time = 0.0
+                    elif (rospy.get_time() - self.start_time) > self.max_tracking_time:
+                        print 'max tracking time reached, send stop signal to stimulus after secs', (rospy.get_time() - self.start_time)
+                        self.csv_notes_file.write('max tracking time reached, send stop signal to stimulus after secs %f\n'%(rospy.get_time() - self.start_time))
+                        self.csv_notes_file.flush()
+                        self.locked_on = False
+                        self.locked_obj_id = 0
+                        self.start_time = 0.0
+                    else:
+                        # continue to next packet (frame)
+                        self.number_frames_without_tracking = 0
+                        break
+
+def main():
+    n = Node()
+    n.run()
+
+if __name__ == '__main__':
+    main()
+
+
+
