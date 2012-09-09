@@ -3,12 +3,13 @@
 import threading
 import numpy as np
 import warnings
+import blist
 
 # ROS imports
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 from ros_flydra.msg import flydra_mainbrain_super_packet
 from geometry_msgs.msg import Pose, Quaternion
-from std_msgs.msg import UInt32
+from std_msgs.msg import UInt32, Float32
 import rospy
 
 import display_client
@@ -18,6 +19,11 @@ IMPOSSIBLE_OBJ_ID = 0
 class Node(object):
     def __init__(self):
         rospy.init_node('flydra2ros')
+        self._estlock = threading.Lock()
+        self._estimates = blist.sorteddict()
+        self._sent = (None, None, None)
+        self.extra_lag_sec = 0.0
+
         rospy.Subscriber("flydra_mainbrain_super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
@@ -42,6 +48,9 @@ class Node(object):
         self._clear_object('initialization')
         self._timer = rospy.Timer(rospy.Duration(1.0/200.0),
                                   self._send_updates)
+        rospy.Subscriber("extra_lag_msec",
+                         Float32,
+                         self.on_extra_lag_msec)
 
     def _clear_object(self,reason):
         rospy.loginfo( reason )
@@ -52,8 +61,10 @@ class Node(object):
             self._current_obj_last_seen_mytime = 0
             self._current_obj_last_seen_acquire_stamp = None
             self._current_obj_last_seen_framenumber = 0
-        self.pos_est = np.nan*np.zeros((3,))
-        self.vel_est = np.nan*np.zeros((3,))
+
+    def on_extra_lag_msec(self, msg):
+        rospy.loginfo( 'lag request of %r msec'%msg.data )
+        self.extra_lag_sec = (msg.data)*1e-3
 
     def on_lock_object(self,msg):
         rospy.loginfo( 'request to lock obj_id %d'%(msg.data,) )
@@ -92,16 +103,40 @@ class Node(object):
 
             r.sleep()
 
+    def _set_lagged_estimates(self, now, pos, vel, acquire_stamp ):
+        with self._estlock:
+            self._estimates[ now + self.extra_lag_sec] = \
+                (pos, vel, acquire_stamp.to_sec(), self.extra_lag_sec)
+
+    def _get_lagged_estimates(self, now ):
+        with self._estlock:
+            lagged_estimate_times = np.array(self._estimates.viewkeys())
+            valid_key_cond = lagged_estimate_times <= now
+            valid_key_idx = np.nonzero( valid_key_cond )[0]
+            if len(valid_key_idx):
+                most_recent_idx = valid_key_idx[-1]
+                for i in range(most_recent_idx+1):
+                    key, val = self._estimates.popitem()
+                pos_est, vel_est, acquire_stamp, extra_lag_sec = val
+
+                lagged_stamp = acquire_stamp + extra_lag_sec
+                self._sent = (lagged_stamp, pos_est, vel_est)
+
+        return self._sent
+
     def _send_updates(self,evt=None):
+        # gets called at 200Hz and when new data comes in
+
         now = rospy.get_time()
         if 1:
         #with self.lock:
-            acquire_stamp = self._current_obj_last_seen_acquire_stamp
-            pos_est = self.pos_est
-            vel_est = self.vel_est
+            acquire_stamp, pos_est, vel_est = self._get_lagged_estimates( now )
+            if pos_est is None:
+                # no data yet
+                return
 
         if acquire_stamp is not None:
-            dt = now - acquire_stamp.to_sec()
+            dt = now - acquire_stamp
         else:
             dt = 0.0
 
@@ -160,12 +195,14 @@ class Node(object):
                             self._current_obj_last_seen_mytime = now
                             self._current_obj_last_seen_acquire_stamp = acquire_stamp
                             self._current_obj_last_seen_framenumber = framenumber
-                            self.pos_est = np.array( (obj.position.x,
-                                                      obj.position.y,
-                                                      obj.position.z))
-                            self.vel_est = np.array( (obj.velocity.x,
-                                                      obj.velocity.y,
-                                                      obj.velocity.z))
+                            pos_est = np.array( (obj.position.x,
+                                                 obj.position.y,
+                                                 obj.position.z))
+                            vel_est = np.array( (obj.velocity.x,
+                                                 obj.velocity.y,
+                                                 obj.velocity.z))
+                            self._set_lagged_estimates(now, pos_est, vel_est, acquire_stamp)
+
                         self._send_updates() # send upon data receive to minimize lag
 
 if __name__ == '__main__':
