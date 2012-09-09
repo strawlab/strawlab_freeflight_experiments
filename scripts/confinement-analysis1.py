@@ -139,12 +139,6 @@ if __name__=='__main__':
         if 0:
             valid = valid[:dur_samples] # only take this long
         r['count'] += 1
-        if len(r['x']):
-            one_nan = np.array( [np.nan] )
-            # separate obj_ids by nan to stop line connection in plot
-            r['x'].append( one_nan )
-            r['y'].append( one_nan )
-            r['z'].append( one_nan )
         r['x'].append( valid['x'] )
         r['y'].append( valid['y'] )
         r['z'].append( valid['z'] )
@@ -164,7 +158,8 @@ if __name__=='__main__':
 
             dur = len(allx)*dt
 
-            ax.plot( allx, ally, 'k-', lw=1.0, alpha=0.5, rasterized=True )
+            for x,y in zip(r['x'], r['y']):
+                ax.plot( x, y, 'k-', lw=1.0, alpha=0.5, rasterized=True )
             if args.show_obj_ids:
                 for (x0,y0,obj_id) in r['start_obj_ids']:
                     ax.text( x0, y0, str(obj_id) )
@@ -176,7 +171,7 @@ if __name__=='__main__':
             ax.set_xlim(-limit,limit)
             ax.set_ylim(-limit,limit)
             ax.set_aspect('equal')
-            ax.set_title('%s: %.1f sec, n=%d'%(current_condition,dur,r['count']))
+            ax.set_title('%s: total: %.1f sec, n=%d'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -205,7 +200,7 @@ if __name__=='__main__':
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( radius*np.cos(theta), radius*np.sin(theta), 'w:', lw=2 )
             ax.set_aspect('equal')
-            ax.set_title('%s: %.1f sec, n=%d'%(current_condition,dur,r['count']))
+            ax.set_title('%s: total: %.1f sec, n=%d'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
