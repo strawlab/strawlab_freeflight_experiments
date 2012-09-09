@@ -151,7 +151,7 @@ class Node(object):
             if np.isnan(est[0]):
                 warnings.warn('nan position hack')
                 est = 0, 0, 0.5
-            
+
             msg = Pose()
             msg.position.x, msg.position.y, msg.position.z = est
             msg.orientation = self._ori
