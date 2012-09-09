@@ -1,8 +1,20 @@
 import numpy as np
 import h5py
+import contextlib
+
+import strawlab_mpl.defaults as smd; smd.setup_defaults()
+
 from matplotlib.mlab import csv2rec
 import matplotlib.pyplot as plt
 import argparse
+
+@contextlib.contextmanager
+def mpl_fig(fname_base):
+    fig = plt.figure( figsize=(5,10) )
+    yield fig
+    fig.subplots_adjust( left=0.15, bottom=0.06, right=0.94, top=0.95, wspace=0.2, hspace=0.26)
+    fig.savefig(fname_base+'.png')
+    fig.savefig(fname_base+'.svg')
 
 def append_col(arr_in, col, name):
     dtype_in = arr_in.dtype
@@ -22,6 +34,10 @@ if __name__=='__main__':
         'metadata_file', type=str)
     parser.add_argument(
         'data_file', type=str)
+    parser.add_argument(
+        '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
+    parser.add_argument(
+        '--show', action='store_true', dest='show', default=False)
     args = parser.parse_args()
 
     metadata = csv2rec( args.metadata_file )
@@ -83,7 +99,7 @@ if __name__=='__main__':
 
         r['n_samples'].append(len(valid))
 
-        dur_samples = 300
+        dur_samples = 100
         if len(valid) < dur_samples: # must be at least this long
             continue
 
@@ -92,7 +108,7 @@ if __name__=='__main__':
                                             tracking_times[0],
                                             len(valid))
 
-        if 1:
+        if 0:
             valid = valid[:dur_samples] # only take this long
         r['count'] += 1
         r['x'].append( valid['x'] )
@@ -101,11 +117,8 @@ if __name__=='__main__':
         r['start_obj_ids'].append(  (valid['x'][0], valid['y'][0], obj_id) )
 
     # ----------------------------
-    minz = 0.5
-    maxz = 0.9
 
-    if 1:
-        fig = plt.figure()
+    with mpl_fig('traces') as fig:
         ax = None
         limit = 0.5
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -115,16 +128,12 @@ if __name__=='__main__':
             ally = np.concatenate( r['y'] )
             allz = np.concatenate( r['z'] )
 
-            if 1:
-                cond = (minz < allz) & (allz < maxz)
-                allx = allx[ cond ]
-                ally = ally[ cond ]
-
             dur = len(allx)*dt
 
-            ax.plot( allx, ally, 'k.', ms=0.5, alpha=0.5 )
-            for (x0,y0,obj_id) in r['start_obj_ids']:
-                ax.text( x0, y0, str(obj_id) )
+            ax.plot( allx, ally, 'k.', ms=0.5, alpha=0.5, rasterized=True )
+            if args.show_obj_ids:
+                for (x0,y0,obj_id) in r['start_obj_ids']:
+                    ax.text( x0, y0, str(obj_id) )
 
             for radius in [0.16, 0.5]:
                 theta = np.linspace(0, 2*np.pi, 100)
@@ -138,23 +147,17 @@ if __name__=='__main__':
             ax.set_xlabel( 'x (m)' )
 
     # ----------------------------
-    if 1:
-        fig = plt.figure()
+    with mpl_fig('hist') as fig:
         ax = None
-        limit = 0.5
-        xbins = np.linspace(-limit,limit,20)
-        ybins = np.linspace(-limit,limit,20)
+        limit = 1.0
+        xbins = np.linspace(-limit,limit,40)
+        ybins = np.linspace(-limit,limit,40)
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(2,1,1+i,sharex=ax,sharey=ax)
 
             allx = np.concatenate( r['x'] )
             ally = np.concatenate( r['y'] )
             allz = np.concatenate( r['z'] )
-
-            if 1:
-                cond = (minz < allz) & (allz < maxz)
-                allx = allx[ cond ]
-                ally = ally[ cond ]
 
             dur = len(allx)*dt
 
@@ -172,6 +175,9 @@ if __name__=='__main__':
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
+            ax.set_xlim( -0.5, 0.5 )
+            ax.set_ylim( -0.5, 0.5 )
+
     # ----------------------------
     if 1:
         fig = plt.figure()
@@ -183,4 +189,6 @@ if __name__=='__main__':
         ax.set_ylabel( 'frequency' )
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
-    plt.show()
+
+    if args.show:
+        plt.show()
