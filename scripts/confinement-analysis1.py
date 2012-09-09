@@ -8,6 +8,8 @@ from matplotlib.mlab import csv2rec
 import matplotlib.pyplot as plt
 import argparse
 
+ZFILT=True
+
 @contextlib.contextmanager
 def mpl_fig(fname_base):
     fig = plt.figure( figsize=(5,10) )
@@ -27,6 +29,24 @@ def append_col(arr_in, col, name):
         arr_out[n] = arr_in[n]
     arr_out[name] = col
     return arr_out
+
+def trim_z(valid):
+    allz = valid['z']
+
+    # stop considering trajectory from the moment it leaves valid zone
+    minz = 0.20
+    maxz = 0.95
+
+    cond = (minz < allz) & (allz < maxz)
+    bad_idxs = np.nonzero(~cond)[0]
+    if len(bad_idxs):
+        bad0 = bad_idxs[0]
+        last_good = bad0-1
+        if last_good > 0:
+            valid = valid[:last_good]
+        else:
+            return None
+    return valid
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -96,12 +116,20 @@ if __name__=='__main__':
 
         cond = (t_start <= tracking_times) & (tracking_times < t_stop)
         valid = this_t[cond]
+        del cond
+        del this_t
 
-        r['n_samples'].append(len(valid))
+        if ZFILT:
+            valid = trim_z(valid)
+            if valid is None:
+                print ('no points left after ZFILT for obj_id %d'%(obj_id))
+                continue
 
         dur_samples = 100
         if len(valid) < dur_samples: # must be at least this long
+            print ('insufficient samples for obj_id %d'%(obj_id))
             continue
+        r['n_samples'].append(len(valid))
 
         print '%s %d: frame0 %d, time0 %r %d samples'%(current_condition, obj_id,
                                             valid[0]['framenumber'],
