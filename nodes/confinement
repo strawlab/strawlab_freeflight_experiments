@@ -31,9 +31,9 @@ class Logger:
         rospy.loginfo( 'saving to %s'%fname )
         self.state = [0,0,0,0]
 
-        self.stimulus_pub = rospy.Publisher('stimulus_filename', String)
-        self.condition_pub = rospy.Publisher('confinement_condition', String)
-        self.lock_object = rospy.Publisher('lock_object', UInt32)
+        self.stimulus_pub = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
+        self.condition_pub = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
+        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
 
     def update(self):
         t = rospy.get_rostime()
