@@ -139,6 +139,12 @@ if __name__=='__main__':
         if 0:
             valid = valid[:dur_samples] # only take this long
         r['count'] += 1
+        if len(r['x']):
+            one_nan = np.array( [np.nan] )
+            # separate obj_ids by nan to stop line connection in plot
+            r['x'].append( one_nan )
+            r['y'].append( one_nan )
+            r['z'].append( one_nan )
         r['x'].append( valid['x'] )
         r['y'].append( valid['y'] )
         r['z'].append( valid['z'] )
@@ -158,7 +164,7 @@ if __name__=='__main__':
 
             dur = len(allx)*dt
 
-            ax.plot( allx, ally, 'k.', ms=0.5, alpha=0.5, rasterized=True )
+            ax.plot( allx, ally, 'k-', lw=1.0, alpha=0.5, rasterized=True )
             if args.show_obj_ids:
                 for (x0,y0,obj_id) in r['start_obj_ids']:
                     ax.text( x0, y0, str(obj_id) )
