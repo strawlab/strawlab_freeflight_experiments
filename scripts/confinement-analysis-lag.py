@@ -10,12 +10,17 @@ import matplotlib.pyplot as plt
 import argparse
 
 ZFILT=True
+CYL_RADIUS = 0.16
 
 @contextlib.contextmanager
-def mpl_fig(fname_base):
-    fig = plt.figure( figsize=(5,10) )
+def mpl_fig(fname_base,figsize=(5,10), **subplots_dict):
+    default_subplots = dict( left=0.15, bottom=0.06, right=0.94, top=0.95, wspace=0.2, hspace=0.26)
+
+    kwargs = default_subplots.copy()
+    kwargs.update( subplots_dict )
+    fig = plt.figure( figsize=figsize )
     yield fig
-    fig.subplots_adjust( left=0.15, bottom=0.06, right=0.94, top=0.95, wspace=0.2, hspace=0.26)
+    fig.subplots_adjust( **kwargs )
     fig.savefig(fname_base+'.png')
     fig.savefig(fname_base+'.svg')
 
@@ -95,6 +100,7 @@ if __name__=='__main__':
                                               count=0,
                                               n_samples=[],
                                               start_obj_ids=[],
+                                              fracs=[],
                                               )
         r = results[current_condition]
 
@@ -131,6 +137,14 @@ if __name__=='__main__':
             continue
         r['n_samples'].append(len(valid))
 
+
+        if 1:
+            # calculate fraction of time per trajectory in virtual cylinder
+            c_dist = np.sqrt(valid['x']**2 + valid['y']**2)
+            thresh_dist = c_dist < CYL_RADIUS
+            obj_frac = np.sum( thresh_dist ) / float( len(thresh_dist) )
+            r['fracs'].append (obj_frac )
+
         print '%s %d: frame0 %d, time0 %r %d samples'%(current_condition, obj_id,
                                             valid[0]['framenumber'],
                                             tracking_times[0],
@@ -160,12 +174,12 @@ if __name__=='__main__':
             dur = len(allx)*dt
 
             for x,y in zip(r['x'], r['y']):
-                ax.plot( x, y, 'k-', lw=1.0, alpha=0.5, rasterized=True )
+                ax.plot( x, y, 'k-', lw=1.0, alpha=0.2, rasterized=True )
             if args.show_obj_ids:
                 for (x0,y0,obj_id) in r['start_obj_ids']:
                     ax.text( x0, y0, str(obj_id) )
 
-            for radius in [0.16, 0.5]:
+            for radius in [CYL_RADIUS, 0.5]:
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( radius*np.cos(theta), radius*np.sin(theta), 'r-',
                          lw=2, alpha=0.3 )
@@ -197,7 +211,7 @@ if __name__=='__main__':
             ax.imshow(hdata.T, extent=extent, interpolation='nearest',
                       origin='lower')#, cmap=plt.get_cmap('Reds'))
 
-            for radius in [0.16, 0.5]:
+            for radius in [CYL_RADIUS, 0.5]:
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( radius*np.cos(theta), radius*np.sin(theta), 'w:', lw=2 )
             ax.set_aspect('equal')
@@ -219,6 +233,36 @@ if __name__=='__main__':
         ax.set_ylabel( 'frequency' )
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
+
+    with mpl_fig('lag_summary',figsize=(3,3),
+                 left=0.22, bottom=0.15, right=0.94, top=0.95, wspace=0.2, hspace=0.26,
+                 ) as fig:
+        ax = fig.add_subplot(1,1,1)
+
+        lags = []
+        means = []
+        stds = []
+        sems = []
+        data = []
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            lags.append( current_condition )
+            means.append( np.mean( r['fracs'] ))
+            stds.append( np.std( r['fracs'] ))
+            sems.append( np.std( r['fracs'] )/ len(r['fracs'] ) )
+            data.append( r['fracs'] )
+
+        bpr = ax.boxplot( data, notch=0, positions=lags, widths=15 )
+        print bpr.keys()
+        print "bpr['whiskers'].keys()",bpr['whiskers'].keys()
+        print "bpr['whiskers'].get()",bpr['whiskers'].get()
+        #ax.errorbar( lags, means, yerr=stds , fmt='o' )
+        #ax.errorbar( lags, means, yerr=sems )
+        ax.set_xlim(-10,550)
+        ax.set_xticks( [0, 250, 500] )
+        #ax.set_yticks( np.linspace(0.5, 0.9, 5) )
+
+        ax.set_ylabel( 'proportion of time in virtual cylinder')
+        ax.set_xlabel( 'additional latency (msec)' )
 
     if args.show:
         plt.show()
