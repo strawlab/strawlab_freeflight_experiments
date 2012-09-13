@@ -256,7 +256,7 @@ def plot_results(results,dt,show_obj_ids=True,show=False):
         bins = np.linspace(0,4000,20)
         for i,(current_condition,r) in enumerate(results.iteritems()):
             hist,_ = np.histogram(r['n_samples'],bins=bins)
-            ax.plot( bins[:-1], hist, '-x', label=current_condition )
+            ax.plot( bins[:-1], hist, '-x', label=unicode(current_condition) )
         ax.set_ylabel( 'frequency' )
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
