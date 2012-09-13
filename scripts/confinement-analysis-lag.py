@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import contextlib
 import blist
+import pickle
 
 import strawlab_mpl.defaults as smd; smd.setup_defaults()
 
@@ -54,20 +55,43 @@ def trim_z(valid):
             return None
     return valid
 
-if __name__=='__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'metadata_file', type=str)
+        'metadata_file', type=str, nargs='?', help='.csv file')
     parser.add_argument(
-        'data_file', type=str)
+        'data_file', type=str, nargs='?', help='.h5 file')
     parser.add_argument(
         '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
     parser.add_argument(
         '--show', action='store_true', dest='show', default=False)
+    parser.add_argument(
+        '--pickle')
     args = parser.parse_args()
 
-    metadata = csv2rec( args.metadata_file )
-    with h5py.File(args.data_file) as h5:
+    if args.pickle is None:
+        assert args.metadata_file is not None
+        assert args.data_file is not None
+
+        results,dt = get_results( args.metadata_file, args.data_file )
+        pickle_fname = args.data_file+'.pickle'
+        with open( pickle_fname, mode='w') as fd:
+            pickle.dump({'results':results,'dt':dt}, fd )
+        print '--------> results saved to %s'%pickle_fname
+    else:
+        with open( args.pickle, mode='r') as fd:
+            pk = pickle.load(fd)
+        results = pk['results']
+        dt = pk['dt']
+    plot_results(results,
+                 dt,
+                 show_obj_ids=args.show_obj_ids,
+                 show=args.show,
+                 )
+
+def get_results( metadata_file, data_file ):
+    metadata = csv2rec( metadata_file )
+    with h5py.File(data_file) as h5:
         trajectories = h5['trajectories'][:]
         starts = h5['trajectory_start_times'][:]
         fps = h5['trajectories'].attrs['frames_per_second']
@@ -158,7 +182,10 @@ if __name__=='__main__':
         r['z'].append( valid['z'] )
         r['start_obj_ids'].append(  (valid['x'][0], valid['y'][0], obj_id) )
 
+    return results, dt
     # ----------------------------
+
+def plot_results(results,dt,show_obj_ids=True,show=False):
     n_conditions = len(results)
 
     with mpl_fig('traces') as fig:
@@ -175,7 +202,7 @@ if __name__=='__main__':
 
             for x,y in zip(r['x'], r['y']):
                 ax.plot( x, y, 'k-', lw=1.0, alpha=0.2, rasterized=True )
-            if args.show_obj_ids:
+            if show_obj_ids:
                 for (x0,y0,obj_id) in r['start_obj_ids']:
                     ax.text( x0, y0, str(obj_id) )
 
@@ -252,17 +279,21 @@ if __name__=='__main__':
             data.append( r['fracs'] )
 
         bpr = ax.boxplot( data, notch=0, positions=lags, widths=15 )
-        print bpr.keys()
-        print "bpr['whiskers'].keys()",bpr['whiskers'].keys()
-        print "bpr['whiskers'].get()",bpr['whiskers'].get()
+        for line in bpr['whiskers']:
+            line.set_linestyle('-')
+
         #ax.errorbar( lags, means, yerr=stds , fmt='o' )
         #ax.errorbar( lags, means, yerr=sems )
         ax.set_xlim(-10,550)
+        ax.set_ylim(0,1.05)
         ax.set_xticks( [0, 250, 500] )
         #ax.set_yticks( np.linspace(0.5, 0.9, 5) )
 
         ax.set_ylabel( 'proportion of time in virtual cylinder')
         ax.set_xlabel( 'additional latency (msec)' )
 
-    if args.show:
+    if show:
         plt.show()
+
+if __name__=='__main__':
+    main()
