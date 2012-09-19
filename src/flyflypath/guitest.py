@@ -34,7 +34,7 @@ class PixelCoordWidget(Gtk.DrawingArea):
         self._build_linemodel()
         
     def _build_linemodel(self):
-        self._model = polyline.PolyLine2.from_svg_path(self._svgiter)
+        self._model = polyline.polyline_from_svg_path(self._svgiter)
 
     def _draw_background(self):
         cr = cairo.Context(self._surface)
