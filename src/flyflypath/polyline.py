@@ -17,6 +17,7 @@ class ClosestPoint(object):
 
 class PolyLine2:
     def __init__(self, *points):
+        self.points = []
         self._lines = []
 
         #cull zero lenght line segments - it is easier to do it here then
@@ -31,7 +32,14 @@ class PolyLine2:
                 lead += 1
                 continue
             else:
-                self._lines.append( LineSegment2(points[follow], points[lead]) )
+                pstart = points[follow]
+                pend = points[lead]
+
+                self._lines.append( LineSegment2(pstart, pend) )
+                if not self.points:
+                    self.points.append(pstart)
+                self.points.append(pend)
+
                 follow = lead
                 lead += 1
 

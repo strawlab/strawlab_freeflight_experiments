@@ -34,7 +34,7 @@ class PixelCoordWidget(Gtk.DrawingArea):
         self._build_linemodel()
         
     def _build_linemodel(self):
-        self._model = polyline.polyline_from_svg_path(self._svgiter)
+        self._model = polyline.polyline_from_svg_path(self._svgiter, 5)
 
     def _draw_background(self):
         cr = cairo.Context(self._surface)
@@ -45,6 +45,14 @@ class PixelCoordWidget(Gtk.DrawingArea):
         cr.set_line_width (1)
         for path_element in self._svgiter:
             svg.draw_on_context(cr, path_element)
+        cr.stroke()
+        
+        #draw the approximation
+        cr.set_source_rgb (0, 0, 1)
+        cr.set_line_width (0.3)
+        cr.move_to(self._model.points[0].x,self._model.points[0].y)
+        for i in range(1,len(self._model.points)):
+            cr.line_to(self._model.points[i].x,self._model.points[i].y)
         cr.stroke()
 
     def on_motion_notify_event(self, da, event):
