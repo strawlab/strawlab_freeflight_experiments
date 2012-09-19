@@ -20,6 +20,33 @@ class PolyLine2:
         self._lines = [ LineSegment2(points[i], points[i+1]) \
                         for i in range(len(points)-1)]
 
+    @staticmethod
+    def from_svg_path(path_iterator):
+        pts = []
+        for path_element in path_iterator:
+            command, c = path_element
+            if command == "M":
+                if len(c) == 2:
+                    pts.append( Point2(c[0],c[1]) )
+                elif len(c) > 2 and (len(c) % 2) == 0:
+                    pts.append( Point2(c[0],c[1]) )
+                    for i in range(2,len(c)-1,2):
+                        pts.append( Point2(c[i],c[i+1]) )
+                else:
+                    raise Exception("Invalid M command data: %r" % c)
+            elif command == "m":
+                if len(c) == 2:
+                    pts.append( Point2(c[0],c[1]) )
+                elif len(c) > 2 and (len(c) % 2) == 0:
+                    pts.append( Point2(c[0],c[1]) )
+                    for i in range(2,len(c)-1,2):
+                        #now we are relative movement wrt last point
+                        prevx = pts[-1].x
+                        prevy = pts[-1].y
+                        pts.append( Point2(c[i]+prevx,c[i+1]+prevy) )
+
+        return PolyLine2(*pts)
+
     @property
     def length(self):
         return sum( l.length for l in self._lines )
@@ -45,21 +72,27 @@ class PolyLine2:
         return closest
 
     def __repr__(self):
-        return 'PolyLine2(%s)' % ', '.join( repr(p) for p in self._points )
+        return 'PolyLine2(%s)' % ', '.join( repr(l) for l in self._lines )
 
 class Bezier2:
     def __init__(self, p0, p1, p2, p3):
         pass
 
-def from_svg_path(self, text):
-    pass
+    @staticmethod
+    def from_svg_path(self, text):
+        pass    
+
+class Path2:
+    @staticmethod
+    def from_svg_path(self, text):
+        pass
 
 if __name__ == "__main__":
     p0 = Point2(1,1)
     p1 = Point2(1,2)
     p2 = Point2(2,2)
     p4 = Point2(3,3)
-
+    
     assert (p0-p1).magnitude() == 1
 
     l0 = LineSegment2(p0,p1)
