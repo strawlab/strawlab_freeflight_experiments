@@ -35,33 +35,6 @@ class PolyLine2:
                 follow = lead
                 lead += 1
 
-    @staticmethod
-    def from_svg_path(path_iterator):
-        pts = []
-        for path_element in path_iterator:
-            command, c = path_element
-            if command == "M":
-                if len(c) == 2:
-                    pts.append( Point2(c[0],c[1]) )
-                elif len(c) > 2 and (len(c) % 2) == 0:
-                    pts.append( Point2(c[0],c[1]) )
-                    for i in range(2,len(c)-1,2):
-                        pts.append( Point2(c[i],c[i+1]) )
-                else:
-                    raise Exception("Invalid M command data: %r" % c)
-            elif command == "m":
-                if len(c) == 2:
-                    pts.append( Point2(c[0],c[1]) )
-                elif len(c) > 2 and (len(c) % 2) == 0:
-                    pts.append( Point2(c[0],c[1]) )
-                    for i in range(2,len(c)-1,2):
-                        #now we are relative movement wrt last point
-                        lastx = pts[-1].x
-                        lasty = pts[-1].y
-                        pts.append( Point2(c[i]+lastx,c[i+1]+lasty) )
-
-        return PolyLine2(*pts)
-
     @property
     def length(self):
         return sum( l.length for l in self._lines )
@@ -131,6 +104,7 @@ class BezierSegment2:
 
     @property
     def length(self):
+        #see jsBezier for recursive approx, or just sum the length of the polyline2
         raise Exception("Not Supported")
 
     def __repr__(self):
@@ -140,27 +114,6 @@ class PolyBezier2:
     def __init__(self, *points):
         self._lines = [ BezierSegment2(points[i+0], points[i+1], points[i+2], points[i+3]) \
                         for i in range(0,len(points)-3,4)]
-
-    @staticmethod
-    def from_svg_path(path_iterator):
-        pts = []
-        last = Point2(0,0)
-        for path_element in path_iterator:
-            command, c = path_element
-            if command == "M":
-                if len(c) == 2:
-                    last = Point2(c[0],c[1])
-                else:
-                    raise Exception("Only bezier paths supported")
-            elif command == "C":
-                for i in range(0,len(c)-5,6):
-                    pts.append( last.copy() )
-                    pts.append( Point2(c[i+0],c[i+1]) )
-                    pts.append( Point2(c[i+2],c[i+3]) )
-                    pts.append( Point2(c[i+4],c[i+5]) )
-                    last = Point2(c[i+4],c[i+5])
-
-        return PolyBezier2(*pts)
 
     def __repr__(self):
         return 'PolyBezier2(%s)' % ', '.join( repr(l) for l in self._lines )
@@ -201,17 +154,12 @@ def polyline_from_svg_path(path_iterator, points_per_bezier=10):
                         Point2(c[i+4]+lastx,c[i+5]+lasty))
                 last = b.p4
                 pts.extend( b.to_points(points_per_bezier) )
+        else:
+            raise Exception("Command %s not supported" % command)
 
     return PolyLine2(*pts)
 
 if __name__ == "__main__":
-    import svg
-    
-    S = "M 40.406102,59.573489 131.31983,91.89837 c 0,0 30.30458,36.36549 8.08122,61.61931 -22.22335,25.25381 -58.588846,2.0203 -49.497473,66.67006 9.091373,64.64977 85.862963,49.49748 85.862963,49.49748 0,0 -17.17259,-115.15739 45.45687,-159.6041 62.62946,-44.446716 22.22335,170.71578 22.22335,170.71578 L 81.822356,413.12688"
-    
-    print polyline_from_svg_path(svg.PathIterator(S))
-    
-    #raise 0
 
     p0 = Point2(1,1)
     p1 = Point2(1,2)
@@ -224,6 +172,7 @@ if __name__ == "__main__":
     polyb = PolyLine2(p0,p1,p2,p4)
     
     assert polya.length == polyb.length
+    assert polya.num_segments == polyb.num_segments
     
     assert (p0-p1).magnitude() == 1
 
@@ -257,16 +206,6 @@ if __name__ == "__main__":
     print b
     print b.to_polyline(4)
 
-    svgstr = "M 50.507627,77.756235 C 160.61426,97.959286 208.09142,156.54813 153.54319,215.13698 98.99495,273.72583 35.355339,263.6243 97.984797,331.30452"    
-    pb = PolyBezier2.from_svg_path(svg.PathIterator(svgstr))
-    print pb
-    
-
-    #print p.connect(Point2(1.8,2.2))
-    #print p.connect(Point2(1,2))
-    #print p.connect()
-    
-    
 #https://github.com/sporritt/jsBezier/blob/master/js/0.4/jsBezier-0.4.js
 #http://perrygeo.googlecode.com/svn/trunk/gis-bin/bezier_smooth.py
 #http://paulbourke.net/geometry/bezier/cubicbezier.html
