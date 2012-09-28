@@ -5,12 +5,13 @@ import svg
 import polyline
 import euclid
 import math
+import path
 
 import cairo
 from gi.repository import Gtk, Gdk, GLib
 
 class PixelCoordWidget(Gtk.DrawingArea):
-    def __init__(self, path, to_pt=False):
+    def __init__(self, svgpath, to_pt=False):
         Gtk.DrawingArea.__init__(self)
         self.set_size_request(500,500)
         self.add_events(
@@ -21,26 +22,16 @@ class PixelCoordWidget(Gtk.DrawingArea):
         self._snap_to_moving_pt = to_pt
 
         self._surface = None
-        self._model = None
+        self._polyline = None
 
         self._moving_pt = None
         self._points_to_path = None
         self._mousex = self._mousey = None
        
-        #parse the SVG
-        d = xml.dom.minidom.parse(open(path,'r'))
-        paths = d.getElementsByTagName('path')
-        assert len(paths) == 1
-        pathdata = str(paths[0].getAttribute('d'))
-        self._svgiter = svg.PathIterator(pathdata)
-
-        #we can build the line model now, but we need to wait until the widget
-        #is shown befor building the background
-        self._build_linemodel()
+        self._model = path.SvgPath(svgpath)
+        self._polyline = self._model.polyline
+        self._svgiter = self._model.svgiter
         
-    def _build_linemodel(self):
-        self._model = polyline.polyline_from_svg_path(self._svgiter, 5)
-
     def _draw_background(self):
         cr = cairo.Context(self._surface)
         cr.set_source_rgb(1, 1, 1)
@@ -55,9 +46,9 @@ class PixelCoordWidget(Gtk.DrawingArea):
         #draw the approximation
         cr.set_source_rgb (0, 0, 1)
         cr.set_line_width (0.3)
-        cr.move_to(self._model.points[0].x,self._model.points[0].y)
-        for i in range(1,len(self._model.points)):
-            cr.line_to(self._model.points[i].x,self._model.points[i].y)
+        cr.move_to(self._polyline.points[0].x,self._polyline.points[0].y)
+        for i in range(1,len(self._polyline.points)):
+            cr.line_to(self._polyline.points[i].x,self._polyline.points[i].y)
         cr.stroke()
 
     def on_motion_notify_event(self, da, event):
@@ -73,7 +64,7 @@ class PixelCoordWidget(Gtk.DrawingArea):
             if self._snap_to_moving_pt and self._moving_pt is not None:
                 self._points_to_path = (self._mousex,self._mousey,self._moving_pt.x,self._moving_pt.y)
             else:
-                closest = self._model.connect( euclid.Point2(self._mousex,self._mousey) )
+                closest = self._polyline.connect( euclid.Point2(self._mousex,self._mousey) )
                 self._points_to_path = (self._mousex,self._mousey,closest.point.x,closest.point.y)
         
         if self._points_to_path:
@@ -101,7 +92,7 @@ class PixelCoordWidget(Gtk.DrawingArea):
 
     def move_along(self, scale):
         scale = min(1.0,max(0.0,scale))
-        self._moving_pt = self._model.along(scale)
+        self._moving_pt = self._polyline.along(scale)
         self.queue_draw()
 
 class Tester:
