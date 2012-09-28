@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+
+import os
+import numpy as np
+import time
+
+PACKAGE='strawlab_freeflight_experiments'
+import roslib
+roslib.load_manifest(PACKAGE)
+import rospy
+import display_client # from vros_projectors package
+from std_msgs.msg import String, UInt32
+from ros_flydra.msg import flydra_mainbrain_super_packet
+import rospkg
+
+import flyflypath.path
+
+rospack = rospkg.RosPack()
+pkg_dir = rospack.get_path(PACKAGE)
+
+PATH_TO_FOLLOW = os.path.join(pkg_dir,"src","flyflypath","impspiral.svg")
+
+TIMEOUT = 0.5
+IMPOSSIBLE_OBJ_ID = 0
+
+class MovingTarget:
+    def __init__(self, svgpath):
+        self._model = flyflypath.path.SvgPath(svgpath)
+
+class Logger:
+    def __init__(self,fname=None):
+        if fname is None:
+            fname = time.strftime('DATA%Y%m%d_%H%M%S.csv')
+        self.fd = open(fname,mode='w')
+        self.fd.write('stimulus_filename,confinement_condition,lock_object,framenumber,t_sec,t_nsec\n')
+        rospy.loginfo( 'saving to %s'%fname )
+        self.state = [0,0,0,0]
+
+        self.stimulus_pub = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
+        self.condition_pub = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
+        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
+
+    def update(self):
+        t = rospy.get_rostime()
+        self.fd.write( '%s,%s,%s,%d,%d,%d\n' % ( self.state[0],
+                                                 self.state[1],
+                                                 self.state[2],
+                                                 self.state[3],
+                                                 t.secs,
+                                                 t.nsecs ))
+        self.fd.flush()
+        self.lock_object.publish( self.state[2] )
+        self.stimulus_pub.publish( self.state[0] )
+        self.condition_pub.publish( self.state[1] )
+
+    def stim(self,mstim):
+        self.state[0] = mstim
+    def condition(self,mcondition):
+        self.state[1] = mcondition
+    def lock(self,obj_id,framenumber):
+        self.state[2] = obj_id
+        self.state[3] = framenumber
+
+class Node(object):
+    def __init__(self):
+        rospy.init_node("confinement")
+
+        rospy.logwarn('HACK to set all display server modes')
+        display_client.DisplayServerProxy.set_stimulus_mode(
+            'StimulusOSGFile')
+
+        self.log = Logger()
+
+
+        self.log.stim( BLANK_FILENAME )
+        self.currently_locked_obj_id = None
+        self.condition = 'control'
+        self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
+                                  self._switch_conditions)
+        self._switch_conditions(None)
+
+        rospy.Subscriber("flydra_mainbrain_super_packets",
+                         flydra_mainbrain_super_packet,
+                         self.on_flydra_mainbrain_super_packets)
+
+    def _switch_conditions(self,event):
+        if self.condition=='confinement':
+            self.condition='control'
+        else:
+            self.condition='confinement'
+        rospy.loginfo('confinement condition: %s'%self.condition )
+        self.log.condition( self.condition )
+
+    def run(self):
+        rospy.loginfo('running stimulus')
+        r = rospy.Rate(10) # 10hz
+        while not rospy.is_shutdown():
+            if self.currently_locked_obj_id is not None:
+                now = rospy.get_time()
+                if now-self.last_seen_time > TIMEOUT:
+                    self.drop_lock_on()
+            r.sleep()
+
+    def is_in_trigger_volume(self,pos,expanded=False):
+        c = np.array( (0,0) )
+        p = np.array( (pos.x, pos.y) )
+        dist = np.sqrt(np.sum((c-p)**2))
+        radius = 0.16
+        zdist = 0.4
+        if expanded:
+            radius += 0.05
+            zdist += 0.05
+
+        if (dist < radius) and (abs(pos.z-0.5) < zdist):
+            return True
+        return False
+
+    def on_flydra_mainbrain_super_packets(self,data):
+        now = rospy.get_time()
+        for packet in data.packets:
+            for obj in packet.objects:
+                if self.currently_locked_obj_id is not None:
+                    # if not self.is_in_trigger_volume(obj.position,expanded=True):
+                    #     self.drop_lock_on()
+                    if obj.obj_id == self.currently_locked_obj_id:
+                        self.last_seen_time = now
+                    #print obj
+                else:
+                    if self.is_in_trigger_volume(obj.position):
+                        #print '*'*200
+                        #print obj
+                        self.lock_on(obj,packet.framenumber)
+
+    def lock_on(self,obj,framenumber):
+        rospy.loginfo('locked object %d at frame %d'%(obj.obj_id,framenumber))
+        now = rospy.get_time()
+        self.currently_locked_obj_id = obj.obj_id
+        self.last_seen_time = now
+        if self.condition=='confinement':
+            self.log.stim( STIM_FILENAME )
+        else:
+            self.log.stim( BLANK_FILENAME )
+        self.log.lock( obj.obj_id, framenumber )
+        self.log.update()
+
+    def drop_lock_on(self):
+        rospy.loginfo('dropping locked object')
+        self.currently_locked_obj_id = None
+        self.log.stim(BLANK_FILENAME)
+        self.log.lock(IMPOSSIBLE_OBJ_ID, 0 )
+        self.log.update()
+
+def main():
+    m = MovingTarget(PATH_TO_FOLLOW)
+    #node = Node()
+    #return node.run()
+
+if __name__=='__main__':
+    main()
