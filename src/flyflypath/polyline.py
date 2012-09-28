@@ -43,13 +43,41 @@ class PolyLine2:
                 follow = lead
                 lead += 1
 
+        self._length = 0
+        self._lengths = {}
+        for l in self._lines:
+            length = l.length
+            self._lengths[l] = length
+            self._length += length
+
     @property
     def length(self):
-        return sum( l.length for l in self._lines )
+        return self._length
 
     @property
     def num_segments(self):
         return len(self._lines)
+
+    def along(self, percent):
+        target = self.length * percent
+        this = next = 0
+        for l in self._lines:
+            ll = self._lengths[l]
+            next = this + ll
+            if next > target:
+                break
+            elif next == target:
+                return l.p2
+            else:
+                this = next
+
+        #l is the linesegment that contains the point, 'this' is the length
+        #comsumed up to the start of the segment
+        remain = target - this
+        linesegmentlen = self._lengths[l]
+        fraction = float(remain) / linesegmentlen
+        return Point2(l.p1.x + fraction*l.v.x,
+                      l.p1.y + fraction*l.v.y)
         
     def connect(self, point):
         closest = ClosestPoint()
@@ -175,6 +203,19 @@ if __name__ == "__main__":
     p2 = Point2(2,2)
     p4 = Point2(3,3)
     p4b = Point2(3,3)
+
+    assert p1 == p1b
+
+    polyl = PolyLine2(p0,p1,p1b,p2)
+
+    assert polyl.length == 2
+
+    assert polyl.along(0.5) == p1
+    assert polyl.along(0.75) == Point2(1.5,2)
+
+    polyreverse = PolyLine2(p2,p1b,p1,p0)
+    assert polyl.length == polyreverse.length
+    assert polyreverse.along(0.75) == Point2(1,1.5)
     
     polya = PolyLine2(p0,p1,p1b,p2,p4,p4b)
     polyb = PolyLine2(p0,p1,p2,p4)
