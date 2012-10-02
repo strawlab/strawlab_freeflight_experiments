@@ -1,7 +1,13 @@
 import numpy as np
-import collections
 
-from euclid import Point2, Vector2, LineSegment2
+from euclid import Point2, LineSegment2, Vector2
+
+class ZeroLineSegment2:
+    def __init__(self):
+        self.p = Point2()
+        self.p2 = Point2()
+        self.v = Vector2()
+        self.length = 0
 
 class ClosestPoint(object):
     __slots__= "point", "vector", "type"
@@ -51,6 +57,11 @@ class PolyLine2:
             self._length += length
 
     @property
+    def p(self):
+        """ first point """
+        return self.points[0].copy()
+
+    @property
     def length(self):
         return self._length
 
@@ -80,21 +91,20 @@ class PolyLine2:
                       l.p1.y + fraction*l.v.y)
         
     def connect(self, point):
-        closest = ClosestPoint()
+        closest = None
 
         dist = np.inf
         for l in self._lines:
             if l.p1 == point or l.p2 == point:
-                closest.point = point
-                closest.type = "vertex"
+                closest = point
+                closesttype = "vertex"
                 break
             else:
                 seg = l.connect(point)
                 newdist = seg.length
                 if newdist < dist:
-                    closest.point = seg.p
-                    closest.vector = seg.v
-                    closest.type = "segment"
+                    closest = seg.p
+                    closesttype = "segment"
                     dist = newdist
 
         return closest
@@ -197,6 +207,8 @@ def polyline_from_svg_path(path_iterator, points_per_bezier=10):
 
 if __name__ == "__main__":
 
+    p00 = Point2(0,0)
+
     p0 = Point2(1,1)
     p1 = Point2(1,2)
     p1b = Point2(1,2)
@@ -207,6 +219,8 @@ if __name__ == "__main__":
     assert p1 == p1b
 
     polyl = PolyLine2(p0,p1,p1b,p2)
+
+    assert polyl.p == p0
 
     assert polyl.length == 2
 
@@ -225,7 +239,14 @@ if __name__ == "__main__":
     
     assert (p0-p1).magnitude() == 1
 
+    assert ZeroLineSegment2().length == 0
+    assert ZeroLineSegment2().p == p00
+    assert ZeroLineSegment2().v.x == 0
+
     l0 = LineSegment2(p0,p1)
+    assert l0.p == p0
+    assert l0.p2 == p1
+
     l1 = LineSegment2(p1,p2)
 
     assert l0.length == 1
