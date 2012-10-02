@@ -10,95 +10,173 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import display_client # from vros_projectors package
 from std_msgs.msg import String, UInt32
+from geometry_msgs.msg import Vector3
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
-import flyflypath.path
+import flyflypath.model
+import flyflypath.view
+import flyflypath.polyline
 
 rospack = rospkg.RosPack()
 pkg_dir = rospack.get_path(PACKAGE)
 
-PATH_TO_FOLLOW = os.path.join(pkg_dir,"src","flyflypath","impspiral.svg")
+STARFIELD_TOPIC = 'velocity'
+
+PATH_TO_FOLLOW      = os.path.join(pkg_dir,"src","flyflypath","impspiral.svg")
+CONTROL_RATE        = 20.0      #Hz
+MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
+
+SWITCH_MODE_TIME    = 2.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
 
-class MovingTarget:
-    def __init__(self, svgpath):
-        self._model = flyflypath.path.SvgPath(svgpath)
+class _Logger:
 
-class Logger:
+    STATE = ("svg_filename","condition","src_x","src_y","src_z","target_x","target_y","target_z",
+             "stim_x","stim_y","stim_z","move_ratio","lock_object","framenumber")
+
     def __init__(self,fname=None):
         if fname is None:
             fname = time.strftime('DATA%Y%m%d_%H%M%S.csv')
-        self.fd = open(fname,mode='w')
-        self.fd.write('stimulus_filename,confinement_condition,lock_object,framenumber,t_sec,t_nsec\n')
-        rospy.loginfo( 'saving to %s'%fname )
-        self.state = [0,0,0,0]
+        self._fd = open(fname,mode='w')
+        for s in self.STATE:
+            setattr(self, s, None)
+        self._fd.write(",".join(self.STATE))
+        self._fd.write(",t_sec,t_nsec\n")
+        rospy.loginfo("saving to %s" % fname)
 
-        self.stimulus_pub = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
-        self.condition_pub = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
-        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
+    def update(self, check=False):
+        vals = [getattr(self,s) for s in self.STATE]
+
+        if check and None in vals:
+            rospy.logwarn("no state to save")
+
+        self._fd.write(",".join(map(str,vals)))
+        t = rospy.get_rostime()
+        self._fd.write(",%d,%d\n" % (t.secs,t.nsecs))
+        self._fd.flush()
+
+class Logger(_Logger):
+    def __init__(self, *args):
+        _Logger.__init__(self, *args)
 
     def update(self):
-        t = rospy.get_rostime()
-        self.fd.write( '%s,%s,%s,%d,%d,%d\n' % ( self.state[0],
-                                                 self.state[1],
-                                                 self.state[2],
-                                                 self.state[3],
-                                                 t.secs,
-                                                 t.nsecs ))
-        self.fd.flush()
-        self.lock_object.publish( self.state[2] )
-        self.stimulus_pub.publish( self.state[0] )
-        self.condition_pub.publish( self.state[1] )
-
-    def stim(self,mstim):
-        self.state[0] = mstim
-    def condition(self,mcondition):
-        self.state[1] = mcondition
-    def lock(self,obj_id,framenumber):
-        self.state[2] = obj_id
-        self.state[3] = framenumber
+        _Logger.update(self)
 
 class Node(object):
     def __init__(self):
-        rospy.init_node("confinement")
+        rospy.init_node("followpath")
 
-        rospy.logwarn('HACK to set all display server modes')
         display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusOSGFile')
+            'StimulusStarField')
 
+        self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
+        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
+
+        self.model = flyflypath.model.MovingPointSvgPath(PATH_TO_FOLLOW)
         self.log = Logger()
 
-
-        self.log.stim( BLANK_FILENAME )
         self.currently_locked_obj_id = None
-        self.condition = 'control'
-        self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
-                                  self._switch_conditions)
-        self._switch_conditions(None)
+        self.fly = Vector3()
+        self.condition = 'static'
+        self.moving_ratio = 0.0
+
+        #init the log to zero (we publish immediately)
+        self.log.svg_filename = self.model.svgpath
+        self.log.src_x = self.fly.x; self.log.src_y = self.fly.y; self.log.src_z = self.fly.z;
+        target = flyflypath.polyline.ZeroLineSegment2()
+        self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = 0.0
+        vec = Vector3()
+        self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = 0.0
+        self.log.move_ratio = self.moving_ratio
+        self.log.lock_object = IMPOSSIBLE_OBJ_ID
+        self.log.framenumber = 0
+
+        #publish for the follow_path monitor
+        self.svg_pub = rospy.Publisher('svg_filename', String, latch=True, tcp_nodelay=True)
+        self.srcpx_pub = rospy.Publisher('source', Vector3, latch=True, tcp_nodelay=True)
+        self.trgpx_pub = rospy.Publisher('target', Vector3, latch=True, tcp_nodelay=True)
+        self.svg_pub.publish(self.model.svgpath)
+        self.srcpx_pub.publish(0,0,0)
+        self.trgpx_pub.publish(0,0,0)
+
+        self.switch_conditions(None)
+
+        self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
+                                  self.switch_conditions)
 
         rospy.Subscriber("flydra_mainbrain_super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    def _switch_conditions(self,event):
-        if self.condition=='confinement':
-            self.condition='control'
+    def move_point(self, val):
+        val = self.model.move_point(val)
+        self.log.move_ratio = val
+        self.moving_ratio = val
+        return val
+
+    def switch_conditions(self,event):
+        #if self.condition=='follow':
+        #    self.condition='static'
+        #else:
+        self.condition='follow'
+        rospy.loginfo('condition: %s' % self.condition )
+        self.log.condition = self.condition
+
+    def get_starfield_velocity_vector(self,dt):
+        msg = Vector3()
+        if self.condition == 'static':
+            msg.z = 0.0
+            target = flyflypath.polyline.ZeroLineSegment2()
         else:
-            self.condition='confinement'
-        rospy.loginfo('confinement condition: %s'%self.condition )
-        self.log.condition( self.condition )
+            if self.currently_locked_obj_id is None:
+                #encourage them to leave the ceiling
+                target = flyflypath.polyline.ZeroLineSegment2()
+            else:
+                #advance the point in constant ish time...
+                nsteps = MOVING_POINT_TIME/dt
+                val = self.move_point(self.moving_ratio + (1.0/nsteps))
+
+                #finished
+                if val == 1.0 or np.isnan(self.fly.x):
+                    self.drop_lock_on()
+                    return msg,flyflypath.polyline.ZeroLineSegment2()
+
+                #do the control
+                #center of svg is at 250,250 - move fly there
+                py = (self.fly.x * +500) + 250
+                px = (self.fly.y * -500) + 250
+                target = self.model.connect_to_moving_point(p=None,px=px, py=py)
+
+                self.srcpx_pub.publish(px,py,0)
+                self.trgpx_pub.publish(target.p2.x,target.p2.y,0)
+
+                msg.x = target.v.y * +0.002
+                msg.y = target.v.x * -0.002
+                msg.z = (self.fly.z - 0.5) * -2
+                
+        return msg,target
 
     def run(self):
         rospy.loginfo('running stimulus')
-        r = rospy.Rate(10) # 10hz
+        r = rospy.Rate(CONTROL_RATE)
         while not rospy.is_shutdown():
             if self.currently_locked_obj_id is not None:
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
+
+            dt = 1.0/CONTROL_RATE #FIXME, not necessarily...
+            vec,target = self.get_starfield_velocity_vector(dt)
+
+            self.log.src_x = self.fly.x; self.log.src_y = self.fly.y; self.log.src_z = self.fly.z;
+            self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = 0.0
+            self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = 0.0
+            self.log.update()
+            self.starfield_velocity_pub.publish(vec)
+
             r.sleep()
 
     def is_in_trigger_volume(self,pos,expanded=False):
@@ -106,7 +184,7 @@ class Node(object):
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
         radius = 0.16
-        zdist = 0.4
+        zdist = 0.35
         if expanded:
             radius += 0.05
             zdist += 0.05
@@ -124,7 +202,7 @@ class Node(object):
                     #     self.drop_lock_on()
                     if obj.obj_id == self.currently_locked_obj_id:
                         self.last_seen_time = now
-                    #print obj
+                        self.fly = obj.position
                 else:
                     if self.is_in_trigger_volume(obj.position):
                         #print '*'*200
@@ -135,25 +213,40 @@ class Node(object):
         rospy.loginfo('locked object %d at frame %d'%(obj.obj_id,framenumber))
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
+        self.first_seen_time = now
         self.last_seen_time = now
-        if self.condition=='confinement':
-            self.log.stim( STIM_FILENAME )
+        if self.condition=='follow':
+            self.log.condition = 'follow+tracking'
+            self.move_point(0.0)
         else:
-            self.log.stim( BLANK_FILENAME )
-        self.log.lock( obj.obj_id, framenumber )
+            self.log.condition = 'static'
+
+        self.lock_object.publish(self.currently_locked_obj_id)
+
+        self.log.lock_object = self.currently_locked_obj_id
+        self.log.framenumber = framenumber
         self.log.update()
 
     def drop_lock_on(self):
-        rospy.loginfo('dropping locked object')
+        now = rospy.get_time()
+        dt = now - self.first_seen_time
+        rospy.loginfo('dropping locked object (tracked for %s s)' % dt)
         self.currently_locked_obj_id = None
-        self.log.stim(BLANK_FILENAME)
-        self.log.lock(IMPOSSIBLE_OBJ_ID, 0 )
+        if self.condition=='follow':
+            self.log.condition = 'follow+lost'
+        else:
+            self.log.condition = 'static'
+
+        self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
+
+        self.log.lock_object = IMPOSSIBLE_OBJ_ID
+        self.log.framenumber = 0
         self.log.update()
 
 def main():
-    m = MovingTarget(PATH_TO_FOLLOW)
-    #node = Node()
-    #return node.run()
+    node = Node()
+    return node.run()
 
 if __name__=='__main__':
     main()
+
