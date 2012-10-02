@@ -186,7 +186,7 @@ void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emit
     // Kill particles going inside/outside of specified domains.
     osg::ref_ptr<osgParticle::SinkOperator> sink = new osgParticle::SinkOperator;
     sink->setSinkStrategy( osgParticle::SinkOperator::SINK_OUTSIDE );
-    sink->addSphereDomain( osg::Vec3(), 20.0f );
+    sink->addSphereDomain( osg::Vec3(), 2000.0f );
 
     emitter->setCounter( rrc.get() );
     emitter->setShooter( _shooter.get() );
