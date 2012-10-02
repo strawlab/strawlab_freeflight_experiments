@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
-   sodipodi:docname="imp.svg">
+   sodipodi:docname="impspiral.svg">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -29,12 +29,16 @@
      inkscape:cy="265.20156"
      inkscape:document-units="px"
      inkscape:current-layer="svg2"
-     showgrid="false"
+     showgrid="true"
      inkscape:window-width="1920"
-     inkscape:window-height="1021"
+     inkscape:window-height="1025"
      inkscape:window-x="0"
      inkscape:window-y="27"
-     inkscape:window-maximized="1" />
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2984" />
+  </sodipodi:namedview>
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -50,13 +54,14 @@
   <path
      sodipodi:type="spiral"
      style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     id="path2984"
-     sodipodi:cx="240.41631"
-     sodipodi:cy="261.604"
+     id="path2982"
+     sodipodi:cx="234.35539"
+     sodipodi:cy="257.56339"
      sodipodi:expansion="1"
-     sodipodi:revolution="3"
-     sodipodi:radius="217.78336"
-     sodipodi:argument="-17.761078"
-     sodipodi:t0="0"
-     d="m 240.41631,261.604 c 5.06475,9.67366 -10.54113,11.59983 -16.07826,8.41795 -15.00527,-8.62268 -11.13867,-30.08722 -0.75764,-40.57446 18.56923,-18.7592 49.43742,-11.98419 65.07066,6.90267 22.94241,27.71722 12.94215,69.0817 -14.56297,89.56687 -36.66001,27.3035 -88.83452,13.95327 -114.06307,-22.22329 -31.74757,-45.52449 -14.99295,-108.64006 29.88359,-138.55927 54.3515,-36.23618 128.47551,-16.04936 163.05547,37.5439 40.75129,63.1578 17.11632,148.32964 -45.2042,187.55168 -71.9515,45.28339 -168.19624,18.19029 -212.047885,-52.86451 -49.827025,-80.73699 -19.26918,-188.07159 60.524815,-236.54409 89.51681,-54.378829 207.9533,-20.351626 261.0403,68.18512 58.93662,98.29258 21.43672,227.83981 -75.84544,285.5365" />
+     sodipodi:revolution="1.8"
+     sodipodi:radius="202.05576"
+     sodipodi:argument="-17.641626"
+     sodipodi:t0="0.22787614"
+     d="m 197.52194,229.93518 c 9.61697,-34.29159 51.46386,-44.51643 81.30086,-31.65497 46.16706,19.90065 58.83838,78.16729 37.2655,120.58977 -29.582,58.17222 -105.03367,73.35456 -159.8787,42.87604 C 85.953992,322.70353 68.245083,229.77619 107.72303,162.57839 156.12259,80.194572 266.66615,59.951791 346.17958,108.48129 c 49.24607,30.0564 82.14627,82.29244 89.99193,139.2443"
+     transform="translate(42.47806,0)" />
 </svg>
