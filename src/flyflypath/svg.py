@@ -29,7 +29,13 @@ def draw_on_context(cr, path_element):
         else:
             raise Exception("Invalid m command data: %r" % c)
     elif command == "C":
-        cr.curve_to(c[0],c[1],c[2],c[3],c[4],c[5])
+        if len(c) == 6:
+            cr.curve_to(c[0],c[1],c[2],c[3],c[4],c[5])
+        elif len(c) > 6 and (len(c) % 6) == 0:
+            for i in range(0,len(c)-5,6):
+                cr.curve_to(c[i+0],c[i+1],c[i+2],c[i+3],c[i+4],c[i+5])
+        else:
+            raise Exception("Invalid C command data: %r" % c)
     elif command == "c":
         if len(c) == 6:
             cr.rel_curve_to(c[0],c[1],c[2],c[3],c[4],c[5])
