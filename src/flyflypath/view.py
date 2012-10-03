@@ -5,6 +5,8 @@ import math
 import cairo
 from gi.repository import Gtk, Gdk
 
+import euclid
+
 class SvgPathWidget(Gtk.DrawingArea):
     def __init__(self, model, to_pt=False):
         Gtk.DrawingArea.__init__(self)
@@ -56,7 +58,7 @@ class SvgPathWidget(Gtk.DrawingArea):
         cr.set_source_surface(self._surface, 0.0, 0.0)
         cr.paint()
 
-        vec,moving_pt = self.get_vec_and_point()
+        vec,src_pt,trg_pt = self.get_vec_and_points()
         
         if vec is not None:
             cr.set_source_rgb (1, 0, 0)
@@ -65,10 +67,16 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.line_to(vec.p2.x,vec.p2.y)
             cr.stroke()
 
-        if moving_pt is not None:
+        if src_pt is not None:
+            cr.set_source_rgb (1,0,0)
+            cr.move_to(src_pt.x, src_pt.y)
+            cr.arc(src_pt.x, src_pt.y, 2, 0, 2.0 * math.pi)
+            cr.fill()
+
+        if trg_pt is not None:
             cr.set_source_rgb (0,1,0)
-            cr.move_to(moving_pt.x, moving_pt.y)
-            cr.arc(moving_pt.x, moving_pt.y, 2, 0, 2.0 * math.pi)
+            cr.move_to(trg_pt.x, trg_pt.y)
+            cr.arc(trg_pt.x, trg_pt.y, 2, 0, 2.0 * math.pi)
             cr.fill()
 
     def _on_configure_event(self, widget, event):
@@ -80,17 +88,19 @@ class SvgPathWidget(Gtk.DrawingArea):
 
         self._draw_background()
 
-    def get_vec_and_point(self):
+    def get_vec_and_points(self):
         vec = None
-        moving_pt = self._model.moving_pt if self._model else None
+        src_pt = None
+        trg_pt = self._model.moving_pt if self._model else None
         if self._model and self._mousex is not None:
+            src_pt = euclid.Point2(self._mousex,self._mousey)
             if self._snap_to_moving_pt and self._model.moving_pt is not None:
                 vec = self._model.connect_to_moving_point(p=None,
                                     px=self._mousex,py=self._mousey)
             else:
                 vec = self._model.connect_closest(p=None,
                                     px=self._mousex,py=self._mousey)
-        return vec,moving_pt
+        return vec,src_pt,trg_pt
 
     def move_along(self, scale):
         self._model.move_point(scale)

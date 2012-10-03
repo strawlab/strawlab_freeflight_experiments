@@ -5,7 +5,7 @@ import threading
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
-from std_msgs.msg import String, UInt32
+from std_msgs.msg import String, UInt32, Bool
 from geometry_msgs.msg import Vector3
 
 import flyflypath.model
@@ -23,6 +23,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
 
         self._src = None
         self._trg = None
+        self._active = False
 
         t = threading.Thread(target=rospy.spin).start()
         self._lock = threading.Lock()
@@ -40,6 +41,9 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         rospy.Subscriber("target",
                          Vector3,
                          self._on_target_move)
+        rospy.Subscriber("active",
+                         Bool,
+                         self._on_active)
 
         self._w.show_all()
 
@@ -66,15 +70,17 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         except:
             pass
 
-    def get_vec_and_point(self):
+    def _on_active(self, msg):
+        self._active = msg.data
+
+    def get_vec_and_points(self):
         vec = None
-        pt  = None
+        src_pt = self._src
+        trg_pt = self._trg
         if self._src is not None and self._trg is not None:
             with self._lock:
-                print self._src, self._trg
                 vec = LineSegment2(self._src,self._trg)
-                pt = self._trg
-        return vec,pt
+        return vec,src_pt,trg_pt
 
 if __name__ == "__main__":
     rospy.init_node("followpath_monitor")
