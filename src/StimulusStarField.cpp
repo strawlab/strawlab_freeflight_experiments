@@ -143,7 +143,7 @@ void StimulusStarField::post_init() {
     ps->setVisibilityDistance( -1.0f );
 
     std::string textureFile = get_plugin_data_path("star.png");
-    ps->setDefaultAttributesUsingShaders( textureFile, true, 0 );
+    ps->setDefaultAttributesUsingShaders( textureFile, false, 0 );
 
     osg::StateSet* stateset = ps->getOrCreateStateSet();
     stateset->setAttribute( new osg::Point(5.0f) ); // pointSize
