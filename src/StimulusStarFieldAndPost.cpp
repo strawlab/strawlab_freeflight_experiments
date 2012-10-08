@@ -117,9 +117,11 @@ public:
     std::string get_message_type(const std::string& topic_name) const;
 
     void setVelocity(double x, double y, double z);
+    void _load_stimulus_filename( std::string osg_filename );
 
 private:
     osg::ref_ptr<osg::Group> _group;
+    osg::ref_ptr<osg::MatrixTransform> switch_node;
     osg::Vec3 _starfield_velocity;
     osg::ref_ptr<ConstantShooter> _shooter;
     osg::ref_ptr<osgParticle::Placer> _placer;
@@ -132,9 +134,39 @@ StimulusStarFieldAndPost::StimulusStarFieldAndPost() {
     _vel_operator = new VelocityOperator;
 
     setVelocity( 0.0, 0.0, 0.0);
+
+    _group = new osg::Group;
+    switch_node = new osg::MatrixTransform;
+    _group->addChild(switch_node);
+
+}
+
+void StimulusStarFieldAndPost::_load_stimulus_filename( std::string osg_filename ) {
+
+    if (!_group) {
+        std::cerr << "_group node not defined!?" << std::endl;
+        return;
+    }
+
+    // don't show the old switching node.
+    _group->removeChild(switch_node);
+
+    // (rely on C++ to delete the old switching node).
+
+    // (create a new switching node.
+    switch_node = new osg::MatrixTransform;
+
+    // now load it with new contents
+    osg::Node* tmp = osgDB::readNodeFile(osg_filename);
+    vros_assert(tmp!=NULL);
+    switch_node->addChild( tmp );
+    _group->addChild(switch_node);
 }
 
 void StimulusStarFieldAndPost::post_init() {
+    std::string osg_filename = get_plugin_data_path("post.osg");
+    _load_stimulus_filename( osg_filename );
+
     // this is based on the OSG example osgparticleshader.cpp
 
     osg::ref_ptr<osgParticle::ParticleSystem> ps = new osgParticle::ParticleSystem;
@@ -164,7 +196,7 @@ void StimulusStarFieldAndPost::post_init() {
 
     osg::ref_ptr<osgParticle::ParticleSystemUpdater> updater = new osgParticle::ParticleSystemUpdater;
 
-    osg::ref_ptr<osg::Group> root = new osg::Group;
+    osg::ref_ptr<osg::Group> root = _group;
     root->addChild( parent.get() );
     root->addChild( updater.get() );
 
@@ -174,7 +206,6 @@ void StimulusStarFieldAndPost::post_init() {
     geode->addDrawable( ps.get() );
     root->addChild( geode.get() );
 
-    _group = root;
     _group->setName("StimulusStarFieldAndPost._group");
 }
 
