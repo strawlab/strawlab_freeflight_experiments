@@ -1,6 +1,10 @@
 <launch>
   <!-- Spawn the display server (actually draws). -->
-  <node name="ds_replay" pkg="vros_display" type="display_server" args="--mode=geometry">
+  <node name="ds_replay" pkg="vros_display" type="display_server" args="--mode=virtual_world --throttle">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <node name="ds_replay2" pkg="vros_display" type="display_server" args="--mode=cubemap --throttle">
     <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
   </node>
 
