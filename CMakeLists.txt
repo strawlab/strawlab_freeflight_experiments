@@ -61,3 +61,7 @@ rosbuild_link_boost(StimulusOSGFile system filesystem)
 rosbuild_add_library(StimulusStarField src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
 rosbuild_link_boost(StimulusStarField system filesystem)
+
+rosbuild_add_library(StimulusStarFieldAndPost src/StimulusStarFieldAndPost.cpp)
+target_link_libraries(StimulusStarFieldAndPost ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
+rosbuild_link_boost(StimulusStarFieldAndPost system filesystem)
