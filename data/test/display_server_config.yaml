@@ -1,0 +1,23 @@
+geom:
+  axis: {x: 0.0, y: 0.0, z: 1.0}
+  base: {x: 0.0, y: 0.0, z: -0.5}
+  model: cylinder
+  radius: 0.5
+tethered_mode: True
+stimulus_plugins: 
+- path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusStarFieldAndPost
+display:
+  displayNum: 0
+  screenNum: 0
+  width: 640
+  height: 480
+  virtualDisplays:
+  - id: vdisp
+    viewport:
+    - [349, 51]
+    - [428, 30]
+    - [530, 20]
+  windowDecoration: true
+  x: 30
+  y: 30

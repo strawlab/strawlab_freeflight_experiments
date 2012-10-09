@@ -95,15 +95,15 @@ private:
 };
 
 // -----------------------------------------------------------
-// class StimulusStarField
+// class StimulusStarFieldAndPost
 // -----------------------------------------------------------
 
-class StimulusStarField: public StimulusInterface
+class StimulusStarFieldAndPost: public StimulusInterface
 {
 public:
-    StimulusStarField();
+    StimulusStarFieldAndPost();
 
-    std::string name() const { return "StimulusStarField"; }
+    std::string name() const { return "StimulusStarFieldAndPost"; }
     void post_init();
 
     void createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program );
@@ -117,24 +117,56 @@ public:
     std::string get_message_type(const std::string& topic_name) const;
 
     void setVelocity(double x, double y, double z);
+    void _load_stimulus_filename( std::string osg_filename );
 
 private:
     osg::ref_ptr<osg::Group> _group;
+    osg::ref_ptr<osg::MatrixTransform> switch_node;
     osg::Vec3 _starfield_velocity;
     osg::ref_ptr<ConstantShooter> _shooter;
     osg::ref_ptr<osgParticle::Placer> _placer;
     osg::ref_ptr<VelocityOperator> _vel_operator;
 };
 
-StimulusStarField::StimulusStarField() {
+StimulusStarFieldAndPost::StimulusStarFieldAndPost() {
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
 
     setVelocity( 0.0, 0.0, 0.0);
+
+    _group = new osg::Group;
+    switch_node = new osg::MatrixTransform;
+    _group->addChild(switch_node);
+
 }
 
-void StimulusStarField::post_init() {
+void StimulusStarFieldAndPost::_load_stimulus_filename( std::string osg_filename ) {
+
+    if (!_group) {
+        std::cerr << "_group node not defined!?" << std::endl;
+        return;
+    }
+
+    // don't show the old switching node.
+    _group->removeChild(switch_node);
+
+    // (rely on C++ to delete the old switching node).
+
+    // (create a new switching node.
+    switch_node = new osg::MatrixTransform;
+
+    // now load it with new contents
+    osg::Node* tmp = osgDB::readNodeFile(osg_filename);
+    vros_assert(tmp!=NULL);
+    switch_node->addChild( tmp );
+    _group->addChild(switch_node);
+}
+
+void StimulusStarFieldAndPost::post_init() {
+    std::string osg_filename = get_plugin_data_path("post.osg");
+    _load_stimulus_filename( osg_filename );
+
     // this is based on the OSG example osgparticleshader.cpp
 
     osg::ref_ptr<osgParticle::ParticleSystem> ps = new osgParticle::ParticleSystem;
@@ -142,7 +174,7 @@ void StimulusStarField::post_init() {
     ps->getDefaultParticleTemplate().setShape( osgParticle::Particle::POINT );
     ps->setVisibilityDistance( -1.0f );
 
-    std::string textureFile = get_plugin_data_path("star.png");
+    std::string textureFile = get_plugin_data_path("blackstar.png");
     ps->setDefaultAttributesUsingShaders( textureFile, false, 0 );
 
     osg::StateSet* stateset = ps->getOrCreateStateSet();
@@ -164,7 +196,7 @@ void StimulusStarField::post_init() {
 
     osg::ref_ptr<osgParticle::ParticleSystemUpdater> updater = new osgParticle::ParticleSystemUpdater;
 
-    osg::ref_ptr<osg::Group> root = new osg::Group;
+    osg::ref_ptr<osg::Group> root = _group;
     root->addChild( parent.get() );
     root->addChild( updater.get() );
 
@@ -174,11 +206,10 @@ void StimulusStarField::post_init() {
     geode->addDrawable( ps.get() );
     root->addChild( geode.get() );
 
-    _group = root;
-    _group->setName("StimulusStarField._group");
+    _group->setName("StimulusStarFieldAndPost._group");
 }
 
-void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
+void StimulusStarFieldAndPost::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
     // Emit specific number of particles every frame
     osg::ref_ptr<osgParticle::RandomRateCounter> rrc = new osgParticle::RandomRateCounter;
     rrc->setRateRange( 500, 2000 );
@@ -186,7 +217,7 @@ void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emit
     // Kill particles going inside/outside of specified domains.
     osg::ref_ptr<osgParticle::SinkOperator> sink = new osgParticle::SinkOperator;
     sink->setSinkStrategy( osgParticle::SinkOperator::SINK_OUTSIDE );
-    sink->addSphereDomain( osg::Vec3(), 2000.0f );
+    sink->addSphereDomain( osg::Vec3(), 20.0f );
 
     emitter->setCounter( rrc.get() );
     emitter->setShooter( _shooter.get() );
@@ -195,17 +226,17 @@ void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emit
     program->addOperator( sink.get() );
 }
 
-osg::Vec4 StimulusStarField::get_clear_color() const {
-    return osg::Vec4(0.0, 0.0, 0.0, 0.0); // transparent black
+osg::Vec4 StimulusStarFieldAndPost::get_clear_color() const {
+    return osg::Vec4(1,1,1,1); // white
 }
 
-std::vector<std::string> StimulusStarField::get_topic_names() const {
+std::vector<std::string> StimulusStarFieldAndPost::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("velocity");
     return result;
 }
 
-void StimulusStarField::receive_json_message(const std::string& topic_name,
+void StimulusStarFieldAndPost::receive_json_message(const std::string& topic_name,
                                              const std::string& json_message) {
     json_t *root;
     json_error_t error;
@@ -234,13 +265,13 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
     setVelocity(x,y,z);
 }
 
-void StimulusStarField::setVelocity(double x, double y, double z) {
+void StimulusStarFieldAndPost::setVelocity(double x, double y, double z) {
     _starfield_velocity = osg::Vec3(x,y,z);
     _shooter->setVelocity( _starfield_velocity );
     _vel_operator->setVelocity( _starfield_velocity );
 }
 
-std::string StimulusStarField::get_message_type(const std::string& topic_name) const {
+std::string StimulusStarFieldAndPost::get_message_type(const std::string& topic_name) const {
     std::string result;
 
     if (topic_name=="velocity") {
@@ -252,7 +283,7 @@ std::string StimulusStarField::get_message_type(const std::string& topic_name) c
 }
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusStarField)
+POCO_EXPORT_CLASS(StimulusStarFieldAndPost)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()
