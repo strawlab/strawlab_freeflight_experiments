@@ -18,6 +18,7 @@ import rospkg
 import flyflypath.model
 import flyflypath.view
 import flyflypath.polyline
+import nodelib.log
 
 rospack = rospkg.RosPack()
 pkg_dir = rospack.get_path(PACKAGE)
