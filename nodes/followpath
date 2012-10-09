@@ -24,7 +24,7 @@ pkg_dir = rospack.get_path(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
 
-PATH_TO_FOLLOW      = os.path.join(pkg_dir,"src","flyflypath","impspiral2.svg")
+PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","impspiral3.svg")
 CONTROL_RATE        = 20.0      #Hz
 MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
 
