@@ -75,7 +75,7 @@ class Node(object):
             # we are already locked onto this object
             return
 
-        if self._current_obj_id not in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+        if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
             rospy.loginfo( 'request to stop lock obj_id %d (to lock %d)'%(self._current_obj_id,msg.data) )
 
         self._current_obj_id = msg.data
@@ -88,7 +88,7 @@ class Node(object):
         r = rospy.Rate(10) # 10hz
         while not rospy.is_shutdown():
             # check for stale object ID
-            if self._current_obj_id not in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+            if self._current_obj_id != IMPOSSIBLE_OBJ_ID:
                 now = rospy.get_time()
                 if 1:
                 #with self.lock:
