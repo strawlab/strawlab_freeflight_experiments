@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 import numpy as np
-import csv
 
 data = {}
 trial = {}
@@ -21,35 +20,30 @@ scalarMap = cmx.ScalarMappable(
                     norm=colors.Normalize(vmin=0, vmax=1),
                     cmap=plt.get_cmap('spring'))
 
-#with open('../nodes/good/DATA20121003_114423.csv', 'rb') as csvfile:
-#with open('../nodes/good/DATA20121004_105408.csv', 'rb') as csvfile:
-with open('../nodes/DATA20121005_165151.csv', 'rb') as csvfile:
-    reader = csv.reader(csvfile, delimiter=',')
-    oid = -1
-    for i,row in enumerate(reader):
-        if i == 0:
-            continue
+#csv = '../nodes/good/DATA20121003_114423.csv'
+csv = '../nodes/good/DATA20121004_105408.csv'
+#csv = '../nodes/good/DATA20121005_165151.csv'
 
-        svg_filename,condition,src_x,src_y,src_z,\
-        target_x,target_y,target_z,stim_x,stim_y,\
-        stim_z,move_ratio,active,lock_object,framenumber,t_sec,t_nsec = row
+oid = -1 
+for rec in followpath.Logger(csv,'r').record_iterator():
+    try:
+        lock_object = int(rec.lock_object)
+    except ValueError:
+        print "invalid id", rec.lock_object
+        continue
 
-        try:
-            lock_object = int(lock_object)
-        except ValueError:
-            print "invalid id", lock_object
-            continue
+    if lock_object > oid and lock_object != 0xFFFFFFFF:
+        oid = lock_object
+        data[oid] = []
+        trial[oid] = rec.condition
 
-        if lock_object > oid and lock_object != 0xFFFFFFFF:
-            oid = lock_object
-            data[oid] = []
-            trial[oid] = condition
+    if oid <= 0:
+        continue
 
-        if oid <= 0:
-            continue
+    if int(rec.active):
+        data[oid].append( (float(rec.src_x),float(rec.src_y),float(rec.move_ratio)) )
 
-        if int(active):
-            data[oid].append( (float(src_x),float(src_y),float(move_ratio)) )
+svg_filename = str(rec.svg_filename)
 
 for oid in data:
     xy = np.array(data[oid])
@@ -77,7 +71,5 @@ for fighandle in figure_names:
     plt.xlim((-0.5,0.5))
     plt.ylim((-0.5,0.5))
     plt.legend(loc='upper right')
-
-print svg_filename
 
 plt.show()
