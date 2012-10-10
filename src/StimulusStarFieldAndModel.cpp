@@ -118,10 +118,13 @@ public:
 
     void setVelocity(double x, double y, double z);
     void _load_stimulus_filename( std::string osg_filename );
+    void _update_pat();
 
 private:
     osg::ref_ptr<osg::Group> _group;
-    osg::ref_ptr<osg::MatrixTransform> switch_node;
+    osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
+    osg::Vec3 model_position;
+    osg::Quat model_attitude;
     osg::Vec3 _starfield_velocity;
     osg::ref_ptr<ConstantShooter> _shooter;
     osg::ref_ptr<osgParticle::Placer> _placer;
@@ -136,9 +139,16 @@ StimulusStarFieldAndModel::StimulusStarFieldAndModel() {
     setVelocity( 0.0, 0.0, 0.0);
 
     _group = new osg::Group;
-    switch_node = new osg::MatrixTransform;
+    switch_node = new osg::PositionAttitudeTransform;
+    _update_pat();
     _group->addChild(switch_node);
 
+}
+
+void StimulusStarFieldAndModel::_update_pat() {
+    vros_assert(switch_node.valid());
+    switch_node->setPosition( model_position );
+    switch_node->setAttitude( model_attitude );
 }
 
 void StimulusStarFieldAndModel::_load_stimulus_filename( std::string osg_filename ) {
@@ -154,7 +164,8 @@ void StimulusStarFieldAndModel::_load_stimulus_filename( std::string osg_filenam
     // (rely on C++ to delete the old switching node).
 
     // (create a new switching node.
-    switch_node = new osg::MatrixTransform;
+    switch_node = new osg::PositionAttitudeTransform;
+    _update_pat();
 
     // now load it with new contents
     osg::Node* tmp = osgDB::readNodeFile(osg_filename);
@@ -233,19 +244,13 @@ osg::Vec4 StimulusStarFieldAndModel::get_clear_color() const {
 std::vector<std::string> StimulusStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("velocity");
+    result.push_back("model_pose");
     return result;
 }
 
-void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_name,
-                                             const std::string& json_message) {
-    json_t *root;
-    json_error_t error;
-    double x,y,z;
-
-    root = json_loads(json_message.c_str(), 0, &error);
-    vros_assert(root != NULL);
-
+osg::Vec3 parse_vec3(json_t* root) {
     json_t *data_json;
+    double x,y,z;
 
     data_json = json_object_get(root, "x");
     vros_assert(data_json != NULL);
@@ -262,7 +267,59 @@ void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_na
     vros_assert(json_is_number(data_json));
     z = json_number_value( data_json );
 
-    setVelocity(x,y,z);
+    return osg::Vec3(x,y,z);
+}
+
+osg::Quat parse_quat(json_t* root) {
+    json_t *data_json;
+    double x,y,z,w;
+
+    data_json = json_object_get(root, "x");
+    vros_assert(data_json != NULL);
+    vros_assert(json_is_number(data_json));
+    x = json_number_value( data_json );
+
+    data_json = json_object_get(root, "y");
+    vros_assert(data_json != NULL);
+    vros_assert(json_is_number(data_json));
+    y = json_number_value( data_json );
+
+    data_json = json_object_get(root, "z");
+    vros_assert(data_json != NULL);
+    vros_assert(json_is_number(data_json));
+    z = json_number_value( data_json );
+
+    data_json = json_object_get(root, "w");
+    vros_assert(data_json != NULL);
+    vros_assert(json_is_number(data_json));
+    w = json_number_value( data_json );
+
+    return osg::Quat(x,y,z,w);
+}
+
+void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_name,
+                                             const std::string& json_message) {
+    json_t *root;
+    json_error_t error;
+
+    root = json_loads(json_message.c_str(), 0, &error);
+    vros_assert(root != NULL);
+
+    if (topic_name=="velocity") {
+        osg::Vec3 vel = parse_vec3(root);
+        setVelocity(vel[0],vel[1],vel[2]);
+    } else if (topic_name=="model_pose") {
+        json_t *data_json;
+
+        data_json = json_object_get(root, "position");
+        model_position = parse_vec3(data_json);
+
+        data_json = json_object_get(root, "orientation");
+        model_attitude = parse_quat(data_json);
+        _update_pat();
+    } else {
+        throw std::runtime_error("unknown topic name");
+    }
 }
 
 void StimulusStarFieldAndModel::setVelocity(double x, double y, double z) {
@@ -276,6 +333,8 @@ std::string StimulusStarFieldAndModel::get_message_type(const std::string& topic
 
     if (topic_name=="velocity") {
         result = "geometry_msgs/Vector3";
+    } else if (topic_name=="model_pose") {
+        result = "geometry_msgs/Pose";
     } else {
         throw std::runtime_error("unknown topic name");
     }
