@@ -27,7 +27,7 @@ class TestStarfieldAndModel(unittest.TestCase):
                      "\t$ ./%s %s:=<%s topic>"%(NAME, topic_name, NAME, topic_name, topic_name))
 
         # request image from server
-        frame_pub = rospy.Publisher('capture_frame_to_path',
+        frame_pub = rospy.Publisher(topic_name,
                                     ROSPath,
                                     latch=True)
         self.newdir = tempfile.mkdtemp()
