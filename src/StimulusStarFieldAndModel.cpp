@@ -95,15 +95,15 @@ private:
 };
 
 // -----------------------------------------------------------
-// class StimulusStarFieldAndPost
+// class StimulusStarFieldAndModel
 // -----------------------------------------------------------
 
-class StimulusStarFieldAndPost: public StimulusInterface
+class StimulusStarFieldAndModel: public StimulusInterface
 {
 public:
-    StimulusStarFieldAndPost();
+    StimulusStarFieldAndModel();
 
-    std::string name() const { return "StimulusStarFieldAndPost"; }
+    std::string name() const { return "StimulusStarFieldAndModel"; }
     void post_init();
 
     void createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program );
@@ -128,7 +128,7 @@ private:
     osg::ref_ptr<VelocityOperator> _vel_operator;
 };
 
-StimulusStarFieldAndPost::StimulusStarFieldAndPost() {
+StimulusStarFieldAndModel::StimulusStarFieldAndModel() {
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
@@ -141,7 +141,7 @@ StimulusStarFieldAndPost::StimulusStarFieldAndPost() {
 
 }
 
-void StimulusStarFieldAndPost::_load_stimulus_filename( std::string osg_filename ) {
+void StimulusStarFieldAndModel::_load_stimulus_filename( std::string osg_filename ) {
 
     if (!_group) {
         std::cerr << "_group node not defined!?" << std::endl;
@@ -163,7 +163,7 @@ void StimulusStarFieldAndPost::_load_stimulus_filename( std::string osg_filename
     _group->addChild(switch_node);
 }
 
-void StimulusStarFieldAndPost::post_init() {
+void StimulusStarFieldAndModel::post_init() {
     std::string osg_filename = get_plugin_data_path("post.osg");
     _load_stimulus_filename( osg_filename );
 
@@ -206,10 +206,10 @@ void StimulusStarFieldAndPost::post_init() {
     geode->addDrawable( ps.get() );
     root->addChild( geode.get() );
 
-    _group->setName("StimulusStarFieldAndPost._group");
+    _group->setName("StimulusStarFieldAndModel._group");
 }
 
-void StimulusStarFieldAndPost::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
+void StimulusStarFieldAndModel::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
     // Emit specific number of particles every frame
     osg::ref_ptr<osgParticle::RandomRateCounter> rrc = new osgParticle::RandomRateCounter;
     rrc->setRateRange( 500, 2000 );
@@ -226,17 +226,17 @@ void StimulusStarFieldAndPost::createStarfieldEffect( osgParticle::ModularEmitte
     program->addOperator( sink.get() );
 }
 
-osg::Vec4 StimulusStarFieldAndPost::get_clear_color() const {
+osg::Vec4 StimulusStarFieldAndModel::get_clear_color() const {
     return osg::Vec4(1,1,1,1); // white
 }
 
-std::vector<std::string> StimulusStarFieldAndPost::get_topic_names() const {
+std::vector<std::string> StimulusStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("velocity");
     return result;
 }
 
-void StimulusStarFieldAndPost::receive_json_message(const std::string& topic_name,
+void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_name,
                                              const std::string& json_message) {
     json_t *root;
     json_error_t error;
@@ -265,13 +265,13 @@ void StimulusStarFieldAndPost::receive_json_message(const std::string& topic_nam
     setVelocity(x,y,z);
 }
 
-void StimulusStarFieldAndPost::setVelocity(double x, double y, double z) {
+void StimulusStarFieldAndModel::setVelocity(double x, double y, double z) {
     _starfield_velocity = osg::Vec3(x,y,z);
     _shooter->setVelocity( _starfield_velocity );
     _vel_operator->setVelocity( _starfield_velocity );
 }
 
-std::string StimulusStarFieldAndPost::get_message_type(const std::string& topic_name) const {
+std::string StimulusStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
 
     if (topic_name=="velocity") {
@@ -283,7 +283,7 @@ std::string StimulusStarFieldAndPost::get_message_type(const std::string& topic_
 }
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusStarFieldAndPost)
+POCO_EXPORT_CLASS(StimulusStarFieldAndModel)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

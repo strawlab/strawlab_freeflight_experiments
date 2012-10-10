@@ -10,7 +10,7 @@
   </node>
 
   <!-- Set the stimulus mode. -->
-  <node name="stimulus_latch" pkg="rostopic" type="rostopic" args="pub --once /stimulus_mode std_msgs/String StimulusStarFieldAndPost">
+  <node name="stimulus_latch" pkg="rostopic" type="rostopic" args="pub --once /stimulus_mode std_msgs/String StimulusStarFieldAndModel">
   </node>
 
   <!-- Set the camera position. -->

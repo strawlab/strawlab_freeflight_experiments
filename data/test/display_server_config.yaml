@@ -6,7 +6,7 @@ geom:
 tethered_mode: True
 stimulus_plugins: 
 - path: $(find strawlab_freeflight_experiments)/lib
-  name: StimulusStarFieldAndPost
+  name: StimulusStarFieldAndModel
 display:
   displayNum: 0
   screenNum: 0
