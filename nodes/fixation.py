@@ -25,10 +25,10 @@ CONTROL_RATE        = 20.0      #Hz
 SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 START_N_SEGMENTS    = 8
-CYL_RAD             = 0.5
-DIST_FROM_WALL      = 0.1
+CYL_RAD             = 0.4
+DIST_FROM_WALL      = 0.11
 
-P_CONST_XY          = +2
+P_CONST_XY          = -2
 P_CONST_Z           = -2
 
 TARGET_Z            = 0.5
@@ -89,6 +89,10 @@ class Node(object):
             res.append( [(x,y),(-x,-y)] )
         self.start_coords = res
         self.start_idx = 0
+
+        self.start_x = self.start_y = 0.0
+        self.search_radius = 0.1
+        self.search_zdist  = 0.15
 
         self.switch_conditions(None,force=START_CONDITION)
 
@@ -175,9 +179,7 @@ class Node(object):
         c = np.array( (self.start_x, self.start_y) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        radius  = 0.16
-        zdist   = 0.15
-        if (dist < radius) and (abs(pos.z-TARGET_Z) < zdist):
+        if (dist < self.search_radius) and (abs(pos.z-TARGET_Z) < self.search_zdist):
             return True
         return False
 
