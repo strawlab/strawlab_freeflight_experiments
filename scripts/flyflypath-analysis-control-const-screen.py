@@ -1,3 +1,4 @@
+import os.path
 import sys
 sys.path.append('../nodes')
 import followpath
@@ -20,9 +21,17 @@ scalarMap = cmx.ScalarMappable(
                     norm=colors.Normalize(vmin=0, vmax=1),
                     cmap=plt.get_cmap('spring'))
 
-#csv = '../nodes/good/DATA20121003_114423.csv'
-csv = '../nodes/good/DATA20121004_105408.csv'
-#csv = '../nodes/good/DATA20121005_165151.csv'
+#default_csv = '../nodes/good/DATA20121003_114423.csv'
+default_csv = '../nodes/good/DATA20121004_105408.csv'
+#default_csv = '../nodes/good/DATA20121005_165151.csv'
+
+try:
+    csv = sys.argv[1]
+except IndexError:
+    csv = default_csv
+finally:
+    if not os.path.exists(csv):
+        raise ValueError("no such file")
 
 oid = -1 
 for rec in followpath.Logger(csv,'r').record_iterator():
