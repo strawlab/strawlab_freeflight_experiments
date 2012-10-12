@@ -6,22 +6,23 @@ import time
 import threading
 
 PACKAGE='strawlab_freeflight_experiments'
+
 import roslib
+import roslib.packages
 roslib.load_manifest(PACKAGE)
+
 import rospy
-import display_client # from vros_projectors package
+import display_client
 from std_msgs.msg import String, UInt32, Bool
 from geometry_msgs.msg import Vector3
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import flyflypath.model
 import flyflypath.view
 import flyflypath.polyline
 import nodelib.log
 
-rospack = rospkg.RosPack()
-pkg_dir = rospack.get_path(PACKAGE)
+pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
 
