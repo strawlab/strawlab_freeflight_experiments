@@ -1,6 +1,8 @@
 import os.path
 import sys
 import pickle
+import re
+
 sys.path.append('../nodes')
 import followpath
 
@@ -33,7 +35,7 @@ try:
 except IndexError:
     csv = default_csv
 finally:
-    if not os.path.exists(csv):
+    if not os.path.isfile(csv):
         raise ValueError("no such file")
 
 oid = -1 
@@ -84,11 +86,19 @@ for along in np.linspace(0,1.0,50):
     svg_x.append(x); svg_y.append(y)
 
 for fighandle in figure_names:
+    title = fighandle
     plt.figure(fighandle)
     plt.plot(svg_x,svg_y,color='black')
     plt.xlim((-0.5,0.5))
     plt.ylim((-0.5,0.5))
-    plt.legend(loc='upper right')
+    plt.title(title)
+
+    csvfname = os.path.splitext(os.path.basename(csv))[0]
+    safetitle = re.sub(r'[^A-Za-z0-9_. ]+|^\.|\.$|^ | $|^$', '', title)
+    filename = "%s_%s.svg" % (csvfname,safetitle)
+    plt.savefig(filename,format='svg')
+
+    #plt.legend(loc='upper right')
 
 if topickle:
     fn = os.path.basename(csv)+".pickle"
