@@ -5,8 +5,11 @@ import numpy as np
 import threading
 
 PACKAGE='strawlab_freeflight_experiments'
+
 import roslib
+import roslib.packages
 roslib.load_manifest(PACKAGE)
+
 import rospy
 import display_client
 from std_msgs.msg import UInt32
@@ -16,20 +19,19 @@ import rospkg
 
 import nodelib.log
 
-rospack = rospkg.RosPack()
-pkg_dir = rospack.get_path(PACKAGE)
+pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
 
 CONTROL_RATE        = 20.0      #Hz
 SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
 
-START_N_SEGMENTS    = 8
+START_N_SEGMENTS    = 4
 CYL_RAD             = 0.4
 DIST_FROM_WALL      = 0.11
 
-P_CONST_XY          = -2
-P_CONST_Z           = -2
+P_CONST_XY          = 3
+P_CONST_Z           = -3
 
 TARGET_Z            = 0.5
 
@@ -38,8 +40,11 @@ IMPOSSIBLE_OBJ_ID = 0
 IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 CONDITIONS = ["static"]
-CONDITIONS.extend( "stripe_fixate/%d" % i for i in range(START_N_SEGMENTS) )
+CONDITIONS.extend( "stripe_fixate/%d/%f" % (i,+1.0*P_CONST_XY) for i in range(START_N_SEGMENTS) )
+CONDITIONS.extend( "stripe_fixate/%d/%f" % (i,-1.0*P_CONST_XY) for i in range(START_N_SEGMENTS) )
 START_CONDITION = CONDITIONS[1]
+
+print CONDITIONS
 
 SUB_CONDITIONS = ["birth","experiment","death"]
 
@@ -50,7 +55,7 @@ def is_static_mode(condition):
     return condition == "static"
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("condition","start_x","start_y","fly_x","fly_y","lock_object","framenumber")
+    STATE = ("condition","condition_sub","trg_x","trg_y","fly_x","fly_y","fly_z","lock_object","framenumber")
 
 class Node(object):
     def __init__(self):
@@ -90,8 +95,14 @@ class Node(object):
         self.start_coords = res
         self.start_idx = 0
 
-        self.start_x = self.start_y = 0.0
-        self.search_radius = 0.1
+        self.trg_x = self.trg_y = 0.0
+
+        self.fly_pub = rospy.Publisher('~fly', Vector3)
+        self.trg_pub = rospy.Publisher('~target', Vector3)
+
+        self.search_radius_birth = 0.15
+        self.search_radius_death = 0.1
+
         self.search_zdist  = 0.15
 
         self.switch_conditions(None,force=START_CONDITION)
@@ -103,7 +114,10 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    def switch_conditions(self,event,force=''):
+    def switch_sub_conditions(self,condition_sub):
+        self.switch_conditions(None,self.condition,condition_sub)
+
+    def switch_conditions(self,event,force='',condition_sub="birth"):
         if force:
             self.condition = force
         else:
@@ -113,16 +127,20 @@ class Node(object):
         self.log.condition = self.condition
         if is_static_mode(self.condition):
             self.drop_lock_on()
-            self.start_x = self.start_y = 0.0
+            self.trg_x = self.trg_y = 0.0
+            self.p_xy = 0.0
         else:
-            self.start_idx = int(self.condition.split('/')[1])
-            self.start_x = self.start_coords[self.start_idx][0][0]
-            self.start_y = self.start_coords[self.start_idx][0][1]
+            cond,start_idx,p = self.condition.split('/')
+            self.start_idx = int(start_idx)
+            self.p_xy = float(p)
+            self.trg_x = self.start_coords[self.start_idx][0][0]
+            self.trg_y = self.start_coords[self.start_idx][0][1]
 
         #all sub phases start at birth
-        self.condition_sub = "birth"
+        self.condition_sub = condition_sub
+        self.log.condition_sub = self.condition_sub
 
-        rospy.loginfo('condition: %s (p=%f)' % (self.condition,self.start_idx))
+        rospy.loginfo('condition: %s:%s' % (self.condition,self.condition_sub))
 
     def get_starfield_velocity_vector(self,t,dt,fly_x,fly_y,fly_z,target_x,target_y,target_z):
         msg = Vector3()
@@ -157,29 +175,40 @@ class Node(object):
                 if is_static_mode(self.condition):
                     starfield_velocity = Vector3() #zero velocity in x,y,z
                 elif self.condition_sub == "birth":
-                    #all experiments start (birth) by bringing the fly to the start target
-                    starfield_velocity = self.get_starfield_velocity_vector(
-                                            now,0,
-                                            fly_x,fly_y,fly_z,
-                                            self.start_x,self.start_y,TARGET_Z)
+                    #unless already there, all experiments start (birth) by bringing the fly to the
+                    #start target
+                    if self.is_in_trigger_volume(fly_x,fly_y,fly_z,self.trg_x,self.trg_y,TARGET_Z,self.search_radius_death):
+                        self.switch_sub_conditions("experiment")
+                        #FIXME: maybe should be a strong push to orientate toward the line????
+                        starfield_velocity = Vector3()
+                    else:
+                        starfield_velocity = self.get_starfield_velocity_vector(
+                                                now,0,
+                                                fly_x,fly_y,fly_z,
+                                                self.trg_x,self.trg_y,TARGET_Z)
+                elif self.condition_sub == "experiment":
+                    print "EXPERIMENT"
+                    self.switch_sub_conditions("birth")
+                    self.drop_lock_on()
                 else:
                     raise Exception("NOT COMPLETED")
 
-                print starfield_velocity
-
-            self.log.start_x = self.start_x; self.log.start_y = self.start_y; self.log.start_z = TARGET_Z
+            self.log.trg_x = self.trg_x; self.log.trg_y = self.trg_y; self.log.trg_z = TARGET_Z
             self.log.fly_x = fly_x; self.log.fly_y = fly_y; self.log.fly_z = fly_z;
             self.log.update()
+
+            self.fly_pub.publish(fly_x,fly_y,fly_z)
+            self.trg_pub.publish(self.trg_x,self.trg_y,TARGET_Z)
 
             self.starfield_velocity_pub.publish(starfield_velocity)
 
             r.sleep()
 
-    def is_in_trigger_volume(self,pos):
-        c = np.array( (self.start_x, self.start_y) )
-        p = np.array( (pos.x, pos.y) )
+    def is_in_trigger_volume(self,fly_x,fly_y,fly_z,x,y,z,search_radius):
+        c = np.array( (x, y) )
+        p = np.array( (fly_x, fly_y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < self.search_radius) and (abs(pos.z-TARGET_Z) < self.search_zdist):
+        if (dist < search_radius) and (abs(fly_z-z) < self.search_zdist):
             return True
         return False
 
@@ -193,7 +222,11 @@ class Node(object):
                         self.fly = obj.position
                 else:
                     if self.condition_sub in ("birth",):
-                        if self.is_in_trigger_volume(obj.position):
+                        #when birthing flies taken them from anywhere in the middle of the
+                        #arena and move them to the target
+                        if self.is_in_trigger_volume(obj.position.x,obj.position.y,obj.position.z,
+                                                     0.0, 0.0, TARGET_Z,
+                                                     self.search_radius_birth):
                             if not is_static_mode(self.condition):
                                 self.fly = obj.position
                                 self.lock_on(obj,packet.framenumber)
@@ -204,6 +237,7 @@ class Node(object):
     
         rospy.loginfo('locked object %d at frame %d at %f,%f,%f' % (
                 self.currently_locked_obj_id,framenumber,self.fly.x,self.fly.y,self.fly.z))
+
         now = rospy.get_time()
         self.first_seen_time = now
         self.last_seen_time = now
