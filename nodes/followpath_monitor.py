@@ -29,7 +29,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._lock = threading.Lock()
 
         self._w = Gtk.Window()
-        self._w.connect("delete-event", Gtk.main_quit)
+        self._w.connect("delete-event", self._quit)
         self._w.add(self)
 
         rospy.Subscriber("svg_filename",
@@ -48,6 +48,10 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._w.show_all()
 
         GLib.timeout_add(1000/20, self._redraw)
+
+    def _quit(self, *args):
+        rospy.signal_shutdown("quit")
+        Gtk.main_quit()
 
     def _redraw(self):
         self.queue_draw()
