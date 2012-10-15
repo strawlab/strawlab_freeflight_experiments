@@ -44,8 +44,9 @@ SHRINK_SPHERE = 0.8
 CONDITIONS = ("follow+control/0.0",
               "follow+stepwise/+0.008",
               "follow+stepwise/+0.006",
-              "follow+stepwise/+0.004")
-START_CONDITION = CONDITIONS[0]
+              "follow+stepwise/+0.004",
+              "follow+stepwise/-0.006")
+START_CONDITION = CONDITIONS[2]
 
 def is_constanttime_mode(condition):
     return condition.startswith("follow+constanttime")
