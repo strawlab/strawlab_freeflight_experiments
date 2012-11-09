@@ -2,6 +2,7 @@ import os.path
 import time
 import csv
 import collections
+import tempfile
 
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
@@ -40,6 +41,8 @@ class CsvLogger:
             rospy.loginfo("reading %s" % self._fname)
         elif mode == 'w':
             rospy.loginfo("writing %s" % self._fname)
+            if self._fname.startswith(tempfile.gettempdir()):
+                rospy.logwarn("SAVING DATA TO TEMPORARY DIRECTORY - ARE YOU SURE")
             self._fd = open(self._fname,mode='w')
             self._fd.write(",".join(self.STATE))
             self._fd.write(",t_sec,t_nsec,flydra_data_file,exp_uuid\n")
