@@ -13,7 +13,7 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import display_client
 from std_msgs.msg import UInt32
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
@@ -22,15 +22,18 @@ import nodelib.log
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
+POST_TOPIC      = 'model_pose'
+
 
 CONTROL_RATE        = 20.0      #Hz
 SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
 
-START_N_SEGMENTS    = 4
+START_N_SEGMENTS    = 3
 CYL_RAD             = 0.4
-DIST_FROM_WALL      = 0.11
+DIST_FROM_WALL      = 0.15
 
-P_CONST_XY          = 3
+P_X                 = -3
+P_Y                 = -3
 P_CONST_Z           = -3
 
 TARGET_Z            = 0.5
@@ -40,11 +43,8 @@ IMPOSSIBLE_OBJ_ID = 0
 IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 CONDITIONS = ["static"]
-CONDITIONS.extend( "stripe_fixate/%d/%f" % (i,+1.0*P_CONST_XY) for i in range(START_N_SEGMENTS) )
-CONDITIONS.extend( "stripe_fixate/%d/%f" % (i,-1.0*P_CONST_XY) for i in range(START_N_SEGMENTS) )
+CONDITIONS.extend( "stripe_fixate/%d" % i for i in range(START_N_SEGMENTS) )
 START_CONDITION = CONDITIONS[1]
-
-print CONDITIONS
 
 SUB_CONDITIONS = ["birth","experiment","death"]
 
@@ -62,14 +62,16 @@ class Node(object):
         rospy.init_node("fixation")
 
         display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusStarField')
+            'StimulusStarFieldAndModel')
 
         self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
         self.starfield_velocity_pub.publish(Vector3())
+        self.starfield_post_pub = rospy.Publisher(POST_TOPIC, Pose, latch=True, tcp_nodelay=True)
+        self.starfield_post_pub.publish(self.get_hide_post_msg())
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
-        self.log = Logger()
+        self.log = Logger(directory="/tmp/")
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -96,12 +98,14 @@ class Node(object):
         self.start_idx = 0
 
         self.trg_x = self.trg_y = 0.0
+        self.post_x = self.post_y = 0.0
 
         self.fly_pub = rospy.Publisher('~fly', Vector3)
         self.trg_pub = rospy.Publisher('~target', Vector3)
+        self.post_pub = rospy.Publisher('~post', Vector3)
 
         self.search_radius_birth = 0.15
-        self.search_radius_death = 0.1
+        self.search_radius_death = 0.08
 
         self.search_zdist  = 0.15
 
@@ -113,6 +117,17 @@ class Node(object):
         rospy.Subscriber("flydra_mainbrain_super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
+
+    def get_post_pose_msg(self,x,y,z=0):
+        msg = Pose()
+        msg.position.x = x
+        msg.position.y = y
+        msg.position.z = z
+        msg.orientation.w = 1
+        return msg
+
+    def get_hide_post_msg(self):
+        return self.get_post_pose_msg(0,0,10)
 
     def switch_sub_conditions(self,condition_sub):
         self.switch_conditions(None,self.condition,condition_sub)
@@ -128,13 +143,14 @@ class Node(object):
         if is_static_mode(self.condition):
             self.drop_lock_on()
             self.trg_x = self.trg_y = 0.0
-            self.p_xy = 0.0
+            self.p_x = self.p_y = 0.0
         else:
-            cond,start_idx,p = self.condition.split('/')
+            cond,start_idx = self.condition.split('/')
             self.start_idx = int(start_idx)
-            self.p_xy = float(p)
-            self.trg_x = self.start_coords[self.start_idx][0][0]
-            self.trg_y = self.start_coords[self.start_idx][0][1]
+            self.p_x = float(P_X)
+            self.p_y = float(P_Y)
+            self.trg_x, self.trg_y = self.start_coords[self.start_idx][0]
+            self.post_x, self.post_y = self.start_coords[self.start_idx][1]
 
         #all sub phases start at birth
         self.condition_sub = condition_sub
@@ -144,8 +160,8 @@ class Node(object):
 
     def get_starfield_velocity_vector(self,t,dt,fly_x,fly_y,fly_z,target_x,target_y,target_z):
         msg = Vector3()
-        msg.x = (fly_x - target_x) * P_CONST_XY
-        msg.y = (fly_y - target_y) * P_CONST_XY
+        msg.x = (fly_x - target_x) * self.p_x
+        msg.y = (fly_y - target_y) * self.p_y
         msg.z = (fly_z - target_z) * P_CONST_Z
         return msg
 
@@ -159,6 +175,7 @@ class Node(object):
 
             if currently_locked_obj_id is None:
                 starfield_velocity = Vector3() #zero velocity in x,y,z
+                starfield_post = self.get_hide_post_msg()
             else:
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
@@ -174,22 +191,27 @@ class Node(object):
                 #do the control
                 if is_static_mode(self.condition):
                     starfield_velocity = Vector3() #zero velocity in x,y,z
+                    starfield_post = self.get_hide_post_msg()
                 elif self.condition_sub == "birth":
                     #unless already there, all experiments start (birth) by bringing the fly to the
                     #start target
                     if self.is_in_trigger_volume(fly_x,fly_y,fly_z,self.trg_x,self.trg_y,TARGET_Z,self.search_radius_death):
                         self.switch_sub_conditions("experiment")
-                        #FIXME: maybe should be a strong push to orientate toward the line????
                         starfield_velocity = Vector3()
+                        starfield_post = self.get_hide_post_msg()
                     else:
                         starfield_velocity = self.get_starfield_velocity_vector(
                                                 now,0,
                                                 fly_x,fly_y,fly_z,
                                                 self.trg_x,self.trg_y,TARGET_Z)
                 elif self.condition_sub == "experiment":
-                    print "EXPERIMENT"
-                    self.switch_sub_conditions("birth")
-                    self.drop_lock_on()
+                    #ignore z or also control z?
+                    if self.is_in_trigger_volume(fly_x,fly_y,0,self.post_x,self.post_y,0,self.search_radius_death):
+                        self.switch_sub_conditions("birth")
+                        self.drop_lock_on()
+                    else:
+                        starfield_velocity = Vector3()
+                        starfield_post = self.get_post_pose_msg(self.post_x,self.post_y)
                 else:
                     raise Exception("NOT COMPLETED")
 
@@ -199,10 +221,14 @@ class Node(object):
 
             self.fly_pub.publish(fly_x,fly_y,fly_z)
             self.trg_pub.publish(self.trg_x,self.trg_y,TARGET_Z)
+            self.post_pub.publish(self.post_x,self.post_y,0)
 
             self.starfield_velocity_pub.publish(starfield_velocity)
+            self.starfield_post_pub.publish(starfield_post)
 
             r.sleep()
+
+        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.filename))
 
     def is_in_trigger_volume(self,fly_x,fly_y,fly_z,x,y,z,search_radius):
         c = np.array( (x, y) )

@@ -63,7 +63,7 @@ class FlycaveWidget(Gtk.DrawingArea):
         cr.set_source_surface(self._surface, 0.0, 0.0)
         cr.paint()
 
-        vec,src_pt,trg_pt = self.get_vec_and_points()
+        vec,pts = self.get_vec_and_points()
         
         if vec is not None:
             cr.set_source_rgb (1, 0, 0)
@@ -72,17 +72,12 @@ class FlycaveWidget(Gtk.DrawingArea):
             cr.line_to(vec.p2.x,vec.p2.y)
             cr.stroke()
 
-        if src_pt is not None:
-            cr.set_source_rgb (1,0,0)
-            cr.move_to(src_pt.x, src_pt.y)
-            cr.arc(src_pt.x, src_pt.y, 2, 0, 2.0 * math.pi)
-            cr.fill()
-
-        if trg_pt is not None:
-            cr.set_source_rgb (0,1,0)
-            cr.move_to(trg_pt.x, trg_pt.y)
-            cr.arc(trg_pt.x, trg_pt.y, 2, 0, 2.0 * math.pi)
-            cr.fill()
+        for pt,rgb in pts:
+            if pt is not None:
+                cr.set_source_rgb (*rgb)
+                cr.move_to(pt.x, pt.y)
+                cr.arc(pt.x, pt.y, 2, 0, 2.0 * math.pi)
+                cr.fill()
 
     def _on_configure_event(self, widget, event):
         allocation = self.get_allocation()
@@ -100,6 +95,7 @@ class FixationWidget(FlycaveWidget):
         self._src = None
         self._trg = None
         self._vec = None
+        self._post = None
 
         t = threading.Thread(target=rospy.spin).start()
         self._lock = threading.Lock()
@@ -114,6 +110,9 @@ class FixationWidget(FlycaveWidget):
         rospy.Subscriber("fixation/target",
                          Vector3,
                          self._on_target_move)
+        rospy.Subscriber("fixation/post",
+                         Vector3,
+                         self._on_post_move)
 
         self._w.show_all()
 
@@ -135,8 +134,15 @@ class FixationWidget(FlycaveWidget):
         x,y = self._xy_to_pxpy(msg.x,msg.y)
         self._trg = Point2(int(x),int(y))
 
+    def _on_post_move(self, msg):
+        x,y = self._xy_to_pxpy(msg.x,msg.y)
+        self._post = Point2(int(x),int(y))
+
     def get_vec_and_points(self):
-        return self._vec,self._src, self._trg
+        return self._vec,(
+                (self._src,(1,0,0)),
+                (self._trg,(0,1,0)),
+                (self._post,(0,0,1)))
 
 if __name__ == "__main__":
     rospy.init_node("fixation_monitor")
