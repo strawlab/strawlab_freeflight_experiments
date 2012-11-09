@@ -92,7 +92,7 @@ class Node(object):
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
         self.model = flyflypath.model.MovingPointSvgPath(PATH_TO_FOLLOW)
-        self.log = Logger()
+        self.log = Logger(directory="/tmp/")
 
         startpt = self.model.polyline.p
         self.start_x, self.start_y = pxpy_to_xy(startpt.x,startpt.y)
@@ -241,6 +241,8 @@ class Node(object):
             self.starfield_velocity_pub.publish(vec)
 
             r.sleep()
+
+        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.filename))
 
     def is_in_trigger_volume(self,pos):
         c = np.array( (self.start_x, self.start_y) )
