@@ -10,9 +10,13 @@ import std_msgs.msg
 class CsvLogger:
 
     STATE = tuple()
+    DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory="~/FLYDRA"):
+    def __init__(self,fname=None, mode='w', directory=None):
         assert len(self.STATE)
+
+        if directory is None:
+            directory = self.DEFAULT_DIRECTORY
 
         self._flydra_data_file = ''
         self._exp_uuid = ''
@@ -54,6 +58,10 @@ class CsvLogger:
 
     def _on_experiment_uuid(self, msg):
         self._exp_uuid = msg.data
+
+    @property
+    def filename(self):
+        return self._fname
 
     def update(self, check=False):
         vals = [getattr(self,s) for s in self.STATE]
