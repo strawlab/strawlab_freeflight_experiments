@@ -71,7 +71,8 @@ class Node(object):
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
-        self.log = Logger(directory="/tmp/")
+        #self.log = Logger(directory="/tmp/")
+        self.log = Logger()
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
