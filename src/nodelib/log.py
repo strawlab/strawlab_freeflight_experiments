@@ -45,7 +45,7 @@ class CsvLogger:
             self._fd.write(",".join(self.STATE))
             self._fd.write(",t_sec,t_nsec,flydra_data_file,exp_uuid\n")
 
-            rospy.Subscriber('flydra_mainbrain_data_file',
+            rospy.Subscriber('flydra_mainbrain/data_file',
                              std_msgs.msg.String,
                              self._on_flydra_mainbrain_start_saving)
             rospy.Subscriber('experiment/uuid',

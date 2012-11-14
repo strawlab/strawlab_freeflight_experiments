@@ -98,7 +98,7 @@ class Node(object):
 
         print 'INITIALIZATION COMPLETED'
         # start subscribing to flydra_mainbrain
-        rospy.Subscriber("flydra_mainbrain_super_packets", flydra_mainbrain_super_packet, self.tracking_data_callback)
+        rospy.Subscriber("flydra_mainbrain/super_packets", flydra_mainbrain_super_packet, self.tracking_data_callback)
 
     def run(self):
         # start publishing stimulus

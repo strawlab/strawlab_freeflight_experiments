@@ -115,7 +115,7 @@ class Node(object):
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
 
-        rospy.Subscriber("flydra_mainbrain_super_packets",
+        rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
