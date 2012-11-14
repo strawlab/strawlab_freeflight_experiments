@@ -26,14 +26,12 @@ class CsvLogger:
             setattr(self, s, None)
 
         if fname is None:
-            directory = os.path.join(
-                            os.path.expanduser(directory),
-                            rospy.get_name()[1:])
+            directory = os.path.expanduser(directory)
             if not os.path.exists(directory):
                 os.makedirs(directory)
             self._fname = os.path.join(
                             directory,
-                            time.strftime('DATA%Y%m%d_%H%M%S.csv'))
+                            time.strftime('%Y%m%d_%H%M%S') + '.%s.csv' % rospy.get_name()[1:])
         else:
             self._fname = os.path.abspath(fname)
 
