@@ -144,6 +144,7 @@ class Node(object):
         if is_static_mode(self.condition):
             self.drop_lock_on()
             self.trg_x = self.trg_y = 0.0
+            self.post_x = self.post_y = 0.0
             self.p_x = self.p_y = 0.0
         else:
             cond,start_idx = self.condition.split('/')
