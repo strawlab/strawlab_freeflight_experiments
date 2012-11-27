@@ -1,22 +1,10 @@
-import numpy as np
-import h5py
-import contextlib
-
-import strawlab_mpl.defaults as smd; smd.setup_defaults()
-
-from matplotlib.mlab import csv2rec
-import matplotlib.pyplot as plt
 import argparse
 
-ZFILT=True
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+import nodelib.analysis
 
-@contextlib.contextmanager
-def mpl_fig(fname_base):
-    fig = plt.figure( figsize=(5,10) )
-    yield fig
-    fig.subplots_adjust( left=0.15, bottom=0.06, right=0.94, top=0.95, wspace=0.2, hspace=0.26)
-    fig.savefig(fname_base+'.png')
-    fig.savefig(fname_base+'.svg')
+import numpy as np
+import matplotlib.pyplot as plt
 
 def append_col(arr_in, col, name):
     dtype_in = arr_in.dtype
@@ -51,38 +39,37 @@ def trim_z(valid):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'metadata_file', type=str)
+        'csv_file', type=str)
     parser.add_argument(
         'data_file', type=str)
     parser.add_argument(
         '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
     parser.add_argument(
-        '--show', action='store_true', dest='show', default=False)
+        '--show', action='store_true', default=False)
+    parser.add_argument(
+        '--zfilt', action='store_true', default=False)
     args = parser.parse_args()
 
-    metadata = csv2rec( args.metadata_file )
-    with h5py.File(args.data_file) as h5:
-        trajectories = h5['trajectories'][:]
-        starts = h5['trajectory_start_times'][:]
-        fps = h5['trajectories'].attrs['frames_per_second']
-        dt = 1.0/fps
+    nmetadata,metadata,trajectories,starts,attrs = nodelib.analysis. load_csv_and_h5(args.csv_file, args.data_file)
+    dt = 1.0/attrs['frames_per_second']
 
     results = {}
     IMPOSSIBLE_OBJ_ID = 0
-    t = metadata['t_sec'] + metadata['t_nsec']*1e-9
-    for i in range(len(metadata)-1):
+    for i in range(nmetadata-1):
         row = metadata[i]
         next_row = metadata[i+1]
-        #print row
+        t_start = nodelib.analysis.rec_get_time(row)
+        t_stop = nodelib.analysis.rec_get_time(next_row)
+
         obj_id = row['lock_object']
         if obj_id==IMPOSSIBLE_OBJ_ID:
             continue
 
         current_condition = row['confinement_condition']
-        t_start = t[i]
-        t_stop = t[i+1]
+
         assert next_row['lock_object']==IMPOSSIBLE_OBJ_ID
         assert str(next_row['stimulus_filename']).endswith('midgray.osg')
+
         if current_condition=='confinement':
             assert str(row['stimulus_filename']).endswith('checkerboard.png.osg')
         else:
@@ -98,6 +85,7 @@ if __name__=='__main__':
                                               )
         r = results[current_condition]
 
+        #return Mx1 row vector with True elements at indexes of this obj_id
         tcond = trajectories['obj_id']==obj_id
         this_t = trajectories[tcond]
         if len(this_t)==0:
@@ -119,7 +107,7 @@ if __name__=='__main__':
         del cond
         del this_t
 
-        if ZFILT:
+        if args.zfilt:
             valid = trim_z(valid)
             if valid is None:
                 print ('no points left after ZFILT for obj_id %d'%(obj_id))
@@ -146,7 +134,7 @@ if __name__=='__main__':
 
     # ----------------------------
 
-    with mpl_fig('traces') as fig:
+    with nodelib.analysis.mpl_fig('traces') as fig:
         ax = None
         limit = 0.5
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -176,7 +164,7 @@ if __name__=='__main__':
             ax.set_xlabel( 'x (m)' )
 
     # ----------------------------
-    with mpl_fig('hist') as fig:
+    with nodelib.analysis.mpl_fig('hist') as fig:
         ax = None
         limit = 1.0
         xbins = np.linspace(-limit,limit,40)

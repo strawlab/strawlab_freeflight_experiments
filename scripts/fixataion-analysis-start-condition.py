@@ -22,13 +22,13 @@ figure_names    = {}
 
 all_conditions  = {}
 
-MIN_DURATION = 2
+MIN_DURATION = 0.5
 
 scalarMap = cmx.ScalarMappable(
                     norm=colors.Normalize(vmin=0, vmax=1),
                     cmap=plt.get_cmap('spring'))
 
-default_csv = '../nodes/DATA20121011_213628.csv'
+default_csv = ''
 
 try:
     csv = sys.argv[1]
@@ -36,7 +36,7 @@ except IndexError:
     csv = default_csv
 finally:
     if not os.path.isfile(csv):
-        raise ValueError("no such file")
+        raise ValueError("no such file\n./%s /path/to/data.csv" % os.path.basename(__file__))
 
 oid = -1 
 for rec in fixation.Logger(csv,'r').record_iterator():
@@ -51,13 +51,7 @@ for rec in fixation.Logger(csv,'r').record_iterator():
 
     t = float(rec.t_sec) + (float(rec.t_nsec) * 1e-9)
 
-    condition = rec.condition.split("/")
-    if float(condition[2]) < 0:
-        continue
-
-    condition = "/".join(condition[0:2])
-    print condition
-
+    condition = rec.condition
     if lock_object > oid:
         #new trial
         if oid != -1:
