@@ -8,13 +8,14 @@ PACKAGE='strawlab_freeflight_experiments'
 import roslib
 roslib.load_manifest(PACKAGE)
 import rospy
-import display_client # from vros_projectors package
+import display_client
 from std_msgs.msg import String, UInt32
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
-rospack = rospkg.RosPack()
-pkg_dir = rospack.get_path(PACKAGE)
+import nodelib.log
+
+pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STIM_FILENAME = 'checkerboard.png.osg'
 BLANK_FILENAME = 'midgray.osg'
@@ -22,52 +23,23 @@ BLANK_FILENAME = 'midgray.osg'
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
 
-class Logger:
-    def __init__(self,fname=None):
-        if fname is None:
-            fname = time.strftime('DATA%Y%m%d_%H%M%S.csv')
-        self.fd = open(fname,mode='w')
-        self.fd.write('stimulus_filename,confinement_condition,lock_object,framenumber,t_sec,t_nsec\n')
-        rospy.loginfo( 'saving to %s'%fname )
-        self.state = [0,0,0,0]
-
-        self.stimulus_pub = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
-        self.condition_pub = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
-        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
-
-    def update(self):
-        t = rospy.get_rostime()
-        self.fd.write( '%s,%s,%s,%d,%d,%d\n' % ( self.state[0],
-                                                 self.state[1],
-                                                 self.state[2],
-                                                 self.state[3],
-                                                 t.secs,
-                                                 t.nsecs ))
-        self.fd.flush()
-        self.lock_object.publish( self.state[2] )
-        self.stimulus_pub.publish( self.state[0] )
-        self.condition_pub.publish( self.state[1] )
-
-    def stim(self,mstim):
-        self.state[0] = mstim
-    def condition(self,mcondition):
-        self.state[1] = mcondition
-    def lock(self,obj_id,framenumber):
-        self.state[2] = obj_id
-        self.state[3] = framenumber
+class Logger(nodelib.log.CsvLogger):
+    STATE = ("stimulus_filename","confinement_condition","lock_object","framenumber")
 
 class Node(object):
     def __init__(self):
         rospy.init_node("confinement")
 
-        rospy.logwarn('HACK to set all display server modes')
         display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
 
-        self.log = Logger()
+        self.log = Logger(wait=True)
+        self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
+        self.pub_condition = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
+        self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
 
 
-        self.log.stim( BLANK_FILENAME )
+        self.log.stimulus_filename = BLANK_FILENAME
         self.currently_locked_obj_id = None
         self.condition = 'control'
         self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
@@ -84,7 +56,7 @@ class Node(object):
         else:
             self.condition='confinement'
         rospy.loginfo('confinement condition: %s'%self.condition )
-        self.log.condition( self.condition )
+        self.log.confinement_condition = self.condition
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -95,6 +67,7 @@ class Node(object):
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
             r.sleep()
+        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,pos,expanded=False):
         c = np.array( (0,0) )
@@ -126,24 +99,32 @@ class Node(object):
                         #print obj
                         self.lock_on(obj,packet.framenumber)
 
+    def update(self):
+        self.log.update()
+        self.pub_lock_object.publish( self.log.lock_object )
+        self.pub_stimulus.publish( self.log.stimulus_filename )
+        self.pub_condition.publish( self.log.confinement_condition )
+
     def lock_on(self,obj,framenumber):
         rospy.loginfo('locked object %d at frame %d'%(obj.obj_id,framenumber))
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
         if self.condition=='confinement':
-            self.log.stim( STIM_FILENAME )
+            self.log.stimulus_filename = STIM_FILENAME
         else:
-            self.log.stim( BLANK_FILENAME )
-        self.log.lock( obj.obj_id, framenumber )
-        self.log.update()
+            self.log.stimulus_filename = BLANK_FILENAME
+        self.log.lock_object = obj.obj_id
+        self.log.framenumber = framenumber
+        self.update()
 
     def drop_lock_on(self):
         rospy.loginfo('dropping locked object')
         self.currently_locked_obj_id = None
-        self.log.stim(BLANK_FILENAME)
-        self.log.lock(IMPOSSIBLE_OBJ_ID, 0 )
-        self.log.update()
+        self.log.stimulus_filename = BLANK_FILENAME
+        self.log.lock_object = IMPOSSIBLE_OBJ_ID
+        self.log.framenumber = 0
+        self.update()
 
 def main():
     node = Node()
