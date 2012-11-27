@@ -8,12 +8,15 @@ import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 import std_msgs.msg
 
+class NoDataError(Exception):
+    pass
+
 class CsvLogger:
 
     STATE = tuple()
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None):
+    def __init__(self,fname=None, mode='w', directory=None, wait=False):
         assert len(self.STATE)
 
         if directory is None:
@@ -51,8 +54,21 @@ class CsvLogger:
             rospy.Subscriber('experiment/uuid',
                              std_msgs.msg.String,
                              self._on_experiment_uuid)
+
+            if wait:
+                rospy.loginfo("waiting for flydra_mainbrain/data_file and experiment/uuid")
+                t0 = t1 = rospy.get_time()
+                while (t1 - t0) < 5.0: #seconds
+                    rospy.sleep(0.1)
+                    t1 = rospy.get_time()
+                    if self._flydra_data_file and not self._exp_uuid:
+                        break
+                if (not self._flydra_data_file) or (not self._exp_uuid):
+                    self.close()
+                    os.remove(self._fname)
+                    raise NoDataError
         else:
-            raise Exception("mode must be 'r' or 'w'")
+            raise IOError("mode must be 'r' or 'w'")
 
     def _on_flydra_mainbrain_start_saving(self, msg):
         self._flydra_data_file = msg.data
@@ -74,6 +90,10 @@ class CsvLogger:
         t = rospy.get_rostime()
         self._fd.write(",%d,%d,%s,%s\n" % (t.secs,t.nsecs,self._flydra_data_file,self._exp_uuid))
         self._fd.flush()
+
+    def close(self):
+        self._fd.close()
+        return self._fname
 
     def record_iterator(self):
         with open(self._fname, 'rb') as csvfile:
