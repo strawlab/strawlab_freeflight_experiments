@@ -72,7 +72,7 @@ class Node(object):
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
         #self.log = Logger(directory="/tmp/")
-        self.log = Logger()
+        self.log = Logger(wait=True)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -230,7 +230,7 @@ class Node(object):
 
             r.sleep()
 
-        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.filename))
+        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,fly_x,fly_y,fly_z,x,y,z,search_radius):
         c = np.array( (x, y) )

@@ -44,9 +44,8 @@ SHRINK_SPHERE = 0.8
 CONDITIONS = ("follow+control/0.0",
               "follow+stepwise/+0.008",
               "follow+stepwise/+0.006",
-              "follow+stepwise/+0.004",
-              "follow+stepwise/-0.006")
-START_CONDITION = CONDITIONS[2]
+              "follow+stepwise/+0.004")
+START_CONDITION = CONDITIONS[1]
 
 def is_constanttime_mode(condition):
     return condition.startswith("follow+constanttime")
@@ -92,7 +91,7 @@ class Node(object):
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
         self.model = flyflypath.model.MovingPointSvgPath(PATH_TO_FOLLOW)
-        self.log = Logger(directory="/tmp/")
+        self.log = Logger(wait=True)
 
         startpt = self.model.polyline.p
         self.start_x, self.start_y = pxpy_to_xy(startpt.x,startpt.y)
@@ -235,14 +234,13 @@ class Node(object):
             self.log.active = 1 if active else 0
 
             self.active_pub.publish(active)
+            self.starfield_velocity_pub.publish(vec)
 
             self.log.update()
 
-            self.starfield_velocity_pub.publish(vec)
-
             r.sleep()
 
-        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.filename))
+        rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,pos):
         c = np.array( (self.start_x, self.start_y) )
