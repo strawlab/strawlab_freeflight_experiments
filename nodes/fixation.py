@@ -31,6 +31,7 @@ SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. expe
 START_N_SEGMENTS    = 3
 CYL_RAD             = 0.4
 DIST_FROM_WALL      = 0.15
+KICK_DIST           = 0.10
 
 P_X                 = -3
 P_Y                 = -3
@@ -46,7 +47,7 @@ CONDITIONS = ["static"]
 CONDITIONS.extend( "stripe_fixate/%d" % i for i in range(START_N_SEGMENTS) )
 START_CONDITION = CONDITIONS[1]
 
-SUB_CONDITIONS = ["birth","experiment","death"]
+SUB_CONDITIONS = ["birth","birth_kick","experiment","death"]
 
 def is_stripe_fixate(condition):
     return condition.startswith("stripe_fixate")
@@ -94,7 +95,9 @@ class Node(object):
         for ang in np.linspace(0,2*np.pi,START_N_SEGMENTS+1):
             x = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL)
             y = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL)
-            res.append( [(x,y),(-x,-y)] )
+            x_inner = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
+            y_inner = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
+            res.append( [(x,y),(x_inner,y_inner),(-x,-y)] )
         self.start_coords = res
         self.start_idx = 0
 
@@ -103,10 +106,11 @@ class Node(object):
 
         self.fly_pub = rospy.Publisher('~fly', Vector3)
         self.trg_pub = rospy.Publisher('~target', Vector3)
+        self.trg_kick_pub = rospy.Publisher('~target_kick', Vector3)
         self.post_pub = rospy.Publisher('~post', Vector3)
 
-        self.search_radius_birth = 0.15
-        self.search_radius_death = 0.08
+        self.search_radius_birth = 0.13
+        self.search_radius_death = 0.05
 
         self.search_zdist  = 0.15
 
@@ -134,6 +138,8 @@ class Node(object):
         self.switch_conditions(None,self.condition,condition_sub)
 
     def switch_conditions(self,event,force='',condition_sub="birth"):
+        assert condition_sub in SUB_CONDITIONS
+
         if force:
             self.condition = force
         else:
@@ -151,8 +157,11 @@ class Node(object):
             self.start_idx = int(start_idx)
             self.p_x = float(P_X)
             self.p_y = float(P_Y)
-            self.trg_x, self.trg_y = self.start_coords[self.start_idx][0]
-            self.post_x, self.post_y = self.start_coords[self.start_idx][1]
+            self.post_x, self.post_y = self.start_coords[self.start_idx][2]
+            if condition_sub == "birth":
+                self.trg_x, self.trg_y = self.start_coords[self.start_idx][0]
+            elif condition_sub == "birth_kick":
+                self.trg_x, self.trg_y = self.start_coords[self.start_idx][1]
 
         #all sub phases start at birth
         self.condition_sub = condition_sub
@@ -194,11 +203,16 @@ class Node(object):
                 if is_static_mode(self.condition):
                     starfield_velocity = Vector3() #zero velocity in x,y,z
                     starfield_post = self.get_hide_post_msg()
-                elif self.condition_sub == "birth":
+                elif self.condition_sub.startswith("birth"):
                     #unless already there, all experiments start (birth) by bringing the fly to the
                     #start target
                     if self.is_in_trigger_volume(fly_x,fly_y,fly_z,self.trg_x,self.trg_y,TARGET_Z,self.search_radius_death):
-                        self.switch_sub_conditions("experiment")
+                        if self.condition_sub == "birth":
+                            self.switch_sub_conditions("birth_kick")
+                        elif self.condition_sub == "birth_kick":
+                            self.switch_sub_conditions("experiment")
+                        else:
+                            raise Exception("NO SUCH CONDITION")
                         starfield_velocity = Vector3()
                         starfield_post = self.get_hide_post_msg()
                     else:

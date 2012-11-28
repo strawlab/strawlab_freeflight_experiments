@@ -94,6 +94,7 @@ class FixationWidget(FlycaveWidget):
 
         self._src = None
         self._trg = None
+        self._trg_prev = None
         self._vec = None
         self._post = None
 
