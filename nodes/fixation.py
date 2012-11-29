@@ -55,6 +55,18 @@ def is_stripe_fixate(condition):
 def is_static_mode(condition):
     return condition == "static"
 
+def get_start_points():
+    #calculate the starting targets for the starfield controller, and the point
+    #opposing them in the cylinder (for the stripe fixation)
+    res = []
+    for ang in np.linspace(0,2*np.pi,START_N_SEGMENTS+1):
+        x = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL)
+        y = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL)
+        x_inner = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
+        y_inner = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
+        res.append( [(x,y),(x_inner,y_inner),(-x,-y)] )
+    return res
+
 class Logger(nodelib.log.CsvLogger):
     STATE = ("condition","condition_sub","trg_x","trg_y","fly_x","fly_y","fly_z","lock_object","framenumber")
 
@@ -72,8 +84,8 @@ class Node(object):
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
-        #self.log = Logger(directory="/tmp/")
-        self.log = Logger(wait=True)
+        self.log = Logger(directory="/tmp/")
+        #self.log = Logger(wait=True)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -89,16 +101,7 @@ class Node(object):
         self.log.lock_object = IMPOSSIBLE_OBJ_ID_ZERO_POSE
         self.log.framenumber = 0
 
-        #calculate the starting targets for the starfield controller, and the point
-        #opposing them in the cylinder (for the stripe fixation)
-        res = []
-        for ang in np.linspace(0,2*np.pi,START_N_SEGMENTS+1):
-            x = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL)
-            y = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL)
-            x_inner = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
-            y_inner = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
-            res.append( [(x,y),(x_inner,y_inner),(-x,-y)] )
-        self.start_coords = res
+        self.start_coords = get_start_points()
         self.start_idx = 0
 
         self.trg_x = self.trg_y = 0.0
