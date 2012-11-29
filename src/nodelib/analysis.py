@@ -13,10 +13,9 @@ import numpy as np
 import h5py
 
 @contextlib.contextmanager
-def mpl_fig(fname_base):
-    fig = plt.figure( figsize=(5,10) )
+def mpl_fig(fname_base,**kwargs):
+    fig = plt.figure( **kwargs )
     yield fig
-    fig.subplots_adjust( left=0.15, bottom=0.06, right=0.94, top=0.95, wspace=0.2, hspace=0.26)
     fig.savefig(fname_base+'.png')
     fig.savefig(fname_base+'.svg')
 
