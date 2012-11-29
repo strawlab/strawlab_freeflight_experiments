@@ -50,7 +50,7 @@ if __name__=='__main__':
         '--zfilt', action='store_true', default=False)
     args = parser.parse_args()
 
-    nmetadata,metadata,trajectories,starts,attrs = nodelib.analysis. load_csv_and_h5(args.csv_file, args.data_file)
+    nmetadata,metadata,trajectories,starts,attrs = nodelib.analysis.load_csv_and_h5(args.csv_file, args.data_file)
     dt = 1.0/attrs['frames_per_second']
 
     results = {}
@@ -134,11 +134,20 @@ if __name__=='__main__':
 
     # ----------------------------
 
-    with nodelib.analysis.mpl_fig('traces') as fig:
+    if 1:
+        figsize = (10,5)
+        NF_R = 1
+        NF_C = 2
+    else:
+        figsize = (10,5)
+        NF_R = 2
+        NF_C = 1
+
+    with nodelib.analysis.mpl_fig('traces',figsize=figsize) as fig:
         ax = None
         limit = 0.5
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(2,1,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(NF_R,NF_C,1+i,sharex=ax,sharey=ax)
 
             allx = np.concatenate( r['x'] )
             ally = np.concatenate( r['y'] )
@@ -164,13 +173,13 @@ if __name__=='__main__':
             ax.set_xlabel( 'x (m)' )
 
     # ----------------------------
-    with nodelib.analysis.mpl_fig('hist') as fig:
+    with nodelib.analysis.mpl_fig('hist',figsize=figsize) as fig:
         ax = None
         limit = 1.0
         xbins = np.linspace(-limit,limit,40)
         ybins = np.linspace(-limit,limit,40)
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(2,1,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(NF_R,NF_C,1+i,sharex=ax,sharey=ax)
 
             allx = np.concatenate( r['x'] )
             ally = np.concatenate( r['y'] )
@@ -196,7 +205,7 @@ if __name__=='__main__':
             ax.set_ylim( -0.5, 0.5 )
 
     # ----------------------------
-    if 1:
+    if 0:
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         bins = np.linspace(0,4000,20)
