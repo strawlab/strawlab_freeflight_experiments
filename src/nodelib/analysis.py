@@ -24,7 +24,7 @@ def load_csv_and_h5(csv_file, h5_file):
     csv = matplotlib.mlab.csv2rec( csv_file )
     ncsv = len(csv)
     if h5_file:
-        with h5py.File(h5_file) as h5:
+        with h5py.File(h5_file,'r') as h5:
             trajectories = h5['trajectories'][:]
             starts = h5['trajectory_start_times'][:]
             attrs = {'frames_per_second':h5['trajectories'].attrs['frames_per_second']}
