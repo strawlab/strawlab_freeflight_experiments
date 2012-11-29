@@ -38,6 +38,11 @@ finally:
     if not os.path.isfile(csv):
         raise ValueError("no such file\n./%s /path/to/data.csv" % os.path.basename(__file__))
 
+pts = fixation.get_start_points()
+
+import pprint
+pprint.pprint(pts)
+
 oid = -1 
 for rec in fixation.Logger(csv,'r').record_iterator():
     try:
@@ -65,7 +70,8 @@ for rec in fixation.Logger(csv,'r').record_iterator():
 
         all_conditions[condition] = (float(rec.trg_x),float(rec.trg_y))
 
-    data[oid].append( (float(rec.fly_x),float(rec.fly_y),float(rec.trg_x),float(rec.trg_y),t) )
+    if rec.condition_sub in ("birth_kick","experiment"):
+        data[oid].append( (float(rec.fly_x),float(rec.fly_y),float(rec.trg_x),float(rec.trg_y),t) )
 
 plt.figure("Start Condition Hold")
 all_conditions_names = all_conditions.keys()
