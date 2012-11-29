@@ -51,7 +51,7 @@ class CsvLogger:
             rospy.Subscriber('flydra_mainbrain/data_file',
                              std_msgs.msg.String,
                              self._on_flydra_mainbrain_start_saving)
-            rospy.Subscriber('experiment/uuid',
+            rospy.Subscriber('experiment_uuid',
                              std_msgs.msg.String,
                              self._on_experiment_uuid)
 
