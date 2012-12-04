@@ -1,34 +1,10 @@
 cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
-
-rosbuild_init()
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-
-#uncomment if you have defined messages
-#rosbuild_genmsg()
-#uncomment if you have defined services
-#rosbuild_gensrv()
-
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
 
 FIND_PACKAGE(OpenThreads)
 FIND_PACKAGE(osg)
@@ -50,18 +26,45 @@ FIND_PACKAGE(Poco)
 SET(JANSSON_FIND_REQUIRED 1)
 FIND_PACKAGE(jansson)
 
-rosbuild_add_library(StimulusAltitudeEdge src/StimulusAltitudeEdge.cpp)
-target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
-rosbuild_link_boost(StimulusAltitudeEdge system filesystem)
+SET(VROS_DISPLAY_PATH "../vros/vros_display")
+SET(VROS_DISPLAY_INCLUDE_PATH "${VROS_DISPLAY_PATH}/include")
 
-rosbuild_add_library(StimulusOSGFile src/StimulusOSGFile.cpp)
-target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
-rosbuild_link_boost(StimulusOSGFile system filesystem)
+FIND_LIBRARY(VROS_DISPLAY_LIBRARY
+	NAMES vros_display
+	PATHS "${VROS_DISPLAY_PATH}/lib")
 
-rosbuild_add_library(StimulusStarField src/StimulusStarField.cpp)
-target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
-rosbuild_link_boost(StimulusStarField system filesystem)
+IF (VROS_DISPLAY_LIBRARY)
+  MESSAGE(STATUS "Found vros_display: ${VROS_DISPLAY_LIBRARY}")
+ELSE(VROS_DISPLAY_LIBRARY)
+  MESSAGE(FATAL_ERROR "Could not find vros_display library")
+ENDIF(VROS_DISPLAY_LIBRARY)
 
-rosbuild_add_library(StimulusStarFieldAndModel src/StimulusStarFieldAndModel.cpp)
-target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} vros_display)
-rosbuild_link_boost(StimulusStarFieldAndModel system filesystem)
+SET(BOOST_LIBRARY_PATHS "/usr/lib")
+
+FIND_LIBRARY(BOOST_SYSTEM_LIBRARY
+  NAMES boost_system
+  PATHS BOOST_LIBRARY_PATHS)
+
+FIND_LIBRARY(BOOST_FILESYSTEM_LIBRARY
+  NAMES boost_filesystem
+  PATHS BOOST_LIBRARY_PATHS)
+
+add_library(StimulusAltitudeEdge SHARED src/StimulusAltitudeEdge.cpp)
+target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES} ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
+  ${VROS_DISPLAY_LIBRARY})
+
+add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp)
+target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES} ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
+  ${VROS_DISPLAY_LIBRARY})
+
+add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
+target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES}  ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
+  ${VROS_DISPLAY_LIBRARY})
+
+add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp)
+target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES}  ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
+  ${VROS_DISPLAY_LIBRARY})
