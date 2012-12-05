@@ -96,13 +96,14 @@ void emitKernel( unsigned int numPtcls,
 __global__
 void moveKernel( unsigned int numPtcls,
                  float4* ptcls,
-                 float etime )
+                 float velx, float vely, float velz,
+                 float dt )
 {
     unsigned int ptclIdx = thIdx();
     if( ptclIdx < numPtcls )
     {
         // perform a euler step
-        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,0,etime,0);
+        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(velx*dt,vely*dt,velz*dt,0);
     }
 }
 
@@ -135,7 +136,10 @@ void emit(unsigned int numPtcls,
 extern "C" __host__
 void move( unsigned int numPtcls,
            void* ptcls,
-           float etime )
+           float velx,
+           float vely,
+           float velz,
+           float dt )
 {
     dim3 blocks( (numPtcls / 128)+1, 1, 1 );
     dim3 threads( 128, 1, 1 );
@@ -143,5 +147,6 @@ void move( unsigned int numPtcls,
     moveKernel<<< blocks, threads >>>(
         numPtcls,
         (float4*)ptcls,
-        etime );
+        velx, vely, velz,
+        dt );
 }

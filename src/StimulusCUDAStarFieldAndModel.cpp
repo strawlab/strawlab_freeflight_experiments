@@ -39,6 +39,7 @@
 extern "C" void move(
                      unsigned int numPtcls,
                      void* ptcls,
+                     float velx, float vely, float velz,
                      float etime );
 
 class MovePtcls : public osgCompute::Computation
@@ -72,9 +73,14 @@ public:
         move(
             _ptcls->getNumElements(),
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
+            _vel[0], _vel[1], _vel[2],
             elapsedtime  );
 
         _timer->stop();
+    }
+
+    virtual void setVelocity( const osg::Vec3& v ) {
+        _vel = v;
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
@@ -93,6 +99,7 @@ private:
     bool						        _firstFrame;
     osg::ref_ptr<const osg::FrameStamp>       _fs;
     osg::ref_ptr<osgCompute::Memory>    _ptcls;
+    osg::Vec3 _vel;
 };
 
 
@@ -215,6 +222,9 @@ public:
 class ParticleNode : public osg::Group {
 public:
     ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
+    virtual void setVelocity( const osg::Vec3& v );
+private:
+    particleDataType* _pd;
 };
 
 ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
@@ -260,11 +270,17 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
 
     this->addChild( geode.get() );
 
-    this->setUserData(new particleDataType(this, geom->getMemory(), bbmin, bbmax ));
+    _pd = new particleDataType(this, geom->getMemory(), bbmin, bbmax );
+    this->setUserData(_pd);
     osg::ref_ptr<particleNodeCallback> pcb = new particleNodeCallback();
     this->setUpdateCallback(pcb);
 }
 
+void ParticleNode::setVelocity( const osg::Vec3& v ) {
+    if (_pd->_move) {
+        _pd->_move->setVelocity(v);
+    }
+}
 
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
@@ -291,17 +307,26 @@ private:
     osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
     osg::Vec3 model_position;
     osg::Quat model_attitude;
-    osg::Vec3 _starfield_velocity;
+
+    osg::ref_ptr<ParticleNode> pn_black;
+    osg::ref_ptr<ParticleNode> pn_white;
+
+    osg::Vec3f bbmin;
+    osg::Vec3f bbmax;
+
 };
 
 StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() {
     vros_assert( is_CUDA_available()==true );
-    setVelocity( 0.0, 0.0, 0.0);
 
     _group = new osg::Group;
     switch_node = new osg::PositionAttitudeTransform;
     _update_pat();
     _group->addChild(switch_node);
+
+    bbmin = osg::Vec3f(-10,-10,-10);
+    bbmax = osg::Vec3f(10,10,10);
+
 }
 
 void StimulusCUDAStarFieldAndModel::_update_pat() {
@@ -337,16 +362,12 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     std::string osg_filename = get_plugin_data_path("post.osg");
     _load_stimulus_filename( osg_filename );
 
-    osg::Vec3f bbmin = osg::Vec3f(-10,-10,-10);
-    osg::Vec3f bbmax = osg::Vec3f(10,10,10);
+    pn_black = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(0,0,0));
+    pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
 
-    osg::ref_ptr<osg::Group> root = _group;
-
-    osg::ref_ptr<osg::Node> pn_black = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(0,0,0));
-    root->addChild( pn_black.get() );
-
-    osg::ref_ptr<osg::Node> pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
-    root->addChild( pn_white.get() );
+    _group->addChild( pn_black.get() );
+    _group->addChild( pn_white.get() );
+    setVelocity( 0.0, 0.0, 0.0);
 
     /////////////////////////
     // CREATE BOUNDING BOX //
@@ -362,7 +383,7 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
     bbox->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
 
-    root->addChild( bbox );
+    _group->addChild( bbox );
 
     _group->setName("StimulusCUDAStarFieldAndModel._group");
 }
@@ -453,7 +474,13 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 }
 
 void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
-    _starfield_velocity = osg::Vec3(x,y,z);
+    osg::Vec3 v = osg::Vec3(x,y,z);
+    if (pn_black) {
+        pn_black->setVelocity(v);
+    }
+    if (pn_white) {
+        pn_white->setVelocity(v);
+    }
 }
 
 std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& topic_name) const {
