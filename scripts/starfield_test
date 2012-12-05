@@ -12,8 +12,6 @@ import display_client # from vros_projectors package
 class Node(object):
     def __init__(self):
         rospy.init_node("starfield_test")
-        display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusStarField')
         self.pub = rospy.Publisher('velocity', Vector3)
 
     def run(self):

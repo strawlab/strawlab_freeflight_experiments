@@ -1,16 +1,16 @@
 <launch>
   <!-- Spawn the display server. -->
-  <node name="ds_replay" pkg="vros_display" type="display_server" args="--mode=virtual_world --throttle">
+  <node name="ds_replay" pkg="vros_display" type="display_server" args="--mode=virtual_world">
     <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
   </node>
 
   <!-- And show another display_server to see the cubemap -->
-  <node name="ds_replay2" pkg="vros_display" type="display_server" args="--mode=cubemap --throttle">
+  <node name="ds_replay2" pkg="vros_display" type="display_server" args="--mode=cubemap">
     <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
   </node>
 
   <!-- Set the stimulus mode. -->
-  <node name="stimulus_latch" pkg="rostopic" type="rostopic" args="pub --once /stimulus_mode std_msgs/String StimulusStarFieldAndModel">
+  <node name="stimulus_latch" pkg="rostopic" type="rostopic" args="pub --once /stimulus_mode std_msgs/String StimulusCUDAStarFieldAndModel">
   </node>
 
   <!-- Set the camera position. -->

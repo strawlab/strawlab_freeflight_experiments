@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.4.6)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/cuda")
+
+FIND_PACKAGE(OsgCompute)
+INCLUDE(FindCuda)
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -67,4 +71,32 @@ target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
 add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES}  ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
+  ${VROS_DISPLAY_LIBRARY})
+
+SET(MY_CUDA_SOURCE_FILES
+	src/PtclKernels.cu
+)
+
+SET(CUDA_NVCC_FLAGS "--compiler-options '-fPIC'")
+
+# Use the CUDA_COMPILE macro.
+CUDA_COMPILE( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
+
+# collect the sources
+SET(TARGET_SRC
+	src/StimulusCUDAStarFieldAndModel.cpp
+    ${CUDA_FILES}
+)
+
+MESSAGE(STATUS "TARGET_SRC: ${TARGET_SRC}")
+MESSAGE(STATUS "CUDA_FILES: ${CUDA_FILES}")
+
+add_library(StimulusCUDAStarFieldAndModel SHARED ${TARGET_SRC})
+INCLUDE_DIRECTORIES(
+  ${OSG_COMPUTE_INCLUDE_PATHS}
+  ${CUDA_TOOLKIT_INCLUDE}
+  ${VROS_DISPLAY_INCLUDE_PATH}
+  )
+target_link_libraries(StimulusCUDAStarFieldAndModel
+  ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} ${OSG_COMPUTE_LIBRARIES}
   ${VROS_DISPLAY_LIBRARY})
