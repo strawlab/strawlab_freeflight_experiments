@@ -214,16 +214,16 @@ public:
 
 class ParticleNode : public osg::Group {
 public:
-    ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin_, osg::Vec3& bbmax_);
+    ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
 };
 
-ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin, osg::Vec3& bbmax){
+ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
     //std::string textureFile = get_plugin_data_path("blackstar.png");
 
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 64000;
+    unsigned int numPtcls = 5000;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
@@ -251,6 +251,7 @@ ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin, osg::Vec3& b
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 50.0f ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ));
     geode->setCullingActive( false );
 
     this->addChild( geode.get() );
@@ -335,10 +336,13 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     osg::Vec3f bbmin = osg::Vec3f(0,0,0);
     osg::Vec3f bbmax = osg::Vec3f(4,4,4);
 
-    osg::ref_ptr<osg::Node> pn = new ParticleNode(*this,bbmin,bbmax);
-
     osg::ref_ptr<osg::Group> root = _group;
-    root->addChild( pn.get() );
+
+    osg::ref_ptr<osg::Node> pn_black = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(0,0,0));
+    root->addChild( pn_black.get() );
+
+    osg::ref_ptr<osg::Node> pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
+    root->addChild( pn_white.get() );
 
     /////////////////////////
     // CREATE BOUNDING BOX //
