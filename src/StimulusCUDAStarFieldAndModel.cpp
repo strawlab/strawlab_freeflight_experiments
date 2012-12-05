@@ -250,7 +250,7 @@ ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin, osg::Vec3& b
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", osg::Vec2(1.0f,50.0f) ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 50.0f ) );
     geode->setCullingActive( false );
 
     this->addChild( geode.get() );

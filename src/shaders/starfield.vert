@@ -1,13 +1,15 @@
-uniform vec2 pixelsize;
+/* -*- Mode: C -*- */
+#version 120
+
+uniform float pixelsize;
 
 void main(void)
 {
-   vec4 worldPos = vec4(gl_Vertex.x,gl_Vertex.y,gl_Vertex.z,1.0);
-   vec4 projPos = gl_ModelViewProjectionMatrix * worldPos;
+  vec4 eyePos = gl_ModelViewMatrix * gl_Vertex;
+  gl_Position = gl_ProjectionMatrix * eyePos;
 
-   float dist = projPos.z / projPos.w;
-   float distAlpha = (dist+1.0)/2.0;
-   gl_PointSize = pixelsize.y - distAlpha * (pixelsize.y - pixelsize.x);
+  vec3 eye3 = vec3( eyePos.x/ eyePos.w, eyePos.y / eyePos.w, eyePos.z / eyePos.w );
 
-   gl_Position = projPos;
+  float dist = length(eye3);
+  gl_PointSize = pixelsize/dist;
 }
