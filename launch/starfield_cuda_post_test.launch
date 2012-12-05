@@ -23,6 +23,9 @@
     </node>
   </group>
 
+  <node name="starfield_test" pkg="strawlab_freeflight_experiments" type="starfield_test">
+  </node>
+
   <!-- And a test. -->
   <group>
     <remap from="capture_frame_to_path" to="ds_replay/capture_frame_to_path"/>
