@@ -1,3 +1,6 @@
+/* -*- Mode: C -*- */
+#version 120
+
 void main (void)
 {
    vec4 result;
