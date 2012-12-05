@@ -214,10 +214,10 @@ public:
 
 class ParticleNode : public osg::Group {
 public:
-    ParticleNode( osg::Vec3& bbmin_, osg::Vec3& bbmax_);
+    ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin_, osg::Vec3& bbmax_);
 };
 
-ParticleNode::ParticleNode( osg::Vec3& bbmin, osg::Vec3& bbmax){// : bbmin(bbmin_), bbmax(bbmax_) {
+ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3& bbmin, osg::Vec3& bbmax){
     //std::string textureFile = get_plugin_data_path("blackstar.png");
 
     /////////////////////
@@ -238,50 +238,13 @@ ParticleNode::ParticleNode( osg::Vec3& bbmin, osg::Vec3& bbmax){// : bbmin(bbmin
 
     osg::ref_ptr<osg::Program> program = new osg::Program;
 
-    const std::string vtxShader=
-        "uniform vec2 pixelsize;                                                                \n"
-        "                                                                                       \n"
-        "void main(void)                                                                        \n"
-        "{                                                                                      \n"
-        "   vec4 worldPos = vec4(gl_Vertex.x,gl_Vertex.y,gl_Vertex.z,1.0);                      \n"
-        "   vec4 projPos = gl_ModelViewProjectionMatrix * worldPos;                             \n"
-        "                                                                                       \n"
-        "   float dist = projPos.z / projPos.w;                                                 \n"
-        "   float distAlpha = (dist+1.0)/2.0;                                                   \n"
-        "   gl_PointSize = pixelsize.y - distAlpha * (pixelsize.y - pixelsize.x);               \n"
-        "                                                                                       \n"
-        "   gl_Position = projPos;                                                              \n"
-        "}                                                                                      \n";
-    program->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
+    osg::Shader* StarFieldVertObj = new osg::Shader(osg::Shader::VERTEX );
+    osg::Shader* StarFieldFragObj = new osg::Shader( osg::Shader::FRAGMENT );
+    rsrc.load_shader_source( StarFieldVertObj, "starfield.vert" );
+    rsrc.load_shader_source( StarFieldFragObj, "starfield.frag" );
 
-    const std::string frgShader=
-        "void main (void)                                                                       \n"
-        "{                                                                                      \n"
-        "   vec4 result;                                                                        \n"
-        "                                                                                       \n"
-        "   vec2 tex_coord = gl_TexCoord[0].xy;                                                 \n"
-        "   tex_coord.y = 1.0-tex_coord.y;                                                      \n"
-        "   float d = 2.0*distance(tex_coord.xy, vec2(0.5, 0.5));                               \n"
-        "   result.a = step(d, 1.0);                                                            \n"
-        "                                                                                       \n"
-        "   vec3 eye_vector = normalize(vec3(0.0, 0.0, 1.0));                                   \n"
-        "   vec3 light_vector = normalize(vec3(2.0, 2.0, 1.0));                                 \n"
-        "   vec3 surface_normal = normalize(vec3(2.0*                                           \n"
-        "           (tex_coord.xy-vec2(0.5, 0.5)), sqrt(1.0-d)));                               \n"
-        "   vec3 half_vector = normalize(eye_vector+light_vector);                              \n"
-        "                                                                                       \n"
-        "   float specular = dot(surface_normal, half_vector);                                  \n"
-        "   float diffuse  = dot(surface_normal, light_vector);                                 \n"
-        "                                                                                       \n"
-        "   vec4 lighting = vec4(0.75, max(diffuse, 0.0), pow(max(specular, 0.0), 40.0), 0.0);  \n"
-        "                                                                                       \n"
-        "   result.rgb = lighting.x*vec3(0.2, 0.8, 0.2)+lighting.y*vec3(0.6, 0.6, 0.6)+         \n"
-        "   lighting.z*vec3(0.25, 0.25, 0.25);                                                  \n"
-        "                                                                                       \n"
-        "   gl_FragColor = result;                                                              \n"
-        "}                                                                                      \n";
-
-    program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
+    program->addShader( StarFieldVertObj );
+    program->addShader( StarFieldFragObj );
     geode->getOrCreateStateSet()->setAttribute(program);
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
@@ -372,7 +335,7 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     osg::Vec3f bbmin = osg::Vec3f(0,0,0);
     osg::Vec3f bbmax = osg::Vec3f(4,4,4);
 
-    osg::ref_ptr<osg::Node> pn = new ParticleNode(bbmin,bbmax);
+    osg::ref_ptr<osg::Node> pn = new ParticleNode(*this,bbmin,bbmax);
 
     osg::ref_ptr<osg::Group> root = _group;
     root->addChild( pn.get() );
