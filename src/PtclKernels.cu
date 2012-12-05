@@ -1,3 +1,4 @@
+/* -*- Mode: C -*- */
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
 *
 * This library is free software; you can redistribute it and/or modify

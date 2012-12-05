@@ -2,6 +2,7 @@
 #version 120
 
 uniform float pixelsize;
+varying float dist;
 
 void main(void)
 {
@@ -10,6 +11,6 @@ void main(void)
 
   vec3 eye3 = vec3( eyePos.x/ eyePos.w, eyePos.y / eyePos.w, eyePos.z / eyePos.w );
 
-  float dist = length(eye3);
+  dist = length(eye3);
   gl_PointSize = pixelsize/dist;
 }

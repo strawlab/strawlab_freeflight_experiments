@@ -214,22 +214,22 @@ public:
 
 class ParticleNode : public osg::Group {
 public:
-    ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
+    ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
 };
 
-ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
+ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
     //std::string textureFile = get_plugin_data_path("blackstar.png");
 
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 5000;
+    unsigned int numPtcls = 50000;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
     osg::Vec4Array* coords = new osg::Vec4Array(numPtcls);
     for( unsigned int v=0; v<coords->size(); ++v )
-        (*coords)[v].set(-1,-1,-1,0);
+        (*coords)[v].set(-10000,-10000,-10000,0); // large value so they get reset
     geom->setVertexArray(coords);
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
 
@@ -243,6 +243,9 @@ ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin, osg::Vec3 bbm
     rsrc.load_shader_source( StarFieldVertObj, "starfield.vert" );
     rsrc.load_shader_source( StarFieldFragObj, "starfield.frag" );
 
+    osg::Vec4 f4 = rsrc.get_clear_color();
+    osg::Vec3 fog_color = osg::Vec3( f4[0], f4[1], f4[2] );
+
     program->addShader( StarFieldVertObj );
     program->addShader( StarFieldFragObj );
     geode->getOrCreateStateSet()->setAttribute(program);
@@ -251,7 +254,8 @@ ParticleNode::ParticleNode( ResourceLoader& rsrc, osg::Vec3 bbmin, osg::Vec3 bbm
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 50.0f ) );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ));
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
 
     this->addChild( geode.get() );
@@ -333,8 +337,8 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     std::string osg_filename = get_plugin_data_path("post.osg");
     _load_stimulus_filename( osg_filename );
 
-    osg::Vec3f bbmin = osg::Vec3f(0,0,0);
-    osg::Vec3f bbmax = osg::Vec3f(4,4,4);
+    osg::Vec3f bbmin = osg::Vec3f(-10,-10,-10);
+    osg::Vec3f bbmax = osg::Vec3f(10,10,10);
 
     osg::ref_ptr<osg::Group> root = _group;
 
@@ -347,10 +351,17 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     /////////////////////////
     // CREATE BOUNDING BOX //
     /////////////////////////
+
+    // XXX FIXME. This is somehow required to fix opengl state after
+    // drawing OSG model.
+
     osg::Geode* bbox = new osg::Geode;
-    bbox->addDrawable(new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints()));
+    osg::ShapeDrawable* sd = new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints());
+    sd->setColor(get_clear_color());
+    bbox->addDrawable(sd);
     bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
     bbox->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
+
     root->addChild( bbox );
 
     _group->setName("StimulusCUDAStarFieldAndModel._group");

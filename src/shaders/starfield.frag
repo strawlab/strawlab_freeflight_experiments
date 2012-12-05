@@ -1,7 +1,9 @@
 /* -*- Mode: C -*- */
 #version 120
 
+uniform vec3 fog_color;
 uniform vec3 color;
+varying float dist;
 
 void main (void)
 {
@@ -12,7 +14,8 @@ void main (void)
    float d = 2.0*distance(tex_coord.xy, vec2(0.5, 0.5));
    result.a = step(d, 1.0);
 
-   result.rgb = color;
+   float fog_factor = clamp(dist/10.0,0,1);
+   result.rgb = mix(color, fog_color, fog_factor);
 
    gl_FragColor = result;
 }
