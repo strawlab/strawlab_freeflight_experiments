@@ -30,7 +30,7 @@ SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. expe
 
 START_N_SEGMENTS    = 3
 CYL_RAD             = 0.4
-DIST_FROM_WALL      = 0.15
+DIST_FROM_WALL      = 0.08
 KICK_DIST           = 0.10
 
 P_X                 = -3
@@ -62,9 +62,9 @@ def get_start_points():
     for ang in np.linspace(0,2*np.pi,START_N_SEGMENTS+1):
         x = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL)
         y = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL)
-        x_inner = math.cos(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
-        y_inner = math.sin(ang) * (CYL_RAD - DIST_FROM_WALL - KICK_DIST)
-        res.append( [(x,y),(x_inner,y_inner),(-x,-y)] )
+        x_inner = math.cos(ang) * KICK_DIST
+        y_inner = math.sin(ang) * KICK_DIST
+        res.append( [(0,0),(x_inner,y_inner),(-x,-y)] )
     return res
 
 class Logger(nodelib.log.CsvLogger):
@@ -84,8 +84,8 @@ class Node(object):
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
-        self.log = Logger(directory="/tmp/")
-        #self.log = Logger(wait=True)
+        #self.log = Logger(directory="/tmp/")
+        self.log = Logger(wait=True)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -112,7 +112,7 @@ class Node(object):
         self.trg_kick_pub = rospy.Publisher('~target_kick', Vector3)
         self.post_pub = rospy.Publisher('~post', Vector3)
 
-        self.search_radius_birth = 0.13
+        self.search_radius_birth = 0.2
         self.search_radius_death = 0.05
 
         self.search_zdist  = 0.15

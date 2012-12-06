@@ -56,14 +56,14 @@ class CsvLogger:
                              self._on_experiment_uuid)
 
             if wait:
-                rospy.loginfo("waiting for flydra_mainbrain/data_file and experiment/uuid")
+                rospy.loginfo("waiting for flydra_mainbrain/data_file")
                 t0 = t1 = rospy.get_time()
                 while (t1 - t0) < 5.0: #seconds
                     rospy.sleep(0.1)
                     t1 = rospy.get_time()
-                    if self._flydra_data_file and not self._exp_uuid:
+                    if self._flydra_data_file:
                         break
-                if (not self._flydra_data_file) or (not self._exp_uuid):
+                if not self._flydra_data_file:
                     self.close()
                     os.remove(self._fname)
                     raise NoDataError
