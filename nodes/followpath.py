@@ -4,6 +4,7 @@ import os
 import numpy as np
 import time
 import threading
+import argparse
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -75,12 +76,10 @@ class Logger(nodelib.log.CsvLogger):
                  "stim_x","stim_y","stim_z","move_ratio","active","lock_object","framenumber")
 
 class Node(object):
-    def __init__(self):
+    def __init__(self, wait_for_flydra, use_tmpdir):
 
         #for x,y in ((0.2,0.3),(-0.2,0.4),(0.3,-0.1),(-0.3,-0.45),(0.5,0.5),(0,0)):
         #    px,py = xy_to_pxpy(x,y)
-
-        rospy.init_node("followpath")
 
         display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
@@ -91,7 +90,8 @@ class Node(object):
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
         self.model = flyflypath.model.MovingPointSvgPath(PATH_TO_FOLLOW)
-        self.log = Logger(wait=True)
+
+        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
 
         startpt = self.model.polyline.p
         self.start_x, self.start_y = pxpy_to_xy(startpt.x,startpt.y)
@@ -294,7 +294,19 @@ class Node(object):
         self.log.framenumber = 0
 
 def main():
-    node = Node()
+    rospy.init_node("followpath")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no-wait', action='store_true', default=False,
+                        help="dont't start unless flydra is saving data")
+    parser.add_argument('--tmpdir', action='store_true', default=False,
+                        help="store logfile in tmpdir")
+    argv = rospy.myargv()
+    args = parser.parse_args(argv[1:])
+
+    node = Node(
+            wait_for_flydra=not args.no_wait,
+            use_tmpdir=args.tmpdir)
     return node.run()
 
 if __name__=='__main__':
