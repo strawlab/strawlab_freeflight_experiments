@@ -233,7 +233,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 50000;
+    unsigned int numPtcls = 5000;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
@@ -263,7 +263,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 50.0f ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 30.0f ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
