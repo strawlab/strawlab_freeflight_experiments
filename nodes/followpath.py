@@ -83,7 +83,7 @@ class Node(object):
         rospy.init_node("followpath")
 
         display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusStarField')
+            'StimulusCUDAStarFieldAndModel')
 
         self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
         self.starfield_velocity_pub.publish(Vector3())
