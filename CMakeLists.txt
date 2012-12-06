@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.4.6)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/cuda")
 
+SET(CUDA_TOOLKIT_ROOT "/usr/local/cuda")
 FIND_PACKAGE(OsgCompute)
 INCLUDE(FindCuda)
 
