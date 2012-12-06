@@ -16,11 +16,13 @@ class CsvLogger:
     STATE = tuple()
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None, wait=False):
+    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False):
         assert len(self.STATE)
 
         if directory is None:
             directory = self.DEFAULT_DIRECTORY
+        if use_tmpdir:
+            directory = tempfile.mkdtemp()
 
         self._flydra_data_file = ''
         self._exp_uuid = ''

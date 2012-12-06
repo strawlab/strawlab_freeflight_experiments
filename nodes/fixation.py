@@ -3,6 +3,7 @@
 import math
 import numpy as np
 import threading
+import argparse
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -71,8 +72,7 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("condition","condition_sub","trg_x","trg_y","fly_x","fly_y","fly_z","lock_object","framenumber")
 
 class Node(object):
-    def __init__(self):
-        rospy.init_node("fixation")
+    def __init__(self, wait_for_flydra, use_tmpdir):
 
         display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
@@ -84,8 +84,7 @@ class Node(object):
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
-        #self.log = Logger(directory="/tmp/")
-        self.log = Logger(wait=True)
+        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -304,7 +303,19 @@ class Node(object):
         self.log.framenumber = 0
 
 def main():
-    node = Node()
+    rospy.init_node("fixation")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no-wait', action='store_true', default=False,
+                        help="dont't start unless flydra is saving data")
+    parser.add_argument('--tmpdir', action='store_true', default=False,
+                        help="store logfile in tmpdir")
+    argv = rospy.myargv()
+    args = parser.parse_args(argv[1:])
+
+    node = Node(
+            wait_for_flydra=not args.no_wait,
+            use_tmpdir=args.tmpdir)
     return node.run()
 
 if __name__=='__main__':
