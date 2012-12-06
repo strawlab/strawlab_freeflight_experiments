@@ -5,7 +5,7 @@ N = 100
 pi = np.pi
 leaft = np.linspace(-pi/4.,pi/4,N)
 
-theta = np.concatenate( (leaft, leaft+pi))
+theta = np.concatenate( (leaft, (leaft+pi)[::-1]))
 r = np.cos(2*theta)
 
 x = r*np.cos( theta )
