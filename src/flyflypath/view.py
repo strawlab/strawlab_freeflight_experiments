@@ -102,7 +102,8 @@ class SvgPathWidget(Gtk.DrawingArea):
                                     px=self._mousex,py=self._mousey)
         return vec,src_pt,trg_pt
 
-    def move_along(self, scale):
-        self._model.move_point(scale)
+    def move_along(self, scale, wrap=False):
+        val = self._model.move_point(scale, wrap=wrap)
         self.queue_draw()
+        return val
 

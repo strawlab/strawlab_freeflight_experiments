@@ -27,13 +27,15 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
 
-PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","impspiral3.svg")
+PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","infinity_manual.svg")
 CONTROL_RATE        = 20.0      #Hz
 MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
 
 SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 Z_TARGET = 0.5
+
+SVG_WRAP_PATH = True
 
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
@@ -138,7 +140,7 @@ class Node(object):
                          self.on_flydra_mainbrain_super_packets)
 
     def move_point(self, val):
-        val = self.model.move_point(val)
+        val = self.model.move_point(val, wrap=SVG_WRAP_PATH)
         self.log.move_ratio = val
         self.moving_ratio = val
         return val

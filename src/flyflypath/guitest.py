@@ -18,12 +18,12 @@ class Tester:
 
         self._step = 0.01
         self._along = 0.0
-        GLib.timeout_add(500, self._move_along)
+        GLib.timeout_add(50, self._move_along)
 
     def _move_along(self):
         self._along += self._step
-        self._view.move_along(self._along)
-        return self._along <= 1.0
+        self._along = self._view.move_along(self._along, wrap=True)
+        return True
 
 
 

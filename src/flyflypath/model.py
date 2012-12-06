@@ -20,6 +20,7 @@ class MovingPointSvgPath:
         self._svgiter = svg.PathIterator(pathdata)
         self._model = polyline.polyline_from_svg_path(self._svgiter, APPROX_BEZIER_WITH_N_SEGMENTS)
         self._moving_pt = None
+        self._ratio = 0.0
 
     @property
     def polyline(self):
@@ -37,11 +38,14 @@ class MovingPointSvgPath:
     def moving_pt(self):
         return self._moving_pt
 
-    def move_point(self, ratio):
+    def move_point(self, ratio, wrap=False):
         """ the amount along the path [0..1], 0=start, 1=end """
         ratio = min(1.0,max(0.0,ratio))
-        self._moving_pt = self._model.along(ratio)
-        return ratio
+        if wrap and (ratio == 1.0):
+            ratio = 0.0
+        self._ratio = ratio
+        self._moving_pt = self._model.along(self._ratio)
+        return self._ratio
 
     def connect_closest(self, p, px=None, py=None):
         if px is not None and py is not None:
