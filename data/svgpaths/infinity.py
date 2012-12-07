@@ -11,8 +11,8 @@ r = np.cos(2*theta)
 x = r*np.cos( theta )
 y = r*np.sin( theta )
 
-x *= 150
-y *= 150
+x *= 100
+y *= 100
 
 x += 250
 y += 250
