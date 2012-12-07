@@ -5,6 +5,7 @@ import numpy as np
 import time
 import threading
 import argparse
+import math
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -32,9 +33,11 @@ PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","infinity.svg")
 CONTROL_RATE        = 30.0      #Hz
 MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
 
-SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 Z_TARGET = 0.5
+
+PX_DIST_ADVANCE = 35
 
 SVG_WRAP_PATH = True
 
@@ -46,12 +49,9 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 SHRINK_SPHERE = 0.8
 
 CONDITIONS = ("follow+control/0.0",
-              "follow+stepwise/+0.006",
-              "follow+stepwise/-0.006")
+              "follow+stepwise/+0.012",
+              "follow+stepwise/-0.012")
 START_CONDITION = CONDITIONS[1]
-
-def is_constanttime_mode(condition):
-    return condition.startswith("follow+constanttime")
 
 def is_stepwise_mode(condition):
     return condition.startswith("follow+stepwise")
@@ -110,6 +110,9 @@ class Node(object):
         now = rospy.get_time()
         self.first_seen_time = now
         self.last_seen_time = now
+        self.last_fly_x = self.fly.x; self.last_fly_y = self.fly.y; self.last_fly_z = self.fly.z;
+        self.last_check_flying_time = now
+        self.fly_dist = 0
 
         self.moving_ratio = 0.0
         self.switch_conditions(None,force=START_CONDITION)
@@ -175,27 +178,14 @@ class Node(object):
     def get_starfield_velocity_vector(self,t,dt,fly_x,fly_y,fly_z):
         px,py = xy_to_pxpy(fly_x,fly_y)
 
-        if is_constanttime_mode(self.condition):
-            #advance the point in constant ish time...
-            nsteps = MOVING_POINT_TIME/dt
-            val = self.move_point(self.moving_ratio + (1.0/nsteps))
-        elif is_stepwise_mode(self.condition):
-            if (t-self.first_seen_time) > MOVING_POINT_TIME:
-                #give up, the fly might have been lost
-                val = 1.0
+        if is_stepwise_mode(self.condition):
+            dist = self.model.connect_to_moving_point(p=None,px=px, py=py)
+            if dist.length < PX_DIST_ADVANCE:
+                val = self.move_point(self.moving_ratio + (1.0/CONTROL_RATE))
             else:
-                dist = self.model.connect_to_moving_point(p=None,px=px, py=py)
-                if dist.length < 35:
-                    val = self.move_point(self.moving_ratio + (1.0/30))
-                else:
-                    val = self.moving_ratio
+                val = self.moving_ratio
         else:
             rospy.logwarn("condition race")
-            return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
-
-        #finished
-        if val == 1.0:
-            self.drop_lock_on()
             return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
 
         #do the control
@@ -227,13 +217,24 @@ class Node(object):
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
-                    self.log.update()
                     continue
 
                 if np.isnan(fly_x):
                     #we have a race  - a fly to track with no pose yet
                     #rospy.logwarn('lost tracking, RACE')
                     continue
+
+                self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
+                                           (fly_y-self.last_fly_y)**2 +
+                                           (fly_z-self.last_fly_z)**2)
+                self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
+                if now-self.last_check_flying_time > 5.0:
+                    fly_dist = self.fly_dist
+                    self.last_check_flying_time = now
+                    self.fly_dist = 0
+                    if fly_dist < 0.3:
+                        self.drop_lock_on()
+                        continue
 
                 #do the control
                 if is_static_mode(self.condition):
@@ -273,40 +274,51 @@ class Node(object):
             for obj in packet.objects:
                 if self.currently_locked_obj_id is not None:
                     if obj.obj_id == self.currently_locked_obj_id:
+                        #dont take the lock here, these position updates happen at 200Hz,
+                        #no need, off by 1 wont matter
                         self.last_seen_time = now
                         self.fly = obj.position
                 else:
                     if self.is_in_trigger_volume(obj.position):
                         if not is_static_mode(self.condition):
-                            self.fly = obj.position
                             self.lock_on(obj,packet.framenumber)
 
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
+            self.fly = obj.position
             self.currently_locked_obj_id = obj.obj_id
-    
+
+            now = rospy.get_time()
+            self.first_seen_time = now
+            self.last_seen_time = now
+
+            self.last_fly_x = self.fly.x; self.last_fly_y = self.fly.y; self.last_fly_z = self.fly.z;
+            self.last_check_flying_time = now
+            self.fly_dist = 0
+
         rospy.loginfo('locked object %d at frame %d at %f,%f,%f' % (
                 self.currently_locked_obj_id,framenumber,self.fly.x,self.fly.y,self.fly.z))
-        now = rospy.get_time()
-        self.first_seen_time = now
-        self.last_seen_time = now
+
         #back to the start of the path
         self.move_point(0.0)
         self.lock_object.publish(self.currently_locked_obj_id)
         self.log.lock_object = self.currently_locked_obj_id
         self.log.framenumber = framenumber
+        self.log.update()
 
     def drop_lock_on(self):
         with self.trackinglock:
             currently_locked_obj_id = self.currently_locked_obj_id
             self.currently_locked_obj_id = None
 
-        now = rospy.get_time()
-        dt = now - self.first_seen_time
+            now = rospy.get_time()
+            dt = now - self.first_seen_time
+
         rospy.loginfo('dropping locked object %s (tracked for %s s)' % (currently_locked_obj_id,dt))
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
         self.log.lock_object = IMPOSSIBLE_OBJ_ID_ZERO_POSE
         self.log.framenumber = 0
+        self.log.update()
 
 def main():
     rospy.init_node("followpath")
