@@ -12,7 +12,7 @@ x = r*np.cos( theta )
 y = r*np.sin( theta )
 
 x *= 100
-y *= 100
+y *= 200
 
 x += 250
 y += 250
