@@ -15,7 +15,7 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import display_client
 from std_msgs.msg import String, UInt32, Bool
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.model
@@ -26,9 +26,10 @@ import nodelib.log
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 STARFIELD_TOPIC = 'velocity'
+POST_TOPIC      = 'model_pose'
 
-PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","infinity_manual.svg")
-CONTROL_RATE        = 20.0      #Hz
+PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","infinity.svg")
+CONTROL_RATE        = 30.0      #Hz
 MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
 
 SWITCH_MODE_TIME    = 3.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -45,9 +46,8 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 SHRINK_SPHERE = 0.8
 
 CONDITIONS = ("follow+control/0.0",
-              "follow+stepwise/+0.008",
               "follow+stepwise/+0.006",
-              "follow+stepwise/+0.004")
+              "follow+stepwise/-0.006")
 START_CONDITION = CONDITIONS[1]
 
 def is_constanttime_mode(condition):
@@ -88,6 +88,8 @@ class Node(object):
 
         self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
         self.starfield_velocity_pub.publish(Vector3())
+        self.starfield_post_pub = rospy.Publisher(POST_TOPIC, Pose, latch=True, tcp_nodelay=True)
+        self.starfield_post_pub.publish(self.get_hide_post_msg())
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
 
@@ -138,6 +140,17 @@ class Node(object):
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
+
+    def get_post_pose_msg(self,x,y,z=0):
+        msg = Pose()
+        msg.position.x = x
+        msg.position.y = y
+        msg.position.z = z
+        msg.orientation.w = 1
+        return msg
+
+    def get_hide_post_msg(self):
+        return self.get_post_pose_msg(0,0,10)
 
     def move_point(self, val):
         val = self.model.move_point(val, wrap=SVG_WRAP_PATH)

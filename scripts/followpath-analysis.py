@@ -38,7 +38,7 @@ scalarMap = cmx.ScalarMappable(
 try:
     csv_fname = sys.argv[1]
 except IndexError:
-    csv_fname = default_csv
+    csv_fname = ""
 finally:
     if not os.path.isfile(csv_fname):
         raise ValueError("no such file")
