@@ -37,7 +37,7 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 Z_TARGET = 0.5
 
-PX_DIST_ADVANCE = 35
+PX_DIST_ADVANCE = 30
 
 SVG_WRAP_PATH = True
 
@@ -50,7 +50,8 @@ SHRINK_SPHERE = 0.8
 
 CONDITIONS = ("follow+control/0.0",
               "follow+stepwise/+0.012",
-              "follow+stepwise/-0.012")
+              "follow+stepwise/+0.015",
+              "follow+stepwise/+0.018")
 START_CONDITION = CONDITIONS[1]
 
 def is_stepwise_mode(condition):
@@ -236,6 +237,8 @@ class Node(object):
                         self.drop_lock_on()
                         continue
 
+                #FIXME: either move this logic into get_starfield_velocity
+                #or move the mode check from get_starfield_velocity here
                 #do the control
                 if is_static_mode(self.condition):
                     vec = Vector3()

@@ -34,5 +34,5 @@ def load_csv_and_h5(csv_file, h5_file):
     return ncsv,csv,trajectories,starts,attrs
 
 def rec_get_time(rec):
-    return rec['t_sec'] + (rec['t_nsec'] * 1e-9)
+    return float(rec['t_sec']) + (float(rec['t_nsec']) * 1e-9)
 
