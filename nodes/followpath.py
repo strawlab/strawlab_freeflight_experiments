@@ -22,6 +22,7 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 import flyflypath.model
 import flyflypath.view
 import flyflypath.polyline
+import flyflypath.euclid
 import nodelib.log
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
@@ -48,20 +49,16 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 #FIXME:
 SHRINK_SPHERE = 0.8
 
-CONDITIONS = ("follow+control/0.0",
-              "follow+stepwise/+0.012",
-              "follow+stepwise/+0.015",
-              "follow+stepwise/+0.018")
-START_CONDITION = CONDITIONS[1]
+CONDITIONS = ("follow+control/+0.015",
+              "follow+control/+0.000",
+              "follow+control/-0.015")
+START_CONDITION = CONDITIONS[0]
 
 def is_stepwise_mode(condition):
     return condition.startswith("follow+stepwise")
 
-def is_static_mode(condition):
-    return condition == "static"
-
 def is_control_mode(condition):
-    return condition == "follow+control/0.0"
+    return condition.startswith("follow+control")
 
 def xy_to_pxpy(x,y):
     #center of svg is at 250,250 - move 0,0 there
@@ -170,31 +167,32 @@ class Node(object):
             j = (i+1) % len(CONDITIONS)
             self.condition = CONDITIONS[j]
         self.log.condition = self.condition
-        if is_static_mode(self.condition):
-            self.drop_lock_on()
-        else:
-            self.p_const = float(self.condition.split('/')[1])
+        self.drop_lock_on()
+        self.p_const = float(self.condition.split('/')[1])
         rospy.loginfo('condition: %s (p=%f)' % (self.condition,self.p_const))
 
     def get_starfield_velocity_vector(self,t,dt,fly_x,fly_y,fly_z):
         px,py = xy_to_pxpy(fly_x,fly_y)
 
         if is_stepwise_mode(self.condition):
-            dist = self.model.connect_to_moving_point(p=None,px=px, py=py)
-            if dist.length < PX_DIST_ADVANCE:
+            target = self.model.connect_to_moving_point(p=None,px=px, py=py)
+            if target.length < PX_DIST_ADVANCE:
                 val = self.move_point(self.moving_ratio + (1.0/CONTROL_RATE))
             else:
                 val = self.moving_ratio
+        elif is_control_mode(self.condition):
+            target = flyflypath.euclid.LineSegment2(
+                                flyflypath.euclid.Point2(px,py),
+                                flyflypath.euclid.Point2(*xy_to_pxpy(0,0)))
         else:
-            rospy.logwarn("condition race")
+            rospy.logwarn("unknown condition")
             return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
 
         #do the control
-        target = self.model.connect_to_moving_point(p=None,px=px, py=py)
         msg = Vector3()
         msg.x = target.v.y * +self.p_const
         msg.y = target.v.x * -self.p_const
-        msg.z = (fly_z - Z_TARGET) * -2
+        msg.z = (fly_z - Z_TARGET) * -2.5
 
         self.srcpx_pub.publish(px,py,0)
         self.trgpx_pub.publish(target.p2.x,target.p2.y,0)
@@ -233,19 +231,12 @@ class Node(object):
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
                     self.fly_dist = 0
-                    if fly_dist < 0.3:
+                    if fly_dist < 0.2:
                         self.drop_lock_on()
                         continue
 
-                #FIXME: either move this logic into get_starfield_velocity
-                #or move the mode check from get_starfield_velocity here
-                #do the control
-                if is_static_mode(self.condition):
-                    vec = Vector3()
-                    target = flyflypath.polyline.ZeroLineSegment2()
-                else:
-                    dt = 1.0/CONTROL_RATE #FIXME, not necessarily...
-                    vec,target,active = self.get_starfield_velocity_vector(now,dt,fly_x,fly_y,fly_z)
+                dt = 1.0/CONTROL_RATE #FIXME, not necessarily...
+                vec,target,active = self.get_starfield_velocity_vector(now,dt,fly_x,fly_y,fly_z)
 
             self.log.src_x = fly_x; self.log.src_y = fly_y; self.log.src_z = fly_z;
             self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = vec.z
@@ -266,7 +257,7 @@ class Node(object):
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
         radius  = 0.16
-        zdist   = 0.15
+        zdist   = 0.4
         if (dist < radius) and (abs(pos.z-Z_TARGET) < zdist):
             return True
         return False
@@ -283,8 +274,7 @@ class Node(object):
                         self.fly = obj.position
                 else:
                     if self.is_in_trigger_volume(obj.position):
-                        if not is_static_mode(self.condition):
-                            self.lock_on(obj,packet.framenumber)
+                        self.lock_on(obj,packet.framenumber)
 
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
