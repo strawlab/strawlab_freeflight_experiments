@@ -19,7 +19,7 @@ import flyflypath.model
 
 #datetime.datetime(1970, 1, 1, 0, 2, 3, 500000)
 
-F = "DATA20121004_105408.csv.pickle"
+F = "20121208_154520.followpath.csv.pickle"
 FPS = 5
 FSTEP_DT = 0.2
 
@@ -89,7 +89,11 @@ with open(F) as pick:
                 n = n + 1
                 t0 = t1
 
-        moviefname = '%s.avi' % oid
+        movdir = "movs"
+        if not os.path.exists(movdir):
+            os.makedirs(movdir)
+
+        moviefname = '%s/%s.avi' % (movdir,oid)
         command = ('mencoder',
                    'mf://%s/*png'%imgdir,
                    '-mf',
@@ -107,17 +111,17 @@ with open(F) as pick:
 
         print "\n\nWROTE %s\n\n" % moviefname
 
-        command = ('convert',
-                   'frame*png',
-                   '+dither',
-                   '-layers',
-                   'Optimize',
-                   '-colors',
-                   '256',
-                   '-depth',
-                   '8',
-                   'profile_LEM.gif')
-        subprocess.check_call(command)
+        #command = ('convert',
+        #           'frame*png',
+        #           '+dither',
+        #           '-layers',
+        #           'Optimize',
+        #           '-colors',
+        #           '256',
+        #           '-depth',
+        #           '8',
+        #           'profile_LEM.gif')
+        #subprocess.check_call(command)
 
         i = i + 1
 
