@@ -3,6 +3,7 @@ import sys
 import argparse
 
 import tables
+import pandas
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -13,11 +14,11 @@ import followpath
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import nodelib.analysis
 
-def get_results(csv_fname, h5_file, args):
+def get_results(csv_fname, h5_file, args, frames_before=0):
 
     infile = followpath.Logger(fname=csv_fname, mode="r")
 
-    h5 = tables.openFile(h5_file, mode='r+')
+    h5 = tables.openFile(h5_file, mode='r')
     trajectories = h5.root.trajectories
 
     #unexplainable protip - adding an index on the framenumber table makes
@@ -49,7 +50,7 @@ def get_results(csv_fname, h5_file, args):
                                       y=[],
                                       z=[],
                                       count=0,
-                                      n_samples=[],
+                                      framenumber=[],
                                       start_obj_ids=[],
                                       )
             r = results[_cond]
@@ -59,39 +60,46 @@ def get_results(csv_fname, h5_file, args):
             elif _id == followpath.IMPOSSIBLE_OBJ_ID:
                 continue
             elif _id != this_id:
+                valid = trajectories.readWhere(
+                            "(obj_id == %d) & (framenumber >= %d)" % (
+                                _id,
+                                _framenumber-frames_before))
                 this_id = _id
-                valid = trajectories.readWhere("(obj_id == %d) & (framenumber >= %d)" % (this_id, _framenumber))
-
-                dur_samples = 100
-                if len(valid) < dur_samples: # must be at least this long
-                    print ('insufficient samples for obj_id %d' % (this_id))
-                    continue
-
-                r['n_samples'].append(len(valid))
-                print '%s %d: frame0 %d, time0 %r %d samples'%(_cond, this_id,
-                                                    valid[0]['framenumber'],
-                                                    _t,
-                                                    len(valid))
 
                 if args.zfilt:
                     valid_cond = nodelib.analysis.trim_z(valid['z'], args.zfilt_min, args.zfilt_max)
                     if valid_cond is None:
-                        print ('no points left after ZFILT for obj_id %d' % (this_id))
+                        print 'no points left after ZFILT for obj_id %d' % (this_id)
                         continue
                     else:
                         validx = valid['x'][valid_cond]
                         validy = valid['y'][valid_cond]
                         validz = valid['z'][valid_cond]
+                        validframenumber = valid['framenumber'][valid_cond]
                 else:
                     validx = valid['x']
                     validy = valid['y']
                     validz = valid['z']
+                    validframenumber = valid['framenumber']
+
+                dur_samples = 100
+                n_samples = len(validx)
+
+                if n_samples < dur_samples: # must be at least this long
+                    print 'insufficient samples for obj_id %d' % (this_id)
+                    continue
+
+                print '%s %d: frame0 %d, time0 %r %d samples'%(_cond, this_id,
+                                                    valid[0]['framenumber'],
+                                                    _t,
+                                                    n_samples)
 
                 r['count'] += 1
                 r['x'].append( validx )
                 r['y'].append( validy )
                 r['z'].append( validz )
-                r['start_obj_ids'].append(  (validx[0], validy[0], this_id) )
+                r['framenumber'].append( validframenumber )
+                r['start_obj_ids'].append(  (validx[0], validy[0], this_id, _framenumber) )
 
             elif _id == this_id:
                 pass
@@ -100,6 +108,8 @@ def get_results(csv_fname, h5_file, args):
                 continue
         except ValueError:
             print row
+
+    h5.close()
 
     return results,dt
 
@@ -127,7 +137,7 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 if in3d:
                     print 'no 3d text'
                 else:
-                    for (x0,y0,obj_id) in r['start_obj_ids']:
+                    for (x0,y0,obj_id,framenumber) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
 
             for rad in radius:
@@ -201,11 +211,46 @@ def plot_nsamples(results, dt, args, name='nsamples'):
         ax = fig.add_subplot(1,1,1)
         bins = np.linspace(0,4000,20)
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            hist,_ = np.histogram(r['n_samples'],bins=bins)
+            n_samples = [len(trial) for trial in r['x']]
+            hist,_ = np.histogram(n_samples,bins=bins)
             ax.plot( bins[:-1], hist, '-x', label=current_condition )
         ax.set_ylabel( 'frequency' )
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
+
+def plot_aligned_radius_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, rmax, name='tracking'):
+    with nodelib.analysis.mpl_fig(name,figsize=figsize) as fig:
+        ax = None
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+
+            series = {}
+            nsamples = 0
+            for x,y,framenumber,(x0,y0,obj_id,framenumber0) in zip(r['x'], r['y'], r['framenumber'], r['start_obj_ids']):
+                ts = framenumber - framenumber0
+
+                rad = np.sqrt(x**2 + y**2)
+                cond = rad < rmax
+
+                rad = rad[cond]
+                ts = ts[cond]
+
+                #drad = np.gradient(rad,10)
+
+                nsamples += 1
+                ax.plot( ts, rad, 'k-', lw=1.0, alpha=0.3, rasterized=True )
+
+                series["%d"%obj_id] = pandas.Series(rad,ts)
+
+            ax.set_xlim(-frames_before,100*6)
+            ax.set_ylabel( 'radius (m)' )
+            ax.set_xlabel( 'frame (n)' )
+            ax.set_title('%s: total: n=%d' % (current_condition,nsamples))
+
+            df = pandas.DataFrame(series)
+            means = df.mean(1) #column wise
+
+            ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=True )
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -233,7 +278,7 @@ if __name__=='__main__':
     assert os.path.isfile(csv_fname)
     assert os.path.isfile(h5_file)
 
-    results,dt = get_results(csv_fname, h5_file, args)
+    results,dt = get_results(csv_fname, h5_file, args, frames_before=0)
     ncond = len(results)
     if 1:
         figsize = (5*ncond,5)
@@ -273,6 +318,16 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 name='%s.track' % fname)
+
+    frames_before=50
+    results,dt = get_results(csv_fname, h5_file, args, frames_before=frames_before)
+
+    plot_aligned_radius_timeseries(results, dt, args,
+                figsize=figsize,
+                fignrows=NF_R, figncols=NF_C,
+                frames_before=frames_before,
+                rmax=0.35,
+                name='%s.rad' % fname)
 
     if args.show:
         plt.show()
