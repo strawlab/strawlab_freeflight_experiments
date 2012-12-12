@@ -218,7 +218,7 @@ def plot_nsamples(results, dt, args, name='nsamples'):
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
 
-def plot_aligned_radius_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, rmax, name='tracking'):
+def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, rmax, dvdt, name):
     with nodelib.analysis.mpl_fig(name,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -226,26 +226,42 @@ def plot_aligned_radius_timeseries(results, dt, args, figsize, fignrows, figncol
 
             series = {}
             nsamples = 0
-            for x,y,framenumber,(x0,y0,obj_id,framenumber0) in zip(r['x'], r['y'], r['framenumber'], r['start_obj_ids']):
+            for x,y,z,framenumber,(x0,y0,obj_id,framenumber0) in zip(r['x'], r['y'], r['z'], r['framenumber'], r['start_obj_ids']):
                 ts = framenumber - framenumber0
 
                 rad = np.sqrt(x**2 + y**2)
                 cond = rad < rmax
 
-                rad = rad[cond]
                 ts = ts[cond]
 
-                #drad = np.gradient(rad,10)
+                if valname == "x":
+                    val = x[cond]
+                elif valname == "y":
+                    val = y[cond]
+                elif valname == "z":
+                    val = z[cond]
+                elif valname == "radius":
+                    val = rad[cond]
+                else:
+                    raise Exception("Not Supported")
+
+                if dvdt:
+                    if val.shape[0] < 10:
+                        continue
+                    val = np.gradient(val,10)
 
                 nsamples += 1
-                ax.plot( ts, rad, 'k-', lw=1.0, alpha=0.3, rasterized=True )
+                ax.plot( ts, val, 'k-', lw=1.0, alpha=0.3, rasterized=True )
 
-                series["%d"%obj_id] = pandas.Series(rad,ts)
+                series["%d"%obj_id] = pandas.Series(val,ts)
 
             ax.set_xlim(-frames_before,100*6)
-            ax.set_ylabel( 'radius (m)' )
+            if dvdt:
+                ax.set_ylim(-0.0005,0.0005)
+
+            ax.set_ylabel( '%s (m)' % valname )
             ax.set_xlabel( 'frame (n)' )
-            ax.set_title('%s: total: n=%d' % (current_condition,nsamples))
+            ax.set_title('%s %s: total: n=%d' % (valname,current_condition,nsamples))
 
             df = pandas.DataFrame(series)
             means = df.mean(1) #column wise
@@ -322,12 +338,32 @@ if __name__=='__main__':
     frames_before=50
     results,dt = get_results(csv_fname, h5_file, args, frames_before=frames_before)
 
-    plot_aligned_radius_timeseries(results, dt, args,
+    plot_aligned_timeseries(results, dt, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
+                valname="radius",
                 rmax=0.35,
+                dvdt=True,
+                name='%s.drad' % fname)
+
+    plot_aligned_timeseries(results, dt, args,
+                figsize=figsize,
+                fignrows=NF_R, figncols=NF_C,
+                frames_before=frames_before,
+                valname="radius",
+                rmax=0.35,
+                dvdt=False,
                 name='%s.rad' % fname)
+
+    plot_aligned_timeseries(results, dt, args,
+                figsize=figsize,
+                fignrows=NF_R, figncols=NF_C,
+                frames_before=frames_before,
+                valname="z",
+                rmax=0.35,
+                dvdt=False,
+                name='%s.z' % fname)
 
     if args.show:
         plt.show()
