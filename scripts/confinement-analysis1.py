@@ -6,18 +6,6 @@ import nodelib.analysis
 import numpy as np
 import matplotlib.pyplot as plt
 
-def append_col(arr_in, col, name):
-    dtype_in = arr_in.dtype
-    print dir(dtype_in)
-    print dtype_in.names
-    dtype_out = [ (n, dtype_in[n]) for n in dtype_in.names ]
-    dtype_out.append( (name, col.dtype) )
-    arr_out = np.empty( (len(arr_in),), dtype=dtype_out )
-    for n in dtype_in.names:
-        arr_out[n] = arr_in[n]
-    arr_out[name] = col
-    return arr_out
-
 def trim_z(valid):
     allz = valid['z']
 
@@ -124,8 +112,6 @@ if __name__=='__main__':
                                             tracking_times[0],
                                             len(valid))
 
-        if 0:
-            valid = valid[:dur_samples] # only take this long
         r['count'] += 1
         r['x'].append( valid['x'] )
         r['y'].append( valid['y'] )
