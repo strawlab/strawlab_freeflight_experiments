@@ -14,6 +14,7 @@ class NoDataError(Exception):
 class CsvLogger:
 
     STATE = tuple()
+    EXTRA_STATE = ("t_sec","t_nsec","flydra_data_file","exp_uuid")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False):
@@ -27,7 +28,10 @@ class CsvLogger:
         self._flydra_data_file = ''
         self._exp_uuid = ''
 
-        for s in self.STATE:
+        self._cols = list(self.STATE)
+        self._cols.extend(self.EXTRA_STATE)
+
+        for s in self._cols:
             setattr(self, s, None)
 
         if fname is None:
@@ -82,6 +86,10 @@ class CsvLogger:
     def filename(self):
         return self._fname
 
+    @property
+    def columns(self):
+        return self._cols
+
     def update(self, check=False):
         vals = [getattr(self,s) for s in self.STATE]
 
@@ -107,5 +115,13 @@ class CsvLogger:
                     assert hasattr(klass, 't_sec')
                     continue
 
-                yield klass(*row)
+                try:
+                    yield klass(*row)
+                except TypeError:
+                    rospy.logwarn("invalid row: %r" % row)
+                    continue
+
+    def write_record(self, obj):
+        self._fd.write(",".join([str(getattr(obj,s)) for s in self.columns]))
+        self._fd.write("\n")
 
