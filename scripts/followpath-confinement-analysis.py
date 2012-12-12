@@ -258,6 +258,11 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             ax.set_xlim(-frames_before,100*6)
             if dvdt:
                 ax.set_ylim(-0.0005,0.0005)
+            else:
+                if valname in ("x","y"):
+                    ax.set_ylim( -0.5, 0.5 )
+                elif valname == "Z":
+                    ax.set_ylim( 0, 1 )
 
             ax.set_ylabel( '%s (m)' % valname )
             ax.set_xlabel( 'frame (n)' )
@@ -355,6 +360,24 @@ if __name__=='__main__':
                 rmax=0.35,
                 dvdt=False,
                 name='%s.rad' % fname)
+
+    plot_aligned_timeseries(results, dt, args,
+                figsize=figsize,
+                fignrows=NF_R, figncols=NF_C,
+                frames_before=frames_before,
+                valname="x",
+                rmax=0.35,
+                dvdt=False,
+                name='%s.x' % fname)
+
+    plot_aligned_timeseries(results, dt, args,
+                figsize=figsize,
+                fignrows=NF_R, figncols=NF_C,
+                frames_before=frames_before,
+                valname="y",
+                rmax=0.35,
+                dvdt=False,
+                name='%s.y' % fname)
 
     plot_aligned_timeseries(results, dt, args,
                 figsize=figsize,
