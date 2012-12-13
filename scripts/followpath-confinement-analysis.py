@@ -23,7 +23,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
 
     infile = followpath.Logger(fname=csv_fname, mode="r")
 
-    h5 = tables.openFile(h5_file, mode='r')
+    h5 = tables.openFile(h5_file, mode='r+')
     trajectories = h5.root.trajectories
 
     #unexplainable protip - adding an index on the framenumber table makes
@@ -304,18 +304,20 @@ if __name__=='__main__':
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
         fm = autodata.files.FileModel()
         fm.select_uuid(args.uuid)
+        csv_file = fm.get_csv("followpath").fullpath
+        h5_file = fm.get_simple_h5().fullpath
     else:
         if None in (args.csv_file, args.h5_file):
             parser.error("both --csv-file and --h5-file are required")
-        csv_fname = args.csv_file
+        csv_file = args.csv_file
         h5_file = args.h5_file
 
-    fname = os.path.basename(csv_fname).split('.')[0]
+    fname = os.path.basename(csv_file).split('.')[0]
 
-    assert os.path.isfile(csv_fname)
+    assert os.path.isfile(csv_file)
     assert os.path.isfile(h5_file)
 
-    results,dt = get_results(csv_fname, h5_file, args, frames_before=0)
+    results,dt = get_results(csv_file, h5_file, args, frames_before=0)
     ncond = len(results)
     if 1:
         figsize = (5*ncond,5)
@@ -357,7 +359,7 @@ if __name__=='__main__':
                 name='%s.track' % fname)
 
     frames_before=50
-    results,dt = get_results(csv_fname, h5_file, args, frames_before=frames_before)
+    results,dt = get_results(csv_file, h5_file, args, frames_before=frames_before)
 
     plot_aligned_timeseries(results, dt, args,
                 figsize=figsize,
