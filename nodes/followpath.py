@@ -31,7 +31,7 @@ STARFIELD_TOPIC = 'velocity'
 POST_TOPIC      = 'model_pose'
 
 PATH_TO_FOLLOW      = os.path.join(pkg_dir,"data","svgpaths","infinity.svg")
-CONTROL_RATE        = 30.0      #Hz
+CONTROL_RATE        = 40.0      #Hz
 MOVING_POINT_TIME   = 25.0      #15s for the target to move along the path (fly move at 0.1m/s)
 
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -49,9 +49,9 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 #FIXME:
 SHRINK_SPHERE = 0.8
 
-CONDITIONS = ("follow+control/+0.015",
+CONDITIONS = ("follow+control/+0.080",
               "follow+control/+0.000",
-              "follow+control/-0.015")
+              "follow+control/-0.080")
 START_CONDITION = CONDITIONS[0]
 
 def is_stepwise_mode(condition):
@@ -192,7 +192,7 @@ class Node(object):
         msg = Vector3()
         msg.x = target.v.y * +self.p_const
         msg.y = target.v.x * -self.p_const
-        msg.z = (fly_z - Z_TARGET) * -2.5
+        msg.z = (fly_z - Z_TARGET) * -10.0
 
         self.srcpx_pub.publish(px,py,0)
         self.trgpx_pub.publish(target.p2.x,target.p2.y,0)
@@ -238,15 +238,17 @@ class Node(object):
                 dt = 1.0/CONTROL_RATE #FIXME, not necessarily...
                 vec,target,active = self.get_starfield_velocity_vector(now,dt,fly_x,fly_y,fly_z)
 
-            self.log.src_x = fly_x; self.log.src_y = fly_y; self.log.src_z = fly_z;
-            self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = vec.z
-            self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = 0.0
-            self.log.active = 1 if active else 0
+            #no need to write the csv unless we are actually controlling something
+            if active:
+                self.log.src_x = fly_x; self.log.src_y = fly_y; self.log.src_z = fly_z;
+                self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = vec.z
+                self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = 0.0
+                self.log.active = 1 if active else 0
+                self.log.update()
 
             self.active_pub.publish(active)
             self.starfield_velocity_pub.publish(vec)
 
-            self.log.update()
 
             r.sleep()
 
