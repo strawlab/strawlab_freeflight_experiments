@@ -11,8 +11,13 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../nodes')
 import followpath
 
-import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+import roslib
+
+roslib.load_manifest('strawlab_freeflight_experiments')
 import nodelib.analysis
+
+roslib.load_manifest('flycave')
+import autodata.files
 
 def get_results(csv_fname, h5_file, args, frames_before=0):
 
@@ -276,9 +281,9 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'csv_file', type=str)
+        '--csv-file', type=str)
     parser.add_argument(
-        'data_file', type=str)
+        '--h5-file', type=str)
     parser.add_argument(
         '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
     parser.add_argument(
@@ -289,10 +294,21 @@ if __name__=='__main__':
         '--zfilt-min', type=float, default=0.10)
     parser.add_argument(
         '--zfilt-max', type=float, default=0.90)
+    parser.add_argument(
+        '--uuid', type=str,
+        help='get the appropriate csv and h5 file for this uuid')
     args = parser.parse_args()
 
-    csv_fname = args.csv_file
-    h5_file = args.data_file
+    if args.uuid:
+        if None not in (args.csv_file, args.h5_file):
+            parser.error("if uuid is given, --csv-file and --h5-file are not required")
+        fm = autodata.files.FileModel()
+        fm.select_uuid(args.uuid)
+    else:
+        if None in (args.csv_file, args.h5_file):
+            parser.error("both --csv-file and --h5-file are required")
+        csv_fname = args.csv_file
+        h5_file = args.h5_file
 
     fname = os.path.basename(csv_fname).split('.')[0]
 
