@@ -10,10 +10,9 @@ import followpath
 
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import flyflypath.model
-import nodelib.analysis
 
 roslib.load_manifest('flycave')
-import autodata.files
+import analysislib.args
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -39,37 +38,39 @@ def doit(csv_fname, h5_fname, args):
                         cmap=plt.get_cmap('spring'))
 
     oid = -1 
-    ncsv,csv,trajectories,starts,attrs = nodelib.analysis.load_csv_and_h5(csv_fname,None)
-
-    for i in range(ncsv):
-        rec = csv[i]
+    for rec in followpath.Logger(csv_fname,'r').record_iterator():
         try:
-            lock_object = int(rec['lock_object'])
+            _id = int(rec.lock_object)
+            _t = float(rec.t_sec) + (float(rec.t_nsec) * 1e-9)
+            _move_ratio = float(rec.move_ratio)
+            _src_x = float(rec.src_x)
+            _src_y = float(rec.src_y)
+            _target_x = float(rec.target_x)
+            _target_y = float(rec.target_y)
+            _active = int(rec.active)
+            _cond = rec.condition
 
-            if lock_object > oid and lock_object != 0xFFFFFFFF:
-                oid = lock_object
+            if _id > oid and _id != 0xFFFFFFFF:
+                oid = _id
                 data[oid] = []
-                trial[oid] = rec['condition']
+                trial[oid] = _cond
 
             if oid <= 0:
                 continue
 
-            if int(rec['active']):
-                t = nodelib.analysis.rec_get_time(rec)
-                data[oid].append( (float(rec['move_ratio']),
-                                   float(rec['src_x']),
-                                   float(rec['src_y']),
-                                   float(rec['target_x']),
-                                   float(rec['target_y']),
-                                   t) )
+            if _active:
+                data[oid].append( (_move_ratio,
+                                   _src_x,
+                                   _src_y,
+                                   _target_x,
+                                   _target_y,
+                                   _t) )
 
-        except ValueError:
-            print "invalid rec", len(rec)
-            pprint.pprint(rec)
-            continue
+        except ValueError, e:
+            print "ERROR: ", e
+            print row
 
-
-    svg_filename = str(rec['svg_filename'])
+    svg_filename = str(rec.svg_filename)
 
     topickle = {'svg':svg_filename}
 
@@ -118,25 +119,7 @@ def doit(csv_fname, h5_fname, args):
             print "wrote",fn,topickle.keys()
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--csv-file', type=str)
-    parser.add_argument(
-        '--h5-file', type=str)
-    parser.add_argument(
-        '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
-    parser.add_argument(
-        '--show', action='store_true', default=False)
-    parser.add_argument(
-        '--zfilt', action='store_true', default=False)
-    parser.add_argument(
-        '--zfilt-min', type=float, default=0.10)
-    parser.add_argument(
-        '--zfilt-max', type=float, default=0.90)
-    parser.add_argument(
-        '--uuid', type=str,
-        help='get the appropriate csv and h5 file for this uuid')
-
+    parser = analysislib.args.get_parser()
     parser.add_argument(
         '--min-ratio', type=float, default=0.10)
     parser.add_argument(
@@ -144,27 +127,12 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    if args.uuid:
-        if None not in (args.csv_file, args.h5_file):
-            parser.error("if uuid is given, --csv-file and --h5-file are not required")
-        fm = autodata.files.FileModel()
-        fm.select_uuid(args.uuid)
-        csv_file = fm.get_csv("followpath").fullpath
-        h5_file = fm.get_simple_h5().fullpath
-    else:
-        if None in (args.csv_file, args.h5_file):
-            parser.error("both --csv-file and --h5-file are required")
-        csv_file = args.csv_file
-        h5_file = args.h5_file
+    csv_file, h5_file = analysislib.args.parse_csv_and_h5_file(parser, args, "followpath")
 
     fname = os.path.basename(csv_file).split('.')[0]
-
-    assert os.path.isfile(csv_file)
-    assert os.path.isfile(h5_file)
 
     doit(csv_file, h5_file, args)
 
     if args.show:
         plt.show()
-
 

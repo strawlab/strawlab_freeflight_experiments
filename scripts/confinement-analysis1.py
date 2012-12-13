@@ -1,10 +1,13 @@
 import argparse
 
-import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
-import nodelib.analysis
+import roslib
+roslib.load_manifest('strawlab_freeflight_experiments')
+import analysislib.plots as aplt
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab
+import h5py
 
 def trim_z(valid):
     allz = valid['z']
@@ -24,6 +27,9 @@ def trim_z(valid):
             return None
     return valid
 
+def rec_get_time(rec):
+    return float(rec['t_sec']) + (float(rec['t_nsec']) * 1e-9)
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -38,7 +44,14 @@ if __name__=='__main__':
         '--zfilt', action='store_true', default=False)
     args = parser.parse_args()
 
-    nmetadata,metadata,trajectories,starts,attrs = nodelib.analysis.load_csv_and_h5(args.csv_file, args.data_file)
+    metadata = matplotlib.mlab.csv2rec( args.csv_file )
+    nmetadata = len(metadata)
+
+    with h5py.File(args.data_file,'r') as h5:
+        trajectories = h5['trajectories'][:]
+        starts = h5['trajectory_start_times'][:]
+        attrs = {'frames_per_second':h5['trajectories'].attrs['frames_per_second']}
+
     dt = 1.0/attrs['frames_per_second']
 
     results = {}
@@ -46,8 +59,8 @@ if __name__=='__main__':
     for i in range(nmetadata-1):
         row = metadata[i]
         next_row = metadata[i+1]
-        t_start = nodelib.analysis.rec_get_time(row)
-        t_stop = nodelib.analysis.rec_get_time(next_row)
+        t_start = rec_get_time(row)
+        t_stop = rec_get_time(next_row)
 
         obj_id = row['lock_object']
         if obj_id==IMPOSSIBLE_OBJ_ID:
@@ -129,7 +142,7 @@ if __name__=='__main__':
         NF_R = 2
         NF_C = 1
 
-    with nodelib.analysis.mpl_fig('traces',figsize=figsize) as fig:
+    with aplt.mpl_fig('traces',figsize=figsize) as fig:
         ax = None
         limit = 0.5
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -159,7 +172,7 @@ if __name__=='__main__':
             ax.set_xlabel( 'x (m)' )
 
     # ----------------------------
-    with nodelib.analysis.mpl_fig('hist',figsize=figsize) as fig:
+    with aplt.mpl_fig('hist',figsize=figsize) as fig:
         ax = None
         limit = 1.0
         xbins = np.linspace(-limit,limit,40)
