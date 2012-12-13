@@ -1,0 +1,6 @@
+*.svg
+*.png
+*.pickle
+*.npy
+*.csv
+*.h5
