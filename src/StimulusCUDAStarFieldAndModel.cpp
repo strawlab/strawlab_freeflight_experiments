@@ -263,7 +263,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 30.0f ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 6.0f ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
@@ -308,7 +308,6 @@ private:
     osg::Vec3 model_position;
     osg::Quat model_attitude;
 
-    osg::ref_ptr<ParticleNode> pn_black;
     osg::ref_ptr<ParticleNode> pn_white;
 
     osg::Vec3f bbmin;
@@ -362,10 +361,8 @@ void StimulusCUDAStarFieldAndModel::post_init() {
     std::string osg_filename = get_plugin_data_path("post.osg");
     _load_stimulus_filename( osg_filename );
 
-    pn_black = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(0,0,0));
     pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
 
-    _group->addChild( pn_black.get() );
     _group->addChild( pn_white.get() );
     setVelocity( 0.0, 0.0, 0.0);
 
@@ -389,7 +386,7 @@ void StimulusCUDAStarFieldAndModel::post_init() {
 }
 
 osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
-    return osg::Vec4(0.5,0.5,0.5,1); // gray
+    return osg::Vec4(0.0,0.0,0.0,1); // black
 }
 
 std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const {
@@ -475,9 +472,6 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
 void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
     osg::Vec3 v = osg::Vec3(x,y,z);
-    if (pn_black) {
-        pn_black->setVelocity(v);
-    }
     if (pn_white) {
         pn_white->setVelocity(v);
     }
