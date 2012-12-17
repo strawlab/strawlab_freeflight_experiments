@@ -11,6 +11,7 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import display_client
 from std_msgs.msg import String, UInt32
+from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
@@ -18,8 +19,11 @@ import nodelib.log
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
-STIM_FILENAME = 'checkerboard.png.osg'
-BLANK_FILENAME = 'midgray.osg'
+CONDITIONS = ("midgray.osg/+0.005/+0.000",
+              "checkerboard.png.osg/+0.005/+0.000",
+              "stars2x1000r.png.osg/+0.005/+0.000",
+              "stars4x1000r.png.osg/+0.005/+0.000")
+START_CONDITION = CONDITIONS[0]
 
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
@@ -36,28 +40,40 @@ class Node(object):
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
 
         self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
-        self.pub_condition = rospy.Publisher('confinement_condition', String, latch=True, tcp_nodelay=True)
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
+        self.pub_model_pose = rospy.Publisher('model_pose', Pose, latch=True, tcp_nodelay=True)
 
-
-        self.log.stimulus_filename = BLANK_FILENAME
         self.currently_locked_obj_id = None
-        self.condition = 'control'
-        self._timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
-                                  self._switch_conditions)
-        self._switch_conditions(None)
+        self.timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
+                                  self.switch_conditions)
+        self.switch_conditions(None,force=START_CONDITION)
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    def _switch_conditions(self,event):
-        if self.condition=='confinement':
-            self.condition='control'
+    def get_model_pose_msg(self):
+        msg = Pose()
+        msg.position.x = self.x0
+        msg.position.y = self.y0
+        msg.position.z = 0.0
+        msg.orientation.w = 1
+        return msg
+
+    def switch_conditions(self,event,force=''):
+        if force:
+            self.condition = force
         else:
-            self.condition='confinement'
-        rospy.loginfo('confinement condition: %s'%self.condition )
+            i = CONDITIONS.index(self.condition)
+            j = (i+1) % len(CONDITIONS)
+            self.condition = CONDITIONS[j]
+
+        self.stimulus_filename = self.condition.split('/')[0]
+        self.x0,self.y0 = map(float,self.condition.split('/')[1:])
+
         self.log.confinement_condition = self.condition
+        rospy.loginfo('confinement condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
+        self.drop_lock_on()
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -71,7 +87,7 @@ class Node(object):
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,pos,expanded=False):
-        c = np.array( (0,0) )
+        c = np.array( (self.x0,self.y0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
         radius = 0.16
@@ -103,26 +119,21 @@ class Node(object):
     def update(self):
         self.log.update()
         self.pub_lock_object.publish( self.log.lock_object )
-        self.pub_stimulus.publish( self.log.stimulus_filename )
-        self.pub_condition.publish( self.log.confinement_condition )
+        self.pub_stimulus.publish( self.stimulus_filename )
+        self.pub_model_pose.publish( self.get_model_pose_msg() )
 
     def lock_on(self,obj,framenumber):
-        rospy.loginfo('locked object %d at frame %d'%(obj.obj_id,framenumber))
+        rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
-        if self.condition=='confinement':
-            self.log.stimulus_filename = STIM_FILENAME
-        else:
-            self.log.stimulus_filename = BLANK_FILENAME
         self.log.lock_object = obj.obj_id
         self.log.framenumber = framenumber
         self.update()
 
     def drop_lock_on(self):
-        rospy.loginfo('dropping locked object')
+        rospy.loginfo('dropping locked object %s' % self.currently_locked_obj_id)
         self.currently_locked_obj_id = None
-        self.log.stimulus_filename = BLANK_FILENAME
         self.log.lock_object = IMPOSSIBLE_OBJ_ID
         self.log.framenumber = 0
         self.update()
