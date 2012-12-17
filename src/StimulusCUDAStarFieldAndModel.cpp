@@ -265,7 +265,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 6.0f ) );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 9.0f ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
