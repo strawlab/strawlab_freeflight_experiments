@@ -5,7 +5,11 @@ import roslib
 roslib.load_manifest('flycave')
 import autodata.files
 
+from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
+
 def get_parser():
+    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--csv-file', type=str)
@@ -16,14 +20,25 @@ def get_parser():
     parser.add_argument(
         '--show', action='store_true', default=False)
     parser.add_argument(
-        '--zfilt', action='store_true', default=False)
+        '--zfilt', type=str, choices=filt_choices,
+        required=True,
+        help='method to filter trajectory data based on Z values')
     parser.add_argument(
-        '--zfilt-min', type=float, default=0.10)
+        '--zfilt-min', type=float, default=0.10,
+        help='minimum z (default %(default)s')
     parser.add_argument(
-        '--zfilt-max', type=float, default=0.90)
+        '--zfilt-max', type=float, default=0.90,
+        help='maximum z (default %(default)s')
     parser.add_argument(
         '--uuid', type=str,
         help='get the appropriate csv and h5 file for this uuid')
+    parser.add_argument(
+        '--rfilt', type=str, choices=filt_choices,
+        required=True,
+        help='method to filter trajectory data based on radius from centre values')
+    parser.add_argument(
+        '--rfilt-max', type=float, default=0.40,
+        help='maximum r (default %(default)s')
 
     return parser
 

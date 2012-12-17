@@ -14,6 +14,7 @@ import followpath
 import roslib
 
 roslib.load_manifest('flycave')
+import analysislib.filters
 import analysislib.args
 import analysislib.plots as aplt
 
@@ -73,27 +74,29 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                 valid = trajectories.readWhere(query)
                 this_id = _id
 
-                if args.zfilt:
-                    valid_cond = analysislib.trim_z(valid['z'], args.zfilt_min, args.zfilt_max)
-                    if valid_cond is None:
-                        print 'no points left after ZFILT for obj_id %d' % (this_id)
-                        continue
-                    else:
-                        validx = valid['x'][valid_cond]
-                        validy = valid['y'][valid_cond]
-                        validz = valid['z'][valid_cond]
-                        validframenumber = valid['framenumber'][valid_cond]
-                else:
-                    validx = valid['x']
-                    validy = valid['y']
-                    validz = valid['z']
-                    validframenumber = valid['framenumber']
+                #filter the trajectories based on Z value
+                valid_z_cond = analysislib.filters.filter_z(
+                                            args.zfilt,
+                                            valid['z'],
+                                            args.zfilt_min, args.zfilt_max)
+                #filter based on radius
+                valid_r_cond = analysislib.filters.filter_radius(
+                                            args.rfilt,
+                                            valid['x'],valid['y'],
+                                            args.rfilt_max)
+
+                valid_cond = valid_z_cond & valid_r_cond
+
+                validx = valid['x'][valid_cond]
+                validy = valid['y'][valid_cond]
+                validz = valid['z'][valid_cond]
+                validframenumber = valid['framenumber'][valid_cond]
 
                 dur_samples = 100
                 n_samples = len(validx)
 
                 if n_samples < dur_samples: # must be at least this long
-                    print 'insufficient samples for obj_id %d' % (this_id)
+                    print 'insufficient samples (%d) for obj_id %d' % (n_samples,this_id)
                     continue
 
                 print '%s %d: frame0 %d, %d samples'%(_cond, this_id,
@@ -178,7 +181,6 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
                 valname="radius",
-                rmax=0.35,
                 dvdt=True,
                 name='%s.drad' % fname)
 
@@ -187,7 +189,6 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
                 valname="radius",
-                rmax=0.35,
                 dvdt=False,
                 name='%s.rad' % fname)
 
@@ -196,7 +197,6 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
                 valname="x",
-                rmax=0.35,
                 dvdt=False,
                 name='%s.x' % fname)
 
@@ -205,7 +205,6 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
                 valname="y",
-                rmax=0.35,
                 dvdt=False,
                 name='%s.y' % fname)
 
@@ -214,7 +213,6 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
                 valname="z",
-                rmax=0.35,
                 dvdt=False,
                 name='%s.z' % fname)
 

@@ -13,8 +13,8 @@ def trim_z(valid):
     allz = valid['z']
 
     # stop considering trajectory from the moment it leaves valid zone
-    minz = 0.20
-    maxz = 0.95
+    minz = 0.10
+    maxz = 0.90
 
     cond = (minz < allz) & (allz < maxz)
     bad_idxs = np.nonzero(~cond)[0]
@@ -116,7 +116,7 @@ if __name__=='__main__':
 
         dur_samples = 100
         if len(valid) < dur_samples: # must be at least this long
-            print ('insufficient samples for obj_id %d'%(obj_id))
+            print ('insufficient samples (%d) for obj_id %d'%(len(valid),obj_id))
             continue
         r['n_samples'].append(len(valid))
 

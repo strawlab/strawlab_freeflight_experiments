@@ -125,7 +125,7 @@ def plot_nsamples(results, dt, args, name):
         ax.set_xlabel( 'n samples per trajectory' )
         ax.legend()
 
-def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, rmax, dvdt, name):
+def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
     with mpl_fig(name,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -136,21 +136,16 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             for x,y,z,framenumber,(x0,y0,obj_id,framenumber0) in zip(r['x'], r['y'], r['z'], r['framenumber'], r['start_obj_ids']):
                 ts = framenumber - framenumber0
 
-                rad = np.sqrt(x**2 + y**2)
-                cond = rad < rmax
-
-                ts = ts[cond]
-
                 if valname == "x":
-                    val = x[cond]
+                    val = x
                 elif valname == "y":
-                    val = y[cond]
+                    val = y
                 elif valname == "z":
-                    val = z[cond]
+                    val = z
                 elif valname == "radius":
-                    val = rad[cond]
+                    val = np.sqrt(x**2 + y**2)
                 else:
-                    raise Exception("Not Supported")
+                    raise Exception("Plotting %s Not Supported" % valname)
 
                 if dvdt:
                     if val.shape[0] < 10:
@@ -168,18 +163,18 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             else:
                 if valname in ("x","y"):
                     ax.set_ylim( -0.5, 0.5 )
-                elif valname == "Z":
+                elif valname == "z":
                     ax.set_ylim( 0, 1 )
 
-            ax.set_ylabel( '%s (m)' % valname )
-            ax.set_xlabel( 'frame (n)' )
-            ax.set_title('%s %s: total: n=%d' % (valname,current_condition,nsamples))
+            ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
+            ax.set_xlabel('frame (n)')
+            ax.set_title('%s%s %s: total: n=%d' % ('d' if dvdt else '',valname,current_condition,nsamples))
 
             df = pandas.DataFrame(series)
             means = df.mean(1) #column wise
             meds = df.median(1) #column wise
 
-            ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=True )
-            ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=True )
+            ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=True, label="mean" )
+            ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=True, label="median" )
 
 
