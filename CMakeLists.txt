@@ -59,7 +59,7 @@ target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
   ${VROS_DISPLAY_LIBRARY})
 
-add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp)
+add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp src/json2osg.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${BOOST_SYSTEM_LIBRARY} ${BOOST_FILESYSTEM_LIBRARY}
   ${VROS_DISPLAY_LIBRARY})
@@ -85,7 +85,7 @@ CUDA_COMPILE( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 
 # collect the sources
 SET(TARGET_SRC
-	src/StimulusCUDAStarFieldAndModel.cpp
+	src/StimulusCUDAStarFieldAndModel.cpp src/json2osg.cpp
     ${CUDA_FILES}
 )
 
