@@ -33,6 +33,9 @@ def get_parser():
         '--uuid', type=str,
         help='get the appropriate csv and h5 file for this uuid')
     parser.add_argument(
+        '--outdir', type=str, default=os.getcwd(),
+        help='directory to save plots')
+    parser.add_argument(
         '--rfilt', type=str, choices=filt_choices,
         required=True,
         help='method to filter trajectory data based on radius from centre values')

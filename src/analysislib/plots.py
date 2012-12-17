@@ -14,14 +14,18 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 @contextlib.contextmanager
-def mpl_fig(fname_base,**kwargs):
+def mpl_fig(fname_base,args,**kwargs):
+    if args and args.outdir:
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        fname_base = os.path.join(args.outdir,fname_base)
     fig = plt.figure( **kwargs )
     yield fig
     fig.savefig(fname_base+'.png')
     fig.savefig(fname_base+'.svg')
 
 def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, name):
-    with mpl_fig(name,figsize=figsize) as fig:
+    with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 0.5
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -64,7 +68,7 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             ax.set_xlabel( 'x (m)' )
 
 def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name):
-    with mpl_fig(name,figsize=figsize) as fig:
+    with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 1.0
         xbins = np.linspace(-limit,limit,40)
@@ -97,7 +101,7 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
             ax.set_ylim( -0.5, 0.5 )
 
 def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
-    with mpl_fig(name,figsize=figsize) as fig:
+    with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
@@ -114,7 +118,7 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
 
 
 def plot_nsamples(results, dt, args, name):
-    with mpl_fig(name) as fig:
+    with mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
         bins = np.linspace(0,4000,20)
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -126,7 +130,7 @@ def plot_nsamples(results, dt, args, name):
         ax.legend()
 
 def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
-    with mpl_fig(name,figsize=figsize) as fig:
+    with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
