@@ -353,14 +353,14 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
     _update_pat();
 
     // now load it with new contents
-    osg::Node* tmp = osgDB::readNodeFile(osg_filename);
+    osg::Node* tmp = load_osg_file(osg_filename);
     vros_assert(tmp!=NULL);
     switch_node->addChild( tmp );
     _group->addChild(switch_node);
 }
 
 void StimulusCUDAStarFieldAndModel::post_init() {
-    std::string osg_filename = get_plugin_data_path("post.osg");
+    std::string osg_filename = "post.osg";
     _load_stimulus_filename( osg_filename );
 
     pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
