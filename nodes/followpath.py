@@ -49,9 +49,10 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 #FIXME:
 SHRINK_SPHERE = 0.8
 
-CONDITIONS = ("follow+control/+0.080",
+CONDITIONS = ("nolock/+0.000",
+              "follow+control/+0.090",
               "follow+control/+0.000",
-              "follow+control/-0.080")
+              "follow+control/-0.090")
 START_CONDITION = CONDITIONS[0]
 
 def is_stepwise_mode(condition):
@@ -59,6 +60,9 @@ def is_stepwise_mode(condition):
 
 def is_control_mode(condition):
     return condition.startswith("follow+control")
+
+def is_control_nolock_mode(condition):
+    return condition.startswith("nolock")
 
 def xy_to_pxpy(x,y):
     #center of svg is at 250,250 - move 0,0 there
@@ -186,7 +190,6 @@ class Node(object):
                                 flyflypath.euclid.Point2(px,py),
                                 flyflypath.euclid.Point2(*xy_to_pxpy(0,0)))
         else:
-            rospy.logwarn("unknown condition")
             return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
 
         #do the control
@@ -301,7 +304,12 @@ class Node(object):
 
         #back to the start of the path
         self.move_point(0.0)
-        self.lock_object.publish(self.currently_locked_obj_id)
+
+        if is_control_nolock_mode(self.condition):
+            self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
+        else:
+            self.lock_object.publish(self.currently_locked_obj_id)
+
         self.log.lock_object = self.currently_locked_obj_id
         self.log.framenumber = self.framenumber
         self.log.update()
@@ -316,6 +324,7 @@ class Node(object):
 
         rospy.loginfo('dropping locked object %s (tracked for %s s)' % (currently_locked_obj_id,dt))
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
+
         self.log.lock_object = IMPOSSIBLE_OBJ_ID_ZERO_POSE
         self.log.update()
 
