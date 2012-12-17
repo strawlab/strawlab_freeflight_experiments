@@ -1,5 +1,8 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 #include "vros_display/stimulus_interface.h"
+#include "vros_display/vros_assert.h"
+
+#include "json2osg.hpp"
 
 #include "Poco/ClassLibrary.h"
 
@@ -59,7 +62,7 @@ class StimulusOSGFile: public StimulusInterface
 public:
 std::string name() const {
     return "StimulusOSGFile";
-}
+  }
 
 void _load_stimulus_filename( std::string osg_filename ) {
 
@@ -75,7 +78,8 @@ void _load_stimulus_filename( std::string osg_filename ) {
     // (rely on C++ to delete the old switching node).
 
     // (create a new switching node.
-    switch_node = new osg::MatrixTransform;
+    switch_node = new osg::PositionAttitudeTransform;
+    _update_pat();
 
     // now load it with new contents
     std::cerr << "reading .osg file: " << osg_filename << std::endl;
@@ -125,12 +129,18 @@ void _load_skybox_basename( std::string basename ) {
     top->addChild(skybox_node);
 }
 
+void _update_pat() {
+    vros_assert(switch_node.valid());
+    switch_node->setPosition( model_position );
+    switch_node->setAttitude( model_attitude );
+}
 
 virtual void post_init() {
   top = new osg::MatrixTransform; top->addDescription("virtual world top node");
 
   // when we first start, don't load any model, but create a node that is later deleted.
-  switch_node = new osg::MatrixTransform;
+  switch_node = new osg::PositionAttitudeTransform;
+  _update_pat();
   top->addChild(switch_node);
 
   _virtual_world = top;
@@ -156,6 +166,7 @@ std::vector<std::string> get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("stimulus_filename");
     result.push_back("skybox_basename");
+    result.push_back("model_pose");
     return result;
 }
 
@@ -190,6 +201,15 @@ void receive_json_message(const std::string& topic_name, const std::string& json
         std::string skybox_basename = json_string_value( data_json );
         std::cerr << "loading skybox filename: " << skybox_basename << std::endl;
         _load_skybox_basename( skybox_basename );
+    } else if (topic_name=="model_pose") {
+        json_t *data_json;
+
+        data_json = json_object_get(root, "position");
+        model_position = parse_vec3(data_json);
+
+        data_json = json_object_get(root, "orientation");
+        model_attitude = parse_quat(data_json);
+        _update_pat();
     } else {
         throw std::runtime_error( string_format( "error: in %s(%d): unknown topic\n", __FILE__, __LINE__));
     }
@@ -202,6 +222,8 @@ std::string get_message_type(const std::string& topic_name) const {
         result = "std_msgs/String";
     } else if (topic_name=="skybox_basename") {
         result = "std_msgs/String";
+    } else if (topic_name=="model_pose") {
+        result = "geometry_msgs/Pose";
     } else {
         throw std::runtime_error(string_format("unknown topic name: %s",topic_name.c_str()));
     }
@@ -212,7 +234,9 @@ std::string get_message_type(const std::string& topic_name) const {
 private:
     osg::ref_ptr<osg::Group> _virtual_world;
     osg::ref_ptr<osg::MatrixTransform> top;
-    osg::ref_ptr<osg::MatrixTransform> switch_node;
+    osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
+    osg::Vec3 model_position;
+    osg::Quat model_attitude;
     osg::ref_ptr<osg::MatrixTransform> skybox_node;
 };
 

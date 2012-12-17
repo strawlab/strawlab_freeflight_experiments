@@ -1,0 +1,32 @@
+<launch>
+  <!-- Spawn the display server. -->
+  <node name="ds_replay" pkg="vros_display" type="display_server" args="--mode=virtual_world">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <!-- And show another display_server to see the cubemap -->
+  <node name="ds_replay2" pkg="vros_display" type="display_server" args="--mode=cubemap">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <!-- Set the stimulus mode. -->
+  <node name="stimulus_mode" pkg="rostopic" type="rostopic" args="pub --latch /stimulus_mode std_msgs/String StimulusOSGFile">
+  </node>
+
+  <!-- Set the camera position. -->
+  <node name="camera_position" pkg="rostopic" type="rostopic" args="pub --once -f $(find strawlab_freeflight_experiments)/data/test/camera_position.yaml /ds_replay/trackball_manipulator_state  vros_display/TrackballManipulatorState">
+  </node>
+
+  <group>
+    <remap from="pose" to="model_pose"/>
+    <node name="set_model" pkg="vros_display" type="send_pose">
+    </node>
+  </group>
+
+  <!-- Set the stimulus filename. -->
+  <node name="stimulus_filename" pkg="rostopic" type="rostopic" args="pub --latch /stimulus_filename std_msgs/String checkerboard.png.osg">
+  </node>
+
+
+
+</launch>
