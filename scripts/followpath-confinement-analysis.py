@@ -92,7 +92,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                 validz = valid['z'][valid_cond]
                 validframenumber = valid['framenumber'][valid_cond]
 
-                dur_samples = 100
+                dur_samples = args.lenfilt / dt
                 n_samples = len(validx)
 
                 if n_samples < dur_samples: # must be at least this long

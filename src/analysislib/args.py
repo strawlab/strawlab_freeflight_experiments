@@ -22,13 +22,13 @@ def get_parser():
     parser.add_argument(
         '--zfilt', type=str, choices=filt_choices,
         required=True,
-        help='method to filter trajectory data based on Z values')
+        help='method to filter trajectory data based on z values')
     parser.add_argument(
         '--zfilt-min', type=float, default=0.10,
-        help='minimum z (default %(default)s')
+        help='minimum z, metres (default %(default)s)')
     parser.add_argument(
         '--zfilt-max', type=float, default=0.90,
-        help='maximum z (default %(default)s')
+        help='maximum z, metres (default %(default)s)')
     parser.add_argument(
         '--uuid', type=str,
         help='get the appropriate csv and h5 file for this uuid')
@@ -41,7 +41,11 @@ def get_parser():
         help='method to filter trajectory data based on radius from centre values')
     parser.add_argument(
         '--rfilt-max', type=float, default=0.40,
-        help='maximum r (default %(default)s')
+        help='maximum r, metres, (default %(default)s)')
+    parser.add_argument(
+        '--lenfilt', type=float, default=1.0,
+        required=False,
+        help='filter trajectories shorter than this many seconds (default %(default)s)')
 
     return parser
 
