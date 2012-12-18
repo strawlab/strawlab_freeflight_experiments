@@ -105,6 +105,7 @@ class Node(object):
         self.trackinglock = threading.Lock()
         self.currently_locked_obj_id = None
         self.fly = Vector3()
+        self.framenumber = 0
         now = rospy.get_time()
         self.first_seen_time = now
         self.last_seen_time = now
@@ -124,7 +125,7 @@ class Node(object):
         self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = 0.0
         self.log.move_ratio = self.moving_ratio
         self.log.lock_object = IMPOSSIBLE_OBJ_ID_ZERO_POSE
-        self.log.framenumber = 0
+        self.log.framenumber = self.framenumber
 
         #publish for the follow_path monitor
         self.svg_pub = rospy.Publisher('svg_filename', String, latch=True, tcp_nodelay=True)
@@ -206,6 +207,7 @@ class Node(object):
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
                 fly_x = self.fly.x; fly_y = self.fly.y; fly_z = self.fly.z
+                framenumber = self.framenumber
 
             active = False
             if currently_locked_obj_id is None:
@@ -242,8 +244,9 @@ class Node(object):
             if active:
                 self.log.src_x = fly_x; self.log.src_y = fly_y; self.log.src_z = fly_z;
                 self.log.stim_x = vec.x; self.log.stim_y = vec.y; self.log.stim_z = vec.z
-                self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = 0.0
+                self.log.target_x = target.p2.x; self.log.target_y = target.p2.y; self.log.target_z = Z_TARGET
                 self.log.active = 1 if active else 0
+                self.log.framenumber = framenumber
                 self.log.update()
 
             self.active_pub.publish(active)
@@ -274,6 +277,7 @@ class Node(object):
                         #no need, off by 1 wont matter
                         self.last_seen_time = now
                         self.fly = obj.position
+                        self.framenumber = packet.framenumber
                 else:
                     if self.is_in_trigger_volume(obj.position):
                         self.lock_on(obj,packet.framenumber)
@@ -281,6 +285,7 @@ class Node(object):
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
             self.fly = obj.position
+            self.framenumber = framenumber
             self.currently_locked_obj_id = obj.obj_id
 
             now = rospy.get_time()
@@ -292,13 +297,13 @@ class Node(object):
             self.fly_dist = 0
 
         rospy.loginfo('locked object %d at frame %d at %f,%f,%f' % (
-                self.currently_locked_obj_id,framenumber,self.fly.x,self.fly.y,self.fly.z))
+                self.currently_locked_obj_id,self.framenumber,self.fly.x,self.fly.y,self.fly.z))
 
         #back to the start of the path
         self.move_point(0.0)
         self.lock_object.publish(self.currently_locked_obj_id)
         self.log.lock_object = self.currently_locked_obj_id
-        self.log.framenumber = framenumber
+        self.log.framenumber = self.framenumber
         self.log.update()
 
     def drop_lock_on(self):
@@ -312,7 +317,6 @@ class Node(object):
         rospy.loginfo('dropping locked object %s (tracked for %s s)' % (currently_locked_obj_id,dt))
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)
         self.log.lock_object = IMPOSSIBLE_OBJ_ID_ZERO_POSE
-        self.log.framenumber = 0
         self.log.update()
 
 def main():
