@@ -1,6 +1,8 @@
 import os.path
 import sys
 import argparse
+import Queue
+import pandas
 
 import tables
 import pandas
@@ -38,8 +40,11 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
             print "obj_id column not indexed, this will be slow. reindex"
         
     dt = 1.0/trajectories.attrs['frames_per_second']
+    dur_samples = args.lenfilt / dt
 
+    _ids = Queue.Queue(maxsize=2)
     this_id = followpath.IMPOSSIBLE_OBJ_ID
+    csv_results = {}
 
     results = {}
     for row in infile.record_iterator():
@@ -49,73 +54,97 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
             _id = int(row.lock_object)
             _t = float(row.t_sec) + (float(row.t_nsec) * 1e-9)
             _framenumber = int(row.framenumber)
+            _stim_x = float(row.stim_x)
+            _stim_y = float(row.stim_y)
+            _stim_z = float(row.stim_z)
 
             if not _cond in results:
-                results[_cond] = dict(x=[],
-                                      y=[],
-                                      z=[],
-                                      count=0,
+                results[_cond] = dict(count=0,
                                       framenumber=[],
                                       start_obj_ids=[],
-                                      )
-            r = results[_cond]
-
-            if args.idfilt and _id not in args.idfilt:
-                continue
+                                      df=[])
 
             if _id == followpath.IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                 continue
             elif _id == followpath.IMPOSSIBLE_OBJ_ID:
                 continue
             elif _id != this_id:
-                if frames_before < 0:
-                    query = "obj_id == %d" % _id
-                else:
-                    query = "(obj_id == %d) & (framenumber >= %d)" % (
-                                _id,
-                                _framenumber-frames_before)
+                try:
+                    query_id,query_framenumber,query_cond = _ids.get(False)
+                except Queue.Empty:
+                    #first time
+                    this_id = _id
+                    csv_results = {k:[] for k in ("framenumber","stim_x","stim_y","stim_z")}
+                    query_id = None
+                finally:
+                    _ids.put((_id,_framenumber,_cond),block=False)
 
-                valid = trajectories.readWhere(query)
-                this_id = _id
-
-                #filter the trajectories based on Z value
-                valid_z_cond = analysislib.filters.filter_z(
-                                            args.zfilt,
-                                            valid['z'],
-                                            args.zfilt_min, args.zfilt_max)
-                #filter based on radius
-                valid_r_cond = analysislib.filters.filter_radius(
-                                            args.rfilt,
-                                            valid['x'],valid['y'],
-                                            args.rfilt_max)
-
-                valid_cond = valid_z_cond & valid_r_cond
-
-                validx = valid['x'][valid_cond]
-                validy = valid['y'][valid_cond]
-                validz = valid['z'][valid_cond]
-                validframenumber = valid['framenumber'][valid_cond]
-
-                dur_samples = args.lenfilt / dt
-                n_samples = len(validx)
-
-                if n_samples < dur_samples: # must be at least this long
-                    print 'insufficient samples (%d) for obj_id %d' % (n_samples,this_id)
+                #first time
+                if query_id is None:
                     continue
 
-                print '%s %d: frame0 %d, %d samples'%(_cond, this_id,
-                                                    valid[0]['framenumber'],
-                                                    n_samples)
+                if (not args.idfilt) or (query_id in args.idfilt):
 
-                r['count'] += 1
-                r['x'].append( validx )
-                r['y'].append( validy )
-                r['z'].append( validz )
-                r['framenumber'].append( validframenumber )
-                r['start_obj_ids'].append(  (validx[0], validy[0], this_id, _framenumber) )
+                    r = results[query_cond]
+
+                    if frames_before < 0:
+                        query = "obj_id == %d" % query_id
+                    else:
+                        query = "(obj_id == %d) & (framenumber >= %d)" % (
+                                    query_id,
+                                    query_framenumber-frames_before)
+
+                    valid = trajectories.readWhere(query)
+
+                    #filter the trajectories based on Z value
+                    valid_z_cond = analysislib.filters.filter_z(
+                                                args.zfilt,
+                                                valid['z'],
+                                                args.zfilt_min, args.zfilt_max)
+                    #filter based on radius
+                    valid_r_cond = analysislib.filters.filter_radius(
+                                                args.rfilt,
+                                                valid['x'],valid['y'],
+                                                args.rfilt_max)
+
+                    valid_cond = valid_z_cond & valid_r_cond
+
+                    validx = valid['x'][valid_cond]
+                    validy = valid['y'][valid_cond]
+                    validz = valid['z'][valid_cond]
+                    validframenumber = valid['framenumber'][valid_cond]
+
+                    n_samples = len(validx)
+
+                    if n_samples < dur_samples: # must be at least this long
+                        print 'insufficient samples (%d) for obj_id %d' % (n_samples,query_id)
+                    else:
+                        print '%s %d: frame0 %d, %d samples'%(_cond, query_id,
+                                                            valid[0]['framenumber'],
+                                                            n_samples)
+
+                        dfd = {'x':validx,'y':validy,'z':validz}
+                        dfd["stim_x"] = pandas.Series(csv_results['stim_x'],index=csv_results['framenumber'])
+                        dfd["stim_y"] = pandas.Series(csv_results['stim_y'],index=csv_results['framenumber'])
+                        dfd["stim_z"] = pandas.Series(csv_results['stim_z'],index=csv_results['framenumber'])
+                        df = pandas.DataFrame(dfd,index=validframenumber)
+
+                        r['count'] += 1
+                        r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber) )
+                        r['df'].append( df )
+
+                this_id = _id
+                csv_results = {k:[] for k in ("framenumber","stim_x","stim_y","stim_z")}
 
             elif _id == this_id:
-                pass
+                #sometimes we get duplicate rows. only append if the fn is
+                #greater than the last one
+                fns = csv_results["framenumber"]
+                if (not fns) or (_framenumber > fns[-1]):
+                    fns.append(_framenumber)
+                    csv_results["stim_x"].append(_stim_x)
+                    csv_results["stim_y"].append(_stim_y)
+                    csv_results["stim_z"].append(_stim_z)
             else:
                 print "CANT GO BACK %d vs %d" % (_id,this_id)
                 continue
@@ -148,6 +177,8 @@ if __name__=='__main__':
         NF_C = 1
 
     radius = [0.5]
+
+    aplt.save_args(args)
 
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,
@@ -220,14 +251,13 @@ if __name__=='__main__':
                 dvdt=False,
                 name='%s.z' % fname)
 
-    aplt.save_args(args)
-
-    fplt = autodata.files.FileView(
-              autodata.files.FileModel(show_progress=True,filepath=h5_file))  
-    with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
-        fplt.plot_tracking_data(
-                    f.add_subplot(1,2,1),
-                    f.add_subplot(1,2,2))
+    if not args.no_trackingstats:
+        fplt = autodata.files.FileView(
+                  autodata.files.FileModel(show_progress=True,filepath=h5_file))  
+        with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
+            fplt.plot_tracking_data(
+                        f.add_subplot(1,2,1),
+                        f.add_subplot(1,2,2))
 
     if args.show:
         plt.show()
