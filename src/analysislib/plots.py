@@ -63,7 +63,7 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 ax.set_zlim(0,1)
 
             ax.set_aspect('equal')
-            ax.set_title('%s: total: %.1f sec, n=%d'%(current_condition,dur,r['count']))
+            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -93,7 +93,7 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
                 ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'w:', lw=2 )
 
             ax.set_aspect('equal')
-            ax.set_title('%s: total: %.1f sec, n=%d'%(current_condition,dur,r['count']))
+            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -114,7 +114,7 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
             ax.hist(times,maxl, range=(0,maxl))
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
-            ax.set_title('%s: total: n=%d'%(current_condition,r['count']))
+            ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
 
 
 def plot_nsamples(results, dt, args, name):
@@ -172,7 +172,7 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
 
             ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
             ax.set_xlabel('frame (n)')
-            ax.set_title('%s%s %s: total: n=%d' % ('d' if dvdt else '',valname,current_condition,nsamples))
+            ax.set_title('%s%s %s\n(n=%d)' % ('d' if dvdt else '',valname,current_condition,nsamples))
 
             df = pandas.DataFrame(series)
             means = df.mean(1) #column wise
