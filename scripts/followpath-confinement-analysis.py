@@ -134,7 +134,7 @@ if __name__=='__main__':
 
     results,dt = get_results(csv_file, h5_file, args, frames_before=0)
     ncond = len(results)
-    if 1:
+    if not args.portrait:
         figsize = (5*ncond,5)
         NF_R = 1
         NF_C = ncond

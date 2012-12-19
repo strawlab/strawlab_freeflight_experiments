@@ -12,13 +12,20 @@ def get_parser():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--csv-file', type=str)
+        '--csv-file', type=str,
+        help='path to *.csv file (if not using --uuid)')
     parser.add_argument(
-        '--h5-file', type=str)
+        '--h5-file', type=str,
+        help='path to simple_flydra.h5 file (if not using --uuid)')
     parser.add_argument(
-        '--hide-obj-ids', action='store_false', dest='show_obj_ids', default=True)
+        '--show-obj-ids', action='store_true', default=False,
+        help='show obj_ids on plots where appropriate')
     parser.add_argument(
-        '--show', action='store_true', default=False)
+        '--show', action='store_true', default=False,
+        help='show plots')
+    parser.add_argument(
+        '--portrait', action='store_true', default=False,
+        help='arrange subplots in portrait orientation (one col, many rows)')
     parser.add_argument(
         '--zfilt', type=str, choices=filt_choices,
         required=True,
