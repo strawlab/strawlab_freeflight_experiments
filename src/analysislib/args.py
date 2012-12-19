@@ -55,8 +55,8 @@ def parse_csv_and_h5_file(parser, args, csv_suffix):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
         fm = autodata.files.FileModel()
         fm.select_uuid(args.uuid)
-        csv_file = fm.get_csv(csv_suffix).fullpath
-        h5_file = fm.get_simple_h5().fullpath
+        csv_file = fm.get_file_model(csv_suffix).fullpath
+        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
     else:
         if None in (args.csv_file, args.h5_file):
             parser.error("both --csv-file and --h5-file are required")

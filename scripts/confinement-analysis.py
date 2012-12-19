@@ -22,7 +22,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
 
     infile = followpath.Logger(fname=csv_fname, mode="r")
 
-    h5 = tables.openFile(h5_file, mode='r+')
+    h5 = tables.openFile(h5_file, mode='r')
     trajectories = h5.root.trajectories
 
     #unexplainable protip - adding an index on the framenumber table makes
@@ -134,7 +134,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    csv_file, h5_file = analysislib.args.parse_csv_and_h5_file(parser, args, "confinement")
+    csv_file, h5_file = analysislib.args.parse_csv_and_h5_file(parser, args, "confinement.csv")
 
     fname = os.path.basename(csv_file).split('.')[0]
 

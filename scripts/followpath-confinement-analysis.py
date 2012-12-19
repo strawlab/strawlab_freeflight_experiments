@@ -128,7 +128,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    csv_file, h5_file = analysislib.args.parse_csv_and_h5_file(parser, args, "followpath")
+    csv_file, h5_file = analysislib.args.parse_csv_and_h5_file(parser, args, "followpath.csv")
 
     fname = os.path.basename(csv_file).split('.')[0]
 
