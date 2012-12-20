@@ -35,6 +35,10 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             else:
                 ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
 
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
             allx = np.concatenate( r['x'] )
             dur = len(allx)*dt
 
@@ -77,6 +81,10 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
 
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
             allx = np.concatenate( r['x'] )
             ally = np.concatenate( r['y'] )
             allz = np.concatenate( r['z'] )
@@ -107,6 +115,10 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
 
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
             assert r['count'] == len(r['x'])
             assert len(r['x']) == len(r['y'])
             times = [dt*len(trial) for trial in r['x']]
@@ -123,6 +135,11 @@ def plot_nsamples(results, dt, args, name):
         ax = fig.add_subplot(1,1,1)
         bins = np.linspace(0,4000,20)
         for i,(current_condition,r) in enumerate(results.iteritems()):
+
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
             n_samples = [len(trial) for trial in r['x']]
             hist,_ = np.histogram(n_samples,bins=bins)
             ax.plot( bins[:-1], hist, '-x', label=current_condition )
@@ -135,6 +152,10 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
 
             series = {}
             nsamples = 0
