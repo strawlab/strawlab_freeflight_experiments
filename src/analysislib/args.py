@@ -21,6 +21,9 @@ def get_parser():
         '--show-obj-ids', action='store_true', default=False,
         help='show obj_ids on plots where appropriate')
     parser.add_argument(
+        '--reindex', action='store_true', default=False,
+        help='reindex simple_flydra h5 file')
+    parser.add_argument(
         '--show', action='store_true', default=False,
         help='show plots')
     parser.add_argument(

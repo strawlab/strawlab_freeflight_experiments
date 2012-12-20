@@ -1,5 +1,6 @@
 import contextlib
 import os.path
+import sys
 
 try:
     import strawlab_mpl.defaults
@@ -181,4 +182,13 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=True, label="mean" )
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=True, label="median" )
 
+def save_args(args, name="README"):
+    if args and args.outdir:
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        name = os.path.join(args.outdir,name)
+
+    with open(name, 'w') as f:
+        f.write("These plots were generated with the following arguments\n")
+        f.write(" ".join(sys.argv))
 

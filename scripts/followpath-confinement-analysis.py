@@ -14,6 +14,7 @@ import followpath
 import roslib
 
 roslib.load_manifest('flycave')
+import autodata.files
 import analysislib.filters
 import analysislib.args
 import analysislib.plots as aplt
@@ -22,7 +23,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
 
     infile = followpath.Logger(fname=csv_fname, mode="r")
 
-    h5 = tables.openFile(h5_file, mode='r+')
+    h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
     trajectories = h5.root.trajectories
 
     #unexplainable protip - adding an index on the framenumber table makes
@@ -215,6 +216,15 @@ if __name__=='__main__':
                 valname="z",
                 dvdt=False,
                 name='%s.z' % fname)
+
+    aplt.save_args(args)
+
+    fplt = autodata.files.FileView(
+              autodata.files.FileModel(show_progress=True,filepath=h5_file))  
+    with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
+        fplt.plot_tracking_data(
+                    f.add_subplot(1,2,1),
+                    f.add_subplot(1,2,2))
 
     if args.show:
         plt.show()
