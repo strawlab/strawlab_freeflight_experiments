@@ -59,6 +59,9 @@ def get_parser():
         '--lenfilt', type=float, default=1.0,
         required=False,
         help='filter trajectories shorter than this many seconds (default %(default)s)')
+    parser.add_argument(
+        '--idfilt', type=int, default=[], nargs='*',
+        help='only show these obj_ids')
 
     return parser
 

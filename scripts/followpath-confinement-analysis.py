@@ -60,6 +60,9 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                                       )
             r = results[_cond]
 
+            if args.idfilt and _id not in args.idfilt:
+                continue
+
             if _id == followpath.IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                 continue
             elif _id == followpath.IMPOSSIBLE_OBJ_ID:
