@@ -74,7 +74,7 @@ class Logger(nodelib.log.CsvLogger):
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir):
 
-        display_client.DisplayServerProxy.set_stimulus_mode(
+        self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
 
         self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
