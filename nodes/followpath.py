@@ -50,10 +50,10 @@ IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 SHRINK_SPHERE = 0.8
 
 CONDITIONS = ("nolock/+0.000",
-              "follow+control/+0.090",
+              "follow+control/+0.060",
               "follow+control/+0.000",
-              "follow+control/-0.090")
-START_CONDITION = CONDITIONS[0]
+              "follow+control/-0.060")
+START_CONDITION = CONDITIONS[1]
 
 def is_stepwise_mode(condition):
     return condition.startswith("follow+stepwise")
@@ -85,7 +85,7 @@ class Node(object):
         #for x,y in ((0.2,0.3),(-0.2,0.4),(0.3,-0.1),(-0.3,-0.45),(0.5,0.5),(0,0)):
         #    px,py = xy_to_pxpy(x,y)
 
-        display_client.DisplayServerProxy.set_stimulus_mode(
+        self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
 
         self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
@@ -196,7 +196,7 @@ class Node(object):
         msg = Vector3()
         msg.x = target.v.y * +self.p_const
         msg.y = target.v.x * -self.p_const
-        msg.z = (fly_z - Z_TARGET) * -10.0
+        msg.z = (fly_z - Z_TARGET) * -5.0
 
         self.srcpx_pub.publish(px,py,0)
         self.trgpx_pub.publish(target.p2.x,target.p2.y,0)
