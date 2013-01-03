@@ -188,7 +188,7 @@ class Node(object):
         elif is_control_mode(self.condition):
             target = flyflypath.euclid.LineSegment2(
                                 flyflypath.euclid.Point2(px,py),
-                                flyflypath.euclid.Point2(*xy_to_pxpy(0,0)))
+                                flyflypath.euclid.Point2(*xy_to_pxpy(self.start_x, self.start_y)))
         else:
             return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
 
