@@ -60,6 +60,10 @@ add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
 
+add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp)
+target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+
 SET(MY_CUDA_SOURCE_FILES
 	src/PtclKernels.cu
 )

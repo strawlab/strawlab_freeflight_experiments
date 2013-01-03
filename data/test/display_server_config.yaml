@@ -11,6 +11,8 @@ stimulus_plugins:
   name: StimulusCUDAStarFieldAndModel
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusOSGFile
+- path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusCylinder
 display:
   displayNum: 0
   screenNum: 0
