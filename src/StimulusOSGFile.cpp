@@ -21,8 +21,6 @@
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 
-#include <boost/filesystem.hpp>
-
 #include <jansson.h>
 
 // this function from http://stackoverflow.com/a/8098080

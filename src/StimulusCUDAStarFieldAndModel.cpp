@@ -31,8 +31,6 @@
 #include <osgCudaStats/Stats>
 #include <osgCudaInit/Init>
 
-#include <boost/filesystem.hpp>
-
 #include <jansson.h>
 
 //////////////////

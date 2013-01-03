@@ -34,8 +34,6 @@
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 
-#include <boost/filesystem.hpp>
-
 #include <jansson.h>
 
 // -----------------------------------------------------------
