@@ -56,11 +56,11 @@ add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
 
-add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp)
+add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
 
-add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp)
+add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
 

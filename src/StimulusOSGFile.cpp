@@ -178,25 +178,11 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     }
 
     if (topic_name=="stimulus_filename") {
-
-        json_t *data_json;
-
-        data_json = json_object_get(root, "data");
-        if(!json_is_string(data_json)){
-            throw std::runtime_error(string_format("error: in %s(%d): expected string\n", __FILE__, __LINE__));
-        }
-        std::string stimulus_filename = json_string_value( data_json );
+        std::string stimulus_filename = parse_string(root);
         std::cerr << "loading filename: " << stimulus_filename << std::endl;
         _load_stimulus_filename( stimulus_filename );
     } else if (topic_name=="skybox_basename") {
-
-        json_t *data_json;
-
-        data_json = json_object_get(root, "data");
-        if(!json_is_string(data_json)){
-            throw std::runtime_error(string_format("error: in %s(%d): expected string\n", __FILE__, __LINE__));
-        }
-        std::string skybox_basename = json_string_value( data_json );
+        std::string skybox_basename = parse_string(root);
         std::cerr << "loading skybox filename: " << skybox_basename << std::endl;
         _load_skybox_basename( skybox_basename );
     } else if (topic_name=="model_pose") {

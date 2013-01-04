@@ -49,3 +49,30 @@ osg::Quat parse_quat(json_t* root) {
 
     return osg::Quat(x,y,z,w);
 }
+
+int parse_int(json_t* root) {
+    json_t *data_json;
+
+    data_json = json_object_get(root, "data");
+    vros_assert(json_is_integer(data_json));
+
+    return json_integer_value(data_json);
+}
+
+float parse_float(json_t* root) {
+    json_t *data_json;
+
+    data_json = json_object_get(root, "data");
+    vros_assert(json_is_real(data_json));
+
+    return json_real_value(data_json);
+}
+
+std::string parse_string(json_t* root) {
+    json_t *data_json;
+
+    data_json = json_object_get(root, "data");
+    vros_assert(json_is_string(data_json));
+
+    return json_string_value(data_json);
+}
