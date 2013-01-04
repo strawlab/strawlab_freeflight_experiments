@@ -163,8 +163,6 @@ osg::ref_ptr<osg::Group> create_virtual_world() {
 	//  }
 	myroot->addChild(geom_transform_node);
 
-	osgDB::writeNodeFile(*myroot,"/home/strawlab/ros-flycave.electric.boost1.46/strawlab_freeflight_experiments/foo.osg");
-
 	return myroot;
 }
 
