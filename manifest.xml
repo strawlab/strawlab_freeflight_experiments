@@ -13,7 +13,7 @@
   <depend package="geometry_msgs"/>
   <depend package="rospy"/>
   <depend package="rxbag"/>
-  <depend package="vros_display"/>
+  <depend package="flyvr"/>
   <depend package="ros_flydra"/>
   <depend package="rostest" />
 

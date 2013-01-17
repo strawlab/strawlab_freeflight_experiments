@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "vros_display/stimulus_interface.h"
-#include "vros_display/vros_assert.h"
+#include "flyvr/stimulus_interface.h"
+#include "flyvr/flyvr_assert.h"
 
 #include "Poco/ClassLibrary.h"
 
@@ -210,23 +210,23 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
     double x,y,z;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    vros_assert(root != NULL);
+    flyvr_assert(root != NULL);
 
     json_t *data_json;
 
     data_json = json_object_get(root, "x");
-    vros_assert(data_json != NULL);
-    vros_assert(json_is_number(data_json));
+    flyvr_assert(data_json != NULL);
+    flyvr_assert(json_is_number(data_json));
     x = json_number_value( data_json );
 
     data_json = json_object_get(root, "y");
-    vros_assert(data_json != NULL);
-    vros_assert(json_is_number(data_json));
+    flyvr_assert(data_json != NULL);
+    flyvr_assert(json_is_number(data_json));
     y = json_number_value( data_json );
 
     data_json = json_object_get(root, "z");
-    vros_assert(data_json != NULL);
-    vros_assert(json_is_number(data_json));
+    flyvr_assert(data_json != NULL);
+    flyvr_assert(json_is_number(data_json));
     z = json_number_value( data_json );
 
     setVelocity(x,y,z);

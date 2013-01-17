@@ -7,7 +7,7 @@ import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from std_msgs.msg import Float32
 
-import display_client # from vros_projectors package
+import display_client # from flyvr_projectors package
 
 
 class Node(object):

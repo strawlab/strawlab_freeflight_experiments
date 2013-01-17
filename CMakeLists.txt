@@ -31,38 +31,38 @@ FIND_PACKAGE(Poco)
 SET(JANSSON_FIND_REQUIRED 1)
 FIND_PACKAGE(jansson)
 
-SET(VROS_DISPLAY_PATH "../vros/vros_display")
-SET(VROS_DISPLAY_INCLUDE_PATH "${VROS_DISPLAY_PATH}/include")
+SET(FLYVR_PATH "../flyvr/flyvr")
+SET(FLYVR_INCLUDE_PATH "${FLYVR_PATH}/include")
 
-FIND_LIBRARY(VROS_DISPLAY_LIBRARY
-	NAMES vros_display
-	PATHS "${VROS_DISPLAY_PATH}/lib")
+FIND_LIBRARY(FLYVR_LIBRARY
+	NAMES flyvr
+	PATHS "${FLYVR_PATH}/lib")
 
-IF (VROS_DISPLAY_LIBRARY)
-  MESSAGE(STATUS "Found vros_display: ${VROS_DISPLAY_LIBRARY}")
-ELSE(VROS_DISPLAY_LIBRARY)
-  MESSAGE(FATAL_ERROR "Could not find vros_display library")
-ENDIF(VROS_DISPLAY_LIBRARY)
+IF (FLYVR_LIBRARY)
+  MESSAGE(STATUS "Found flyvr: ${FLYVR_LIBRARY}")
+ELSE(FLYVR_LIBRARY)
+  MESSAGE(FATAL_ERROR "Could not find flyvr library")
+ENDIF(FLYVR_LIBRARY)
 
 add_library(StimulusAltitudeEdge SHARED src/StimulusAltitudeEdge.cpp)
 target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp src/json2osg.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${VROS_DISPLAY_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 SET(MY_CUDA_SOURCE_FILES
 	src/PtclKernels.cu
@@ -86,9 +86,9 @@ add_library(StimulusCUDAStarFieldAndModel SHARED ${TARGET_SRC})
 INCLUDE_DIRECTORIES(
   ${OSG_COMPUTE_INCLUDE_PATHS}
   ${CUDA_TOOLKIT_INCLUDE}
-  ${VROS_DISPLAY_INCLUDE_PATH}
+  ${FLYVR_INCLUDE_PATH}
   )
 target_link_libraries(StimulusCUDAStarFieldAndModel
   ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} ${OSG_COMPUTE_LIBRARIES}
-  ${VROS_DISPLAY_LIBRARY})
+  ${FLYVR_LIBRARY})
 

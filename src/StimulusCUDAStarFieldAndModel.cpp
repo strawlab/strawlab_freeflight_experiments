@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "vros_display/stimulus_interface.h"
-#include "vros_display/vros_assert.h"
+#include "flyvr/stimulus_interface.h"
+#include "flyvr/flyvr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -316,7 +316,7 @@ private:
 };
 
 StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() {
-    vros_assert( is_CUDA_available()==true );
+    flyvr_assert( is_CUDA_available()==true );
 
     _group = new osg::Group;
     switch_node = new osg::PositionAttitudeTransform;
@@ -329,7 +329,7 @@ StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() {
 }
 
 void StimulusCUDAStarFieldAndModel::_update_pat() {
-    vros_assert(switch_node.valid());
+    flyvr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
     switch_node->setAttitude( model_attitude );
 }
@@ -352,7 +352,7 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
 
     // now load it with new contents
     osg::Node* tmp = load_osg_file(osg_filename);
-    vros_assert(tmp!=NULL);
+    flyvr_assert(tmp!=NULL);
     switch_node->addChild( tmp );
     _group->addChild(switch_node);
 }
@@ -402,7 +402,7 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    vros_assert(root != NULL);
+    flyvr_assert(root != NULL);
 
     if (topic_name=="velocity") {
         osg::Vec3 vel = parse_vec3(root);

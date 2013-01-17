@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
-#include "vros_display/stimulus_interface.h"
-#include "vros_display/vros_assert.h"
+#include "flyvr/stimulus_interface.h"
+#include "flyvr/flyvr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -62,7 +62,7 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    vros_assert(root != NULL);
+    flyvr_assert(root != NULL);
 
     if (topic_name=="cylinder_radius") {
 		set_cylinder_radius(parse_float(root));

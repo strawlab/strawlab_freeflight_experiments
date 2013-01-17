@@ -12,7 +12,7 @@ import roslib; roslib.load_manifest(PKG)
 
 import rospy
 import rostest
-from vros_display.msg import ROSPath
+from flyvr.msg import ROSPath
 
 class TestStarfieldAndModel(unittest.TestCase):
 

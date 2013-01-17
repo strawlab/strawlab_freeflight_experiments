@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "vros_display/stimulus_interface.h"
-#include "vros_display/vros_assert.h"
+#include "flyvr/stimulus_interface.h"
+#include "flyvr/flyvr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -128,7 +128,7 @@ void _load_skybox_basename( std::string basename ) {
 }
 
 void _update_pat() {
-    vros_assert(switch_node.valid());
+    flyvr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
     switch_node->setAttitude( model_attitude );
 }
