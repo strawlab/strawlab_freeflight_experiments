@@ -1,1 +1,1 @@
-../../../vros/vros_display/cmake/Modules/FindOsgCompute.cmake
+../../../flyvr/cmake/Modules/FindOsgCompute.cmake
