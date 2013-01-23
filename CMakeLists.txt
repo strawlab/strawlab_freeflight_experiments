@@ -72,6 +72,16 @@ SET(CUDA_TOOLKIT_INCLUDE "")
 IF(OSG_COMPUTE_FOUND)
   SET(CUDA_NVCC_FLAGS "--compiler-options '-fPIC'")
   CUDA_COMPILE( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
+
+  # collect the sources
+  SET(TARGET_SRC
+    src/StimulusCUDAStarFieldAndModel.cpp src/json2osg.cpp
+    ${CUDA_FILES}
+  )
+
+  MESSAGE(STATUS "TARGET_SRC: ${TARGET_SRC}")
+  MESSAGE(STATUS "CUDA_FILES: ${CUDA_FILES}")
+
   MESSAGE(STATUS "CUDA_FILES: ${CUDA_FILES}")
 
   add_library(StimulusCUDAStarFieldAndModel SHARED ${TARGET_SRC})
