@@ -48,7 +48,7 @@ def draw_on_context(cr, path_element):
         cr.line_to(c[0],c[1])
     elif command == "l":
         cr.rel_line_to(c[0],c[1])
-    elif command == "Z":
+    elif command in ("z","Z"):
         cr.close_path()
     else:
         raise Exception("Unsupported Command %s" % command)

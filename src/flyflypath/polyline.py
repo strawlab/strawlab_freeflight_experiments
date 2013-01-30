@@ -200,6 +200,10 @@ def polyline_from_svg_path(path_iterator, points_per_bezier=10):
                         Point2(c[i+4]+lastx,c[i+5]+lasty))
                 last = b.p4
                 pts.extend( b.to_points(points_per_bezier) )
+        elif command in ("z","Z"):
+            #FIXME: The spec says join to the start of the last open path, I think we
+            #only support 1 path, so this is the first point, not last.
+            pts.append( pts[0] )
         else:
             raise Exception("Command %s not supported" % command)
 
