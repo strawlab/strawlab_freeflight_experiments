@@ -3,17 +3,28 @@ import roslib; roslib.load_manifest('strawlab_tethered_experiments')
 
 import scenegen.primlib as primlib
 import scenegen.osgwriter as osgwriter
+
+import flyflypath.model
+
+import numpy as np
+import scipy
 import argparse
 import random
-import scipy
 
-def make_wall(image_fname,height):
 
-    xwalk = [0]
-    ywalk = [0]
-    for i in range(15):
-        xwalk.append(xwalk[-1] + random.random())
-        ywalk.append(ywalk[-1] + random.random())
+def make_wall(svg_fname, image_fname,height):
+
+    model = flyflypath.model.MovingPointSvgPath(svg_fname)
+    pts = [model.move_point(i)[1] for i in np.linspace(0,1,50)]
+
+    xwalk = []
+    ywalk = []
+
+    for pt in pts:
+        px = (pt.x - 250) * 0.2
+        py = (pt.y - 250) * 0.2
+        xwalk.append(px)
+        ywalk.append(py)
 
     z0 = -height
     z1 = height
@@ -41,7 +52,8 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('imagefile',type=str,help='image file')
+    parser.add_argument('--svg',type=str,help='svg path', required=True)
     parser.add_argument('--height',type=float,default=10.0,help='height, Z')
     args = parser.parse_args()
-    make_wall(args.imagefile, args.height)
+    make_wall(args.svg, args.imagefile, args.height)
 
