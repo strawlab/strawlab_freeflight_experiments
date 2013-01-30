@@ -45,7 +45,7 @@ class MovingPointSvgPath:
             ratio = 0.0
         self._ratio = ratio
         self._moving_pt = self._model.along(self._ratio)
-        return self._ratio
+        return self._ratio, self._moving_pt
 
     def connect_closest(self, p, px=None, py=None):
         if px is not None and py is not None:

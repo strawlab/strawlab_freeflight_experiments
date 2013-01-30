@@ -159,7 +159,7 @@ class Node(object):
         return self.get_post_pose_msg(0,0,10)
 
     def move_point(self, val):
-        val = self.model.move_point(val, wrap=SVG_WRAP_PATH)
+        val,pt = self.model.move_point(val, wrap=SVG_WRAP_PATH)
         self.log.move_ratio = val
         self.moving_ratio = val
         return val
