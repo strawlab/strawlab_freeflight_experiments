@@ -134,7 +134,7 @@ osg::ref_ptr<osg::Group> create_virtual_world() {
 	_texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
 	_texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP);
 	_texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP);
-	set_cylinder_image("stars2x800r.png");
+	set_cylinder_image("stars/stars2x800r.png");
 
 	osg::ref_ptr<osg::Material> material = new osg::Material;
 	material->setEmission(osg::Material::FRONT, osg::Vec4(0.8, 0.8, 0.8, 1.0));
