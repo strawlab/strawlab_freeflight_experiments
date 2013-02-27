@@ -46,7 +46,7 @@ def get_parser():
         '--basedir', type=str,
         help='base directory in which data files can be found by UUID', default=None)
     parser.add_argument(
-        '--outdir', type=str, default=os.getcwd(),
+        '--outdir', type=str, default=None,
         help='directory to save plots')
     parser.add_argument(
         '--rfilt', type=str, choices=filt_choices,
@@ -69,20 +69,27 @@ def parse_csv_and_h5_file(parser, args, csv_suffix):
     if args.uuid:
         if None not in (args.csv_file, args.h5_file):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
-        fm = autodata.files.FileModel(basedir=args.basedir)
+        fm = autodata.files.FileModel(basedir=args.basedir, plotdir=args.outdir)
         fm.select_uuid(args.uuid)
         csv_file = fm.get_file_model(csv_suffix).fullpath
         h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+        plotdir = fm.get_plot_dir() + "/"
     else:
         if None in (args.csv_file, args.h5_file):
             parser.error("both --csv-file and --h5-file are required")
         csv_file = args.csv_file
         h5_file = args.h5_file
-
-    print csv_file
-    print h5_file
+        plotdir = os.getcwd() + "/"
 
     assert os.path.exists(csv_file)
     assert os.path.exists(h5_file)
+    assert os.path.isdir(plotdir)
+
+    args.outdir = plotdir
+
+    print csv_file
+    print h5_file
+    print plotdir
 
     return csv_file, h5_file
+
