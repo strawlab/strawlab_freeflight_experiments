@@ -19,10 +19,8 @@ import nodelib.log
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
-CONDITIONS = ("midgray.osg/+0.2/+0.000",
-              "checkerboard.png.osg/+0.2/+0.000",
-              "stars2x1000r.png.osg/+0.2/+0.000",
-              "stars4x1000r.png.osg/+0.2/+0.000")
+CONDITIONS = ("midgray.osg/+0.0/+0.000",
+              "checkerboard.png.osg/+0.0/+0.000")
 START_CONDITION = CONDITIONS[0]
 
 TIMEOUT = 0.5
