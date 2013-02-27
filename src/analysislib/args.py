@@ -43,6 +43,9 @@ def get_parser():
         '--uuid', type=str,
         help='get the appropriate csv and h5 file for this uuid')
     parser.add_argument(
+        '--basedir', type=str,
+        help='base directory in which data files can be found by UUID', default=None)
+    parser.add_argument(
         '--outdir', type=str, default=os.getcwd(),
         help='directory to save plots')
     parser.add_argument(
@@ -63,7 +66,7 @@ def parse_csv_and_h5_file(parser, args, csv_suffix):
     if args.uuid:
         if None not in (args.csv_file, args.h5_file):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
-        fm = autodata.files.FileModel()
+        fm = autodata.files.FileModel(basedir=args.basedir)
         fm.select_uuid(args.uuid)
         csv_file = fm.get_file_model(csv_suffix).fullpath
         h5_file = fm.get_file_model("simple_flydra.h5").fullpath
