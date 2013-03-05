@@ -14,6 +14,8 @@ import matplotlib.mlab
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
+
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
     if args and args.outdir:
@@ -44,10 +46,10 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
 
             if in3d:
                 for x,y,z in zip(r['x'], r['y'], r['z']):
-                    ax.plot( x, y, z, 'k-', lw=1.0, alpha=0.5, rasterized=True )
+                    ax.plot( x, y, z, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
             else:
                 for x,y in zip(r['x'], r['y']):
-                    ax.plot( x, y, 'k-', lw=1.0, alpha=0.5, rasterized=True )
+                    ax.plot( x, y, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
 
             if args.show_obj_ids:
                 if in3d:
@@ -179,7 +181,7 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
                     val = np.gradient(val,10)
 
                 nsamples += 1
-                ax.plot( ts, val, 'k-', lw=1.0, alpha=0.3, rasterized=True )
+                ax.plot( ts, val, 'k-', lw=1.0, alpha=0.3, rasterized=RASTERIZE )
 
                 series["%d"%obj_id] = pandas.Series(val,ts)
 
@@ -200,8 +202,8 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             means = df.mean(1) #column wise
             meds = df.median(1) #column wise
 
-            ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=True, label="mean" )
-            ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=True, label="median" )
+            ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="mean" )
+            ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
 def save_args(args, name="README"):
     if args and args.outdir:
