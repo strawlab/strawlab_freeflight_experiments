@@ -27,6 +27,9 @@ def get_parser():
         '--show', action='store_true', default=False,
         help='show plots')
     parser.add_argument(
+        '--no-trackingstats', action='store_true', default=False,
+        help='plot tracking length distribution for all flies in h5 file (takes some time)')
+    parser.add_argument(
         '--portrait', action='store_true', default=False,
         help='arrange subplots in portrait orientation (one col, many rows)')
     parser.add_argument(

@@ -185,12 +185,15 @@ if __name__=='__main__':
 
     aplt.save_args(args)
 
-    fplt = autodata.files.FileView(
-              autodata.files.FileModel(show_progress=True,filepath=h5_file))
-    with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
-        fplt.plot_tracking_data(
-                    f.add_subplot(1,2,1),
-                    f.add_subplot(1,2,2))
+
+    
+    if not args.no_trackingstats:
+        fplt = autodata.files.FileView(
+                  autodata.files.FileModel(show_progress=True,filepath=h5_file))
+        with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
+            fplt.plot_tracking_data(
+                        f.add_subplot(1,2,1),
+                        f.add_subplot(1,2,2))
 
     if args.show:
         plt.show()
