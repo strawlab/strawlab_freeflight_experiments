@@ -66,6 +66,8 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'r-',
                          lw=2, alpha=0.3 )
 
+            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
+
         for ax in axes:
             ax.set_xlim(-limit,limit)
             ax.set_ylim(-limit,limit)
@@ -75,7 +77,6 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 ax.set_zlim(0,1)
 
             ax.set_aspect('equal')
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
