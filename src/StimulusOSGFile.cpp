@@ -174,7 +174,9 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
     root = json_loads(json_message.c_str(), 0, &error);
     if(!root) {
-        throw std::runtime_error(string_format("error: in %s(%d) on json line %d: %s\n", __FILE__, __LINE__, error.line, error.text));
+        throw std::runtime_error(string_format(
+           "error: in %s(%d) on json line %d: %s\n", __FILE__, __LINE__,
+           error.line, error.text));
     }
 
     if (topic_name=="stimulus_filename") {
