@@ -36,7 +36,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
             trajectories.cols.obj_id.createIndex()
         except tables.exceptions.FileModeError:
             print "obj_id column not indexed, this will be slow. reindex"
-        
+
     dt = 1.0/trajectories.attrs['frames_per_second']
 
     this_id = followpath.IMPOSSIBLE_OBJ_ID
@@ -183,7 +183,7 @@ if __name__=='__main__':
     aplt.save_args(args)
 
     fplt = autodata.files.FileView(
-              autodata.files.FileModel(show_progress=True,filepath=h5_file))  
+              autodata.files.FileModel(show_progress=True,filepath=h5_file))
     with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
         fplt.plot_tracking_data(
                     f.add_subplot(1,2,1),
