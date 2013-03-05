@@ -3,11 +3,15 @@ import h5py
 import contextlib
 import blist
 import pickle
+from collections import defaultdict
 
 import strawlab_mpl.defaults as smd; smd.setup_defaults()
+from strawlab_mpl.category_scatter import CategoryScatter
+from strawlab_mpl.spines import spine_placer, auto_reduce_spine_bounds
 
 from matplotlib.mlab import csv2rec
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import argparse
 
 ZFILT=True
@@ -291,6 +295,35 @@ def plot_results(results,dt,show_obj_ids=True,show=False):
 
         ax.set_ylabel( 'proportion of time in virtual cylinder')
         ax.set_xlabel( 'additional latency (msec)' )
+
+    with mpl_fig('lag_summary2',figsize=(3,3),
+                 left=0.22, bottom=0.15, right=0.94, top=0.95, wspace=0.2, hspace=0.26,
+                 ) as fig:
+        ax1 = fig.add_subplot(1,1,1)
+        categories = defaultdict(list)
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            categories[current_condition].extend( r['fracs'] )
+        categories = categories.iteritems()
+
+        cs = CategoryScatter( ax1, categories )
+
+        # Locate the axes spines on the left and bottom.
+        spine_placer(ax1, location='left,bottom' )
+
+        # Finalize the category scatter plot (stuff that can only be done
+        # after the spines are placed).
+        cs.finalize()
+
+        ax1.set_xlabel( 'additional latency (msec)' )
+        ax1.set_ylabel( 'proportion of time in virtual cylinder')
+
+        # Now, add a final few touchups.
+        ax1.spines['bottom'].set_color('none') # don't draw bottom spine
+        ax1.yaxis.set_major_locator( mticker.MaxNLocator(nbins=4) )
+        auto_reduce_spine_bounds( ax1 )
+
+        fig.tight_layout()
+
 
     if show:
         plt.show()
