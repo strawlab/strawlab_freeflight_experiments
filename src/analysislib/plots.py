@@ -12,6 +12,7 @@ import pandas
 import numpy as np
 import matplotlib.mlab
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 from mpl_toolkits.mplot3d import Axes3D
 
 RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
@@ -31,11 +32,13 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 0.5
+        axes = set()
         for i,(current_condition,r) in enumerate(results.iteritems()):
             if in3d:
                 ax = fig.add_subplot(fignrows,figncols,1+i,projection="3d")
             else:
                 ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add( ax )
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
@@ -63,8 +66,10 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'r-',
                          lw=2, alpha=0.3 )
 
+        for ax in axes:
             ax.set_xlim(-limit,limit)
             ax.set_ylim(-limit,limit)
+            ax.set_aspect('equal')
 
             if in3d:
                 ax.set_zlim(0,1)
@@ -73,6 +78,21 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
+
+            locations = ['left','bottom']
+            for loc, spine in ax.spines.items():
+                if loc in locations:
+                    spine.set_position( ('outward',10) ) # outward by 10 points
+                else:
+                    spine.set_color('none') # don't draw spine
+
+            ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            if not in3d:
+                ax.xaxis.set_ticks_position('bottom')
+
+            ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            if not in3d:
+                ax.yaxis.set_ticks_position('left')
 
 def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name):
     with mpl_fig(name,args,figsize=figsize) as fig:
