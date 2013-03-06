@@ -7,14 +7,19 @@ import euclid
 
 APPROX_BEZIER_WITH_N_SEGMENTS = 5
 
+class SvgError(Exception):
+    pass
+
 class MovingPointSvgPath:
     def __init__(self, path):
-        assert os.path.exists(path)
+        if not os.path.exists(path):
+            raise SvgError("File Missing")
         self._svgpath = path
         #parse the SVG
         d = xml.dom.minidom.parse(open(path,'r'))
         paths = d.getElementsByTagName('path')
-        assert len(paths) == 1
+        if len(paths) != 1:
+            raise SvgError("Only 1 path supported")
         pathdata = str(paths[0].getAttribute('d'))
 
         self._svgiter = svg.PathIterator(pathdata)
