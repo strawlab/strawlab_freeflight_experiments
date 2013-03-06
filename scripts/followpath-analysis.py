@@ -94,7 +94,7 @@ def doit(csv_fname, h5_fname, args):
     svg_x = []; svg_y = []
     for along in np.linspace(0,1.0,50):
         pt = svg.polyline.along(along)
-        x,y = followpath.pxpy_to_xy(pt.x,pt.y)
+        x,y = followpath.XFORM.pxpy_to_xy(pt.x,pt.y)
         svg_x.append(x); svg_y.append(y)
 
     for fighandle in figure_names:

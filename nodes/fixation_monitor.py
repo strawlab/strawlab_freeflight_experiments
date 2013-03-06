@@ -9,6 +9,7 @@ import rospy
 from std_msgs.msg import String, UInt32, Bool
 from geometry_msgs.msg import Vector3
 
+from flyflypath.transform import SVGTransform
 from flyflypath.euclid import Point2, LineSegment2
 
 import cairo
@@ -18,16 +19,13 @@ GObject.threads_init()
 Gdk.threads_init()
 
 class FlycaveWidget(Gtk.DrawingArea):
-    def __init__(self,w_px,h_px,r_m):
+    def __init__(self,w_px,r_m):
         Gtk.DrawingArea.__init__(self)
 
-        assert w_px == h_px
+        self._xform = SVGTransform(w=w_px)
+        self._r_px = r_m * w_px
 
-        self._w_px = w_px
-        self._h_px = h_px
-        self._r_px = r_m * self._w_px
-
-        self.set_size_request(self._w_px,self._h_px)
+        self.set_size_request(w_px,h_px)
         self.add_events(
                 Gdk.EventMask.POINTER_MOTION_HINT_MASK | \
                 Gdk.EventMask.POINTER_MOTION_MASK)
@@ -38,11 +36,6 @@ class FlycaveWidget(Gtk.DrawingArea):
         self._surface = None
         self._mousex = self._mousey = None
 
-    def _xy_to_pxpy(self, x, y):
-        x = (x * self._w_px) + (self._w_px/2.0)
-        y = (y * self._h_px) + (self._h_px/2.0)
-        return x,y
-       
     def _draw_background(self):
         cr = cairo.Context(self._surface)
         cr.set_source_rgb(1, 1, 1)
@@ -50,7 +43,7 @@ class FlycaveWidget(Gtk.DrawingArea):
 
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (1)
-        cx,cy = self._xy_to_pxpy(0,0)
+        cx,cy = self._xform.xy_to_pxpy(0,0)
         cr.arc(cx, cy, self._r_px, 0, 2.0 * math.pi)
         cr.stroke()
         
@@ -90,7 +83,7 @@ class FlycaveWidget(Gtk.DrawingArea):
 
 class FixationWidget(FlycaveWidget):
     def __init__(self):
-        FlycaveWidget.__init__(self, 500, 500, 0.5)
+        FlycaveWidget.__init__(self, 500, 0.5)
 
         self._src = None
         self._trg = None
@@ -128,15 +121,15 @@ class FixationWidget(FlycaveWidget):
         return True
 
     def _on_source_move(self, msg):
-        x,y = self._xy_to_pxpy(msg.x,msg.y)
+        x,y = self._xform.xy_to_pxpy(msg.x,msg.y)
         self._src = Point2(int(x),int(y))
 
     def _on_target_move(self, msg):
-        x,y = self._xy_to_pxpy(msg.x,msg.y)
+        x,y = self._xform.xy_to_pxpy(msg.x,msg.y)
         self._trg = Point2(int(x),int(y))
 
     def _on_post_move(self, msg):
-        x,y = self._xy_to_pxpy(msg.x,msg.y)
+        x,y = self._xform.xy_to_pxpy(msg.x,msg.y)
         self._post = Point2(int(x),int(y))
 
     def get_vec_and_points(self):

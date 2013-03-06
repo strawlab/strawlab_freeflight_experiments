@@ -19,6 +19,7 @@ from std_msgs.msg import String, UInt32, Bool
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
+import flyflypath.transform
 import flyflypath.model
 import flyflypath.view
 import flyflypath.polyline
@@ -42,12 +43,15 @@ PX_DIST_ADVANCE = 30
 
 SVG_WRAP_PATH = True
 
+FLY_DIST_CHECK_TIME = 5.0
+FLY_DIST_MIN_DIST = 0.2
+
 TIMEOUT = 0.5
 IMPOSSIBLE_OBJ_ID = 0
 IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
-#FIXME:
-SHRINK_SPHERE = 0.8
+#FIXME: shrink made non-zero to keep away from edge
+XFORM = flyflymodel.transform.SVGTransform(shrink=0.8)
 
 CONDITIONS = ("nolock/+0.000",
               "follow+control/+0.060",
@@ -64,17 +68,6 @@ def is_control_mode(condition):
 def is_control_nolock_mode(condition):
     return condition.startswith("nolock")
 
-def xy_to_pxpy(x,y):
-    #center of svg is at 250,250 - move 0,0 there
-    py = (x * +500 * SHRINK_SPHERE) + 250
-    px = (y * -500 * SHRINK_SPHERE) + 250
-    return px,py
-
-def pxpy_to_xy(px,py):
-    y = (px - 250) / -500.0
-    x = (py - 250) / +500.0
-    return x/SHRINK_SPHERE,y/SHRINK_SPHERE
-
 class Logger(nodelib.log.CsvLogger):
     STATE = ("svg_filename","condition","src_x","src_y","src_z","target_x","target_y","target_z",
                  "stim_x","stim_y","stim_z","move_ratio","active","lock_object","framenumber")
@@ -83,7 +76,7 @@ class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir):
 
         #for x,y in ((0.2,0.3),(-0.2,0.4),(0.3,-0.1),(-0.3,-0.45),(0.5,0.5),(0,0)):
-        #    px,py = xy_to_pxpy(x,y)
+        #    px,py = XFORM.xy_to_pxpy(x,y)
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
@@ -100,7 +93,7 @@ class Node(object):
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
 
         startpt = self.model.polyline.p
-        self.start_x, self.start_y = pxpy_to_xy(startpt.x,startpt.y)
+        self.start_x, self.start_y = XFORM.pxpy_to_xy(startpt.x,startpt.y)
 
         self.p_const = 0.0
 
@@ -177,7 +170,7 @@ class Node(object):
         rospy.loginfo('condition: %s (p=%f)' % (self.condition,self.p_const))
 
     def get_starfield_velocity_vector(self,t,dt,fly_x,fly_y,fly_z):
-        px,py = xy_to_pxpy(fly_x,fly_y)
+        px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
 
         if is_stepwise_mode(self.condition):
             target = self.model.connect_to_moving_point(p=None,px=px, py=py)
@@ -188,7 +181,7 @@ class Node(object):
         elif is_control_mode(self.condition):
             target = flyflypath.euclid.LineSegment2(
                                 flyflypath.euclid.Point2(px,py),
-                                flyflypath.euclid.Point2(*xy_to_pxpy(self.start_x, self.start_y)))
+                                flyflypath.euclid.Point2(*XFORM.xy_to_pxpy(self.start_x, self.start_y)))
         else:
             return Vector3(),flyflypath.polyline.ZeroLineSegment2(),False
 
@@ -232,11 +225,12 @@ class Node(object):
                                            (fly_y-self.last_fly_y)**2 +
                                            (fly_z-self.last_fly_z)**2)
                 self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
-                if now-self.last_check_flying_time > 5.0:
+
+                if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
                     self.fly_dist = 0
-                    if fly_dist < 0.2:
+                    if fly_dist < FLY_DIST_MIN_DIST:
                         self.drop_lock_on()
                         continue
 
