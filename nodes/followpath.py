@@ -51,7 +51,7 @@ IMPOSSIBLE_OBJ_ID = 0
 IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 #FIXME: shrink made non-zero to keep away from edge
-XFORM = flyflymodel.transform.SVGTransform(shrink=0.8)
+XFORM = flyflypath.transform.SVGTransform(shrink=0.8)
 
 CONDITIONS = ("nolock/+0.000",
               "follow+control/+0.060",
