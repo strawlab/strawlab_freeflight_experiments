@@ -45,15 +45,14 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
-            allx = np.concatenate( r['x'] )
-            dur = len(allx)*dt
+            dur = sum(len(df) for df in r['df'])*dt
 
             if in3d:
-                for x,y,z in zip(r['x'], r['y'], r['z']):
-                    ax.plot( x, y, z, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                for df in r['df']:
+                    ax.plot( df['x'].values, df['y'].values, df['z'].values, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
             else:
-                for x,y in zip(r['x'], r['y']):
-                    ax.plot( x, y, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                for df in r['df']:
+                    ax.plot( df['x'].values, df['y'].values, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
 
             if args.show_obj_ids:
                 if in3d:
@@ -113,9 +112,9 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
-            allx = np.concatenate( r['x'] )
-            ally = np.concatenate( r['y'] )
-            allz = np.concatenate( r['z'] )
+            allx = np.concatenate( [df['x'].values for df in r['df']] )
+            ally = np.concatenate( [df['y'].values for df in r['df']] )
+            allz = np.concatenate( [df['z'].values for df in r['df']] )
 
             dur = len(allx)*dt
 
@@ -151,9 +150,9 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
-            assert r['count'] == len(r['x'])
-            assert len(r['x']) == len(r['y'])
-            times = [dt*len(trial) for trial in r['x']]
+            assert r['count'] == len(r['df'])
+
+            times = [dt*len(df) for df in r['df']]
 
             maxl = 30
             ax.hist(times,maxl, range=(0,maxl))
@@ -172,7 +171,7 @@ def plot_nsamples(results, dt, args, name):
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
-            n_samples = [len(trial) for trial in r['x']]
+            n_samples = [len(df) for df in r['df']]
             hist,_ = np.histogram(n_samples,bins=bins)
             ax.plot( bins[:-1], hist, '-x', label=current_condition )
         ax.set_ylabel( 'frequency' )
@@ -191,19 +190,16 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
 
             series = {}
             nsamples = 0
-            for x,y,z,framenumber,(x0,y0,obj_id,framenumber0) in zip(r['x'], r['y'], r['z'], r['framenumber'], r['start_obj_ids']):
-                ts = framenumber - framenumber0
-
-                if valname == "x":
-                    val = x
-                elif valname == "y":
-                    val = y
-                elif valname == "z":
-                    val = z
-                elif valname == "radius":
-                    val = np.sqrt(x**2 + y**2)
-                else:
-                    raise Exception("Plotting %s Not Supported" % valname)
+            for df,(x0,y0,obj_id,framenumber0) in zip(r['df'], r['start_obj_ids']):
+                ts = df.index.values - framenumber0
+                
+                try:
+                    val = df[valname].values
+                except KeyError:
+                    if valname == "radius":
+                        val = np.sqrt(df['x'].values**2 + df['y'].values**2)
+                    else:
+                        raise
 
                 if dvdt:
                     if val.shape[0] < 10:
