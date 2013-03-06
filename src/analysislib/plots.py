@@ -233,6 +233,11 @@ def save_args(args, name="README"):
         name = os.path.join(args.outdir,name)
 
     with open(name, 'w') as f:
-        f.write("These plots were generated with the following arguments\n")
+        f.write("These plots were generated with the following command line arguments\n\n")
         f.write(" ".join(sys.argv))
+        f.write("\n\n")
+        f.write("The configuration was (including default values)\n")
+        for k,v in args._get_kwargs():
+            f.write("%s\n    %r\n" % (k,v))
+        f.write("\n")
 
