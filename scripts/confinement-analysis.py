@@ -180,11 +180,6 @@ if __name__=='__main__':
     aplt.plot_nsamples(results, dt, args,
                 name='%s.nsamples' % fname)
 
-    aplt.plot_tracking_length(results, dt, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
-                name='%s.track' % fname)
-
     
     if not args.no_trackingstats:
         fplt = autodata.files.FileView(
