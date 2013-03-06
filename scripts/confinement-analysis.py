@@ -155,6 +155,8 @@ if __name__=='__main__':
 
     radius = [0.5, 0.16]
 
+    aplt.save_args(args)
+
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
@@ -182,9 +184,6 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 name='%s.track' % fname)
-
-    aplt.save_args(args)
-
 
     
     if not args.no_trackingstats:
