@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.mlab
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import matplotlib.colors as colors
 from mpl_toolkits.mplot3d import Axes3D
 
 RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
@@ -95,12 +96,16 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             if not in3d:
                 ax.yaxis.set_ticks_position('left')
 
-def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name):
+def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name, colorbar=False):
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 1.0
         xbins = np.linspace(-limit,limit,40)
         ybins = np.linspace(-limit,limit,40)
+
+        cmap=plt.get_cmap('jet')
+        norm = colors.Normalize(0,5)
+
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
 
@@ -116,9 +121,10 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
 
             hdata,xedges,yedges = np.histogram2d( allx, ally,
                                                   bins=[xbins,ybins] )
+
             extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-            ax.imshow(hdata.T, extent=extent, interpolation='nearest',
-                      origin='lower')#, cmap=plt.get_cmap('Reds'))
+            im = ax.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
+                      origin='lower', cmap=cmap, norm=norm)
 
             for rad in radius:
                 theta = np.linspace(0, 2*np.pi, 100)
@@ -131,6 +137,9 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
 
             ax.set_xlim( -0.5, 0.5 )
             ax.set_ylim( -0.5, 0.5 )
+
+            if colorbar:
+                fig.colorbar(im)
 
 def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
     with mpl_fig(name,args,figsize=figsize) as fig:
