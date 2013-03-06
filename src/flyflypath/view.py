@@ -25,15 +25,15 @@ class SvgPathWidget(Gtk.DrawingArea):
         self._mousex = self._mousey = None
        
     def _draw_background(self):
+        cr = cairo.Context(self._surface)
+        cr.set_source_rgb(1, 1, 1)
+        cr.paint()
+
         if not self._model:
             return
 
         polyline = self._model.polyline
         svgiter = self._model.svgiter
-
-        cr = cairo.Context(self._surface)
-        cr.set_source_rgb(1, 1, 1)
-        cr.paint()
 
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (1)
@@ -58,7 +58,7 @@ class SvgPathWidget(Gtk.DrawingArea):
         cr.set_source_surface(self._surface, 0.0, 0.0)
         cr.paint()
 
-        vec,src_pt,trg_pt = self.get_vec_and_points()
+        vec,pts,poly = self.get_vec_and_points()
         
         if vec is not None:
             cr.set_source_rgb (1, 0, 0)
@@ -67,17 +67,22 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.line_to(vec.p2.x,vec.p2.y)
             cr.stroke()
 
-        if src_pt is not None:
-            cr.set_source_rgb (1,0,0)
-            cr.move_to(src_pt.x, src_pt.y)
-            cr.arc(src_pt.x, src_pt.y, 2, 0, 2.0 * math.pi)
-            cr.fill()
+        for pt,rgb in pts:
+            if pt is not None:
+                cr.set_source_rgb (*rgb)
+                cr.move_to(pt.x, pt.y)
+                cr.arc(pt.x, pt.y, 2, 0, 2.0 * math.pi)
+                cr.fill()
 
-        if trg_pt is not None:
-            cr.set_source_rgb (0,1,0)
-            cr.move_to(trg_pt.x, trg_pt.y)
-            cr.arc(trg_pt.x, trg_pt.y, 2, 0, 2.0 * math.pi)
-            cr.fill()
+        if poly:
+            #draw the approximation
+            cr.set_source_rgb (0, 0, 1)
+            cr.set_line_width (0.3)
+            cr.move_to(poly[0][0],poly[0][1])
+            for i in range(1,len(poly)):
+                cr.line_to(poly[i][0],poly[i][1])
+            cr.close_path()
+            cr.stroke()
 
     def _on_configure_event(self, widget, event):
         allocation = self.get_allocation()

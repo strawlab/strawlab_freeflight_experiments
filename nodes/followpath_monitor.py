@@ -6,7 +6,7 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from std_msgs.msg import String, UInt32, Bool
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3, PoseArray
 
 import flyflypath.model
 import flyflypath.view
@@ -24,6 +24,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._src = None
         self._trg = None
         self._active = False
+        self._area = []
 
         t = threading.Thread(target=rospy.spin).start()
         self._lock = threading.Lock()
@@ -44,6 +45,9 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         rospy.Subscriber("active",
                          Bool,
                          self._on_active)
+        rospy.Subscriber("trigger_area",
+                         PoseArray,
+                         self._on_trigger_area)
 
         self._w.show_all()
 
@@ -57,9 +61,15 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self.queue_draw()
         return True
 
+    def _on_trigger_area(self, msg):
+        self._area = [(p.position.x,p.position.y) for p in msg.poses]
+
     def _on_svg_filename(self, msg):
         with self._lock:
-            self._model = flyflypath.model.MovingPointSvgPath(msg.data)
+            try:
+                self._model = flyflypath.model.MovingPointSvgPath(msg.data)
+            except flyflypath.model.SvgError:
+                self._model = None
             self._draw_background()
 
     def _on_source_move(self, msg):
@@ -84,7 +94,12 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         if self._src is not None and self._trg is not None:
             with self._lock:
                 vec = LineSegment2(self._src,self._trg)
-        return vec,src_pt,trg_pt
+
+        pts = [ (trg_pt,(0,1,0)) ]
+        if self._active:
+            pts.append( (src_pt,(1,0,0)) )
+
+        return vec,pts,tuple(self._area)
 
 if __name__ == "__main__":
     rospy.init_node("followpath_monitor")
