@@ -24,13 +24,16 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 HOLD_COND = "midgray.osg"
 
-CONDITIONS = ("lboxmed.svg.osg/+0.0/+0.0/1",
-              "lboxmed.svg.osg/+0.0/+0.0/5",
-              "lboxmed.svg.osg/+0.0/+0.0/25",
-              "lboxmed.svg.osg/+0.0/+0.0/125",
-              "lboxmed.svg.osg/+0.0/+0.0/625",
+CONDITIONS = ("midgray.osg/+0.0/+0.0/0",
+#              "lboxmed.svg.osg/+0.0/+0.0/1",
+#              "lboxmed.svg.osg/+0.0/+0.0/5",
+#              "lboxmed.svg.osg/+0.0/+0.0/25",
+#              "lboxmed.svg.osg/+0.0/+0.0/125",
+#              "lboxmed.svg.osg/+0.0/+0.0/625"
+              "lboxmed.svg.osg/+0.0/+0.0/0",
+              "lboxmed.svg.osg/+0.0/+0.0/-1",
 )
-START_CONDITION = CONDITIONS[-1]
+START_CONDITION = CONDITIONS[1]
 
 CONTROL_RATE = 40.0
 
@@ -44,7 +47,7 @@ START_Z         = 0.5
 TIMEOUT = 0.5
 
 IMPOSSIBLE_OBJ_ID           = 0
-IMPOSSIBLE_OBJ_ID_LAST_POSE = 0xFFFFFFFE
+IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -134,9 +137,8 @@ class Node(object):
                 fly_x = self.fly.x; fly_y = self.fly.y; fly_z = self.fly.z
                 framenumber = self.framenumber
 
-            active = False
             if currently_locked_obj_id is None:
-                self.active_pub.publish(False)
+                active = False
             else:
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
@@ -151,6 +153,9 @@ class Node(object):
                     #we have a race  - a fly to track with no pose yet
                     continue
 
+                active = True
+
+                #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
                                            (fly_y-self.last_fly_y)**2 +
                                            (fly_z-self.last_fly_z)**2)
@@ -165,7 +170,8 @@ class Node(object):
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.srcpx_pub.publish(px,py,0)
-                self.active_pub.publish(True)
+
+            self.active_pub.publish(active)
 
             r.sleep()
 
@@ -197,17 +203,12 @@ class Node(object):
         for packet in data.packets:
             for obj in packet.objects:
                 if self.currently_locked_obj_id is not None:
-                    # if not self.is_in_trigger_volume(obj.position,expanded=True):
-                    #     self.drop_lock_on()
                     if obj.obj_id == self.currently_locked_obj_id:
                         self.last_seen_time = now
                         self.fly = obj.position
                         self.framenumber = packet.framenumber
-                    #print obj
                 else:
                     if self.is_in_trigger_volume(obj.position):
-                        #print '*'*200
-                        #print obj
                         self.lock_on(obj,packet.framenumber)
 
     def update(self):
