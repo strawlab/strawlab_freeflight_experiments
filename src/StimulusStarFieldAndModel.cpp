@@ -104,7 +104,7 @@ public:
     StimulusStarFieldAndModel();
 
     std::string name() const { return "StimulusStarFieldAndModel"; }
-    void post_init();
+    void post_init(bool slave);
 
     void createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program );
 
@@ -174,7 +174,7 @@ void StimulusStarFieldAndModel::_load_stimulus_filename( std::string osg_filenam
     _group->addChild(switch_node);
 }
 
-void StimulusStarFieldAndModel::post_init() {
+void StimulusStarFieldAndModel::post_init(bool slave) {
     std::string osg_filename = get_plugin_data_path("post.osg");
     _load_stimulus_filename( osg_filename );
 

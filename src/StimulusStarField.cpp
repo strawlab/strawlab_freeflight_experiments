@@ -102,7 +102,7 @@ public:
     StimulusStarField();
 
     std::string name() const { return "StimulusStarField"; }
-    void post_init();
+    void post_init(bool slave);
 
     void createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program );
 
@@ -132,7 +132,7 @@ StimulusStarField::StimulusStarField() {
     setVelocity( 0.0, 0.0, 0.0);
 }
 
-void StimulusStarField::post_init() {
+void StimulusStarField::post_init(bool slave) {
     // this is based on the OSG example osgparticleshader.cpp
 
     osg::ref_ptr<osgParticle::ParticleSystem> ps = new osgParticle::ParticleSystem;

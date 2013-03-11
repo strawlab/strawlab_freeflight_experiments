@@ -133,7 +133,7 @@ void _update_pat() {
     switch_node->setAttitude( model_attitude );
 }
 
-virtual void post_init() {
+virtual void post_init(bool slave) {
   top = new osg::MatrixTransform; top->addDescription("virtual world top node");
 
   // when we first start, don't load any model, but create a node that is later deleted.

@@ -288,7 +288,7 @@ public:
     StimulusCUDAStarFieldAndModel();
 
     std::string name() const { return "StimulusCUDAStarFieldAndModel"; }
-    void post_init();
+    void post_init(bool slave);
 
     osg::ref_ptr<osg::Group> get_3d_world() {return _group; }
 
@@ -357,7 +357,7 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
     _group->addChild(switch_node);
 }
 
-void StimulusCUDAStarFieldAndModel::post_init() {
+void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
     std::string osg_filename = "post.osg";
     _load_stimulus_filename( osg_filename );
 

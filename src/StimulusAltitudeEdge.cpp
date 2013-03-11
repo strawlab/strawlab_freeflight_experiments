@@ -25,7 +25,7 @@ public:
     StimulusAltitudeEdge();
 
     std::string name() const { return "StimulusAltitudeEdge"; }
-    void post_init();
+    void post_init(bool slave);
 
     osg::ref_ptr<osg::Group> get_3d_world() {return _group; }
 
@@ -43,7 +43,7 @@ private:
 StimulusAltitudeEdge::StimulusAltitudeEdge() : _edge_height(0.5) {
 }
 
-void StimulusAltitudeEdge::post_init() {
+void StimulusAltitudeEdge::post_init(bool slave) {
     osg::ref_ptr<osg::Node> drawn_geometry_node = load_osg_file("StimulusAltitudeEdge.osg");
     {
         osg::StateSet* state = drawn_geometry_node->getOrCreateStateSet();
