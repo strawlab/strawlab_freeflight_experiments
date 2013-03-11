@@ -5,8 +5,12 @@
 #include "json2osg.hpp"
 
 #include "Poco/ClassLibrary.h"
+#include "Poco/SharedMemory.h"
+#include "Poco/NamedMutex.h"
 
 #include <iostream>
+#include <stdio.h>
+#include <string.h>
 
 #include <osg/MatrixTransform>
 #include <osg/TextureCubeMap>
@@ -22,42 +26,82 @@
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 
-
 class StimulusCylinder: public StimulusInterface
 {
 public:
+	StimulusCylinder();
+
+    void post_init(bool);
+    std::vector<std::string> get_topic_names() const;
+    void receive_json_message(const std::string& topic_name, const std::string& json_message);
+    std::string get_message_type(const std::string& topic_name) const;
+    void update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation );
+
+	std::string name() const { return "StimulusCylinder"; }
+    osg::ref_ptr<osg::Group> get_3d_world() {return _virtual_world; }
+
+private:
 	const static float DEFAULT_RADIUS = 0.5f;
 	const static float DEFAULT_HEIGHT = 1.0f;	
 
-std::string name() const {
-	return "StimulusCylinder";
+	osg::ref_ptr<osg::Group> 			_virtual_world;
+    osg::ref_ptr<osg::Cylinder> 		_cylinder;
+	osg::ref_ptr<osg::Texture2D> 		_texture;
+	osg::ref_ptr<osg::ShapeDrawable> 	_shape;
+	double								_t0;
+	double								_rotation;
+	double								_rotation_vel;
+	bool								_rotation_abs;
+    bool 								_slave;
+    Poco::SharedMemory 					_mem;
+    Poco::NamedMutex 					_memlock;
+
+	osg::ref_ptr<osg::Group> create_virtual_world();
+	void dirty_cylinder(void);
+	void set_cylinder_rotation(float angle);
+	void set_cylinder_rotation_rate(float rate);
+	void set_cylinder_position(float x, float y, float z);
+	void set_cylinder_radius(float r);
+	void set_cylinder_height(float h);
+	void set_cylinder_image(std::string s) { _texture->setImage(load_image_file(s)); }
+};
+
+StimulusCylinder::StimulusCylinder() :
+	_t0(-1),
+	_rotation(0),
+	_rotation_vel(0),
+	_rotation_abs(true),
+    _mem("StimulusCylinder", sizeof(float), Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
+    _memlock("StimulusCylinder")
+{
+
 }
 
-virtual void post_init(void) {
+void StimulusCylinder::post_init(bool slave)
+{
+	_slave = slave;
 	_virtual_world = create_virtual_world();
+
+	if (!_slave) {
+	    Poco::NamedMutex::ScopedLock lock(_memlock);
+		memset (_mem.begin(),0,sizeof(float));
+	}
 }
 
-void resized(int width,int height) {
-}
-
-osg::ref_ptr<osg::Group> get_3d_world() {
-    return _virtual_world;
-}
-
-osg::ref_ptr<osg::Group> get_2d_hud() {
-    return 0;
-}
-
-std::vector<std::string> get_topic_names() const {
+std::vector<std::string> StimulusCylinder::get_topic_names() const
+{
     std::vector<std::string> result;
     result.push_back("cylinder_radius");
     result.push_back("cylinder_height");
+    result.push_back("cylinder_rotation");
+    result.push_back("cylinder_rotation_rate");
     result.push_back("cylinder_image");
     result.push_back("model_pose");
     return result;
 }
 
-void receive_json_message(const std::string& topic_name, const std::string& json_message) {
+void StimulusCylinder::receive_json_message(const std::string& topic_name, const std::string& json_message)
+{
     json_t *root;
     json_error_t error;
 
@@ -66,6 +110,10 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
     if (topic_name=="cylinder_radius") {
 		set_cylinder_radius(parse_float(root));
+    } else if (topic_name=="cylinder_rotation") {
+		set_cylinder_rotation(parse_float(root));
+    } else if (topic_name=="cylinder_rotation_rate") {
+		set_cylinder_rotation_rate(parse_float(root));
     } else if (topic_name=="cylinder_height") {
 		set_cylinder_height(parse_float(root));
     } else if (topic_name=="cylinder_image") {
@@ -81,12 +129,17 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     }
 }
 
-std::string get_message_type(const std::string& topic_name) const {
+std::string StimulusCylinder::get_message_type(const std::string& topic_name) const
+{
     std::string result;
 
     if (topic_name=="cylinder_radius") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_height") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_rotation") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_rotation_rate") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_image") {
         result = "std_msgs/String";
@@ -98,9 +151,35 @@ std::string get_message_type(const std::string& topic_name) const {
     return result;
 }
 
-osg::ref_ptr<osg::Group> create_virtual_world() {
+void StimulusCylinder::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation )
+{
+  Poco::NamedMutex::ScopedLock lock(_memlock);
+  float *rotation = reinterpret_cast<float*>(_mem.begin());
+
+  if (!_slave) {
+	if (_rotation_abs) {
+		*rotation = _rotation;
+	} else {
+		if (_t0 < 0) {
+			_t0 = time;
+			return;
+		}
+
+		float dt = time - _t0;
+		*rotation = *rotation + (_rotation_vel * dt);
+		_t0 = time;
+	}
+  }
+
+  osg::Quat quat = osg::Quat(*rotation, osg::Vec3(0,0,1));
+  _cylinder->setRotation(quat);
+  dirty_cylinder();
+  std::cerr << _slave << " r " << (*rotation) << "\n";
+
+}
+
+osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	osg::ref_ptr<osg::MatrixTransform> myroot = new osg::MatrixTransform; myroot->addDescription("virtual world root node");
-	//add_default_skybox(myroot);
 
 	// Create a geometry transform node enabling use cut-and-pasted
 	// geometry from OSG example and have it on the XY plane with Z
@@ -117,86 +196,74 @@ osg::ref_ptr<osg::Group> create_virtual_world() {
 
 	osg::ref_ptr<osg::TessellationHints> hints = new osg::TessellationHints;
 	hints->setDetailRatio(2.0f);
+	hints->setCreateTop(false);
+	hints->setCreateBottom(false);
 
+	//start in absolute position mode
 	_cylinder = new osg::Cylinder();
 	_shape = new osg::ShapeDrawable(_cylinder, hints.get());
-	set_cylinder_position(0.0,0.0,0.0);
+
+	//_shape->setUseDisplayList(false);
+	//_shape->setUseVertexBufferObjects(true);
+
+	set_cylinder_rotation(_rotation);
+	set_cylinder_position(0.0,0.0,-0.5*DEFAULT_HEIGHT);
 	set_cylinder_radius(DEFAULT_RADIUS);
 	set_cylinder_height(DEFAULT_HEIGHT);
 
-	//shape->setColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-	//shape->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
 	geode->addDrawable(_shape.get());
 
-	_texture = new osg::Texture2D;
+	_texture = new osg::Texture2D();
 	_texture->setDataVariance(osg::Object::DYNAMIC);
-	_texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-	_texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
-	_texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP);
-	_texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP);
-	set_cylinder_image("stars/stars2x800r.png");
+	_texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::NEAREST);
+	_texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
+	_texture->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+	_texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+	set_cylinder_image("lena.png");
 
 	osg::ref_ptr<osg::Material> material = new osg::Material;
 	material->setEmission(osg::Material::FRONT, osg::Vec4(0.8, 0.8, 0.8, 1.0));
-	//material->setColorMode(osg::Material::DIFFUSE);
-	//material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-	//material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(1, 1, 1, 1));
-	//material->setShininess(osg::Material::FRONT_AND_BACK, 64.0f);
 
 	osg::StateSet *sphereStateSet = _shape->getOrCreateStateSet();
 	sphereStateSet->setAttribute(material);
 	sphereStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 
-	//  {
-	//	  osg::ref_ptr<osg::Light> _light = new osg::Light;
-	//	  _light->setLightNum(0);
-	//	  _light->setAmbient(osg::Vec4(0.00f,0.0f,0.00f,1.0f));
-	//	  _light->setDiffuse(osg::Vec4(0.8f,0.8f,0.8f,1.0f));
-	//	  _light->setSpecular(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
-	//	  _light->setPosition(osg::Vec4(2.0, 2.0, 5.0, 1.0));
+	sphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
-	//	  geom_transform_node->getOrCreateStateSet()->setAssociatedModes(_light.get(),osg::StateAttribute::ON);
-
-	//	  // enable lighting by default.
-	//	  geom_transform_node->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::ON);
-
-	//  }
 	myroot->addChild(geom_transform_node);
 
 	return myroot;
 }
 
-private:
-	osg::ref_ptr<osg::Group> 			_virtual_world;
-    osg::ref_ptr<osg::Cylinder> 		_cylinder;
-	osg::ref_ptr<osg::Texture2D> 		_texture;
-	osg::ref_ptr<osg::ShapeDrawable> 	_shape;
+void StimulusCylinder::set_cylinder_rotation(float angle) {
+	_rotation_abs = true;
+	_rotation = angle;
+}
 
-void set_cylinder_position(float x, float y, float z) {
+void StimulusCylinder::set_cylinder_rotation_rate(float rate) {
+	_rotation_abs = false;
+	_rotation_vel = rate;
+}
+
+void StimulusCylinder::set_cylinder_position(float x, float y, float z) {
 	_cylinder->setCenter(osg::Vec3(x,y,z));
-	_shape->dirtyDisplayList();
-	_shape->dirtyBound(); 
+	dirty_cylinder();
 }
 
-void set_cylinder_radius(float r) {
+void StimulusCylinder::set_cylinder_radius(float r) {
 	_cylinder->setRadius(r);
-	_shape->dirtyDisplayList();
-	_shape->dirtyBound(); 
+	dirty_cylinder();
 }
 
-void set_cylinder_height(float h) {
+void StimulusCylinder::set_cylinder_height(float h) {
 	_cylinder->setHeight(h);
+	dirty_cylinder();
+}
+
+void StimulusCylinder::dirty_cylinder(void) {
 	_shape->dirtyDisplayList();
 	_shape->dirtyBound(); 
 }
-
-void set_cylinder_image(std::string s) {
-	osg::ref_ptr<osg::Image> image = load_image_file(s);
-	_texture->setImage(image);
-}
-
-};
-
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
 POCO_EXPORT_CLASS(StimulusCylinder)
