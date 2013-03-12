@@ -16,7 +16,7 @@ import random
 import os.path
 
 
-def make_wall(svg_fname, image_fname,height, odir):
+def make_wall(svg_fname, image_fname,height, odir, npts=500):
 
     xform = flyflypath.transform.SVGTransform()
 
@@ -28,7 +28,11 @@ def make_wall(svg_fname, image_fname,height, odir):
     svg_fname = os.path.abspath(svg_fname)
 
     model = flyflypath.model.MovingPointSvgPath(svg_fname)
-    pts = [model.move_point(i)[1] for i in np.linspace(0,1,50)]
+
+    #so, ideally the move_point should be a little smarter about decomposing
+    #the polyline into component peices (i.e. ensure you hit all corners),
+    #but that is not the case yet. Cest la vie.
+    pts = [model.move_point(i)[1] for i in np.linspace(0,1,npts)]
 
     xwalk = []
     ywalk = []
