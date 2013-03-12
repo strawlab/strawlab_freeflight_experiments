@@ -25,6 +25,7 @@ import flyflypath.view
 import flyflypath.polyline
 import flyflypath.euclid
 import nodelib.log
+from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -47,8 +48,6 @@ FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST = 0.2
 
 TIMEOUT = 0.5
-IMPOSSIBLE_OBJ_ID = 0
-IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 #FIXME: shrink made non-zero to keep away from edge
 XFORM = flyflypath.transform.SVGTransform(shrink=0.8)

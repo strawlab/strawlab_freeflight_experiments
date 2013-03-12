@@ -16,6 +16,7 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
 import nodelib.log
+from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -24,7 +25,6 @@ CONDITIONS = ("midgray.osg/+0.0/+0.000",
 START_CONDITION = CONDITIONS[0]
 
 TIMEOUT = 0.5
-IMPOSSIBLE_OBJ_ID = 0
 
 class Logger(nodelib.log.CsvLogger):
     STATE = ("stimulus_filename","confinement_condition","lock_object","framenumber")

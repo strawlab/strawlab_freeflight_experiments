@@ -21,6 +21,8 @@ import analysislib.filters
 import analysislib.args
 import analysislib.plots as aplt
 
+from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
+
 def get_results(csv_fname, h5_file, args, frames_before=0):
 
     infile = followpath.Logger(fname=csv_fname, mode="r")
@@ -43,7 +45,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
     dur_samples = args.lenfilt / dt
 
     _ids = Queue.Queue(maxsize=2)
-    this_id = followpath.IMPOSSIBLE_OBJ_ID
+    this_id = IMPOSSIBLE_OBJ_ID
     csv_results = {}
 
     results = {}
@@ -64,9 +66,9 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                                       start_obj_ids=[],
                                       df=[])
 
-            if _id == followpath.IMPOSSIBLE_OBJ_ID_ZERO_POSE:
+            if _id == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                 continue
-            elif _id == followpath.IMPOSSIBLE_OBJ_ID:
+            elif _id == IMPOSSIBLE_OBJ_ID:
                 continue
             elif _id != this_id:
                 try:
@@ -254,7 +256,7 @@ if __name__=='__main__':
     if not args.no_trackingstats:
         fplt = autodata.files.FileView(
                   autodata.files.FileModel(show_progress=True,filepath=h5_file))  
-        with aplt.mpl_fig("%s.tracking",args,figsize=(10,5)) as f:
+        with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
             fplt.plot_tracking_data(
                         f.add_subplot(1,2,1),
                         f.add_subplot(1,2,2))

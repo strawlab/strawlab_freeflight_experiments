@@ -19,6 +19,7 @@ import rospkg
 
 import flyflypath.transform
 import nodelib.log
+from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -45,9 +46,6 @@ START_ZDIST     = 0.4
 START_Z         = 0.5
 
 TIMEOUT = 0.5
-
-IMPOSSIBLE_OBJ_ID           = 0
-IMPOSSIBLE_OBJ_ID_ZERO_POSE = 0xFFFFFFFF
 
 XFORM = flyflypath.transform.SVGTransform()
 
