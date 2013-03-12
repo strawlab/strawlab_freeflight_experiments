@@ -41,7 +41,7 @@ def make_wall(svg_fname, image_fname,height, odir):
     z0 = 0.0
     z1 = height
 
-    wall = primlib.ZWall(xwalk, ywalk, z0,z1,res=128)
+    wall = primlib.ZWall(xwalk, ywalk, z0,z1,res=128, twrap=1)
     wall.texture_fname = image_fname
     wall.mag_filter = "NEAREST"
 
