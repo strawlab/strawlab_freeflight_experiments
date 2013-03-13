@@ -43,7 +43,7 @@ TIMEOUT             = 0.5
 IMPOSSIBLE_OBJ_ID   = 0
 
 #CONDITIONS = ["checkerboard.png//+100.0", "gray.png//+100.0", "lena.png//+100.0"]
-CONDITIONS = ["checkerboard.png//+100.0", "checkerboard.png//+200.0", "checkerboard.png//-100.0", "gray.png//+100.0"]
+CONDITIONS = ["checkerboard16.png//+10.0", "checkerboard16.png//-10.0", "checkerboard16.png//0.0", "gray.png//+10.0"]
 START_CONDITION = CONDITIONS[0]
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -128,7 +128,7 @@ class Node(object):
 
         dpos = np.array((fly_x-self.x0,fly_y-self.y0))
         vel  = np.array((fly_vx, fly_vy))
-        magn = np.cross(dpos,vel)
+        magn = np.dot(dpos,vel)
 
         return magn*self.p_const,self.x0,self.y0
 
