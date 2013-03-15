@@ -26,6 +26,8 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 TOPIC_CYL_ROTATION      = "cylinder_rotation"
 TOPIC_CYL_ROTATION_RATE = "cylinder_rotation_rate"
 TOPIC_CYL_IMAGE         = "cylinder_image"
+TOPIC_CYL_CENTRE        = "cylinder_centre"
+TOPIC_CYL_RADIUS        = "cylinder_radius"
 
 CONTROL_RATE        = 40.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -42,14 +44,14 @@ GRAY_FN = "gray.png"
 TIMEOUT             = 0.5
 IMPOSSIBLE_OBJ_ID   = 0
 
-#CONDITIONS = ["checkerboard.png//+100.0", "gray.png//+100.0", "lena.png//+100.0"]
-CONDITIONS = ["checkerboard16.png//+10.0", "checkerboard16.png//-10.0", "checkerboard16.png//0.0", "gray.png//+10.0"]
+#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)"
+CONDITIONS = ["checkerboard16.png//+20.0/0.2", "checkerboard16.png//-20.0/0.2", "checkerboard16.png//0.0/0.2", "gray.png//+20.0/0.2"]
 START_CONDITION = CONDITIONS[0]
 
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","lock_object","framenumber")
+    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","lock_object","framenumber")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir):
@@ -58,9 +60,12 @@ class Node(object):
             'StimulusCylinder')
 
         self.rotation_pub = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
-        self.rotation_pub.publish(0)
         self.rotation_velocity_pub = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
         self.image_pub = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
+        self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
+        self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
+
+        self.rotation_pub.publish(0)
 
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -112,25 +117,34 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p = self.condition.split('/')
+        img,svg,p,rad = self.condition.split('/')
         self.img_fn = str(img)
         self.svg_fn = str(svg)
         self.p_const = float(p)
+        self.rad_locked = float(rad)
 
         if self.svg_fn:
             self.svg_pub.publish(self.svg_fn)
         
-        rospy.loginfo('condition: %s (p=%f, svg=%s)' % (self.condition,self.p_const,self.svg_fn))
+        rospy.loginfo('condition: %s (p=%f, svg=%s, rad locked=%f)' % (self.condition,self.p_const,self.svg_fn,self.rad_locked))
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
         #px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
         #vx,vy = XFORM.xy_to_pxpy(fly_vx, fly_vy)
 
-        dpos = np.array((fly_x-self.x0,fly_y-self.y0))
+        dpos = np.array((self.x0-fly_x,self.y0-fly_y))
         vel  = np.array((fly_vx, fly_vy))
-        magn = np.dot(dpos,vel)
 
-        return magn*self.p_const,self.x0,self.y0
+        dposn = dpos / np.linalg.norm(dpos)
+        veln = vel / np.linalg.norm(vel)
+
+        if np.linalg.norm(vel) > 0.05:
+            ang = np.arccos(np.dot(dposn,veln))
+            val = (ang/np.pi)*self.p_const
+        else:
+            val = None
+
+        return val,self.x0,self.y0
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -142,7 +156,6 @@ class Node(object):
                 fly_vx = self.flyv.x; fly_vy = self.flyv.y; fly_vz = self.flyv.z
 
             if currently_locked_obj_id is None:
-                rate = 0
                 active = False
             else:
                 now = rospy.get_time()
@@ -180,11 +193,16 @@ class Node(object):
                 trg_px, trg_py = XFORM.xy_to_pxpy(trg_x,trg_y)
                 self.trg_pub.publish(trg_px,trg_py,0)
 
-                self.log.rotation_rate = rate
+                self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
                 self.log.update()
 
-            self.rotation_velocity_pub.publish(rate)
+                if rate is not None:
+                    self.log.rotation_rate = rate
+                    self.rotation_velocity_pub.publish(rate)
+
+                self.cyl_centre_pub.publish(fly_x,fly_y,0)
+
             self.ack_pub.publish(active)
 
             r.sleep()
@@ -224,7 +242,12 @@ class Node(object):
         self.last_seen_time = now
         self.log.lock_object = obj.obj_id
         self.log.framenumber = framenumber
+
         self.image_pub.publish( self.img_fn )
+
+        self.cyl_radius_pub.publish(self.rad_locked)
+        self.log.cyl_r = self.rad_locked
+
         self.update()
 
     def drop_lock_on(self):
@@ -232,7 +255,19 @@ class Node(object):
         self.currently_locked_obj_id = None
         self.log.lock_object = IMPOSSIBLE_OBJ_ID
         self.log.framenumber = 0
-        self.image_pub.publish( GRAY_FN )
+
+        self.image_pub.publish(GRAY_FN)
+
+        self.rotation_velocity_pub.publish(0)
+        self.log.rotation_rate = 0
+
+        self.cyl_radius_pub.publish(0.5)
+        self.log.cyl_r = 0.5
+
+        self.cyl_centre_pub.publish(0,0,0)
+        self.log.cyl_x = 0
+        self.log.cyl_y = 0
+
         self.update()
 
 def main():
