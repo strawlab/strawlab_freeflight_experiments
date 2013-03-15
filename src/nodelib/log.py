@@ -17,7 +17,7 @@ class CsvLogger:
     EXTRA_STATE = ("t_sec","t_nsec","flydra_data_file","exp_uuid")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False):
+    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None):
         assert len(self.STATE)
 
         if directory is None:
@@ -33,6 +33,16 @@ class CsvLogger:
 
         for s in self._cols:
             setattr(self, s, None)
+
+        if mode not in ('r','w'):
+            raise IOError("mode must be 'r' or 'w'. to continue an existing file set continue_existing=/PATH/TO/FILE")
+
+        if continue_existing:
+            if not os.path.isfile(continue_existing):
+                raise NoDataError("file does not exist")
+
+            fname = continue_existing
+            mode = 'a'
 
         if fname is None:
             directory = os.path.expanduser(directory)
@@ -53,7 +63,11 @@ class CsvLogger:
             self._fd = open(self._fname,mode='w')
             self._fd.write(",".join(self.STATE))
             self._fd.write(",t_sec,t_nsec,flydra_data_file,exp_uuid\n")
+        elif mode == 'a':
+            rospy.loginfo("continuing %s" % self._fname)
+            self._fd = open(self._fname,mode='a')
 
+        if mode in ('w','a'):
             rospy.Subscriber('flydra_mainbrain/data_file',
                              std_msgs.msg.String,
                              self._on_flydra_mainbrain_start_saving)
@@ -73,8 +87,6 @@ class CsvLogger:
                     self.close()
                     os.remove(self._fname)
                     raise NoDataError
-        else:
-            raise IOError("mode must be 'r' or 'w'")
 
     def _on_flydra_mainbrain_start_saving(self, msg):
         self._flydra_data_file = msg.data
