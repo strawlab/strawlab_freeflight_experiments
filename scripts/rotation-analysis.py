@@ -178,7 +178,9 @@ if __name__=='__main__':
                 fignrows=NF_R, figncols=NF_C,
                 in3d=False,
                 radius=radius,
-                name='%s.traces' % fname)
+                name='%s.traces' % fname,
+                show_starts=True,
+                show_ends=True)
 
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,

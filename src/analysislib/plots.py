@@ -29,7 +29,7 @@ def mpl_fig(fname_base,args,**kwargs):
     fig.savefig(fname_base+'.png')
     fig.savefig(fname_base+'.svg')
 
-def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, name):
+def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 0.5
@@ -49,10 +49,19 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
 
             if in3d:
                 for df in r['df']:
-                    ax.plot( df['x'].values, df['y'].values, df['z'].values, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    xv = df['x'].values
+                    yv = df['y'].values
+                    zv = df['z'].values
+                    ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
             else:
                 for df in r['df']:
-                    ax.plot( df['x'].values, df['y'].values, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    xv = df['x'].values
+                    yv = df['y'].values
+                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    if show_starts:
+                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    if show_ends:
+                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
 
             if args.show_obj_ids:
                 if in3d:
