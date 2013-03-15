@@ -96,7 +96,7 @@ std::vector<std::string> StimulusCylinder::get_topic_names() const
     result.push_back("cylinder_rotation");
     result.push_back("cylinder_rotation_rate");
     result.push_back("cylinder_image");
-    result.push_back("model_pose");
+    result.push_back("cylinder_centre");
     return result;
 }
 
@@ -118,11 +118,8 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
 		set_cylinder_height(parse_float(root));
     } else if (topic_name=="cylinder_image") {
 		set_cylinder_image(parse_string(root));
-    } else if (topic_name=="model_pose") {
-        json_t *data_json;
-		osg::Vec3 position;
-        data_json = json_object_get(root, "position");
-		position = parse_vec3(data_json);
+    } else if (topic_name=="cylinder_centre") {
+		osg::Vec3 position = parse_vec3(root);
 		set_cylinder_position(position.x(),position.y(),position.z());
     } else {
         throw std::runtime_error("unknown topic name");
@@ -143,8 +140,8 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_image") {
         result = "std_msgs/String";
-    } else if (topic_name=="model_pose") {
-        result = "geometry_msgs/Pose";
+    } else if (topic_name=="cylinder_centre") {
+        result = "geometry_msgs/Vector3";
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -184,15 +181,16 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	// Create a geometry transform node enabling use cut-and-pasted
 	// geometry from OSG example and have it on the XY plane with Z
 	// pointing up.
-	osg::ref_ptr<osg::MatrixTransform> geom_transform_node = new osg::MatrixTransform;
-	geom_transform_node->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
+	//osg::ref_ptr<osg::MatrixTransform> geom_transform_node = new osg::MatrixTransform;
+	//geom_transform_node->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
 
 	osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-	osg::ref_ptr<osg::MatrixTransform> cylinder_transform = new osg::MatrixTransform;
+	//osg::ref_ptr<osg::MatrixTransform> cylinder_transform = new osg::MatrixTransform;
 	//rotate the cylinder to orientate up like the flycave
-	cylinder_transform->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
-	cylinder_transform->addChild(geode.get());
-	geom_transform_node->addChild(cylinder_transform.get());
+	//cylinder_transform->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
+	//cylinder_transform->addChild(geode.get());
+	//geom_transform_node->addChild(cylinder_transform.get());
+	myroot->addChild(geode.get());
 
 	osg::ref_ptr<osg::TessellationHints> hints = new osg::TessellationHints;
 	hints->setDetailRatio(2.0f);
@@ -207,7 +205,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	//_shape->setUseVertexBufferObjects(true);
 
 	set_cylinder_rotation(_rotation);
-	set_cylinder_position(0.0,0.0,-0.5*DEFAULT_HEIGHT);
+	set_cylinder_position(0.0,0.0,0.0);
 	set_cylinder_radius(DEFAULT_RADIUS);
 	set_cylinder_height(DEFAULT_HEIGHT);
 
@@ -230,7 +228,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 
 	sphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
-	myroot->addChild(geom_transform_node);
+	//myroot->addChild(geom_transform_node);
 
 	return myroot;
 }
@@ -246,7 +244,7 @@ void StimulusCylinder::set_cylinder_rotation_rate(float rate) {
 }
 
 void StimulusCylinder::set_cylinder_position(float x, float y, float z) {
-	_cylinder->setCenter(osg::Vec3(x,y,z));
+	_cylinder->setCenter(osg::Vec3(x,y,z+(0.5*DEFAULT_HEIGHT)));
 	dirty_cylinder();
 }
 

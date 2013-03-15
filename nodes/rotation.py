@@ -35,7 +35,7 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST   = 0.2
 
-START_RADIUS    = 0.12
+START_RADIUS    = 0.35
 START_ZDIST     = 0.4
 START_Z         = 0.5
 
@@ -44,8 +44,18 @@ GRAY_FN = "gray.png"
 TIMEOUT             = 0.5
 IMPOSSIBLE_OBJ_ID   = 0
 
+PI = np.pi
+TAU= 2*PI
+
 #CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)"
-CONDITIONS = ["checkerboard16.png//+20.0/0.2", "checkerboard16.png//-20.0/0.2", "checkerboard16.png//0.0/0.2", "gray.png//+20.0/0.2"]
+CONDITIONS = ["checkerboard16.png//+0.1/0.2",
+              "checkerboard16.png//-0.1/0.2",
+              "checkerboard16.png//+0.2/0.2",
+              "checkerboard16.png//+0.05/0.2",
+              "checkerboard16.png//+0.5/0.2",
+              "checkerboard16.png//0.0/0.2",
+              "gray.png//+0.1/0.2"
+]
 START_CONDITION = CONDITIONS[0]
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -54,7 +64,7 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","lock_object","framenumber")
 
 class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir):
+    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinder')
@@ -65,12 +75,14 @@ class Node(object):
         self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
 
+        self.pushover_pub = rospy.Publisher('note', String)
+
         self.rotation_pub.publish(0)
 
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
+        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -135,14 +147,30 @@ class Node(object):
         dpos = np.array((self.x0-fly_x,self.y0-fly_y))
         vel  = np.array((fly_vx, fly_vy))
 
-        dposn = dpos / np.linalg.norm(dpos)
-        veln = vel / np.linalg.norm(vel)
+        speed = np.linalg.norm(vel)
 
-        if np.linalg.norm(vel) > 0.05:
-            ang = np.arccos(np.dot(dposn,veln))
-            val = (ang/np.pi)*self.p_const
+        dposn = dpos / np.linalg.norm(dpos)
+        eps = 1e-20
+        if speed > eps:
+            veln = vel / speed
+
+            vel_angle = np.arctan2( veln[1], veln[0] )
+            desired_angle = np.arctan2( dposn[1], dposn[0] )
+
+            error_angle_unwrapped = desired_angle - vel_angle
+
+            error_angle = (error_angle_unwrapped + PI) % TAU - PI
+
+            velocity_gate = max( speed*20.0, 1.0) # linear ramp to 1.0
+            val = velocity_gate*error_angle*self.p_const
+
+            #print '--------'
+            #print 'vel_angle',vel_angle
+            #print 'desired_angle', desired_angle
+            #print 'error_angle',error_angle
+            #print
         else:
-            val = None
+            val = 0.0
 
         return val,self.x0,self.y0
 
@@ -197,9 +225,8 @@ class Node(object):
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
                 self.log.update()
 
-                if rate is not None:
-                    self.log.rotation_rate = rate
-                    self.rotation_velocity_pub.publish(rate)
+                self.log.rotation_rate = rate
+                self.rotation_velocity_pub.publish(rate)
 
                 self.cyl_centre_pub.publish(fly_x,fly_y,0)
 
@@ -240,6 +267,7 @@ class Node(object):
         now = rospy.get_time()
         self.currently_locked_obj_id = obj.obj_id
         self.last_seen_time = now
+        self.first_seen_time = now
         self.log.lock_object = obj.obj_id
         self.log.framenumber = framenumber
 
@@ -251,8 +279,16 @@ class Node(object):
         self.update()
 
     def drop_lock_on(self):
-        rospy.loginfo('dropping locked object %s' % self.currently_locked_obj_id)
+        old_id = self.currently_locked_obj_id
+        now = rospy.get_time()
+        dt = now - self.first_seen_time
+        if (dt > 60) and (old_id is not None):
+            self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
+
+        rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+
         self.currently_locked_obj_id = None
+
         self.log.lock_object = IMPOSSIBLE_OBJ_ID
         self.log.framenumber = 0
 
@@ -278,12 +314,15 @@ def main():
                         help="dont't start unless flydra is saving data")
     parser.add_argument('--tmpdir', action='store_true', default=False,
                         help="store logfile in tmpdir")
+    parser.add_argument('--continue-existing', type=str, default=None,
+                        help="path to a logfile to continue")
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
 
     node = Node(
             wait_for_flydra=not args.no_wait,
-            use_tmpdir=args.tmpdir)
+            use_tmpdir=args.tmpdir,
+            continue_existing=args.continue_existing)
     return node.run()
 
 if __name__=='__main__':
