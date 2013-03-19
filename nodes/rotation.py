@@ -4,6 +4,7 @@ import math
 import numpy as np
 import threading
 import argparse
+import os.path
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -18,6 +19,7 @@ from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
 
+import flyflypath.model
 import flyflypath.transform
 import nodelib.log
 
@@ -29,7 +31,7 @@ TOPIC_CYL_IMAGE         = "cylinder_image"
 TOPIC_CYL_CENTRE        = "cylinder_centre"
 TOPIC_CYL_RADIUS        = "cylinder_radius"
 
-CONTROL_RATE        = 40.0      #Hz
+CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 FLY_DIST_CHECK_TIME = 5.0
@@ -47,21 +49,20 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)"
-CONDITIONS = ["checkerboard16.png//+0.1/0.2",
-              "checkerboard16.png//-0.1/0.2",
-              "checkerboard16.png//+0.2/0.2",
-              "checkerboard16.png//+0.05/0.2",
-              "checkerboard16.png//+0.5/0.2",
-              "checkerboard16.png//0.0/0.2",
-              "gray.png//+0.1/0.2"
+#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)/advance_threshold(m)"
+CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.025",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.05",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.075",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1",
+              "checkerboard16.png/infinity.svg/0.0/0.2/0.05",
+              "gray.png/infinity.svg/+0.1/0.2/0.05",
 ]
 START_CONDITION = CONDITIONS[0]
 
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","lock_object","framenumber")
+    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","lock_object","framenumber")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -98,13 +99,14 @@ class Node(object):
             self.last_fly_x = self.fly.x; self.last_fly_y = self.fly.y; self.last_fly_z = self.fly.z;
             self.last_check_flying_time = now
             self.fly_dist = 0
+            self.model = None
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
         #target (for moving points)
         self.trg_x = self.trg_y = 0.0
 
-        self.svg_pub = rospy.Publisher("svg_filename", String)
+        self.svg_pub = rospy.Publisher("svg_filename", String, latch=True)
         self.src_pub = rospy.Publisher("source", Vector3)
         self.trg_pub = rospy.Publisher("target", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
@@ -129,22 +131,36 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad = self.condition.split('/')
+        img,svg,p,rad,advance = self.condition.split('/')
         self.img_fn = str(img)
-        self.svg_fn = str(svg)
         self.p_const = float(p)
         self.rad_locked = float(rad)
-
-        if self.svg_fn:
-            self.svg_pub.publish(self.svg_fn)
+        self.advance_px = XFORM.m_to_pixel(float(advance))
         
-        rospy.loginfo('condition: %s (p=%f, svg=%s, rad locked=%f)' % (self.condition,self.p_const,self.svg_fn,self.rad_locked))
+
+        self.log.cyl_r = self.rad_locked
+
+        if str(svg):
+            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
+            self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
+            self.svg_pub.publish(self.svg_fn)
+        else:
+            self.svg_fn = ''
+        
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
-        #px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
-        #vx,vy = XFORM.xy_to_pxpy(fly_vx, fly_vy)
+        if self.svg_fn:
+            with self.trackinglock:
+                px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
+                segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
+                if segment.length < self.advance_px:
+                    self.log.ratio, newpt = self.model.advance_point(1/100.0, wrap=True)
+                    self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+        else:
+            self.trg_x = self.trg_y = 0.0
 
-        dpos = np.array((self.x0-fly_x,self.y0-fly_y))
+        dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
 
         speed = np.linalg.norm(vel)
@@ -172,7 +188,7 @@ class Node(object):
         else:
             val = 0.0
 
-        return val,self.x0,self.y0
+        return val,self.trg_x,self.trg_y
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -182,6 +198,7 @@ class Node(object):
                 currently_locked_obj_id = self.currently_locked_obj_id
                 fly_x = self.fly.x; fly_y = self.fly.y; fly_z = self.fly.z
                 fly_vx = self.flyv.x; fly_vy = self.flyv.y; fly_vz = self.flyv.z
+                framenumber = self.framenumber
 
             if currently_locked_obj_id is None:
                 active = False
@@ -223,12 +240,15 @@ class Node(object):
 
                 self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
-                self.log.update()
 
                 self.log.rotation_rate = rate
                 self.rotation_velocity_pub.publish(rate)
 
                 self.cyl_centre_pub.publish(fly_x,fly_y,0)
+
+                self.log.framenumber = framenumber
+
+                self.log.update()
 
             self.ack_pub.publish(active)
 
@@ -263,46 +283,57 @@ class Node(object):
         self.lock_object.publish( self.log.lock_object )
 
     def lock_on(self,obj,framenumber):
-        rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
-        now = rospy.get_time()
-        self.currently_locked_obj_id = obj.obj_id
-        self.last_seen_time = now
-        self.first_seen_time = now
-        self.log.lock_object = obj.obj_id
-        self.log.framenumber = framenumber
+        with self.trackinglock:
+            rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
+            now = rospy.get_time()
+            self.currently_locked_obj_id = obj.obj_id
+            self.last_seen_time = now
+            self.first_seen_time = now
+            self.log.lock_object = obj.obj_id
+            self.log.framenumber = framenumber
+
+            if self.svg_fn:
+                px,py = XFORM.xy_to_pxpy(obj.position.x,obj.position.y)
+                closest,ratio = self.model.connect_closest(p=None, px=px, py=py)
+                self.log.ratio,newpt = self.model.start_move_from_ratio(ratio)
+                self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+            else:
+                self.log.ratio = 0
+                self.trg_x = self.trg_y = 0.0
 
         self.image_pub.publish( self.img_fn )
-
         self.cyl_radius_pub.publish(self.rad_locked)
-        self.log.cyl_r = self.rad_locked
 
         self.update()
 
     def drop_lock_on(self):
-        old_id = self.currently_locked_obj_id
-        now = rospy.get_time()
-        dt = now - self.first_seen_time
-        if (dt > 60) and (old_id is not None):
-            self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
+        with self.trackinglock:
+            old_id = self.currently_locked_obj_id
+            now = rospy.get_time()
+            dt = now - self.first_seen_time
 
-        rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
 
-        self.currently_locked_obj_id = None
+            self.currently_locked_obj_id = None
 
-        self.log.lock_object = IMPOSSIBLE_OBJ_ID
-        self.log.framenumber = 0
+            self.log.lock_object = IMPOSSIBLE_OBJ_ID
+            self.log.framenumber = 0
+
+            self.log.rotation_rate = 0
+            self.log.ratio = 0
+
+            self.log.cyl_r = 0.5
+
+            self.log.cyl_x = 0
+            self.log.cyl_y = 0
 
         self.image_pub.publish(GRAY_FN)
-
         self.rotation_velocity_pub.publish(0)
-        self.log.rotation_rate = 0
-
         self.cyl_radius_pub.publish(0.5)
-        self.log.cyl_r = 0.5
-
         self.cyl_centre_pub.publish(0,0,0)
-        self.log.cyl_x = 0
-        self.log.cyl_y = 0
+
+        if (dt > 60) and (old_id is not None):
+            self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
 
         self.update()
 

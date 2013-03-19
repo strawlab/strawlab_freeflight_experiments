@@ -56,6 +56,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
             _id = int(row.lock_object)
             _t = float(row.t_sec) + (float(row.t_nsec) * 1e-9)
             _framenumber = int(row.framenumber)
+            _ratio = float(row.ratio)
 
             if not _cond in results:
                 results[_cond] = dict(count=0,
@@ -73,7 +74,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                 except Queue.Empty:
                     #first time
                     this_id = _id
-                    csv_results = {k:[] for k in ("framenumber",)}
+                    csv_results = {k:[] for k in ("framenumber","ratio")}
                     query_id = None
                 finally:
                     _ids.put((_id,_framenumber,_cond),block=False)
@@ -123,6 +124,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                                                             n_samples)
 
                         dfd = {'x':validx,'y':validy,'z':validz}
+                        dfd['ratio'] = pandas.Series(csv_results['ratio'],index=csv_results['framenumber'])
                         df = pandas.DataFrame(dfd,index=validframenumber)
 
                         r['count'] += 1
@@ -130,7 +132,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                         r['df'].append( df )
 
                 this_id = _id
-                csv_results = {k:[] for k in ("framenumber",)}
+                csv_results = {k:[] for k in ("framenumber","ratio")}
 
             elif _id == this_id:
                 #sometimes we get duplicate rows. only append if the fn is
@@ -138,6 +140,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                 fns = csv_results["framenumber"]
                 if (not fns) or (_framenumber > fns[-1]):
                     fns.append(_framenumber)
+                    csv_results["ratio"].append(_ratio)
             else:
                 print "CANT GO BACK %d vs %d" % (_id,this_id)
                 continue
