@@ -92,22 +92,34 @@ class PolyLine2:
         
     def connect(self, point):
         closest = None
+        closestl = None
 
         dist = np.inf
         for l in self._lines:
             if l.p1 == point or l.p2 == point:
                 closest = point
+                closestl = l
                 closesttype = "vertex"
                 break
             else:
                 seg = l.connect(point)
                 newdist = seg.length
                 if newdist < dist:
+                    #we are closer than before
                     closest = seg.p
+                    closestl = l
                     closesttype = "segment"
                     dist = newdist
 
-        return closest
+        #FIXME: iterate again... ARGH
+        length = 0
+        for l in self._lines:
+            if l == closestl:
+                length += (closest - l.p1).magnitude()
+                break
+            length += l.length
+
+        return closest,length/self.length
 
     def __repr__(self):
         return 'PolyLine2(%s)' % ', '.join( repr(l) for l in self._lines )
