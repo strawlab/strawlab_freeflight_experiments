@@ -13,7 +13,7 @@ class SvgError(Exception):
 class MovingPointSvgPath:
     def __init__(self, path):
         if not os.path.exists(path):
-            raise SvgError("File Missing")
+            raise SvgError("File Missing: %s" % path)
         self._svgpath = path
         #parse the SVG
         d = xml.dom.minidom.parse(open(path,'r'))
@@ -43,6 +43,15 @@ class MovingPointSvgPath:
     def moving_pt(self):
         return self._moving_pt
 
+    def start_move_from_ratio(self, ratio):
+        """ set the ratio and point to this """
+        self._ratio = ratio
+        self._moving_pt = self._model.along(self._ratio)
+        return self._ratio, self._moving_pt
+
+    def advance_point(self, delta, wrap=False):
+        return self.move_point(self._ratio + delta, wrap)
+
     def move_point(self, ratio, wrap=False):
         """ the amount along the path [0..1], 0=start, 1=end """
         ratio = min(1.0,max(0.0,ratio))
@@ -55,13 +64,21 @@ class MovingPointSvgPath:
     def connect_closest(self, p, px=None, py=None):
         if px is not None and py is not None:
             p = euclid.Point2(px,py)
-        closest = self._model.connect(p)
-        return euclid.LineSegment2(p,closest)
+        closest,ratio = self._model.connect(p)
+        try:
+            seg = euclid.LineSegment2(p,closest)
+        except AttributeError:
+            seg = polyline.ZeroLineSegment2(closest)
+        return seg,ratio
 
     def connect_to_moving_point(self, p, px=None, py=None):
         if px is not None and py is not None:
             p = euclid.Point2(px,py)
-        return euclid.LineSegment2(p,self._moving_pt)
+        try:
+            seg = euclid.LineSegment2(p,self._moving_pt)
+        except AttributeError:
+            seg = polyline.ZeroLineSegment2(p)
+        return seg
 
 
 
