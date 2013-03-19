@@ -42,7 +42,7 @@ public:
 
 private:
 	const static float DEFAULT_RADIUS = 0.5f;
-	const static float DEFAULT_HEIGHT = 1.0f;	
+	const static float DEFAULT_HEIGHT = 1.0f;
 
 	osg::ref_ptr<osg::Group> 			_virtual_world;
     osg::ref_ptr<osg::Cylinder> 		_cylinder;
@@ -260,7 +260,7 @@ void StimulusCylinder::set_cylinder_height(float h) {
 
 void StimulusCylinder::dirty_cylinder(void) {
 	_shape->dirtyDisplayList();
-	_shape->dirtyBound(); 
+	_shape->dirtyBound();
 }
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
