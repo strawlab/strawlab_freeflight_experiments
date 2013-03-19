@@ -208,11 +208,11 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	osg::ref_ptr<osg::Material> material = new osg::Material;
 	material->setEmission(osg::Material::FRONT, osg::Vec4(0.8, 0.8, 0.8, 1.0));
 
-	osg::StateSet *sphereStateSet = _shape->getOrCreateStateSet();
-	sphereStateSet->setAttribute(material);
-	sphereStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
+	osg::StateSet *cylStateSet = _shape->getOrCreateStateSet();
+	cylStateSet->setAttribute(material);
+	cylStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 
-	sphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	cylStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 	return myroot;
 }
