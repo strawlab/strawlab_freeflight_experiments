@@ -203,7 +203,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	_texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
 	_texture->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
 	_texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
-	set_cylinder_image("lena.png");
+	set_cylinder_image("checkerboard16.png");
 
 	osg::ref_ptr<osg::Material> material = new osg::Material;
 	material->setEmission(osg::Material::FRONT, osg::Vec4(0.8, 0.8, 0.8, 1.0));
