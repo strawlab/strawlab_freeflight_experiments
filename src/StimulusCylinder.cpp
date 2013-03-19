@@ -178,18 +178,7 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
 osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	osg::ref_ptr<osg::MatrixTransform> myroot = new osg::MatrixTransform; myroot->addDescription("virtual world root node");
 
-	// Create a geometry transform node enabling use cut-and-pasted
-	// geometry from OSG example and have it on the XY plane with Z
-	// pointing up.
-	//osg::ref_ptr<osg::MatrixTransform> geom_transform_node = new osg::MatrixTransform;
-	//geom_transform_node->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
-
 	osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-	//osg::ref_ptr<osg::MatrixTransform> cylinder_transform = new osg::MatrixTransform;
-	//rotate the cylinder to orientate up like the flycave
-	//cylinder_transform->setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(90.0),1.0,0.0,0.0));
-	//cylinder_transform->addChild(geode.get());
-	//geom_transform_node->addChild(cylinder_transform.get());
 	myroot->addChild(geode.get());
 
 	osg::ref_ptr<osg::TessellationHints> hints = new osg::TessellationHints;
@@ -200,9 +189,6 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	//start in absolute position mode
 	_cylinder = new osg::Cylinder();
 	_shape = new osg::ShapeDrawable(_cylinder, hints.get());
-
-	//_shape->setUseDisplayList(false);
-	//_shape->setUseVertexBufferObjects(true);
 
 	set_cylinder_rotation(_rotation);
 	set_cylinder_position(0.0,0.0,0.0);
@@ -227,8 +213,6 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	sphereStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 
 	sphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-
-	//myroot->addChild(geom_transform_node);
 
 	return myroot;
 }
