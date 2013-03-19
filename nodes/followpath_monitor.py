@@ -51,26 +51,22 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
 
         self._w.show_all()
 
-        GLib.timeout_add(1000/20, self._redraw)
+        GLib.timeout_add(1000/20, self.redraw)
 
     def _quit(self, *args):
         rospy.signal_shutdown("quit")
         Gtk.main_quit()
 
-    def _redraw(self):
-        self.queue_draw()
-        return True
-
     def _on_trigger_area(self, msg):
-        self._area = [(p.position.x,p.position.y) for p in msg.poses]
+        self._area = [Point2(p.position.x,p.position.y) for p in msg.poses]
 
     def _on_svg_filename(self, msg):
         with self._lock:
             try:
                 self._model = flyflypath.model.MovingPointSvgPath(msg.data)
-            except flyflypath.model.SvgError:
+            except flyflypath.model.SvgError, e:
                 self._model = None
-            self._draw_background()
+            self.draw_background()
 
     def _on_source_move(self, msg):
         try:
@@ -88,18 +84,22 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._active = msg.data
 
     def get_vec_and_points(self):
-        vec = None
+        vecs = []
         src_pt = self._src
         trg_pt = self._trg
         if self._src is not None and self._trg is not None:
             with self._lock:
-                vec = LineSegment2(self._src,self._trg)
+                try:
+                    vecs.append( LineSegment2(self._src,self._trg) )
+                except AttributeError:
+                    #zero length line
+                    pass
 
         pts = [ (trg_pt,(0,1,0)) ]
         if self._active:
             pts.append( (src_pt,(1,0,0)) )
 
-        return vec,pts,tuple(self._area)
+        return vecs,pts,tuple(self._area)
 
 if __name__ == "__main__":
     rospy.init_node("followpath_monitor")

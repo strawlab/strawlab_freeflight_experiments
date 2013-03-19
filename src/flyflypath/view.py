@@ -8,21 +8,25 @@ from gi.repository import Gtk, Gdk
 import euclid
 
 class SvgPathWidget(Gtk.DrawingArea):
-    def __init__(self, model, to_pt=False):
+    def __init__(self, model):
         Gtk.DrawingArea.__init__(self)
         self.set_size_request(500,500)
-        self.add_events(
-                Gdk.EventMask.POINTER_MOTION_HINT_MASK | \
-                Gdk.EventMask.POINTER_MOTION_MASK)
-        self.connect('motion-notify-event', self._on_motion_notify_event)
         self.connect('draw', self._on_draw_event)
         self.connect('configure-event', self._on_configure_event)
 
         self._model = model
-        self._snap_to_moving_pt = to_pt
-
         self._surface = None
-        self._mousex = self._mousey = None
+        self._need_bg_redraw = False
+
+    def redraw(self):
+        if self._need_bg_redraw:
+            self._draw_background()
+            self._need_bg_redraw = False
+        self.queue_draw()
+        return True
+
+    def draw_background(self):
+        self._need_bg_redraw = True
        
     def _draw_background(self):
         cr = cairo.Context(self._surface)
@@ -49,18 +53,19 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.line_to(polyline.points[i].x,polyline.points[i].y)
         cr.stroke()
 
-    def _on_motion_notify_event(self, da, event):
-        (window, self._mousex, self._mousey, state) = event.window.get_pointer()
-        self.queue_draw()
-        return True
+        self.add_to_background(cr)
+
+    def add_to_background(self, cr):
+        """ override this for a chance to draw additonal stuff on the background """
+        pass
 
     def _on_draw_event(self, widget, cr):
         cr.set_source_surface(self._surface, 0.0, 0.0)
         cr.paint()
 
-        vec,pts,poly = self.get_vec_and_points()
-        
-        if vec is not None:
+        vecs,pts,poly = self.get_vec_and_points()
+
+        for vec in vecs:
             cr.set_source_rgb (1, 0, 0)
             cr.set_line_width (1)
             cr.move_to(vec.p1.x,vec.p1.y)
@@ -94,21 +99,12 @@ class SvgPathWidget(Gtk.DrawingArea):
         self._draw_background()
 
     def get_vec_and_points(self):
-        vec = None
-        src_pt = None
-        trg_pt = self._model.moving_pt if self._model else None
-        if self._model and self._mousex is not None:
-            src_pt = euclid.Point2(self._mousex,self._mousey)
-            if self._snap_to_moving_pt and self._model.moving_pt is not None:
-                vec = self._model.connect_to_moving_point(p=None,
-                                    px=self._mousex,py=self._mousey)
-            else:
-                vec = self._model.connect_closest(p=None,
-                                    px=self._mousex,py=self._mousey)
-        return vec,src_pt,trg_pt
+        """
+        returns a 3-tuple
+            euclid.LineSegment
+            [(euclid.Point2,(r,g,b)),]
+            [euclid.Point2,]
+        """
+        raise NotImplementedError
 
-    def move_along(self, scale, wrap=False):
-        val,pt = self._model.move_point(scale, wrap=wrap)
-        self.queue_draw()
-        return val
 
