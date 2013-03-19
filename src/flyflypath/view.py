@@ -63,7 +63,7 @@ class SvgPathWidget(Gtk.DrawingArea):
         if vec is not None:
             cr.set_source_rgb (1, 0, 0)
             cr.set_line_width (1)
-            cr.move_to(vec.p.x,vec.p.y)
+            cr.move_to(vec.p1.x,vec.p1.y)
             cr.line_to(vec.p2.x,vec.p2.y)
             cr.stroke()
 
@@ -78,9 +78,9 @@ class SvgPathWidget(Gtk.DrawingArea):
             #draw the approximation
             cr.set_source_rgb (0, 0, 1)
             cr.set_line_width (0.3)
-            cr.move_to(poly[0][0],poly[0][1])
+            cr.move_to(poly[0].x,poly[0].y)
             for i in range(1,len(poly)):
-                cr.line_to(poly[i][0],poly[i][1])
+                cr.line_to(poly[i].x,poly[i].y)
             cr.close_path()
             cr.stroke()
 

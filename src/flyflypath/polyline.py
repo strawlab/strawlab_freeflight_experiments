@@ -3,11 +3,16 @@ import numpy as np
 from euclid import Point2, LineSegment2, Vector2
 
 class ZeroLineSegment2:
-    def __init__(self):
-        self.p = Point2()
-        self.p2 = Point2()
+    def __init__(self, pt=None):
+        if pt is None:
+            pt = Point2()
+        self.p1 = pt
+        self.p2 = pt
         self.v = Vector2()
         self.length = 0
+
+    def __repr__(self):
+        return "LineSegment2(%r to %r)" % (self.p1, self.p2)
 
 class ClosestPoint(object):
     __slots__= "point", "vector", "type"
@@ -57,7 +62,7 @@ class PolyLine2:
             self._length += length
 
     @property
-    def p(self):
+    def p1(self):
         """ first point """
         return self.points[0].copy()
 
@@ -236,7 +241,7 @@ if __name__ == "__main__":
 
     polyl = PolyLine2(p0,p1,p1b,p2)
 
-    assert polyl.p == p0
+    assert polyl.p1 == p0
 
     assert polyl.length == 2
 
@@ -256,11 +261,13 @@ if __name__ == "__main__":
     assert (p0-p1).magnitude() == 1
 
     assert ZeroLineSegment2().length == 0
-    assert ZeroLineSegment2().p == p00
+    assert ZeroLineSegment2().p1 == p00
     assert ZeroLineSegment2().v.x == 0
 
+    assert ZeroLineSegment2(p1).p1 == p1
+
     l0 = LineSegment2(p0,p1)
-    assert l0.p == p0
+    assert l0.p1 == p0
     assert l0.p2 == p1
 
     l1 = LineSegment2(p1,p2)
