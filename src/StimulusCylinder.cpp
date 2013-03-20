@@ -56,6 +56,8 @@ private:
     Poco::SharedMemory 					_mem;
     Poco::NamedMutex 					_memlock;
 
+    osg::Uniform* tex_v_offset_uniform;
+
 	osg::ref_ptr<osg::Group> create_virtual_world();
 	void dirty_cylinder(void);
 	void set_cylinder_rotation(float angle);
@@ -64,6 +66,7 @@ private:
 	void set_cylinder_radius(float r);
 	void set_cylinder_height(float h);
 	void set_cylinder_image(std::string s) { _texture->setImage(load_image_file(s)); }
+	void set_cylinder_v_offset(float vo) { tex_v_offset_uniform->set( vo ); };
 };
 
 StimulusCylinder::StimulusCylinder() :
@@ -93,6 +96,7 @@ std::vector<std::string> StimulusCylinder::get_topic_names() const
     std::vector<std::string> result;
     result.push_back("cylinder_radius");
     result.push_back("cylinder_height");
+    result.push_back("cylinder_v_offset");
     result.push_back("cylinder_rotation");
     result.push_back("cylinder_rotation_rate");
     result.push_back("cylinder_image");
@@ -116,6 +120,8 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
 		set_cylinder_rotation_rate(parse_float(root));
     } else if (topic_name=="cylinder_height") {
 		set_cylinder_height(parse_float(root));
+    } else if (topic_name=="cylinder_v_offset") {
+		set_cylinder_v_offset(parse_float(root));
     } else if (topic_name=="cylinder_image") {
 		set_cylinder_image(parse_string(root));
     } else if (topic_name=="cylinder_centre") {
@@ -133,6 +139,8 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
     if (topic_name=="cylinder_radius") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_height") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_v_offset") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_rotation") {
         result = "std_msgs/Float32";
@@ -208,6 +216,31 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	cylStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 
 	cylStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	cylStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
+
+    {
+        osg::Program* ZtexcylProgram;
+        osg::Shader*  ZtexcylVertObj;
+        osg::Shader*  ZtexcylFragObj;
+
+        ZtexcylProgram = new osg::Program;
+        ZtexcylProgram->setName( "ztexcyl" );
+        ZtexcylVertObj = new osg::Shader( osg::Shader::VERTEX );
+        ZtexcylFragObj = new osg::Shader( osg::Shader::FRAGMENT );
+        ZtexcylProgram->addShader( ZtexcylFragObj );
+        ZtexcylProgram->addShader( ZtexcylVertObj );
+
+        load_shader_source( ZtexcylVertObj, "ztexcyl.vert" );
+        load_shader_source( ZtexcylFragObj, "ztexcyl.frag" );
+
+        cylStateSet->setAttributeAndModes(ZtexcylProgram, osg::StateAttribute::ON);
+        tex_v_offset_uniform = new osg::Uniform( osg::Uniform::FLOAT, "tex_v_offset" );
+        tex_v_offset_uniform->set(0);
+        cylStateSet->addUniform( tex_v_offset_uniform );
+
+		osg::Uniform* tu = new osg::Uniform( osg::Uniform::SAMPLER_2D, "my_texture" );
+        cylStateSet->addUniform( tu );
+    }
 
 	return myroot;
 }
