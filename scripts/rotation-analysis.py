@@ -185,12 +185,18 @@ if __name__=='__main__':
             #when the derivitive is -ve once nan's have been forward filled. The
             #second fillna(0) is because the first elements derifitive is NaN.
             #yay pandas
-            wrap = df['ratio'].fillna(value=None, method='pad').diff().fillna(0).argmin()
-            if wrap > 0:
-                a = df['ratio'][0:wrap].min()
-                b = df['ratio'][wrap:].max()
-                if np.abs(b - a) < 0.01:
-                    best.append(obj_id)
+            dratio = df['ratio'].fillna(value=None, method='pad').diff().fillna(0)
+            ncrossings = (dratio < 0).sum()
+            if ncrossings == 1:
+                #only 1 wrap, consider only long trajectories
+                wrap = dratio.argmin()
+                if wrap > 0:
+                    a = df['ratio'][0:wrap].min()
+                    b = df['ratio'][wrap:].max()
+                    if np.abs(b - a) < 0.01:
+                        best.append(obj_id)
+            elif ncrossings > 1:
+                best.append(obj_id)
 
     print "THE BEST FLIES ARE"
     print " ".join(map(str,best))
