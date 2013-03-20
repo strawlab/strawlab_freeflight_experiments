@@ -29,6 +29,7 @@
 typedef struct
 {
     float angular_position;
+    float v_offset_value;
 } StimulusCylinderSharedStateType;
 
 class StimulusCylinder: public StimulusInterface
@@ -57,6 +58,9 @@ private:
     double                              _angular_position;
     double                              _angular_velocity;
     bool                                _angular_position_mode;
+    double                              _v_offset_value;
+    double                              _v_offset_rate;
+    bool                                _v_offset_value_mode;
     bool                                _slave;
     Poco::SharedMemory                  _mem;
     Poco::NamedMutex                    _memlock;
@@ -71,7 +75,8 @@ private:
     void set_cylinder_radius(float r);
     void set_cylinder_height(float h);
     void set_cylinder_image(std::string s) { _texture->setImage(load_image_file(s)); }
-    void set_cylinder_v_offset(float vo) { tex_v_offset_uniform->set( vo ); };
+    void set_cylinder_v_offset(float vo);
+    void set_cylinder_v_offset_rate(float vor);
 };
 
 StimulusCylinder::StimulusCylinder() :
@@ -79,6 +84,9 @@ StimulusCylinder::StimulusCylinder() :
     _angular_position(0),
     _angular_velocity(0),
     _angular_position_mode(true),
+    _v_offset_value(0),
+    _v_offset_rate(0),
+    _v_offset_value_mode(true),
     _mem("StimulusCylinder", sizeof(StimulusCylinderSharedStateType),
          Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
     _memlock("StimulusCylinder")
@@ -102,9 +110,10 @@ std::vector<std::string> StimulusCylinder::get_topic_names() const
     std::vector<std::string> result;
     result.push_back("cylinder_radius");
     result.push_back("cylinder_height");
-    result.push_back("cylinder_v_offset");
     result.push_back("cylinder_rotation");
     result.push_back("cylinder_rotation_rate");
+    result.push_back("cylinder_v_offset");
+    result.push_back("cylinder_v_offset_rate");
     result.push_back("cylinder_image");
     result.push_back("cylinder_centre");
     return result;
@@ -128,6 +137,8 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
         set_cylinder_height(parse_float(root));
     } else if (topic_name=="cylinder_v_offset") {
         set_cylinder_v_offset(parse_float(root));
+    } else if (topic_name=="cylinder_v_offset_rate") {
+        set_cylinder_v_offset_rate(parse_float(root));
     } else if (topic_name=="cylinder_image") {
         set_cylinder_image(parse_string(root));
     } else if (topic_name=="cylinder_centre") {
@@ -146,11 +157,13 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_height") {
         result = "std_msgs/Float32";
-    } else if (topic_name=="cylinder_v_offset") {
-        result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_rotation") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_rotation_rate") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_v_offset") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_v_offset_rate") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_image") {
         result = "std_msgs/String";
@@ -169,19 +182,28 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
   shared = reinterpret_cast<StimulusCylinderSharedStateType*>(_mem.begin());
 
   if (!_slave) {
+    if (_t0 < 0) {
+        _t0 = time;
+        return;
+    }
+    float dt = time - _t0;
+    _t0 = time;
+
     if (_angular_position_mode) {
         shared->angular_position = _angular_position;
     } else {
-        if (_t0 < 0) {
-            _t0 = time;
-            return;
-        }
-
-        float dt = time - _t0;
         shared->angular_position = shared->angular_position + (_angular_velocity * dt);
-        _t0 = time;
     }
+
+    if (_v_offset_value_mode) {
+        shared->v_offset_value = _v_offset_value;
+    } else {
+        shared->v_offset_value = shared->v_offset_value + (_v_offset_rate * dt);
+    }
+
   }
+
+  tex_v_offset_uniform->set(shared->v_offset_value);
 
   osg::Quat quat = osg::Quat(shared->angular_position, osg::Vec3(0,0,1));
   _cylinder->setRotation(quat);
@@ -260,6 +282,16 @@ void StimulusCylinder::set_cylinder_rotation(float angle) {
 void StimulusCylinder::set_cylinder_rotation_rate(float rate) {
     _angular_position_mode = false;
     _angular_velocity = rate;
+}
+
+void StimulusCylinder::set_cylinder_v_offset(float vo) {
+    _v_offset_value_mode = true;
+    _v_offset_value = vo;
+}
+
+void StimulusCylinder::set_cylinder_v_offset_rate(float vor) {
+    _v_offset_value_mode = false;
+    _v_offset_rate = vor;
 }
 
 void StimulusCylinder::set_cylinder_position(float x, float y, float z) {
