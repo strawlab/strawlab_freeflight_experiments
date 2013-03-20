@@ -176,6 +176,27 @@ if __name__=='__main__':
 
     aplt.save_args(args)
 
+    best = []
+    for i,(current_condition,r) in enumerate(results.iteritems()):
+        if not r['count']:
+            continue
+        for df,(x0,y0,obj_id,framenumber0) in zip(r['df'], r['start_obj_ids']):
+            #find when the ratio wraps. This is
+            #when the derivitive is -ve once nan's have been forward filled. The
+            #second fillna(0) is because the first elements derifitive is NaN.
+            #yay pandas
+            wrap = df['ratio'].fillna(value=None, method='pad').diff().fillna(0).argmin()
+            if wrap > 0:
+                a = df['ratio'][0:wrap].min()
+                b = df['ratio'][wrap:].max()
+                if np.abs(b - a) < 0.01:
+                    best.append(obj_id)
+
+    print "THE BEST FLIES ARE"
+    print " ".join(map(str,best))
+
+    #FIXME: plot a histogram of ratio span
+
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
