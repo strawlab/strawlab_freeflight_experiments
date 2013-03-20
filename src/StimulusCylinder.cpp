@@ -171,7 +171,6 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
   osg::Quat quat = osg::Quat(*rotation, osg::Vec3(0,0,1));
   _cylinder->setRotation(quat);
   dirty_cylinder();
-  std::cerr << _slave << " r " << (*rotation) << "\n";
 
 }
 
@@ -205,11 +204,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 	_texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
 	set_cylinder_image("checkerboard16.png");
 
-	osg::ref_ptr<osg::Material> material = new osg::Material;
-	material->setEmission(osg::Material::FRONT, osg::Vec4(0.8, 0.8, 0.8, 1.0));
-
 	osg::StateSet *cylStateSet = _shape->getOrCreateStateSet();
-	cylStateSet->setAttribute(material);
 	cylStateSet->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 
 	cylStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
