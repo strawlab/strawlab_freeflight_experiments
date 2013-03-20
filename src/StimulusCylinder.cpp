@@ -49,9 +49,9 @@ private:
     osg::ref_ptr<osg::Texture2D>        _texture;
     osg::ref_ptr<osg::ShapeDrawable>    _shape;
     double                              _t0;
-    double                              _rotation;
-    double                              _rotation_vel;
-    bool                                _rotation_abs;
+    double                              _angular_position;
+    double                              _angular_velocity;
+    bool                                _angular_position_mode;
     bool                                _slave;
     Poco::SharedMemory                  _mem;
     Poco::NamedMutex                    _memlock;
@@ -71,9 +71,9 @@ private:
 
 StimulusCylinder::StimulusCylinder() :
     _t0(-1),
-    _rotation(0),
-    _rotation_vel(0),
-    _rotation_abs(true),
+    _angular_position(0),
+    _angular_velocity(0),
+    _angular_position_mode(true),
     _mem("StimulusCylinder", sizeof(float), Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
     _memlock("StimulusCylinder")
 {
@@ -162,8 +162,8 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
   float *rotation = reinterpret_cast<float*>(_mem.begin());
 
   if (!_slave) {
-    if (_rotation_abs) {
-        *rotation = _rotation;
+    if (_angular_position_mode) {
+        *rotation = _angular_position;
     } else {
         if (_t0 < 0) {
             _t0 = time;
@@ -171,7 +171,7 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
         }
 
         float dt = time - _t0;
-        *rotation = *rotation + (_rotation_vel * dt);
+        *rotation = *rotation + (_angular_velocity * dt);
         _t0 = time;
     }
   }
@@ -197,7 +197,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
     _cylinder = new osg::Cylinder();
     _shape = new osg::ShapeDrawable(_cylinder, hints.get());
 
-    set_cylinder_rotation(_rotation);
+    set_cylinder_rotation(_angular_position);
     set_cylinder_position(0.0,0.0,0.0);
     set_cylinder_radius(DEFAULT_RADIUS);
     set_cylinder_height(DEFAULT_HEIGHT);
@@ -246,13 +246,13 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 }
 
 void StimulusCylinder::set_cylinder_rotation(float angle) {
-    _rotation_abs = true;
-    _rotation = angle;
+    _angular_position_mode = true;
+    _angular_position = angle;
 }
 
 void StimulusCylinder::set_cylinder_rotation_rate(float rate) {
-    _rotation_abs = false;
-    _rotation_vel = rate;
+    _angular_position_mode = false;
+    _angular_velocity = rate;
 }
 
 void StimulusCylinder::set_cylinder_position(float x, float y, float z) {
