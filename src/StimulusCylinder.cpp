@@ -26,6 +26,11 @@
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 
+typedef struct
+{
+    float angular_position;
+} StimulusCylinderSharedStateType;
+
 class StimulusCylinder: public StimulusInterface
 {
 public:
@@ -74,7 +79,8 @@ StimulusCylinder::StimulusCylinder() :
     _angular_position(0),
     _angular_velocity(0),
     _angular_position_mode(true),
-    _mem("StimulusCylinder", sizeof(float), Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
+    _mem("StimulusCylinder", sizeof(StimulusCylinderSharedStateType),
+         Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
     _memlock("StimulusCylinder")
 {
 
@@ -87,7 +93,7 @@ void StimulusCylinder::post_init(bool slave)
 
     if (!_slave) {
         Poco::NamedMutex::ScopedLock lock(_memlock);
-        memset (_mem.begin(),0,sizeof(float));
+        memset (_mem.begin(),0,sizeof(StimulusCylinderSharedStateType));
     }
 }
 
@@ -159,11 +165,12 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
 void StimulusCylinder::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation )
 {
   Poco::NamedMutex::ScopedLock lock(_memlock);
-  float *rotation = reinterpret_cast<float*>(_mem.begin());
+  StimulusCylinderSharedStateType *shared;
+  shared = reinterpret_cast<StimulusCylinderSharedStateType*>(_mem.begin());
 
   if (!_slave) {
     if (_angular_position_mode) {
-        *rotation = _angular_position;
+        shared->angular_position = _angular_position;
     } else {
         if (_t0 < 0) {
             _t0 = time;
@@ -171,12 +178,12 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
         }
 
         float dt = time - _t0;
-        *rotation = *rotation + (_angular_velocity * dt);
+        shared->angular_position = shared->angular_position + (_angular_velocity * dt);
         _t0 = time;
     }
   }
 
-  osg::Quat quat = osg::Quat(*rotation, osg::Vec3(0,0,1));
+  osg::Quat quat = osg::Quat(shared->angular_position, osg::Vec3(0,0,1));
   _cylinder->setRotation(quat);
   dirty_cylinder();
 
