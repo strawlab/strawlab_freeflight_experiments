@@ -27,6 +27,8 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 TOPIC_CYL_ROTATION      = "cylinder_rotation"
 TOPIC_CYL_ROTATION_RATE = "cylinder_rotation_rate"
+TOPIC_CYL_V_OFFSET_VALUE= "cylinder_v_offset_value"
+TOPIC_CYL_V_OFFSET_RATE = "cylinder_v_offset_rate"
 TOPIC_CYL_IMAGE         = "cylinder_image"
 TOPIC_CYL_CENTRE        = "cylinder_centre"
 TOPIC_CYL_RADIUS        = "cylinder_radius"
@@ -49,20 +51,19 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)/advance_threshold(m)"
-CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.025",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.05",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.075",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1",
-              "checkerboard16.png/infinity.svg/0.0/0.2/0.05",
-              "gray.png/infinity.svg/+0.1/0.2/0.05",
+#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)/advance_threshold(m)/v_gain"
+CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.1",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.12",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.15",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.50",
 ]
 START_CONDITION = CONDITIONS[0]
 
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","lock_object","framenumber")
+    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","lock_object","framenumber","v_offset_rate")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -72,6 +73,8 @@ class Node(object):
 
         self.rotation_pub = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.rotation_velocity_pub = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
+        self.v_offset_value_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
+        self.v_offset_rate_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_RATE, Float32, latch=True, tcp_nodelay=True)
         self.image_pub = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
         self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
@@ -79,6 +82,7 @@ class Node(object):
         self.pushover_pub = rospy.Publisher('note', String)
 
         self.rotation_pub.publish(0)
+        self.v_offset_value_pub.publish(0)
 
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -131,9 +135,10 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance = self.condition.split('/')
+        img,svg,p,rad,advance,v_gain = self.condition.split('/')
         self.img_fn = str(img)
         self.p_const = float(p)
+        self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
         
@@ -148,6 +153,10 @@ class Node(object):
             self.svg_fn = ''
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+
+    def get_v_rate(self,fly_z):
+        target_z = 0.7
+        return self.v_gain*(fly_z-target_z)
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
         if self.svg_fn:
@@ -232,6 +241,7 @@ class Node(object):
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
+                v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,0)
@@ -243,6 +253,9 @@ class Node(object):
 
                 self.log.rotation_rate = rate
                 self.rotation_velocity_pub.publish(rate)
+
+                self.log.v_offset_rate = v_rate
+                self.v_offset_rate_pub.publish(v_rate)
 
                 self.cyl_centre_pub.publish(fly_x,fly_y,0)
 

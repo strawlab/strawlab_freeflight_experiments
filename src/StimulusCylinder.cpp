@@ -112,7 +112,7 @@ std::vector<std::string> StimulusCylinder::get_topic_names() const
     result.push_back("cylinder_height");
     result.push_back("cylinder_rotation");
     result.push_back("cylinder_rotation_rate");
-    result.push_back("cylinder_v_offset");
+    result.push_back("cylinder_v_offset_value");
     result.push_back("cylinder_v_offset_rate");
     result.push_back("cylinder_image");
     result.push_back("cylinder_centre");
@@ -135,7 +135,7 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
         set_cylinder_rotation_rate(parse_float(root));
     } else if (topic_name=="cylinder_height") {
         set_cylinder_height(parse_float(root));
-    } else if (topic_name=="cylinder_v_offset") {
+    } else if (topic_name=="cylinder_v_offset_value") {
         set_cylinder_v_offset(parse_float(root));
     } else if (topic_name=="cylinder_v_offset_rate") {
         set_cylinder_v_offset_rate(parse_float(root));
@@ -161,7 +161,7 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_rotation_rate") {
         result = "std_msgs/Float32";
-    } else if (topic_name=="cylinder_v_offset") {
+    } else if (topic_name=="cylinder_v_offset_value") {
         result = "std_msgs/Float32";
     } else if (topic_name=="cylinder_v_offset_rate") {
         result = "std_msgs/Float32";
