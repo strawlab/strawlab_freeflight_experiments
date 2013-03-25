@@ -3,6 +3,7 @@ import sys
 import argparse
 import Queue
 import pandas
+import operator
 
 import tables
 import pandas
@@ -176,7 +177,7 @@ if __name__=='__main__':
 
     aplt.save_args(args)
 
-    best = []
+    best = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
         if not r['count']:
             continue
@@ -194,12 +195,17 @@ if __name__=='__main__':
                     a = df['ratio'][0:wrap].min()
                     b = df['ratio'][wrap:].max()
                     if np.abs(b - a) < 0.01:
-                        best.append(obj_id)
+                        best[obj_id] = 1
             elif ncrossings > 1:
-                best.append(obj_id)
+                best[obj_id] = ncrossings
 
     print "THE BEST FLIES ARE"
-    print " ".join(map(str,best))
+    print " ".join(map(str,best.keys()))
+
+    sorted_best = sorted(best.iteritems(), key=operator.itemgetter(1))
+    print "THE BEST FLIES FLEW THIS MANY LOOPS"
+    for k,v in sorted_best:
+        print k,":",v
 
     #FIXME: plot a histogram of ratio span
 
