@@ -177,6 +177,14 @@ if __name__=='__main__':
 
     aplt.save_args(args)
 
+    #dont change this, is has to be ~= 1. It is the dratio/dt value to detect
+    #a wrap of 1->0 (but remember this is kinda related to the step increment),
+    #that is a huge step increment and a small ALMOST_1 could miss flies
+    ALMOST_1 = 0.9
+
+    #change this to include more flies that didn't quite go a full revolution
+    MINIMUM_RATIO = 0.9
+
     best = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
         if not r['count']:
@@ -187,14 +195,14 @@ if __name__=='__main__':
             #second fillna(0) is because the first elements derifitive is NaN.
             #yay pandas
             dratio = df['ratio'].fillna(value=None, method='pad').diff().fillna(0)
-            ncrossings = (dratio < 0).sum()
+            ncrossings = (dratio < -ALMOST_1).sum()
             if ncrossings == 1:
                 #only 1 wrap, consider only long trajectories
                 wrap = dratio.argmin()
                 if wrap > 0:
                     a = df['ratio'][0:wrap].min()
                     b = df['ratio'][wrap:].max()
-                    if np.abs(b - a) < 0.01:
+                    if np.abs(b - a) < (1-MINIMUM_RATIO):
                         best[obj_id] = 1
             elif ncrossings > 1:
                 best[obj_id] = ncrossings
