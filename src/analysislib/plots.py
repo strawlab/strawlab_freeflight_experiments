@@ -14,6 +14,7 @@ import matplotlib.mlab
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.colors as colors
+import matplotlib.dates as mdates
 from mpl_toolkits.mplot3d import Axes3D
 
 RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
@@ -28,6 +29,34 @@ def mpl_fig(fname_base,args,**kwargs):
     yield fig
     fig.savefig(fname_base+'.png')
     fig.savefig(fname_base+'.svg')
+
+def plot_trial_times(results, dt, args, name):
+    with mpl_fig(name,args) as fig:
+        ax = fig.add_subplot(1,1,1)
+        starts = {}
+        lengths = {}
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
+            starts[current_condition] = []
+            lengths[current_condition] = []
+
+            for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                starts[current_condition].append(time0)
+                lengths[current_condition].append(len(df))
+
+        colors = [matplotlib.pyplot.cm.jet(i) for i in np.linspace(0, 0.9, len(starts))]
+
+        for i,condition in enumerate(starts):
+            ax.plot_date(mdates.epoch2num(starts[condition]),lengths[condition],label=condition,marker='o',color=colors[i])
+
+        ax.set_xlabel("start")
+        ax.set_ylabel("n samples")
+        ax.set_title("successfull trial start times")
+        ax.legend()
 
 def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
     with mpl_fig(name,args,figsize=figsize) as fig:
@@ -67,7 +96,7 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
                 if in3d:
                     print 'no 3d text'
                 else:
-                    for (x0,y0,obj_id,framenumber) in r['start_obj_ids']:
+                    for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
 
             for rad in radius:
@@ -199,7 +228,7 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
 
             series = {}
             nsamples = 0
-            for df,(x0,y0,obj_id,framenumber0) in zip(r['df'], r['start_obj_ids']):
+            for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 ts = df.index.values - framenumber0
                 
                 try:

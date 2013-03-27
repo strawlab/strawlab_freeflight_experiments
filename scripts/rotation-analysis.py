@@ -71,14 +71,14 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                 continue
             elif _id != this_id:
                 try:
-                    query_id,query_framenumber,query_cond = _ids.get(False)
+                    query_id,query_framenumber,start_time,query_cond = _ids.get(False)
                 except Queue.Empty:
                     #first time
                     this_id = _id
                     csv_results = {k:[] for k in ("framenumber","ratio")}
                     query_id = None
                 finally:
-                    _ids.put((_id,_framenumber,_cond),block=False)
+                    _ids.put((_id,_framenumber,_t,_cond),block=False)
 
                 #first time
                 if query_id is None:
@@ -129,7 +129,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                         df = pandas.DataFrame(dfd,index=validframenumber)
 
                         r['count'] += 1
-                        r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber) )
+                        r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber, start_time) )
                         r['df'].append( df )
 
                 this_id = _id
@@ -189,7 +189,7 @@ if __name__=='__main__':
     for i,(current_condition,r) in enumerate(results.iteritems()):
         if not r['count']:
             continue
-        for df,(x0,y0,obj_id,framenumber0) in zip(r['df'], r['start_obj_ids']):
+        for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
             #find when the ratio wraps. This is
             #when the derivitive is -ve once nan's have been forward filled. The
             #second fillna(0) is because the first elements derifitive is NaN.
@@ -215,7 +215,8 @@ if __name__=='__main__':
     for k,v in sorted_best:
         print k,":",v
 
-    #FIXME: plot a histogram of ratio span
+    aplt.plot_trial_times(results, dt, args,
+                name="%s.trialtimes" % fname)
 
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,
