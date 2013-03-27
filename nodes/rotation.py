@@ -52,11 +52,9 @@ PI = np.pi
 TAU= 2*PI
 
 #CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)/advance_threshold(m)/v_gain"
-CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.1",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.12",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.15",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.50",
+CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.0/0.2/0.1/0.00",
+              "gray.png/infinity.svg/+0.3/0.2/0.1/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 
