@@ -264,7 +264,7 @@ osg::ref_ptr<osg::Group> StimulusCylinder::create_virtual_world() {
 
         cylStateSet->setAttributeAndModes(ZtexcylProgram, osg::StateAttribute::ON);
         tex_v_offset_uniform = new osg::Uniform( osg::Uniform::FLOAT, "tex_v_offset" );
-        tex_v_offset_uniform->set(0);
+        tex_v_offset_uniform->set(0.0f);
         cylStateSet->addUniform( tex_v_offset_uniform );
 
         osg::Uniform* tu = new osg::Uniform( osg::Uniform::SAMPLER_2D, "my_texture" );
