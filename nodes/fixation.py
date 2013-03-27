@@ -12,7 +12,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import display_client
+import flyvr.display_client as display_client
 from std_msgs.msg import UInt32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet

@@ -7,7 +7,7 @@ import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from geometry_msgs.msg import Vector3
 
-import display_client # from flyvr_projectors package
+import flyvr.display_client as display_client
 
 class Node(object):
     def __init__(self):
