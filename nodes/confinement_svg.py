@@ -53,12 +53,12 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("stimulus_filename","confinement_condition","lock_object","framenumber","startr")
 
 class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir):
+    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir)
+        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
         self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
@@ -244,12 +244,15 @@ def main():
                         help="dont't start unless flydra is saving data")
     parser.add_argument('--tmpdir', action='store_true', default=False,
                         help="store logfile in tmpdir")
+    parser.add_argument('--continue-existing', type=str, default=None,
+                        help="path to a logfile to continue")
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
 
     node = Node(
             wait_for_flydra=not args.no_wait,
-            use_tmpdir=args.tmpdir)
+            use_tmpdir=args.tmpdir,
+            continue_existing=args.continue_existing)
     return node.run()
 
 if __name__=='__main__':
