@@ -25,16 +25,18 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 HOLD_COND = "midgray.osg"
 
-CONDITIONS = ("midgray.osg/+0.0/+0.0/0",
+#CONDITION = "stimulus_filename,x0,y0,lag (ms, -ve = infinite)"
+CONDITIONS = [
+#              "midgray.osg/+0.0/+0.0/0",
 #              "lboxmed.svg.osg/+0.0/+0.0/1",
 #              "lboxmed.svg.osg/+0.0/+0.0/5",
 #              "lboxmed.svg.osg/+0.0/+0.0/25",
 #              "lboxmed.svg.osg/+0.0/+0.0/125",
 #              "lboxmed.svg.osg/+0.0/+0.0/625"
               "lboxmed.svg.osg/+0.0/+0.0/0",
-              "lboxmed.svg.osg/+0.0/+0.0/-1",
-)
-START_CONDITION = CONDITIONS[1]
+#              "lboxmed.svg.osg/+0.0/+0.0/-1",
+]
+START_CONDITION = CONDITIONS[0]
 
 CONTROL_RATE = 40.0
 
