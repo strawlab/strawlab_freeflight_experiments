@@ -65,18 +65,18 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
 
             if _id == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                 continue
-            elif _id == IMPOSSIBLE_OBJ_ID:
+            if _id == IMPOSSIBLE_OBJ_ID:
                 continue
             elif _id != this_id:
                 try:
-                    query_id,query_framenumber,query_cond = _ids.get(False)
+                    query_id,query_framenumber,start_time,query_cond = _ids.get(False)
                 except Queue.Empty:
                     #first time
                     this_id = _id
                     csv_results = {k:[] for k in ("framenumber",)}
                     query_id = None
                 finally:
-                    _ids.put((_id,_framenumber,_cond),block=False)
+                    _ids.put((_id,_framenumber,_t,_cond),block=False)
 
                 #first time
                 if query_id is None:
@@ -126,7 +126,7 @@ def get_results(csv_fname, h5_file, args, frames_before=0):
                         df = pandas.DataFrame(dfd,index=validframenumber)
 
                         r['count'] += 1
-                        r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber) )
+                        r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber, start_time) )
                         r['df'].append( df )
 
                 this_id = _id
@@ -172,6 +172,9 @@ if __name__=='__main__':
     radius = [0.5, 0.16]
 
     aplt.save_args(args)
+
+    aplt.plot_trial_times(results, dt, args,
+                name="%s.trialtimes" % fname)
 
     aplt.plot_traces(results, dt, args,
                 figsize=figsize,
