@@ -56,7 +56,7 @@ def get_parser():
         required=True,
         help='method to filter trajectory data based on radius from centre values')
     parser.add_argument(
-        '--rfilt-max', type=float, default=0.40,
+        '--rfilt-max', type=float, default=0.42,
         help='maximum r, metres, (default %(default)s)')
     parser.add_argument(
         '--lenfilt', type=float, default=1.0,
