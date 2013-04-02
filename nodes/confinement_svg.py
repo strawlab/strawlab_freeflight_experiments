@@ -52,7 +52,7 @@ TIMEOUT = 0.5
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("stimulus_filename","confinement_condition","lock_object","framenumber","startr")
+    STATE = ("stimulus_filename","startr")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -123,9 +123,9 @@ class Node(object):
         svg_filename = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
         self.svg_pub.publish(svg_filename)
 
-        self.log.confinement_condition = self.condition
+        self.log.condition = self.condition
         self.log.startr = START_RADIUS
-        rospy.loginfo('confinement condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
+        rospy.loginfo('condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
         self.drop_lock_on()
 
     def run(self):

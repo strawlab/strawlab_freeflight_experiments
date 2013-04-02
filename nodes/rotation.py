@@ -61,7 +61,7 @@ START_CONDITION = CONDITIONS[0]
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("condition","rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","lock_object","framenumber","v_offset_rate")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):

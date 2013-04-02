@@ -14,7 +14,7 @@ class NoDataError(Exception):
 class CsvLogger:
 
     STATE = tuple()
-    EXTRA_STATE = ("t_sec","t_nsec","flydra_data_file","exp_uuid")
+    EXTRA_STATE = ("t_sec","t_nsec","flydra_data_file","exp_uuid","condition","lock_object","framenumber")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None):

@@ -27,7 +27,7 @@ START_CONDITION = CONDITIONS[0]
 TIMEOUT = 0.5
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("stimulus_filename","confinement_condition","lock_object","framenumber")
+    STATE = ("stimulus_filename",)
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir):
@@ -69,8 +69,8 @@ class Node(object):
         self.stimulus_filename = self.condition.split('/')[0]
         self.x0,self.y0 = map(float,self.condition.split('/')[1:])
 
-        self.log.confinement_condition = self.condition
-        rospy.loginfo('confinement condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
+        self.log.condition = self.condition
+        rospy.loginfo('condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
         self.drop_lock_on()
 
     def run(self):
