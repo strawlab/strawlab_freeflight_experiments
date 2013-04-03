@@ -27,20 +27,22 @@ HOLD_COND = "midgray.osg"
 
 #CONDITION = "stimulus_filename,x0,y0,lag (ms, -ve = infinite)"
 CONDITIONS = [
-#              "midgray.osg/+0.0/+0.0/0",
-#              "lboxmed.svg.osg/+0.0/+0.0/1",
-#              "lboxmed.svg.osg/+0.0/+0.0/5",
-#              "lboxmed.svg.osg/+0.0/+0.0/25",
-#              "lboxmed.svg.osg/+0.0/+0.0/125",
-#              "lboxmed.svg.osg/+0.0/+0.0/625"
+              "midgray.osg/+0.0/+0.0/0",
               "lboxmed.svg.osg/+0.0/+0.0/0",
-#              "lboxmed.svg.osg/+0.0/+0.0/-1",
+              "lboxmed.svg.osg/+0.0/+0.0/1",
+              "lboxmed.svg.osg/+0.0/+0.0/5",
+              "lboxmed.svg.osg/+0.0/+0.0/25",
+              "lboxmed.svg.osg/+0.0/+0.0/125",
+              "lboxmed.svg.osg/+0.0/+0.0/625",
+              "lboxmed.svg.osg/+0.0/+0.0/-1",
 ]
-START_CONDITION = CONDITIONS[0]
+START_CONDITION = CONDITIONS[1]
 
 CONTROL_RATE = 40.0
 
+SWITCH_MODE_TIME    = 5.0*60
 FLY_DIST_CHECK_TIME = 5.0
+
 FLY_DIST_MIN_DIST = 0.2
 
 START_RADIUS    = 0.12
@@ -86,7 +88,7 @@ class Node(object):
             self.last_check_flying_time = now
             self.fly_dist = 0
 
-        self.timer = rospy.Timer(rospy.Duration(5*60), # switch every 5 minutes
+        self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME), # switch every 5 minutes
                                   self.switch_conditions)
         self.switch_conditions(None,force=START_CONDITION)
 
