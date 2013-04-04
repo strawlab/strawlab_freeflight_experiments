@@ -19,6 +19,8 @@ import rospkg
 
 import flyflypath.transform
 import nodelib.log
+import nodelib.visualization
+
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
@@ -66,7 +68,8 @@ class Node(object):
 
         self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
-        self.pub_lag = rospy.Publisher("extra_lag_msec", Float32, latch=True, tcp_nodelay=True)
+        self.pub_lag = rospy.Publisher('extra_lag_msec', Float32, latch=True, tcp_nodelay=True)
+        self.pub_model_pose = rospy.Publisher('model_pose', Pose, latch=True, tcp_nodelay=True)
 
         #publish for the follow_path monitor
         self.svg_pub = rospy.Publisher('svg_filename', String, latch=True, tcp_nodelay=True)
@@ -94,7 +97,11 @@ class Node(object):
 
         self.srcpx_pub.publish(0,0,0)
         self.active_pub.publish(False)
-        self.trigarea_pub.publish(self._get_trigger_volume_posearray())
+        self.trigarea_pub.publish(
+                nodelib.visualization.get_circle_trigger_volume_posearray(
+                                        XFORM,
+                                        START_RADIUS,self.x0,self.y0)
+        )
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
@@ -121,6 +128,8 @@ class Node(object):
 
         lag = float(self.condition.split('/')[-1])
         self.pub_lag.publish(lag)
+
+        self.pub_model_pose.publish( self.get_model_pose_msg() )
 
         svg_filename = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
         self.svg_pub.publish(svg_filename)
@@ -183,19 +192,6 @@ class Node(object):
             r.sleep()
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
-
-    def _get_trigger_volume_posearray(self):
-
-        def _xy_on_circle(radius, ox, oy, steps=16):
-            angleStep = 2 * math.pi / steps
-            for a in range(0, steps):
-                x = math.sin(a * angleStep) * radius + ox
-                y = math.cos(a * angleStep) * radius + oy
-                yield x, y
-
-        pxpy = [XFORM.xy_to_pxpy(*v) for v in _xy_on_circle(START_RADIUS,self.x0,self.y0)]
-        poses = [Pose(position=Point(px,py,0)) for px,py in pxpy]
-        return PoseArray(poses=poses)
 
     def is_in_trigger_volume(self,pos):
         c = np.array( (self.x0,self.y0) )
