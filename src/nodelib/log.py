@@ -13,8 +13,8 @@ class NoDataError(Exception):
 
 class CsvLogger:
 
-    STATE = tuple()
-    EXTRA_STATE = ("t_sec","t_nsec","flydra_data_file","exp_uuid","condition","lock_object","framenumber")
+    STATE =         tuple()
+    EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None):
@@ -28,7 +28,10 @@ class CsvLogger:
         self._flydra_data_file = ''
         self._exp_uuid = ''
 
-        self._cols = list(self.STATE)
+        self._state = list(self.STATE)
+        self._state.extend(("condition","lock_object","framenumber"))
+
+        self._cols = list(self._state)
         self._cols.extend(self.EXTRA_STATE)
 
         for s in self._cols:
@@ -61,7 +64,7 @@ class CsvLogger:
             if self._fname.startswith(tempfile.gettempdir()):
                 rospy.logwarn("SAVING DATA TO TEMPORARY DIRECTORY - ARE YOU SURE")
             self._fd = open(self._fname,mode='w')
-            self._fd.write(",".join(self.STATE))
+            self._fd.write(",".join(self._state))
             self._fd.write(",t_sec,t_nsec,flydra_data_file,exp_uuid\n")
         elif mode == 'a':
             rospy.loginfo("continuing %s" % self._fname)
@@ -103,7 +106,7 @@ class CsvLogger:
         return self._cols
 
     def update(self, check=False):
-        vals = [getattr(self,s) for s in self.STATE]
+        vals = [getattr(self,s) for s in self._state]
 
         if check and None in vals:
             rospy.logwarn("no state to save")
