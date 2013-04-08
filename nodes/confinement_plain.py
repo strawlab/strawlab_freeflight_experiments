@@ -30,7 +30,7 @@ HOLD_COND = "noposts.osg"
 #CONDITION = "stimulus_filename,x0,y0,lag (ms, -ve = infinite)"
 CONDITIONS = [
 #              "midgray.osg/+0.0/+0.0/0",
-              "posts3.osg/+0.0/+0.0/0",
+              "posts2.osg/+0.0/+0.0/0",
               "posts3.osg/+0.0/+0.0/0",
               "noposts.osg/+0.0/+0.0/0",
 ]
