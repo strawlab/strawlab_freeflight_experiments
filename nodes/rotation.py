@@ -36,6 +36,8 @@ TOPIC_CYL_RADIUS        = "cylinder_radius"
 CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
+ADVANCE_RATIO       = 1/100.0
+
 FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST   = 0.2
 
@@ -51,10 +53,19 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-#CONDITION = "cylinder_image/svg_path(if omitted target = 0,0)/gain/radius_when_locked(0 disables)/advance_threshold(m)/v_gain"
-CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.0/0.2/0.1/0.00",
-              "gray.png/infinity.svg/+0.3/0.2/0.1/0.20",
+#CONDITION = "cylinder_image/
+#             svg_path(if omitted target = 0,0)/
+#             gain/
+#             radius_when_locked(0 disables rad and cx,xy changing)/
+#             advance_threshold(m)/
+#             v_gain"
+#
+#The first condition is the important (i.e. non control) one. If there
+#is a considerable flight in this condition then a pushover message is
+#sent
+CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.5/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.0/0.5/0.1/0.00",
+              "gray.png/infinity.svg/+0.3/0.5/0.1/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 
@@ -78,6 +89,7 @@ class Node(object):
         self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
 
         self.pushover_pub = rospy.Publisher('note', String)
+        self.save_pub = rospy.Publisher('save_object', UInt32)
 
         self.rotation_pub.publish(0)
         self.v_offset_value_pub.publish(0)
@@ -102,6 +114,8 @@ class Node(object):
             self.last_check_flying_time = now
             self.fly_dist = 0
             self.model = None
+
+            self.ratio_total = 0
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
@@ -162,8 +176,9 @@ class Node(object):
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
                 if segment.length < self.advance_px:
-                    self.log.ratio, newpt = self.model.advance_point(1/100.0, wrap=True)
+                    self.log.ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
                     self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+                    self.ratio_total += ADVANCE_RATIO
         else:
             self.trg_x = self.trg_y = 0.0
 
@@ -255,7 +270,8 @@ class Node(object):
                 self.log.v_offset_rate = v_rate
                 self.v_offset_rate_pub.publish(v_rate)
 
-                self.cyl_centre_pub.publish(fly_x,fly_y,0)
+                if self.rad_locked != 0.5:
+                    self.cyl_centre_pub.publish(fly_x,fly_y,0)
 
                 self.log.framenumber = framenumber
 
@@ -312,6 +328,8 @@ class Node(object):
                 self.log.ratio = 0
                 self.trg_x = self.trg_y = 0.0
 
+            self.ratio_total = 0
+
         self.image_pub.publish( self.img_fn )
         self.cyl_radius_pub.publish(self.rad_locked)
 
@@ -343,8 +361,10 @@ class Node(object):
         self.cyl_radius_pub.publish(0.5)
         self.cyl_centre_pub.publish(0,0,0)
 
-        if (dt > 60) and (old_id is not None):
-            self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
+        if (self.ratio_total > 2) and (old_id is not None):
+            if self.condition == CONDITIONS[0]:
+                self.pushover_pub.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+                self.save_pub.publish(old_id)
 
         self.update()
 
