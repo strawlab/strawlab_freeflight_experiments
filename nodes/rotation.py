@@ -32,6 +32,7 @@ TOPIC_CYL_V_OFFSET_RATE = "cylinder_v_offset_rate"
 TOPIC_CYL_IMAGE         = "cylinder_image"
 TOPIC_CYL_CENTRE        = "cylinder_centre"
 TOPIC_CYL_RADIUS        = "cylinder_radius"
+TOPIC_CYL_HEIGHT        = "cylinder_height"
 
 CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -53,21 +54,25 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
+MAX_ROTATION_RATE = 1.5
+
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
-#             radius_when_locked(0 disables rad and cx,xy changing)/
+#             radius_when_locked(-ve disables cx,xy changing)/
 #             advance_threshold(m)/
 #             v_gain"
 #
-#The first condition is the important (i.e. non control) one. If there
-#is a considerable flight in this condition then a pushover message is
-#sent
-CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/0.5/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.0/0.5/0.1/0.00",
-              "gray.png/infinity.svg/+0.3/0.5/0.1/0.20",
+CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.0/0.5/0.1/0.00",
+#              "gray.png/infinity.svg/+0.3/0.5/0.1/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
+#If there is a considerable flight in these conditions then a pushover
+#message is sent and a video recorded
+COOL_CONDITIONS = set(CONDITIONS[0:])
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -87,6 +92,7 @@ class Node(object):
         self.image_pub = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
         self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
+        self.cyl_height_pub = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
 
         self.pushover_pub = rospy.Publisher('note', String)
         self.save_pub = rospy.Publisher('save_object', UInt32)
@@ -154,7 +160,6 @@ class Node(object):
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
         
-
         self.log.cyl_r = self.rad_locked
 
         if str(svg):
@@ -163,6 +168,12 @@ class Node(object):
             self.svg_pub.publish(self.svg_fn)
         else:
             self.svg_fn = ''
+
+        if self.rad_locked < 0:
+            #HACK
+            self.cyl_height_pub.publish(-4.0*self.rad_locked)
+        else:
+            self.cyl_height_pub.publish(1.0)
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
@@ -209,6 +220,8 @@ class Node(object):
             #print
         else:
             val = 0.0
+
+        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
 
         return val,self.trg_x,self.trg_y
 
@@ -270,8 +283,10 @@ class Node(object):
                 self.log.v_offset_rate = v_rate
                 self.v_offset_rate_pub.publish(v_rate)
 
-                if self.rad_locked != 0.5:
+                if self.rad_locked > 0:
                     self.cyl_centre_pub.publish(fly_x,fly_y,0)
+                else:
+                    self.cyl_centre_pub.publish(0,0,0)
 
                 self.log.framenumber = framenumber
 
@@ -331,7 +346,8 @@ class Node(object):
             self.ratio_total = 0
 
         self.image_pub.publish( self.img_fn )
-        self.cyl_radius_pub.publish(self.rad_locked)
+
+        self.cyl_radius_pub.publish(np.abs(self.rad_locked))
 
         self.update()
 
@@ -358,11 +374,12 @@ class Node(object):
 
         self.image_pub.publish(GRAY_FN)
         self.rotation_velocity_pub.publish(0)
+
         self.cyl_radius_pub.publish(0.5)
         self.cyl_centre_pub.publish(0,0,0)
 
         if (self.ratio_total > 2) and (old_id is not None):
-            if self.condition == CONDITIONS[0]:
+            if self.condition in COOL_CONDITIONS:
                 self.pushover_pub.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.save_pub.publish(old_id)
 
