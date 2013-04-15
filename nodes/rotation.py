@@ -63,16 +63,19 @@ MAX_ROTATION_RATE = 1.5
 #             advance_threshold(m)/
 #             v_gain"
 #
-CONDITIONS = ["checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.0/0.5/0.1/0.00",
-#              "gray.png/infinity.svg/+0.3/0.5/0.1/0.20",
+CONDITIONS = [
+#              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
+              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set(CONDITIONS[0:])
+COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -171,7 +174,7 @@ class Node(object):
 
         if self.rad_locked < 0:
             #HACK
-            self.cyl_height_pub.publish(-4.0*self.rad_locked)
+            self.cyl_height_pub.publish(-4.5*self.rad_locked)
         else:
             self.cyl_height_pub.publish(1.0)
         
