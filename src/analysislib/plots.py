@@ -1,3 +1,4 @@
+import pickle
 import contextlib
 import os.path
 import sys
@@ -283,4 +284,13 @@ def save_args(args, name="README"):
         for k,v in args._get_kwargs():
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
+
+def save_results(args, results, dt, name="data.pkl"):
+    if args and args.outdir:
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        name = os.path.join(args.outdir,name)
+
+    with open(name, "w+b") as f:
+        pickle.dump({"results":results,"dt":dt}, f)
 
