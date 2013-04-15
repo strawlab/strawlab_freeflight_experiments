@@ -46,8 +46,8 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args)
-    aplt.save_results(args, results, dt)
+    aplt.save_args(args, combine.plotdir)
+    aplt.save_results(combine.plotdir, results, dt)
 
     aplt.plot_trial_times(results, dt, args,
                 name="%s.trialtimes" % fname)

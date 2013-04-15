@@ -46,8 +46,8 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args)
-    aplt.save_results(args, results, dt)
+    aplt.save_args(args, combine.plotdir)
+    aplt.save_results(combine.plotdir, results, dt)
 
     #dont change this, is has to be ~= 1. It is the dratio/dt value to detect
     #a wrap of 1->0 (but remember this is kinda related to the step increment),

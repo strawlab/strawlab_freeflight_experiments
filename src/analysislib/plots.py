@@ -270,11 +270,8 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="mean" )
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
-def save_args(args, name="README"):
-    if args and args.outdir:
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
-        name = os.path.join(args.outdir,name)
+def save_args(args, plotdir, name="README"):
+    name = os.path.join(plotdir,name)
 
     with open(name, 'w') as f:
         f.write("These plots were generated with the following command line arguments\n\n")
@@ -285,11 +282,8 @@ def save_args(args, name="README"):
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
 
-def save_results(args, results, dt, name="data.pkl"):
-    if args and args.outdir:
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
-        name = os.path.join(args.outdir,name)
+def save_results(plotdir, results, dt, name="data.pkl"):
+    name = os.path.join(plotdir,name)
 
     with open(name, "w+b") as f:
         pickle.dump({"results":results,"dt":dt}, f)
