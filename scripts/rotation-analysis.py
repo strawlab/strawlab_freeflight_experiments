@@ -25,7 +25,7 @@ if __name__=='__main__':
 
     combine = analysislib.combine.CombineH5WithCSV(
                             rotation.Logger,
-                            "framenumber","ratio",
+                            "framenumber","ratio","rotation_rate",
     )
     combine.add_from_args(args, "rotation.csv", frames_before=0)
 
