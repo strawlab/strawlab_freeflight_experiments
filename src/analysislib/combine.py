@@ -70,6 +70,8 @@ class CombineH5WithCSV(object):
         print "reading", csv_fname
         print "reading", h5_file
 
+        warnings = {}
+
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
@@ -115,7 +117,13 @@ class CombineH5WithCSV(object):
 
                 for k in self._rows:
                     if k != "framenumber":
-                        this_row[k] = float(getattr(row,k))
+                        try:
+                            this_row[k] = float(getattr(row,k))
+                        except AttributeError:
+                            this_row[k] = 0.0
+                            if k not in warnings:
+                                print "WARNING: no such column in csv:",k
+                                warnings[k] = True
 
                 if not _cond in results:
                     results[_cond] = dict(count=0,
