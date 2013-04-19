@@ -41,6 +41,20 @@ class CombineH5WithCSV(object):
     def fname(self):
         return os.path.join(self.plotdir,os.path.basename(self.csv_file).split('.')[0])
 
+    def add_from_uuid(self, uuid, csv_suffix, plotdir=None, frames_before=0, **kwargs):
+        fm = autodata.files.FileModel()
+        fm.select_uuid(uuid)
+        csv_file = fm.get_file_model(csv_suffix).fullpath
+        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+
+        self.plotdir = (plotdir if plotdir else os.getcwd()) + "/"
+
+        args = analysislib.args.get_default_args()
+        for k in kwargs:
+            setattr(args,k,kwargs[k])
+
+        self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
+
     def add_from_args(self, args, csv_suffix, frames_before=0):
         if args.uuid is not None:
             if len(args.uuid) > 1:
