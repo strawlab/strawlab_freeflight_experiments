@@ -69,6 +69,7 @@ CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
               "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
               "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
