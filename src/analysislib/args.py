@@ -37,7 +37,7 @@ def get_parser(*only_these_options):
             help='show plots')
     if not only_these_options or "no-trackingstats" in only_these_options:
         parser.add_argument(
-            '--no-trackingstats', action='store_true', default=False,
+            '--plot-tracking-stats', action='store_true', default=False,
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
     if not only_these_options or "portrait" in only_these_options:
         parser.add_argument(

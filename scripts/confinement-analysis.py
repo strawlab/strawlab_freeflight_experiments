@@ -77,7 +77,7 @@ if __name__=='__main__':
                 name='%s.nsamples' % fname)
 
 
-    if not args.no_trackingstats and len(args.uuid) == 1:
+    if args.plot_tracking_stats and len(args.uuid) == 1:
         fplt = autodata.files.FileView(
                   autodata.files.FileModel(show_progress=True,filepath=combine.h5_file))
         with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:

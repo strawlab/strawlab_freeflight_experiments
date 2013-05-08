@@ -253,7 +253,7 @@ if __name__=='__main__':
                 dvdt=False,
                 name='%s.z' % fname)
 
-    if not args.no_trackingstats:
+    if args.plot_tracking_stats:
         fplt = autodata.files.FileView(
                   autodata.files.FileModel(show_progress=True,filepath=h5_file))  
         with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
