@@ -134,7 +134,7 @@ class CombineH5WithCSV(object):
                         try:
                             this_row[k] = float(getattr(row,k))
                         except AttributeError:
-                            this_row[k] = 0.0
+                            this_row[k] = np.nan
                             if k not in warnings:
                                 print "WARNING: no such column in csv:",k
                                 warnings[k] = True
