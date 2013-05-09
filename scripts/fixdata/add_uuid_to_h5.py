@@ -10,7 +10,9 @@ def add_uuid_to_h5(h5,u):
     f = PT.openFile(h5, mode="r+")
     ct = f.createTable
     root = f.root
-    exp_info = ct(root,'experiment_info',flydra.data_descriptions.ExperimentInfo,"ExperimentInfo",expectedrows=100)
+    if 'experiment_info' not in root:
+        exp_info = ct(root,'experiment_info',flydra.data_descriptions.ExperimentInfo,"ExperimentInfo",expectedrows=100)
+    exp_info = root.experiment_info
     exp_info.row['uuid'] = u
     exp_info.row.append()
     exp_info.flush()
