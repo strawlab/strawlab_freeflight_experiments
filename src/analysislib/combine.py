@@ -35,6 +35,7 @@ class CombineH5WithCSV(object):
         self._rows = set(rows)
 
         self._results = {}
+        self._skipped = {}
         self._dt = None
 
     @property
@@ -121,6 +122,8 @@ class CombineH5WithCSV(object):
         results = self._results
         this_row = {}
 
+        skipped = self._skipped
+
         for row in infile.record_iterator():
             try:
 
@@ -144,6 +147,8 @@ class CombineH5WithCSV(object):
                                           framenumber=[],
                                           start_obj_ids=[],
                                           df=[])
+                    skipped[_cond] = 0
+                    
 
                 if _id == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                     continue
@@ -199,6 +204,7 @@ class CombineH5WithCSV(object):
 
                         if n_samples < dur_samples: # must be at least this long
                             print 'insufficient samples (%d) for obj_id %d' % (n_samples,query_id)
+                            self._skipped[_cond] += 1
                         else:
                             print '%s %d: frame0 %d, %d samples'%(_cond, query_id,
                                                                 valid[0]['framenumber'],

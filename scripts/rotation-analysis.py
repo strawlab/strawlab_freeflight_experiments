@@ -116,6 +116,8 @@ if __name__=='__main__':
     aplt.plot_nsamples(results, dt, args,
                 name='%s.nsamples' % fname)
 
+    print combine._skipped
+
 
     if args.plot_tracking_stats and len(args.uuid) == 1:
         fplt = autodata.files.FileView(
