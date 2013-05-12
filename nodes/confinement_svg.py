@@ -39,6 +39,7 @@ CONDITIONS = [
               "lboxmed.svg.osg/+0.0/+0.0/-1",
 ]
 START_CONDITION = CONDITIONS[1]
+COOL_CONDITIONS = set(["lboxmed.svg.osg/+0.0/+0.0/0"])#set()
 
 CONTROL_RATE = 40.0
 
@@ -76,6 +77,9 @@ class Node(object):
         self.srcpx_pub = rospy.Publisher('source', Vector3, latch=False, tcp_nodelay=True)
         self.active_pub = rospy.Publisher('active', Bool, latch=True, tcp_nodelay=True)
         self.trigarea_pub = rospy.Publisher('trigger_area', PoseArray, latch=True, tcp_nodelay=True)
+
+        self.pushover_pub = rospy.Publisher('note', String)
+        self.save_pub = rospy.Publisher('save_object', UInt32)
 
         #protect the traked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -219,22 +223,38 @@ class Node(object):
         self.pub_lock_object.publish( self.log.lock_object )
 
     def lock_on(self,obj,framenumber):
-        rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
-        now = rospy.get_time()
-        self.currently_locked_obj_id = obj.obj_id
-        self.last_seen_time = now
-        self.log.lock_object = obj.obj_id
-        self.log.framenumber = framenumber
+        with self.trackinglock:
+            rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
+            now = rospy.get_time()
+            self.currently_locked_obj_id = obj.obj_id
+            self.last_seen_time = now
+            self.first_seen_time = now
+            self.log.lock_object = obj.obj_id
+            self.log.framenumber = framenumber
+
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
 
     def drop_lock_on(self):
-        rospy.loginfo('dropping locked object %s' % self.currently_locked_obj_id)
-        self.currently_locked_obj_id = None
-        self.log.lock_object = IMPOSSIBLE_OBJ_ID
-        self.log.framenumber = 0
+        with self.trackinglock:
+            old_id = self.currently_locked_obj_id
+            now = rospy.get_time()
+            dt = now - self.first_seen_time
+
+            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+
+            self.currently_locked_obj_id = None
+
+            self.log.lock_object = IMPOSSIBLE_OBJ_ID
+            self.log.framenumber = 0
+
+        if (dt > 30) and (old_id is not None):
+            if self.condition in COOL_CONDITIONS:
+                self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
+                self.save_pub.publish(old_id)
+
         self.pub_stimulus.publish( HOLD_COND )
-        self.update()
+        self.update()        
 
 def main():
     rospy.init_node("confinement")
