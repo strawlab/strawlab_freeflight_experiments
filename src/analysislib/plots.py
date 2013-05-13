@@ -29,10 +29,14 @@ def mpl_fig(fname_base,args,**kwargs):
         fname_base = os.path.join(args.outdir,fname_base)
     fig = plt.figure( **kwargs )
     yield fig
-    fig.savefig(fname_base+'.png')
-    fig.savefig(fname_base+'.svg')
+    fig.savefig(fname_base+'.png',bbox_inches='tight')
+    fig.savefig(fname_base+'.svg',bbox_inches='tight')
 
-def plot_trial_times(results, dt, args, name):
+def fmt_date_xaxes(ax):
+    for tl in ax.get_xaxis().get_majorticklabels():
+        tl.set_rotation(30)
+        tl.set_ha("right")
+
     with mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
         starts = {}
