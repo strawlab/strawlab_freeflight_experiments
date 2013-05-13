@@ -37,10 +37,25 @@ class CombineH5WithCSV(object):
         self._results = {}
         self._skipped = {}
         self._dt = None
+        self._lenfilt = None
 
     @property
     def fname(self):
         return os.path.join(self.plotdir,os.path.basename(self.csv_file).split('.')[0])
+
+    @property
+    def min_num_frames(self):
+        return self._lenfilt / self._dt
+
+    @property
+    def framerate(self):
+        return 1.0 / self._dt
+
+    def get_num_skipped(self, condition):
+        return self._skipped.get(condition,0)
+
+    def get_num_frames(self, seconds):
+        return seconds / self._dt
 
     def add_from_uuid(self, uuid, csv_suffix, plotdir=None, frames_before=0, **kwargs):
         fm = autodata.files.FileModel()
@@ -110,10 +125,11 @@ class CombineH5WithCSV(object):
 
         if self._dt is None:
             self._dt = dt
+            self._lenfilt = args.lenfilt
         else:
             assert dt == self._dt
 
-        dur_samples = args.lenfilt / dt
+        dur_samples = self.min_num_frames
 
         _ids = Queue.Queue(maxsize=2)
         this_id = IMPOSSIBLE_OBJ_ID

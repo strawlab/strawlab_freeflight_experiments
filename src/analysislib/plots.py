@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
+import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
 
 RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
@@ -202,8 +203,20 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
 
 def plot_nsamples(results, dt, args, name):
     with mpl_fig(name,args) as fig:
-        ax = fig.add_subplot(1,1,1)
-        bins = np.linspace(0,4000,20)
+
+        gs = gridspec.GridSpec(2, 1,height_ratios=[1,3])
+        gs.update(hspace=0.1)
+
+        ax_outliers = fig.add_subplot(gs[0])
+        ax = fig.add_subplot(gs[1], sharex=ax_outliers)
+
+        bins = np.arange(
+                    combine.min_num_frames,
+                    combine.get_num_frames(40.0),
+                    combine.get_num_frames(2.0)
+        )
+        bin_centers = 0.5*(bins[1:]+bins[:-1])
+        nconds = 0
         for i,(current_condition,r) in enumerate(results.iteritems()):
 
             if not r['count']:
@@ -211,11 +224,39 @@ def plot_nsamples(results, dt, args, name):
                 continue
 
             n_samples = [len(df) for df in r['df']]
-            hist,_ = np.histogram(n_samples,bins=bins)
-            ax.plot( bins[:-1], hist, '-x', label=current_condition )
-        ax.set_ylabel( 'frequency' )
-        ax.set_xlabel( 'n samples per trajectory' )
-        ax.legend()
+            hist,edges = np.histogram(n_samples,bins=bins)
+
+            ax.plot(bin_centers, hist, '-x', label=current_condition)
+            ax_outliers.plot(0, combine.get_num_skipped(current_condition), 'o', clip_on=False, label=current_condition)
+
+            nconds += 1
+
+        ax.axvline(combine.min_num_frames, linestyle='--', color='k')
+
+        #top axis, bottom axis
+        tax = ax_outliers
+        bax = ax
+        # hide the spines between ax and bax
+        tax.spines['bottom'].set_visible(False)
+        bax.spines['top'].set_visible(False)
+        tax.xaxis.tick_top()
+        tax.tick_params(labeltop='off') # don't put tick labels at the top
+        bax.xaxis.tick_bottom()
+
+        ax.set_ylabel( 'trials (n)' )
+        ax.set_xlabel( 'trajectory length (frames)' )
+
+        ax_outliers.set_ylabel( 'started (n)' )
+
+        ax_outliers.set_title("trial length")
+
+        #set the legend on the top figure, it has the same data and association
+        #of colors as the bottom one anyway
+        ax_outliers.legend(loc='upper right', numpoints=1,
+            columnspacing=0.05,
+            prop={'size':11} if nconds <= 4 else {'size':9},
+            ncol=1 if nconds <= 4 else 2
+        )
 
 def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
     with mpl_fig(name,args,figsize=figsize) as fig:
