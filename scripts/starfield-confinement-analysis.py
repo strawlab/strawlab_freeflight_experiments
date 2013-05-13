@@ -180,32 +180,33 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args)
+    aplt.save_args(args, combine)
+    aplt.save_results(combine)
 
-    aplt.plot_traces(results, dt, args,
+    aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=True,
                 radius=radius,
                 name='%s.traces3d' % fname)
 
-    aplt.plot_traces(results, dt, args,
+    aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=False,
                 radius=radius,
                 name='%s.traces' % fname)
 
-    aplt.plot_histograms(results, dt, args,
+    aplt.plot_histograms(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 radius=radius,
                 name='%s.hist' % fname)
 
-    aplt.plot_nsamples(results, dt, args,
+    aplt.plot_nsamples(combine, args,
                 name='%s.nsamples' % fname)
 
-    aplt.plot_tracking_length(results, dt, args,
+    aplt.plot_tracking_length(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 name='%s.track' % fname)
@@ -213,7 +214,7 @@ if __name__=='__main__':
     frames_before=50
     results,dt = get_results(csv_file, h5_file, args, frames_before=frames_before)
 
-    aplt.plot_aligned_timeseries(results, dt, args,
+    aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
@@ -221,7 +222,7 @@ if __name__=='__main__':
                 dvdt=True,
                 name='%s.drad' % fname)
 
-    aplt.plot_aligned_timeseries(results, dt, args,
+    aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
@@ -229,7 +230,7 @@ if __name__=='__main__':
                 dvdt=False,
                 name='%s.rad' % fname)
 
-    aplt.plot_aligned_timeseries(results, dt, args,
+    aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
@@ -237,7 +238,7 @@ if __name__=='__main__':
                 dvdt=False,
                 name='%s.x' % fname)
 
-    aplt.plot_aligned_timeseries(results, dt, args,
+    aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,
@@ -245,7 +246,7 @@ if __name__=='__main__':
                 dvdt=False,
                 name='%s.y' % fname)
 
-    aplt.plot_aligned_timeseries(results, dt, args,
+    aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 frames_before=frames_before,

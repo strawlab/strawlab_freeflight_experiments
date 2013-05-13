@@ -46,34 +46,34 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args, combine.plotdir)
-    aplt.save_results(combine.plotdir, results, dt)
+    aplt.save_args(args, combine)
+    aplt.save_results(combine)
 
-    aplt.plot_trial_times(results, dt, args,
+    aplt.plot_trial_times(combine, args,
                 name="%s.trialtimes" % fname)
 
-    aplt.plot_traces(results, dt, args,
+    aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=False,
                 radius=radius,
                 name='%s.traces' % fname)
 
-    aplt.plot_traces(results, dt, args,
+    aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=True,
                 radius=radius,
                 name='%s.traces3d' % fname)
 
-    aplt.plot_histograms(results, dt, args,
+    aplt.plot_histograms(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 radius=radius,
                 name='%s.hist' % fname)
 
 
-    aplt.plot_nsamples(results, dt, args,
+    aplt.plot_nsamples(combine, args,
                 name='%s.nsamples' % fname)
 
 

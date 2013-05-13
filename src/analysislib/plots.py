@@ -37,6 +37,8 @@ def fmt_date_xaxes(ax):
         tl.set_rotation(30)
         tl.set_ha("right")
 
+def plot_trial_times(combine, args, name):
+    results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
         starts = {}
@@ -60,11 +62,19 @@ def fmt_date_xaxes(ax):
             ax.plot_date(mdates.epoch2num(starts[condition]),lengths[condition],label=condition,marker='o',color=colors[i])
 
         ax.set_xlabel("start")
-        ax.set_ylabel("n samples")
+        ax.set_ylabel("samples (n)")
         ax.set_title("successfull trial start times")
-        ax.legend()
 
-def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
+        fmt_date_xaxes(ax)
+
+        nconds = len(starts)
+
+        ax.legend(loc='upper right', numpoints=1,
+            prop={'size':11} if nconds <= 4 else {'size':9}
+        )
+
+def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
+    results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 0.5
@@ -108,7 +118,7 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             for rad in radius:
                 theta = np.linspace(0, 2*np.pi, 100)
                 ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'r-',
-                         lw=2, alpha=0.3 )
+                         lw=2, alpha=0.3, clip_on=False )
 
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
 
@@ -139,7 +149,8 @@ def plot_traces(results, dt, args, figsize, fignrows, figncols, in3d, radius, na
             if not in3d:
                 ax.yaxis.set_ticks_position('left')
 
-def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name, colorbar=False):
+def plot_histograms(combine, args, figsize, fignrows, figncols, radius, name, colorbar=False):
+    results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         limit = 1.0
@@ -184,7 +195,8 @@ def plot_histograms(results, dt, args, figsize, fignrows, figncols, radius, name
             if colorbar:
                 fig.colorbar(im)
 
-def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
+def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
+    results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -205,7 +217,8 @@ def plot_tracking_length(results, dt, args, figsize, fignrows, figncols, name):
             ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
 
 
-def plot_nsamples(results, dt, args, name):
+def plot_nsamples(combine, args, name):
+    results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
 
         gs = gridspec.GridSpec(2, 1,height_ratios=[1,3])
@@ -262,7 +275,8 @@ def plot_nsamples(results, dt, args, name):
             ncol=1 if nconds <= 4 else 2
         )
 
-def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
+def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
+    results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -315,7 +329,8 @@ def plot_aligned_timeseries(results, dt, args, figsize, fignrows, figncols, fram
             ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="mean" )
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
-def save_args(args, plotdir, name="README"):
+def save_args(args, combine, name="README"):
+    plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
 
     with open(name, 'w') as f:
@@ -327,7 +342,9 @@ def save_args(args, plotdir, name="README"):
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
 
-def save_results(plotdir, results, dt, name="data.pkl"):
+def save_results(combine, name="data.pkl"):
+    results,dt = combine.get_results()
+    plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
 
     with open(name, "w+b") as f:
