@@ -244,7 +244,7 @@ def plot_nsamples(combine, args, name):
             hist,edges = np.histogram(n_samples,bins=bins)
 
             ax.plot(bin_centers, hist, '-x', label=current_condition)
-            ax_outliers.plot(0, combine.get_num_skipped(current_condition), 'o', clip_on=False, label=current_condition)
+            ax_outliers.plot(0, combine.get_num_trials(current_condition), 'o', clip_on=False, label=current_condition)
 
             nconds += 1
 

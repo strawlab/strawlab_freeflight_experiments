@@ -54,6 +54,12 @@ class CombineH5WithCSV(object):
     def get_num_skipped(self, condition):
         return self._skipped.get(condition,0)
 
+    def get_num_analysed(self, condition):
+        return self._results[condition]['count']
+
+    def get_num_trials(self, condition):
+        return self.get_num_skipped(condition) + self.get_num_analysed(condition) 
+
     def get_num_frames(self, seconds):
         return seconds / self._dt
 
