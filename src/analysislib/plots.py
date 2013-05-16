@@ -20,6 +20,7 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
 
 RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
+WRAP_TEXT=bool(int( os.environ.get('WRAP_TEXT','1')))
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
@@ -149,6 +150,9 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, 
             if not in3d:
                 ax.yaxis.set_ticks_position('left')
 
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
 def plot_histograms(combine, args, figsize, fignrows, figncols, radius, name, colorbar=False):
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
@@ -195,6 +199,10 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, radius, name, co
             if colorbar:
                 fig.colorbar(im)
 
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
+
 def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
@@ -215,6 +223,10 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
             ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
+
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
 
 
 def plot_nsamples(combine, args, name):
@@ -329,6 +341,10 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
             ax.plot( means.index.values, means.values, 'r-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="mean" )
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
+
 def save_args(args, combine, name="README"):
     plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
@@ -349,4 +365,100 @@ def save_results(combine, name="data.pkl"):
 
     with open(name, "w+b") as f:
         pickle.dump({"results":results,"dt":dt}, f)
+
+#scary matplotlib autowrap title logic from
+#http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
+#http://stackoverflow.com/questions/8802918/my-matplotlib-title-gets-cropped
+def _autowrap_text(event):
+    """Auto-wraps all text objects in a figure at draw-time"""
+    import matplotlib as mpl
+    fig = event.canvas.figure
+
+    # Cycle through all artists in all the axes in the figure
+    for ax in fig.axes:
+        for artist in ax.get_children():
+            # If it's a text artist, wrap it...
+            if isinstance(artist, mpl.text.Text):
+                _do_autowrap_text(artist, event.renderer)
+
+    # Temporarily disconnect any callbacks to the draw event...
+    # (To avoid recursion)
+    func_handles = fig.canvas.callbacks.callbacks[event.name]
+    fig.canvas.callbacks.callbacks[event.name] = {}
+    # Re-draw the figure..
+    fig.canvas.draw()
+    # Reset the draw event callbacks
+    fig.canvas.callbacks.callbacks[event.name] = func_handles
+
+def _do_autowrap_text(textobj, renderer):
+    """Wraps the given matplotlib text object so that it exceed the boundaries
+    of the axis it is plotted in."""
+    import textwrap
+
+    # Get the starting position of the text in pixels...
+    x0, y0 = textobj.get_transform().transform(textobj.get_position())
+    # Get the extents of the current axis in pixels...
+    clip = textobj.get_axes().get_window_extent()
+    # Set the text to rotate about the left edge (doesn't make sense otherwise)
+    textobj.set_rotation_mode('anchor')
+
+    # Get the amount of space in the direction of rotation to the left and 
+    # right of x0, y0 (left and right are relative to the rotation, as well)
+    rotation = textobj.get_rotation()
+    right_space = _min_dist_inside((x0, y0), rotation, clip)
+    left_space = _min_dist_inside((x0, y0), rotation - 180, clip)
+
+    # Use either the left or right distance depending on the horiz alignment.
+    alignment = textobj.get_horizontalalignment()
+    if alignment is 'left':
+        new_width = right_space 
+    elif alignment is 'right':
+        new_width = left_space
+    else:
+        new_width = 2 * min(left_space, right_space)
+
+    # Estimate the width of the new size in characters...
+    aspect_ratio = 0.5 # This varies with the font!! 
+    fontsize = textobj.get_size()
+    pixels_per_char = aspect_ratio * renderer.points_to_pixels(fontsize)
+
+    # If wrap_width is < 1, just make it 1 character
+    wrap_width = max(1, new_width // pixels_per_char)
+    try:
+        #textwrap breaks on hyphens, which is not what we want because
+        #we separate experimental phases by /, and often these phases
+        #contain negative numbers (i.e. -ve).
+        #so replace "-" with a placeholder "!", then replace "/" with "-"
+        #so it breaks words there
+        safe_txt = textobj.get_text().replace("-","!").replace("/","-")
+        wrapped_text = textwrap.fill(safe_txt, wrap_width)
+        #reverse the above transform
+        wrapped_text = wrapped_text.replace("-","/").replace("!","-")
+    except TypeError:
+        # This appears to be a single word
+        wrapped_text = textobj.get_text()
+    textobj.set_text(wrapped_text)
+
+def _min_dist_inside(point, rotation, box):
+    """Gets the space in a given direction from "point" to the boundaries of
+    "box" (where box is an object with x0, y0, x1, & y1 attributes, point is a
+    tuple of x,y, and rotation is the angle in degrees)"""
+    from math import sin, cos, radians
+    x0, y0 = point
+    rotation = radians(rotation)
+    distances = []
+    threshold = 0.0001 
+    if cos(rotation) > threshold: 
+        # Intersects the right axis
+        distances.append((box.x1 - x0) / cos(rotation))
+    if cos(rotation) < -threshold: 
+        # Intersects the left axis
+        distances.append((box.x0 - x0) / cos(rotation))
+    if sin(rotation) > threshold: 
+        # Intersects the top axis
+        distances.append((box.y1 - y0) / sin(rotation))
+    if sin(rotation) < -threshold: 
+        # Intersects the bottom axis
+        distances.append((box.y0 - y0) / sin(rotation))
+    return min(distances)
 
