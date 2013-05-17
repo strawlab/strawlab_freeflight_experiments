@@ -14,7 +14,7 @@ roslib.load_manifest(PACKAGE)
 
 import rospy
 import display_client
-from std_msgs.msg import UInt32, Bool, Float32, String
+from std_msgs.msg import UInt32, Bool, Float32, String, Int8
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 import rospkg
@@ -30,7 +30,8 @@ TOPIC_CYL_ROTATION_RATE = "cylinder_rotation_rate"
 TOPIC_CYL_V_OFFSET_VALUE= "cylinder_v_offset_value"
 TOPIC_CYL_V_OFFSET_RATE = "cylinder_v_offset_rate"
 TOPIC_CYL_IMAGE         = "cylinder_image"
-TOPIC_CYL_CENTRE        = "cylinder_centre"
+TOPIC_CYL_LOCK_X        = "cylinder_lock_pose_x"
+TOPIC_CYL_LOCK_Y        = "cylinder_lock_pose_y"
 TOPIC_CYL_RADIUS        = "cylinder_radius"
 TOPIC_CYL_HEIGHT        = "cylinder_height"
 
@@ -94,9 +95,11 @@ class Node(object):
         self.v_offset_value_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
         self.v_offset_rate_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_RATE, Float32, latch=True, tcp_nodelay=True)
         self.image_pub = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
-        self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.cyl_height_pub = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
+
+        self.cyl_lock_x_pub = rospy.Publisher(TOPIC_CYL_LOCK_X, Int8, latch=True, tcp_nodelay=True)
+        self.cyl_lock_y_pub = rospy.Publisher(TOPIC_CYL_LOCK_Y, Int8, latch=True, tcp_nodelay=True)
 
         self.pushover_pub = rospy.Publisher('note', String)
         self.save_pub = rospy.Publisher('save_object', UInt32)
@@ -288,9 +291,11 @@ class Node(object):
                 self.v_offset_rate_pub.publish(v_rate)
 
                 if self.rad_locked > 0:
-                    self.cyl_centre_pub.publish(fly_x,fly_y,0)
+                    self.cyl_lock_x_pub.publish(1)
+                    self.cyl_lock_y_pub.publish(1)
                 else:
-                    self.cyl_centre_pub.publish(0,0,0)
+                    self.cyl_lock_x_pub.publish(-1)
+                    self.cyl_lock_y_pub.publish(-1)
 
                 self.log.framenumber = framenumber
 
@@ -380,7 +385,9 @@ class Node(object):
         self.rotation_velocity_pub.publish(0)
 
         self.cyl_radius_pub.publish(0.5)
-        self.cyl_centre_pub.publish(0,0,0)
+
+        self.cyl_lock_x_pub.publish(-1)
+        self.cyl_lock_y_pub.publish(-1)
 
         if (self.ratio_total > 2) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:

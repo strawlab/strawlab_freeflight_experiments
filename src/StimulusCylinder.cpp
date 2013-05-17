@@ -62,9 +62,9 @@ private:
     double                              _v_offset_rate;
     bool                                _v_offset_value_mode;
     bool                                _slave;
-    bool                                _lock_pose_x;
-    bool                                _lock_pose_y;
-    bool                                _lock_pose_z;
+    int                                 _lock_pose_x;
+    int                                 _lock_pose_y;
+    int                                 _lock_pose_z;
     Poco::SharedMemory                  _mem;
     Poco::NamedMutex                    _memlock;
 
@@ -87,9 +87,9 @@ StimulusCylinder::StimulusCylinder() :
     _angular_position(0),
     _angular_velocity(0),
     _angular_position_mode(true),
-    _lock_pose_x(false),
-    _lock_pose_y(false),
-    _lock_pose_z(false),
+    _lock_pose_x(0),
+    _lock_pose_y(0),
+    _lock_pose_z(0),
     _v_offset_value(0),
     _v_offset_rate(0),
     _v_offset_value_mode(true),
@@ -185,11 +185,11 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
     } else if (topic_name=="cylinder_centre") {
         result = "geometry_msgs/Vector3";
     } else if (topic_name=="cylinder_lock_pose_x") {
-        result = "std_msgs/UInt8";
+        result = "std_msgs/Int8";
     } else if (topic_name=="cylinder_lock_pose_y") {
-        result = "std_msgs/UInt8";
+        result = "std_msgs/Int8";
     } else if (topic_name=="cylinder_lock_pose_z") {
-        result = "std_msgs/UInt8";
+        result = "std_msgs/Int8";
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -226,20 +226,36 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
 
   tex_v_offset_uniform->set(shared->v_offset_value);
 
-
-  if (_lock_pose_x) {
+  //Hijack -ve values of lock pose have a special meaning; set the cylinder center to
+  //0,0,0. This is to stop a race in the rotation stimulus whereby the cylinder
+  //center is set back to 0,0,0 when we drop lock. In this situation, if the
+  //stimulus sends set_center and toggles _lock_pose, if a pose message arrives
+  //between set_center and _lock_pose = false the the center could move.
+  if (_lock_pose_x != 0) {
       const osg::Vec3& orig_center = _cylinder->getCenter();
-      set_cylinder_position(observer_position[0], orig_center[1], orig_center[2]-(0.5*DEFAULT_HEIGHT));
+      set_cylinder_position(
+            _lock_pose_x < 0 ? 0 : observer_position[0],
+            _lock_pose_x < 0 ? 0 : orig_center[1],
+            _lock_pose_x < 0 ? 0 : orig_center[2]-(0.5*DEFAULT_HEIGHT)
+      );
   }
 
-  if (_lock_pose_y) {
+  if (_lock_pose_y != 0) {
       const osg::Vec3& orig_center = _cylinder->getCenter();
-      set_cylinder_position(orig_center[0], observer_position[1], orig_center[2]-(0.5*DEFAULT_HEIGHT));
+      set_cylinder_position(
+            _lock_pose_y < 0 ? 0 : orig_center[0],
+            _lock_pose_y < 0 ? 0 : observer_position[1],
+            _lock_pose_y < 0 ? 0 : orig_center[2]-(0.5*DEFAULT_HEIGHT)
+      );
   }
 
-  if (_lock_pose_z) {
+  if (_lock_pose_z != 0) {
       const osg::Vec3& orig_center = _cylinder->getCenter();
-      set_cylinder_position(orig_center[0], orig_center[1], observer_position[2]);
+      set_cylinder_position(
+            _lock_pose_z < 0 ? 0 : orig_center[0],
+            _lock_pose_z < 0 ? 0 : orig_center[1],
+            _lock_pose_z < 0 ? 0 : observer_position[2]
+      );
   }
 
   osg::Quat quat = osg::Quat(shared->angular_position, osg::Vec3(0,0,1));
