@@ -62,6 +62,9 @@ private:
     double                              _v_offset_rate;
     bool                                _v_offset_value_mode;
     bool                                _slave;
+    bool                                _lock_pose_x;
+    bool                                _lock_pose_y;
+    bool                                _lock_pose_z;
     Poco::SharedMemory                  _mem;
     Poco::NamedMutex                    _memlock;
 
@@ -84,6 +87,9 @@ StimulusCylinder::StimulusCylinder() :
     _angular_position(0),
     _angular_velocity(0),
     _angular_position_mode(true),
+    _lock_pose_x(false),
+    _lock_pose_y(false),
+    _lock_pose_z(false),
     _v_offset_value(0),
     _v_offset_rate(0),
     _v_offset_value_mode(true),
@@ -116,6 +122,9 @@ std::vector<std::string> StimulusCylinder::get_topic_names() const
     result.push_back("cylinder_v_offset_rate");
     result.push_back("cylinder_image");
     result.push_back("cylinder_centre");
+    result.push_back("cylinder_lock_pose_x");
+    result.push_back("cylinder_lock_pose_y");
+    result.push_back("cylinder_lock_pose_z");
     return result;
 }
 
@@ -144,6 +153,12 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
     } else if (topic_name=="cylinder_centre") {
         osg::Vec3 position = parse_vec3(root);
         set_cylinder_position(position.x(),position.y(),position.z());
+    } else if (topic_name=="cylinder_lock_pose_x") {
+        _lock_pose_x = parse_int(root);
+    } else if (topic_name=="cylinder_lock_pose_y") {
+        _lock_pose_y = parse_int(root);
+    } else if (topic_name=="cylinder_lock_pose_z") {
+        _lock_pose_z = parse_int(root);
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -169,6 +184,12 @@ std::string StimulusCylinder::get_message_type(const std::string& topic_name) co
         result = "std_msgs/String";
     } else if (topic_name=="cylinder_centre") {
         result = "geometry_msgs/Vector3";
+    } else if (topic_name=="cylinder_lock_pose_x") {
+        result = "std_msgs/UInt8";
+    } else if (topic_name=="cylinder_lock_pose_y") {
+        result = "std_msgs/UInt8";
+    } else if (topic_name=="cylinder_lock_pose_z") {
+        result = "std_msgs/UInt8";
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -204,6 +225,22 @@ void StimulusCylinder::update( const double& time, const osg::Vec3& observer_pos
   }
 
   tex_v_offset_uniform->set(shared->v_offset_value);
+
+
+  if (_lock_pose_x) {
+      const osg::Vec3& orig_center = _cylinder->getCenter();
+      set_cylinder_position(observer_position[0], orig_center[1], orig_center[2]-(0.5*DEFAULT_HEIGHT));
+  }
+
+  if (_lock_pose_y) {
+      const osg::Vec3& orig_center = _cylinder->getCenter();
+      set_cylinder_position(orig_center[0], observer_position[1], orig_center[2]-(0.5*DEFAULT_HEIGHT));
+  }
+
+  if (_lock_pose_z) {
+      const osg::Vec3& orig_center = _cylinder->getCenter();
+      set_cylinder_position(orig_center[0], orig_center[1], observer_position[2]);
+  }
 
   osg::Quat quat = osg::Quat(shared->angular_position, osg::Vec3(0,0,1));
   _cylinder->setRotation(quat);
