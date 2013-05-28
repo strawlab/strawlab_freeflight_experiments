@@ -77,10 +77,9 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
     print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
     print "fmf ranges from", fmftimestamps[0], "to", fmftimestamps[-1]
 
-    try:
-        t0 = fmf.get_frame_at_or_before_timestamp(timestamps[0])[1]
-    except ValueError, e:
-        raise IOError(fmf_fname)
+    t0 = max(timestamps[0],fmftimestamps[0])
+    if t0 > min(timestamps[-1],fmftimestamps[-1]):
+        raise IOError("%s (contains no overlapping time period)" % fmf_fname)
 
     #define the size of the output
     device_y0 = MARGIN
@@ -112,7 +111,13 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
 
     tfirst = None
     for n,(t,uv,xyz,framenumber) in enumerate(zip(timestamps,pixel,xyz,valid['framenumber'])):
-        img,ts = fmf.get_frame_at_or_before_timestamp(t)
+
+        pbar.update(n)
+
+        try:
+            img,ts = fmf.get_frame_at_or_before_timestamp(t)
+        except ValueError:
+            continue
 
         if ts > t0:
             t0 = ts
@@ -197,8 +202,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
                     _canv.text(str(framenumber),m["dw"]-100,m["dh"]-20, color_rgba=(0.5,0.5,0.5,1.0))
                         
             canv.save()
-
-        pbar.update(n)
 
     pbar.finish()
 

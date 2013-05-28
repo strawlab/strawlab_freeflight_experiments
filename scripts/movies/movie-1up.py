@@ -68,15 +68,20 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix):
     print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
     print "fmf ranges from", fmftimestamps[0], "to", fmftimestamps[-1]
 
-    try:
-        t0 = fmf.get_frame_at_or_before_timestamp(timestamps[0])[1]
-    except ValueError, e:
-        raise IOError(fmf_fname)
+    t0 = max(timestamps[0],fmftimestamps[0])
+    if t0 > min(timestamps[-1],fmftimestamps[-1]):
+        raise IOError("%s (contains no overlapping time period)" % fmf_fname)
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 
     for n,(t,uv,xyz) in enumerate(zip(timestamps,pixel,xyz)):
-        img,ts = fmf.get_frame_at_or_before_timestamp(t)
+
+        pbar.update(n)
+
+        try:
+            img,ts = fmf.get_frame_at_or_before_timestamp(t)
+        except ValueError:
+            continue
 
         if ts > t0:
             t0 = ts
@@ -94,8 +99,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix):
             #color is BGR
             cv2.circle(rgb_image, tuple(map(int,uv)), 10, (0, 0, 255), 3)
             cv2.imwrite(imgfname,rgb_image)
-
-        pbar.update(n)
 
     pbar.finish()
 
