@@ -36,7 +36,10 @@ import analysislib.movie
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
-def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_framenumber):
+ZOOM_REGION_WH = 50
+ZOOM_REGION_DISPLAY_WH = 100
+
+def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_framenumber, zoom_fly):
     h5 = tables.openFile(h5_file, mode='r')
     trajectories = h5.root.trajectories
     dt = 1.0/trajectories.attrs['frames_per_second']
@@ -47,7 +50,10 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
 
-    movie = analysislib.movie.MovieMaker(tmpdir, "%s_2up" % obj_id)
+    movie = analysislib.movie.MovieMaker(
+                tmpdir,
+                ("%s_2up" % obj_id) + ("_zoom" if zoom_fly else "")
+    )
 
     query = "obj_id == %d" % obj_id
     valid = trajectories.readWhere(query)
@@ -147,6 +153,16 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
                 _canv.imshow(rgb_image, 0,0, filter='best' )
                 _canv.scatter([col], [row], color_rgba=(1,0,0,0.8), radius=6, markeredgewidth=5 )
 
+            if zoom_fly:
+                #do the zoomed in part
+                z_w = ZOOM_REGION_WH//2
+                z_wd = ZOOM_REGION_DISPLAY_WH
+                z_image = rgb_image[row-z_w:row+z_w,col-z_w:col+z_w,:]
+                device_rect = (m["device_x0"], device_y0+m["dh"]-z_wd, z_wd, z_wd)
+                user_rect = (0,0,z_image.shape[1], z_image.shape[0])
+                with canv.set_user_coords(device_rect, user_rect) as _canv:
+                    _canv.imshow(z_image, 0,0, filter='nearest')
+
             m = panels["plot"]
             device_rect = (m["device_x0"], device_y0, m["dw"], m["dh"])
             user_rect = (0,0,m["width"], m["height"])
@@ -231,6 +247,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--no-framenumber', action='store_false', dest="framenumber", default="true",
         help='dont render the framenumber on the video')
+    parser.add_argument(
+        '--zoom-fly', action='store_true',
+        help='render zoomed region around fly')
 
     args = parser.parse_args()
 
@@ -267,7 +286,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.tfix, args.framenumber)
+            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.tfix, args.framenumber, args.zoom_fly)
         except IOError, e:
             print "missing file", e
 
