@@ -231,7 +231,7 @@ if __name__ == "__main__":
         tmpdir = tempfile.mkdtemp(str(obj_id), dir="/mnt/ssd/tmp/")
 
         try:
-            fmf_fname = autodata.files.get_fmf_file(uuid, obj_id)
+            fmf_fname = autodata.files.get_fmf_file(uuid, obj_id,"Basler_21266086",raise_exception=True)
             doit(h5_fname, fmf_fname, obj_id, tmpdir, outdir, sml='_sml')
         except autodata.files.NoFile, e:
             print "missing file", e

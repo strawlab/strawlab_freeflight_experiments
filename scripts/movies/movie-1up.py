@@ -117,14 +117,16 @@ if __name__ == "__main__":
         '--calibration', type=str, required=True,
         help='path to camera calibration file')
     parser.add_argument(
+        '--camera', type=str, default="Basler_21266086",
+        help='camera uuid that recorded fmf file')
+    parser.add_argument(
         '--tfix', type=float, default=0.0,
-        help='path to camera calibration file')
+        help='time offset to fixup movie')
     parser.add_argument(
         '--tmpdir', type=str, default='/tmp/',
         help='path to temporary directory')
 
     args = parser.parse_args()
-    outdir = args.outdir if args.outdir is not None else strawlab.constants.MOVIE_DIR
 
     if (not args.h5_file) and (not args.uuid):
         parser.error("Specify a UUID or a H5 file")
@@ -143,12 +145,14 @@ if __name__ == "__main__":
 
         h5_file = args.h5_file
 
+    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_move_dir(uuid)
+
     if args.fmf_file:
         obj_ids = [int(os.path.basename(fmf_file)[:-4]) for fmf_file in args.fmf_file]
         fmf_files = args.fmf_file
     else:
         obj_ids = args.idfilt
-        fmf_files = [autodata.files.get_fmf_file(uuid,obj_id,raise_exception=False) for obj_id in args.idfilt]
+        fmf_files = [autodata.files.get_fmf_file(uuid,obj_id,args.camera,raise_exception=False) for obj_id in args.idfilt]
 
     if not obj_ids:
         parser.error("You must specify --idfilt or --fmf-file")
