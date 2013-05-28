@@ -7,9 +7,12 @@ import autodata.files
 
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
 
-def get_default_args():
+def get_default_args(**kwargs):
     parser = get_parser()
-    return parser.parse_args("--zfilt trim --rfilt trim".split(' '))
+    args = parser.parse_args("--zfilt trim --rfilt trim".split(' '))
+    for k,v in kwargs.iteritems():
+        setattr(args,k,v)
+    return args
 
 def get_parser(*only_these_options):
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
