@@ -31,22 +31,24 @@ HOLD_COND = "midgray.osg"
 CONDITIONS = [
               "midgray.osg/+0.0/+0.0/0",
               "lboxmed.svg.osg/+0.0/+0.0/0",
-#              "lboxmed.svg.osg/+0.0/+0.0/1",
-#              "lboxmed.svg.osg/+0.0/+0.0/5",
-#              "lboxmed.svg.osg/+0.0/+0.0/25",
-#              "lboxmed.svg.osg/+0.0/+0.0/125",
-#              "lboxmed.svg.osg/+0.0/+0.0/625",
-#              "lboxmed.svg.osg/+0.0/+0.0/-1",
+              "lboxmed.svg.osg/+0.0/+0.0/0",
+              "lboxmed.svg.osg/+0.0/+0.0/0",
+              "lboxmed.svg.osg/+0.0/+0.0/1",
+              "lboxmed.svg.osg/+0.0/+0.0/5",
+              "lboxmed.svg.osg/+0.0/+0.0/25",
+              "lboxmed.svg.osg/+0.0/+0.0/125",
+              "lboxmed.svg.osg/+0.0/+0.0/625",
+              "lboxmed.svg.osg/+0.0/+0.0/-1",
 ]
-START_CONDITION = CONDITIONS[1]
-COOL_CONDITIONS = set()#set(["lboxmed.svg.osg/+0.0/+0.0/0"])#set()
+START_CONDITION = 1
+COOL_CONDITIONS = set(["lboxmed.svg.osg/+0.0/+0.0/0"])#set()
 
 CONTROL_RATE = 40.0
 
 SWITCH_MODE_TIME    = 5.0*60
 FLY_DIST_CHECK_TIME = 5.0
 
-FLY_DIST_MIN_DIST = 0.2
+FLY_DIST_MIN_DIST = 0.15
 
 START_RADIUS    = 0.12
 START_ZDIST     = 0.4
@@ -119,13 +121,13 @@ class Node(object):
         msg.orientation.w = 1
         return msg
 
-    def switch_conditions(self,event,force=''):
-        if force:
-            self.condition = force
+    def switch_conditions(self,event,force=None):
+        if force is not None and type(force) is int:
+            self.condition_n = force
         else:
-            i = CONDITIONS.index(self.condition)
-            j = (i+1) % len(CONDITIONS)
-            self.condition = CONDITIONS[j]
+            self.condition_n = (self.condition_n+1) % len(CONDITIONS)
+
+        self.condition = CONDITIONS[self.condition_n]
 
         self.stimulus_filename = self.condition.split('/')[0]
         self.x0,self.y0 = map(float,self.condition.split('/')[1:-1])
