@@ -49,6 +49,8 @@ if __name__=='__main__':
     aplt.save_args(args, combine)
     aplt.save_results(combine)
 
+    aplt.save_longest_flights(combine, args, maxn=10)
+
     aplt.plot_trial_times(combine, args,
                 name="%s.trialtimes" % fname)
 
