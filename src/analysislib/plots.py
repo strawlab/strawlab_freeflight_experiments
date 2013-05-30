@@ -394,9 +394,9 @@ def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
     with open(name, 'w') as f:
         l = "number of loops"
         f.write("%s\n"%l)
-        f.write("%s\n\n"%('-'*len(l)))
+        f.write("%s\n"%('-'*len(l)))
         for l in best:
-            f.write("### %s\n\n"%l)
+            f.write("\n### %s\n\n"%l)
             f.write("|%s|%s|\n" % (
                         "obj id".ljust(COL_WIDTH),
                         "nloops".ljust(COL_WIDTH))
@@ -440,9 +440,9 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
     with open(name, 'w') as f:
         l = "longest trajectories"
         f.write("%s\n"%l)
-        f.write("%s\n\n"%('-'*len(l)))
+        f.write("%s\n"%('-'*len(l)))
         for l in best:
-            f.write("### %s\n\n"%l)
+            f.write("\n### %s\n\n"%l)
             f.write("|%s|%s|%s|\n" % (
                         "obj id".ljust(COL_WIDTH),
                         "nframes".ljust(COL_WIDTH),
