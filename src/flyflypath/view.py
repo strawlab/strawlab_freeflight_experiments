@@ -73,11 +73,17 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.stroke()
 
         for pt,rgb in pts:
+            offset = 12
             if pt is not None:
                 cr.set_source_rgb (*rgb)
                 cr.move_to(pt.x, pt.y)
                 cr.arc(pt.x, pt.y, 2, 0, 2.0 * math.pi)
                 cr.fill()
+                cr.move_to(5,offset)
+                cr.show_text("z: %.2f" % pt.z)
+                cr.stroke()
+                offset += 10
+
 
         if poly:
             #draw the approximation

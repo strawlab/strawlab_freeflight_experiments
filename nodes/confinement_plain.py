@@ -176,7 +176,7 @@ class Node(object):
                         continue
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
-                self.srcpx_pub.publish(px,py,0)
+                self.srcpx_pub.publish(px,py,fly_z)
 
             #don't need to record anything at the control rate
             #self.log.framenumber = framenumber

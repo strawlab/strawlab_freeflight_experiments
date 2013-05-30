@@ -6,7 +6,7 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from std_msgs.msg import String, UInt32, Bool
-from geometry_msgs.msg import Vector3, PoseArray
+from geometry_msgs.msg import Vector3, PoseArray, Point
 
 import flyflypath.model
 import flyflypath.view
@@ -70,13 +70,13 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
 
     def _on_source_move(self, msg):
         try:
-            self._src = Point2(int(msg.x),int(msg.y))
+            self._src = Point(int(msg.x),int(msg.y),msg.z)
         except:
             pass
 
     def _on_target_move(self, msg):
         try:
-            self._trg = Point2(int(msg.x),int(msg.y))
+            self._trg = Point(int(msg.x),int(msg.y),msg.z)
         except:
             pass
 
@@ -85,15 +85,18 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
 
     def get_vec_and_points(self):
         vecs = []
-        src_pt = self._src
-        trg_pt = self._trg
+        with self._lock:
+            src_pt = self._src
+            trg_pt = self._trg
         if self._src is not None and self._trg is not None:
-            with self._lock:
-                try:
-                    vecs.append( LineSegment2(self._src,self._trg) )
-                except AttributeError:
-                    #zero length line
-                    pass
+            try:
+                vecs.append( LineSegment2(
+                                Point2(self._src.x,self._src.y),
+                                Point2(self._trg.x,self._trg.y))
+                )
+            except AttributeError:
+                #zero length line
+                pass
 
         pts = [ (trg_pt,(0,1,0)) ]
         if self._active:

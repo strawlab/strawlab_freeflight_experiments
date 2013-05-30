@@ -274,9 +274,9 @@ class Node(object):
                 v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
-                self.src_pub.publish(px,py,0)
+                self.src_pub.publish(px,py,fly_z)
                 trg_px, trg_py = XFORM.xy_to_pxpy(trg_x,trg_y)
-                self.trg_pub.publish(trg_px,trg_py,0)
+                self.trg_pub.publish(trg_px,trg_py,START_Z)
 
                 self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
