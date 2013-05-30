@@ -31,14 +31,14 @@ HOLD_COND = "midgray.osg"
 CONDITIONS = [
               "midgray.osg/+0.0/+0.0/0",
               "lboxmed.svg.osg/+0.0/+0.0/0",
-              "lboxmed.svg.osg/+0.0/+0.0/0",
-              "lboxmed.svg.osg/+0.0/+0.0/0",
-              "lboxmed.svg.osg/+0.0/+0.0/1",
-              "lboxmed.svg.osg/+0.0/+0.0/5",
-              "lboxmed.svg.osg/+0.0/+0.0/25",
-              "lboxmed.svg.osg/+0.0/+0.0/125",
-              "lboxmed.svg.osg/+0.0/+0.0/625",
-              "lboxmed.svg.osg/+0.0/+0.0/-1",
+#              "lboxmed.svg.osg/+0.0/+0.0/0",
+#              "lboxmed.svg.osg/+0.0/+0.0/0",
+#              "lboxmed.svg.osg/+0.0/+0.0/1",
+#              "lboxmed.svg.osg/+0.0/+0.0/5",
+#              "lboxmed.svg.osg/+0.0/+0.0/25",
+#              "lboxmed.svg.osg/+0.0/+0.0/125",
+#              "lboxmed.svg.osg/+0.0/+0.0/625",
+#              "lboxmed.svg.osg/+0.0/+0.0/-1",
 ]
 START_CONDITION = 1
 COOL_CONDITIONS = set(["lboxmed.svg.osg/+0.0/+0.0/0"])#set()
