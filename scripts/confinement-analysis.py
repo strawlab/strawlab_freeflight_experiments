@@ -1,9 +1,10 @@
+#!/usr/bin/env python
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-sys.path.append('../nodes')
+sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import confinement
 
 import roslib
