@@ -3,6 +3,11 @@ import os.path
 import sys
 import operator
 import numpy as np
+
+if not os.environ.get('DISPLAY'):
+    import matplotlib
+    matplotlib.use('agg')
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
