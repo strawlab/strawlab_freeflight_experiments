@@ -162,6 +162,8 @@ void StimulusCylinder::receive_json_message(const std::string& topic_name, const
     } else {
         throw std::runtime_error("unknown topic name");
     }
+
+    json_decref(root);
 }
 
 std::string StimulusCylinder::get_message_type(const std::string& topic_name) const
