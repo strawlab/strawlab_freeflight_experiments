@@ -230,6 +230,8 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
     z = json_number_value( data_json );
 
     setVelocity(x,y,z);
+
+    json_decref(root);
 }
 
 void StimulusStarField::setVelocity(double x, double y, double z) {

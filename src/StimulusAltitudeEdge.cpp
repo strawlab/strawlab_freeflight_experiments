@@ -99,6 +99,7 @@ void StimulusAltitudeEdge::receive_json_message(const std::string& topic_name,
     _edge_height = json_number_value( data_json );
     edge_height_uniform->set(_edge_height);
 
+    json_decref(root);
 }
 
 std::string StimulusAltitudeEdge::get_message_type(const std::string& topic_name) const {

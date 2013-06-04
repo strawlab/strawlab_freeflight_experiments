@@ -419,6 +419,8 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     } else {
         throw std::runtime_error("unknown topic name");
     }
+
+    json_decref(root);
 }
 
 void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {

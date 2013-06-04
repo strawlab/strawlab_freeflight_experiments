@@ -271,6 +271,8 @@ void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_na
     } else {
         throw std::runtime_error("unknown topic name");
     }
+
+    json_decref(root);
 }
 
 void StimulusStarFieldAndModel::setVelocity(double x, double y, double z) {

@@ -199,6 +199,8 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     } else {
         throw std::runtime_error( string_format( "error: in %s(%d): unknown topic\n", __FILE__, __LINE__));
     }
+
+    json_decref(root);
 }
 
 std::string get_message_type(const std::string& topic_name) const {
