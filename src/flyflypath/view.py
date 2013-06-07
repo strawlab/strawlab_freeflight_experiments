@@ -72,8 +72,8 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.line_to(vec.p2.x,vec.p2.y)
             cr.stroke()
 
+        offset = 12
         for pt,rgb in pts:
-            offset = 12
             if pt is not None:
                 cr.set_source_rgb (*rgb)
                 cr.move_to(pt.x, pt.y)
@@ -82,7 +82,7 @@ class SvgPathWidget(Gtk.DrawingArea):
                 cr.move_to(5,offset)
                 cr.show_text("z: %.2f" % pt.z)
                 cr.stroke()
-                offset += 10
+                offset += 12
 
 
         if poly:
