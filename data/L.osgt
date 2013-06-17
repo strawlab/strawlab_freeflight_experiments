@@ -1,0 +1,530 @@
+#Ascii Scene
+#Version 92
+#Generator osgexport 0.13.0
+
+osg::Group {
+  UniqueID 58
+  Name "Root"
+  StateSet TRUE {
+    osg::StateSet {
+      UniqueID 59
+      ModeList 2 {
+        GL_LIGHT1 ON
+        GL_LIGHT0 ON
+      }
+      AttributeList 2 {
+        osg::LightModel {
+          UniqueID 60
+          AmbientIntensity 0.00000 0.00000 0.00000 1.00000
+          ColorControl SEPARATE_SPECULAR_COLOR
+          LocalViewer FALSE
+        }
+        Value OFF
+        osg::Material {
+          UniqueID 61
+          Ambient TRUE Front 0.00000 0.00000 0.00000 1.00000 Back 0.00000 0.00000 0.00000 1.00000
+          Diffuse TRUE Front 0.64000 0.64000 0.64000 1.00000 Back 0.64000 0.64000 0.64000 1.00000
+          Specular TRUE Front 0.50000 0.50000 0.50000 1.00000 Back 0.50000 0.50000 0.50000 1.00000
+          Emission TRUE Front 0.00000 0.00000 0.00000 1.00000 Back 0.00000 0.00000 0.00000 1.00000
+          Shininess TRUE Front 10.00000 Back 10.00000
+        }
+        Value OFF
+      }
+    }
+  }
+  Children 5 {
+    osg::MatrixTransform {
+      UniqueID 0
+      Name "Point"
+      Children 1 {
+        osg::LightSource {
+          UniqueID 1
+          Name "Point"
+          Light TRUE {
+            osg::Light {
+              UniqueID 2
+              UserDataContainer TRUE {
+                osg::DefaultUserDataContainer {
+                  UniqueID 3
+                  UDC_UserObjects 9 {
+                    osg::StringValueObject {
+                      UniqueID 4
+                      Name "source"
+                      Value "blender"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 5
+                      Name "Energy"
+                      Value "1.0"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 6
+                      Name "Color"
+                      Value "[ 1.000000, 1.000000, 1.000000 ]"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 7
+                      Name "UseDiffuse"
+                      Value "true"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 8
+                      Name "UseSpecular"
+                      Value "true"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 9
+                      Name "Distance"
+                      Value "25.0"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 10
+                      Name "FalloffType"
+                      Value "INVERSE_SQUARE"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 11
+                      Name "UseSphere"
+                      Value "false"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 12
+                      Name "Type"
+                      Value "POINT"
+                    }
+                  }
+                }
+              }
+              LightNum 1
+              Ambient 1.00000 1.00000 1.00000 1.00000
+              Diffuse 1.00000 1.00000 1.00000 1.00000
+              Specular 1.00000 1.00000 1.00000 1.00000
+              Position 0.00000 0.00000 0.00000 1.00000
+              Direction 0.00000 0.00000 -1.00000
+              ConstantAttenuation 0.00000
+              LinearAttenuation 0.00000
+              QuadraticAttenuation 0.04000
+              SpotExponent 0.00000
+              SpotCutoff 180.00000
+            }
+          }
+        }
+      }
+      Matrix {
+        1.00000 0.00000 0.00000 0.00000
+        0.00000 1.00000 0.00000 0.00000
+        0.00000 0.00000 1.00000 0.00000
+        0.06009 0.01930 -1.44565 1.00000
+      }
+    }
+    osg::MatrixTransform {
+      UniqueID 14
+      Name "Camera.001"
+      Matrix {
+        1.00000 0.00000 0.00000 0.00000
+        0.00000 1.00000 0.00000 0.00000
+        0.00000 0.00000 1.00000 0.00000
+        0.06009 0.01930 -1.44565 1.00000
+      }
+    }
+    osg::MatrixTransform {
+      UniqueID 16
+      Name "Camera"
+      Matrix {
+        0.94328 -0.33198 -0.00000 0.00000
+        0.28770 0.81745 0.49901 0.00000
+        -0.16566 -0.47071 0.86660 0.00000
+        -0.76596 -2.38596 6.95429 1.00000
+      }
+    }
+    osg::MatrixTransform {
+      UniqueID 18
+      Name "Cube"
+      Children 1 {
+        osg::Geode {
+          UniqueID 43
+          Name "GeodeCube"
+          Drawables 1 {
+            osg::Geometry {
+              UniqueID 20
+              Name "Cube"
+              StateSet TRUE {
+                osg::StateSet {
+                  UniqueID 21
+                  Name "Material"
+                  DataVariance DYNAMIC
+                  UserDataContainer TRUE {
+                    osg::DefaultUserDataContainer {
+                      UniqueID 35
+                      UDC_UserObjects 5 {
+                        osg::StringValueObject {
+                          UniqueID 36
+                          Name "source"
+                          Value "blender"
+                        }
+                        osg::StringValueObject {
+                          UniqueID 38
+                          Name "00_DiffuseColor"
+                          Value "1.0"
+                        }
+                        osg::StringValueObject {
+                          UniqueID 39
+                          Name "00_BlendType"
+                          Value "MIX"
+                        }
+                        osg::StringValueObject {
+                          UniqueID 41
+                          Name "01_DiffuseColor"
+                          Value "0.26229506731033325"
+                        }
+                        osg::StringValueObject {
+                          UniqueID 42
+                          Name "01_BlendType"
+                          Value "MIX"
+                        }
+                      }
+                    }
+                  }
+                  AttributeList 1 {
+                    osg::Material {
+                      UniqueID 22
+                      Name "Material"
+                      DataVariance DYNAMIC
+                      UserDataContainer TRUE {
+                        osg::DefaultUserDataContainer {
+                          UniqueID 23
+                          UDC_UserObjects 11 {
+                            osg::StringValueObject {
+                              UniqueID 24
+                              Name "source"
+                              Value "blender"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 25
+                              Name "DiffuseIntensity"
+                              Value "0.800000011920929"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 26
+                              Name "DiffuseColor"
+                              Value "[ 0.800000, 0.800000, 0.800000 ]"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 27
+                              Name "SpecularIntensity"
+                              Value "0.0"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 28
+                              Name "SpecularColor"
+                              Value "[ 1.000000, 1.000000, 1.000000 ]"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 29
+                              Name "SpecularHardness"
+                              Value "50"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 30
+                              Name "Emit"
+                              Value "0.49599963426589966"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 31
+                              Name "Ambient"
+                              Value "1.0"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 32
+                              Name "Translucency"
+                              Value "0.0"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 33
+                              Name "DiffuseShader"
+                              Value "LAMBERT"
+                            }
+                            osg::StringValueObject {
+                              UniqueID 34
+                              Name "SpecularShader"
+                              Value "COOKTORR"
+                            }
+                          }
+                        }
+                      }
+                      Ambient TRUE Front 0.00000 0.00000 0.00000 1.00000 Back 0.00000 0.00000 0.00000 1.00000
+                      Diffuse TRUE Front 0.64000 0.64000 0.64000 1.00000 Back 0.64000 0.64000 0.64000 1.00000
+                      Specular TRUE Front 0.00000 0.00000 0.00000 1.00000 Back 0.00000 0.00000 0.00000 1.00000
+                      Emission TRUE Front 0.39680 0.39680 0.39680 1.00000 Back 0.39680 0.39680 0.39680 1.00000
+                      Shininess TRUE Front 12.50000 Back 12.50000
+                    }
+                    Value OFF
+                  }
+                  TextureModeList 2 {
+                    Data 1 {
+                      GL_TEXTURE_2D ON
+                    }
+                    Data 1 {
+                      GL_TEXTURE_2D ON
+                    }
+                  }
+                  TextureAttributeList 2 {
+                    Data 1 {
+                      osg::Texture2D {
+                        UniqueID 37
+                        Name "Texture"
+                        WRAP_S REPEAT
+                        WRAP_T REPEAT
+                        WRAP_R REPEAT
+                        MIN_FILTER LINEAR_MIPMAP_LINEAR
+                        MAG_FILTER LINEAR
+                        Image TRUE {
+                          UniqueID 62
+                          FileName "L_colors.png"
+                          WriteHint 0 2
+                        }
+                      }
+                      Value OFF
+                    }
+                    Data 1 {
+                      osg::Texture2D {
+                        UniqueID 40
+                        Name "Texture.001"
+                        WRAP_S REPEAT
+                        WRAP_T REPEAT
+                        WRAP_R REPEAT
+                        MIN_FILTER LINEAR_MIPMAP_LINEAR
+                        MAG_FILTER LINEAR
+                        Image TRUE {
+                          UniqueID 63
+                          FileName "L_UV_Checker_Map.jpg"
+                          WriteHint 0 2
+                        }
+                      }
+                      Value OFF
+                    }
+                  }
+                }
+              }
+              PrimitiveSetList 1 {
+                  DrawElementsUInt GL_QUADS 32 {
+                    0 1 2 3 
+                    4 5 6 7 
+                    8 9 10 11 
+                    12 13 14 15 
+                    16 17 18 19 
+                    14 20 21 15 
+                    22 23 24 25 
+                    2 26 27 3 
+                  }
+              }
+              VertexData {
+                Array TRUE ArrayID 0 Vec3fArray 28 {
+                  -1.00000 -1.00000 2.23897
+                  -1.00000 -1.00000 -1.00000
+                  -1.00000 1.00000 -1.00000
+                  -1.00000 1.00000 2.23897
+                  1.00000 1.00000 2.23897
+                  1.00000 3.09786 2.23897
+                  1.00000 3.09786 -1.00000
+                  1.00000 1.00000 -1.00000
+                  1.00000 1.00000 -1.00000
+                  2.34539 1.00000 -1.00000
+                  2.34539 1.00000 2.23897
+                  1.00000 1.00000 2.23897
+                  -1.00000 -1.00000 -1.00000
+                  -1.00000 -1.00000 2.23897
+                  1.00000 -1.00000 2.23897
+                  1.00000 -1.00000 -1.00000
+                  2.34539 1.00000 2.23897
+                  2.34539 1.00000 -1.00000
+                  2.34539 -1.00000 -1.00000
+                  2.34539 -1.00000 2.23897
+                  2.34539 -1.00000 2.23897
+                  2.34539 -1.00000 -1.00000
+                  -1.00000 3.09786 2.23897
+                  -1.00000 3.09786 -1.00000
+                  1.00000 3.09786 -1.00000
+                  1.00000 3.09786 2.23897
+                  -1.00000 3.09786 -1.00000
+                  -1.00000 3.09786 2.23897
+                }
+                Indices FALSE
+                Binding BIND_PER_VERTEX
+                Normalize 0
+              }
+              NormalData {
+                Array TRUE ArrayID 1 Vec3fArray 28 {
+                  1.00000 0.00000 0.00000
+                  1.00000 0.00000 0.00000
+                  1.00000 0.00000 0.00000
+                  1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  0.00000 -1.00000 -0.00000
+                  0.00000 -1.00000 -0.00000
+                  0.00000 -1.00000 -0.00000
+                  0.00000 -1.00000 -0.00000
+                  0.00000 1.00000 0.00000
+                  0.00000 1.00000 0.00000
+                  0.00000 1.00000 0.00000
+                  0.00000 1.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  -1.00000 0.00000 0.00000
+                  0.00000 1.00000 -0.00000
+                  0.00000 1.00000 -0.00000
+                  -0.00000 -1.00000 0.00000
+                  -0.00000 -1.00000 0.00000
+                  -0.00000 -1.00000 0.00000
+                  -0.00000 -1.00000 0.00000
+                  1.00000 0.00000 0.00000
+                  1.00000 0.00000 0.00000
+                }
+                Indices FALSE
+                Binding BIND_PER_VERTEX
+                Normalize 0
+              }
+              TexCoordData 2 {
+                Data {
+                  Array TRUE ArrayID 2 Vec2fArray 28 {
+                    0.50061 0.83990
+                    0.50061 0.67475
+                    0.58410 0.67475
+                    0.58410 0.83990
+                    1.00074 0.83990
+                    0.83376 0.83990
+                    0.83376 0.67475
+                    1.00074 0.67475
+                    0.00091 0.67475
+                    0.16656 0.67475
+                    0.16656 0.83990
+                    0.00091 0.83990
+                    0.50061 0.67475
+                    0.50061 0.83990
+                    0.41554 0.83990
+                    0.41554 0.67475
+                    0.16656 0.83990
+                    0.16656 0.67475
+                    0.33400 0.67475
+                    0.33400 0.83990
+                    0.33400 0.83990
+                    0.33400 0.67475
+                    0.66692 0.83990
+                    0.66692 0.67475
+                    0.83376 0.67475
+                    0.83376 0.83990
+                    0.66692 0.67475
+                    0.66692 0.83990
+                  }
+                  Indices FALSE
+                  Binding BIND_PER_VERTEX
+                  Normalize 0
+                }
+                Data {
+                  Array TRUE ArrayID 2
+                  Indices FALSE
+                  Binding BIND_PER_VERTEX
+                  Normalize 0
+                }
+              }
+            }
+          }
+        }
+      }
+      Matrix {
+        1.00000 0.00000 0.00000 0.00000
+        0.00000 1.00000 0.00000 0.00000
+        0.00000 0.00000 1.00000 0.00000
+        0.00000 0.00000 0.00000 1.00000
+      }
+    }
+    osg::MatrixTransform {
+      UniqueID 44
+      Name "Lamp"
+      Children 1 {
+        osg::LightSource {
+          UniqueID 45
+          Name "Lamp"
+          Light TRUE {
+            osg::Light {
+              UniqueID 46
+              UserDataContainer TRUE {
+                osg::DefaultUserDataContainer {
+                  UniqueID 47
+                  UDC_UserObjects 9 {
+                    osg::StringValueObject {
+                      UniqueID 48
+                      Name "source"
+                      Value "blender"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 49
+                      Name "Energy"
+                      Value "0.0"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 50
+                      Name "Color"
+                      Value "[ 1.000000, 1.000000, 1.000000 ]"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 51
+                      Name "UseDiffuse"
+                      Value "true"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 52
+                      Name "UseSpecular"
+                      Value "true"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 53
+                      Name "Distance"
+                      Value "29.999982833862305"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 54
+                      Name "FalloffType"
+                      Value "INVERSE_SQUARE"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 55
+                      Name "UseSphere"
+                      Value "false"
+                    }
+                    osg::StringValueObject {
+                      UniqueID 56
+                      Name "Type"
+                      Value "POINT"
+                    }
+                  }
+                }
+              }
+              LightNum 0
+              Ambient 1.00000 1.00000 1.00000 1.00000
+              Diffuse 0.00000 0.00000 0.00000 1.00000
+              Specular 0.00000 0.00000 0.00000 1.00000
+              Position 0.00000 0.00000 0.00000 1.00000
+              Direction 0.00000 0.00000 -1.00000
+              ConstantAttenuation 0.00000
+              LinearAttenuation 0.00000
+              QuadraticAttenuation 0.03333
+              SpotExponent 0.00000
+              SpotCutoff 180.00000
+            }
+          }
+        }
+      }
+      Matrix {
+        -0.29086 0.95517 -0.05519 0.00000
+        -0.77110 -0.19988 0.60452 0.00000
+        0.56639 0.21839 0.79467 0.00000
+        -0.60933 0.21189 3.72398 1.00000
+      }
+    }
+  }
+}
