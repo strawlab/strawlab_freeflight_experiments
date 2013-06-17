@@ -30,7 +30,9 @@ class StimulusOSGFile: public StimulusInterface
 {
 public:
 
-StimulusOSGFile() : model_scale(1.0,1.0,1.0) {
+StimulusOSGFile() : 
+    model_scale(1.0,1.0,1.0),
+    model_position(0.,0.,0.) {
     ;
 }
 
@@ -151,25 +153,16 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    if(!root) {
-        throw std::runtime_error(
-                format("invalid json on line: %d: %s",error.line, std::string(error.text)));
-    }
+    flyvr_assert(root != NULL);
 
     if (topic_name=="stimulus_filename") {
-        std::string stimulus_filename = parse_string(root);
-        std::cerr << "loading filename: " << stimulus_filename << std::endl;
-        _load_stimulus_filename( stimulus_filename );
+        _load_stimulus_filename( parse_string(root) );
     } else if (topic_name=="skybox_basename") {
-        std::string skybox_basename = parse_string(root);
-        std::cerr << "loading skybox filename: " << skybox_basename << std::endl;
-        _load_skybox_basename( skybox_basename );
+        _load_skybox_basename( parse_string(root) );
     } else if (topic_name=="model_pose") {
         json_t *data_json;
-
         data_json = json_object_get(root, "position");
         model_position = parse_vec3(data_json);
-
         data_json = json_object_get(root, "orientation");
         model_attitude = parse_quat(data_json);
         _update_pat();
