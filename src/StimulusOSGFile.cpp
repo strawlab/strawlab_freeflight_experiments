@@ -29,9 +29,14 @@ using Poco::format;
 class StimulusOSGFile: public StimulusInterface
 {
 public:
+
+StimulusOSGFile() : model_scale(1.0,1.0,1.0) {
+    ;
+}
+
 std::string name() const {
     return "StimulusOSGFile";
-  }
+}
 
 void _load_stimulus_filename( std::string osg_filename ) {
 
@@ -101,11 +106,13 @@ void _load_skybox_basename( std::string basename ) {
 void _update_pat() {
     flyvr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
+    switch_node->setScale( model_scale );
     switch_node->setAttitude( model_attitude );
 }
 
 virtual void post_init(bool slave) {
-  top = new osg::MatrixTransform; top->addDescription("virtual world top node");
+  top = new osg::MatrixTransform;
+  top->addDescription("virtual world top node");
 
   // when we first start, don't load any model, but create a node that is later deleted.
   switch_node = new osg::PositionAttitudeTransform;
@@ -135,6 +142,7 @@ std::vector<std::string> get_topic_names() const {
     result.push_back("stimulus_filename");
     result.push_back("skybox_basename");
     result.push_back("model_pose");
+    result.push_back("model_scale");
     return result;
 }
 
@@ -165,6 +173,9 @@ void receive_json_message(const std::string& topic_name, const std::string& json
         data_json = json_object_get(root, "orientation");
         model_attitude = parse_quat(data_json);
         _update_pat();
+    } else if (topic_name=="model_scale") {
+        model_scale = parse_vec3(root);
+        _update_pat();
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -181,6 +192,8 @@ std::string get_message_type(const std::string& topic_name) const {
         result = "std_msgs/String";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
+    } else if (topic_name=="model_scale") {
+        result = "geometry_msgs/Vector3";
     } else {
         throw std::runtime_error(format("unknown topic name: %s",topic_name));
     }
@@ -193,6 +206,7 @@ private:
     osg::ref_ptr<osg::MatrixTransform> top;
     osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
     osg::Vec3 model_position;
+    osg::Vec3 model_scale;
     osg::Quat model_attitude;
     osg::ref_ptr<osg::MatrixTransform> skybox_node;
 };
