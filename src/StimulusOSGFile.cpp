@@ -5,6 +5,7 @@
 #include "json2osg.hpp"
 
 #include "Poco/ClassLibrary.h"
+#include "Poco/Format.h"
 
 #include <iostream>
 
@@ -23,37 +24,7 @@
 
 #include <jansson.h>
 
-// this function from http://stackoverflow.com/a/8098080
-std::string string_format(const std::string &fmt, ...) {
-    int size=100;
-    std::string str;
-    va_list ap;
-    while (1) {
-        str.resize(size);
-        va_start(ap, fmt);
-        int n = vsnprintf((char *)str.c_str(), size, fmt.c_str(), ap);
-        va_end(ap);
-        if (n > -1 && n < size) {
-            str.resize(n);
-            return str;
-        }
-        if (n > -1)
-            size=n+1;
-        else
-            size*=2;
-    }
-}
-
-
-std::string join_path(std::string a,std::string b) {
-    // roughly inspired by Python's os.path.join
-    char pathsep = '/'; // TODO: FIXME: not OK on Windows.
-    if (a.at(a.size()-1)==pathsep) {
-        return a+b;
-    } else {
-        return a+std::string("/")+b;
-    }
-}
+using Poco::format;
 
 class StimulusOSGFile: public StimulusInterface
 {
@@ -86,7 +57,7 @@ void _load_stimulus_filename( std::string osg_filename ) {
     if (tmp!=NULL) {
         switch_node->addChild( tmp );
     } else {
-        throw std::runtime_error(string_format("File %s not found",osg_filename.c_str()));
+        throw std::runtime_error(format("File %s not found",osg_filename));
     }
 
     top->addChild(switch_node);
@@ -142,7 +113,6 @@ virtual void post_init(bool slave) {
   top->addChild(switch_node);
 
   _virtual_world = top;
-
 }
 
 osg::Vec4 get_clear_color() const {
@@ -174,9 +144,8 @@ void receive_json_message(const std::string& topic_name, const std::string& json
 
     root = json_loads(json_message.c_str(), 0, &error);
     if(!root) {
-        throw std::runtime_error(string_format(
-           "error: in %s(%d) on json line %d: %s\n", __FILE__, __LINE__,
-           error.line, error.text));
+        throw std::runtime_error(
+                format("invalid json on line: %d: %s",error.line, std::string(error.text)));
     }
 
     if (topic_name=="stimulus_filename") {
@@ -197,7 +166,7 @@ void receive_json_message(const std::string& topic_name, const std::string& json
         model_attitude = parse_quat(data_json);
         _update_pat();
     } else {
-        throw std::runtime_error( string_format( "error: in %s(%d): unknown topic\n", __FILE__, __LINE__));
+        throw std::runtime_error("unknown topic name");
     }
 
     json_decref(root);
@@ -213,7 +182,7 @@ std::string get_message_type(const std::string& topic_name) const {
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
     } else {
-        throw std::runtime_error(string_format("unknown topic name: %s",topic_name.c_str()));
+        throw std::runtime_error(format("unknown topic name: %s",topic_name));
     }
     return result;
 
