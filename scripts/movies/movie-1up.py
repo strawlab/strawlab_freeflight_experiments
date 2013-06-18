@@ -102,7 +102,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix):
 
     pbar.finish()
 
-    moviefname = movie.render(os.path.join(outdir,uuid))
+    moviefname = movie.render(outdir)
     movie.cleanup()
 
     print "wrote", moviefname
