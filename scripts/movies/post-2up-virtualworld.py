@@ -151,11 +151,19 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 
+    tfirst = None
     for n,(t,uv,xyz) in enumerate(zip(timestamps,pixel,xyz)):
-        img,ts = fmf.get_frame_at_or_before_timestamp(t)
+
+        pbar.update(n)
+
+        try:
+            img,ts = fmf.get_frame_at_or_before_timestamp(t)
+        except ValueError:
+            continue
 
         if ts > t0:
             t0 = ts
+            tfirst = ts if tfirst is None else tfirst
 
             col,row = uv
             x,y,z = xyz
@@ -197,8 +205,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
                 user_rect = (0,0,m["width"], m["height"])
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
                     _canv.imshow( scipy.misc.imread(myfname), 0,0, filter='best' )
-
-            pbar.update(n)
 
             canv.save()
 
