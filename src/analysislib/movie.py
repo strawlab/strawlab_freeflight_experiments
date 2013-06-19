@@ -1,6 +1,9 @@
 import os.path
 import tempfile
 import shutil
+import glob
+import numpy as np
+import scipy.misc
 
 import sh
 
@@ -44,4 +47,38 @@ class MovieMaker:
 
     def cleanup(self):
         shutil.rmtree(self.tmpdir)
+
+class ImageDirMovie:
+    """
+    Implements the same interface as FlyMovieFormat, but gets data from
+    a directory of images. To create such a directory, from a gopro mp4,
+    try
+     avconv -ss 00:00:00 -i GOPR0008.MP4 -r 60.0 %6d.png
+    """
+    def __init__(self, imgdir, fps, starttime, fmt="png"):
+        self._files = sorted(glob.glob(os.path.join(imgdir,"*.%s"%fmt)))
+
+        if not self._files:
+            raise Exception("No images found")
+
+        self._times = np.linspace(starttime,starttime+(len(self._files)/float(fps)),len(self._files))
+
+        self.height,self.width,nchan = self.get_frame(0)[0].shape
+        self.is_rgb = nchan == 3
+
+    def get_all_timestamps(self):
+        return self._times
+
+    def get_frame_at_or_before_timestamp(self, timestamp):
+        tss = self.get_all_timestamps()
+        at_or_before_timestamp_cond = tss <= timestamp
+        nz = np.nonzero(at_or_before_timestamp_cond)[0]
+        if len(nz)==0:
+            raise ValueError("no frames at or before timestamp given")
+        fno = nz[-1]
+        return self.get_frame(fno)
+
+    def get_frame(self, n):
+        return scipy.misc.imread(self._files[n]),self._times[n]
+
 
