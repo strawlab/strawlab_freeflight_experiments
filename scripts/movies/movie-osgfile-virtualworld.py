@@ -54,12 +54,13 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, framenum
 
     # setup camera position
     for name in VR_PANELS:
+        print "HAVE YOU SET THE CORRECT VIEW????"
         # easiest way to get these:
         #   rosservice call /ds_geometry/get_trackball_manipulator_state
         msg = flyvr.msg.TrackballManipulatorState()
         if name=='virtual_world':
             #used for the post movies
-            if 0:
+            if 1:
                 msg.rotation.x = -0.0563853703639
                 msg.rotation.y = -0.249313040186
                 msg.rotation.z = -0.959619648636
