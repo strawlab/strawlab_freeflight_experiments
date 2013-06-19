@@ -27,19 +27,17 @@ import geometry_msgs.msg
 
 roslib.load_manifest('flycave')
 import autodata.files
+import strawlab.constants
 
 roslib.load_manifest('flyvr')
 import flyvr.display_client
-
-CALIBRATION = '/home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag'
-OSG_FILE = 'posts3.osg'
 
 VR_PANELS = ['virtual_world']
 
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
-def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
+def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, framenumber, sml, osg_file_desc):
     h5 = tables.openFile(h5_file, mode='r')
     trajectories = h5.root.trajectories
     dt = 1.0/trajectories.attrs['frames_per_second']
@@ -52,27 +50,35 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
         dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
 
         renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
-        osgslaves[name] = flyvr.display_client.OSGFileStimulusSlave(dsc, OSG_FILE)
-
-
-    pub_stimulus = rospy.Publisher('stimulus_filename', std_msgs.msg.String, latch=True)
-    pub_stimulus.publish(OSG_FILE)
-
+        osgslaves[name] = flyvr.display_client.OSGFileStimulusSlave(dsc, osg_file_desc)
 
     # setup camera position
     for name in VR_PANELS:
         # easiest way to get these:
         #   rosservice call /ds_geometry/get_trackball_manipulator_state
+        msg = flyvr.msg.TrackballManipulatorState()
         if name=='virtual_world':
-            msg = flyvr.msg.TrackballManipulatorState()
-            msg.rotation.x = -0.0563853703639
-            msg.rotation.y = -0.249313040186
-            msg.rotation.z = -0.959619648636
-            msg.rotation.w = -0.117447128336
-            msg.center.x = -0.00815043784678
-            msg.center.y = -0.0655635818839
-            msg.center.z = 0.54163891077
-            msg.distance = 1.26881285595
+            #used for the post movies
+            if 0:
+                msg.rotation.x = -0.0563853703639
+                msg.rotation.y = -0.249313040186
+                msg.rotation.z = -0.959619648636
+                msg.rotation.w = -0.117447128336
+                msg.center.x = -0.00815043784678
+                msg.center.y = -0.0655635818839
+                msg.center.z = 0.54163891077
+                msg.distance = 1.26881285595
+            #used for the colored l box, more looking down
+            else:
+                msg.rotation.x = -0.0530832760665
+                msg.rotation.y = -0.0785547480223
+                msg.rotation.z = -0.986425433667
+                msg.rotation.w = -0.134075281764
+                msg.center.x = 0.0064534349367
+                msg.center.y = 0.0254454407841
+                msg.center.z = 0.522875547409
+                msg.distance = 1.00728635582
+
         elif name=='geometry':
             msg = flyvr.msg.TrackballManipulatorState()
             msg.rotation.x = 0.122742295197
@@ -89,9 +95,18 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
         if msg is not None:
             renderers[name].set_view(msg)
 
-    camera = camera_model.load_camera_from_bagfile( open(CALIBRATION) )
+    if calibration:
+        camera = camera_model.load_camera_from_bagfile( open(calibration) )
+    else:
+        camera = None
 
-    movie = analysislib.movie.MovieMaker(tmpdir, "%s%s" % (obj_id, sml))
+    movie = analysislib.movie.MovieMaker(
+                                tmpdir,
+                                "%s%s_%s%s" % (obj_id,
+                                               sml,
+                                               "_".join(VR_PANELS),
+                                               "" if fmf_fname.endswith(".fmf") else "_gopro")
+    )
 
     query = "obj_id == %d" % obj_id
     valid = trajectories.readWhere(query)
@@ -99,18 +114,28 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
     starts = trajectory_start_times.readWhere(query)
     start = starts['first_timestamp_secs'][0] + (starts['first_timestamp_nsecs'][0]*1e-9)
 
-    print "fmf fname", fmf_fname
-
-    fmf = motmot.FlyMovieFormat.FlyMovieFormat.FlyMovie(fmf_fname)
-    fmftimes = fmf.get_all_timestamps()
-
     timestamps = np.arange(
                         start,
                         start+(len(valid)*dt),
                         dt)
 
+    if fmf_fname.endswith(".fmf"):
+        print "fmf fname", fmf_fname
+        fmf = motmot.FlyMovieFormat.FlyMovieFormat.FlyMovie(fmf_fname)
+        movie_is_rgb = False #fixe
+    else:
+        path,fps,tstart = fmf_fname.split("|")
+        print "move from image frames in %s at %s fps (ts=%s)" % (path,fps,tstart)
+        fmf = analysislib.movie.ImageDirMovie(path,float(fps),float(tstart))
+        movie_is_rgb = fmf.is_rgb
+
+
     xyz = np.c_[valid['x'],valid['y'],valid['z']]
-    pixel = camera.project_3d_to_pixel(xyz)
+    if camera:
+        pixel = camera.project_3d_to_pixel(xyz)
+    else:
+        pixel = np.ones((xyz.shape[0],2),dtype=xyz.dtype)
+        pixel.fill(np.nan)
 
     print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
 
@@ -170,10 +195,13 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
             col,row = uv
             x,y,z = xyz
 
-            #see fmfcat commit for why this is right
-            rgb_image = cv2.cvtColor(img[:,1:],cv2.COLOR_BAYER_GR2RGB)
-            #and this is wrong?
-            #rgb_image = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2RGB)
+            if movie_is_rgb:
+                rgb_image = img
+            else:
+                #see fmfcat commit for why this is right
+                rgb_image = cv2.cvtColor(img[:,1:],cv2.COLOR_BAYER_GR2RGB)
+                #and this is wrong?
+                #rgb_image = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2RGB)
 
             imgfname = movie.next_frame()
             canv = benu.benu.Canvas(imgfname,actual_out_w,actual_out_h)
@@ -185,7 +213,8 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
             user_rect = (0,0,m["width"], m["height"])
             with canv.set_user_coords(device_rect, user_rect) as _canv:
                 _canv.imshow(rgb_image, 0,0, filter='best' )
-                _canv.scatter([col], [row], color_rgba=(1,0,0,0.8), radius=6, markeredgewidth=5 )
+                if (not np.isnan(col)) and (not np.isnan(row)):
+                    _canv.scatter([col], [row], color_rgba=(1,0,0,0.8), radius=6, markeredgewidth=5 )
 
             #do the VR 
             for name in VR_PANELS:
@@ -213,30 +242,76 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
     print "wrote", moviefname
 
 if __name__ == "__main__":
+    rospy.init_node('osgrender')
 
-    rospy.init_node('render3up')
+    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir")
+    parser.add_argument(
+        '--movie-file', type=str, required=True,
+        help='path to movie file (fmf or mp4)')
+    parser.add_argument(
+        '--calibration', type=str, required=False,
+        help='path to camera calibration file')
+    parser.add_argument(
+        '--tfix', type=float, default=0.0,
+        help='time offset to fixup movie')
+    parser.add_argument(
+        '--tmpdir', type=str, default='/tmp/',
+        help='path to temporary directory')
+    parser.add_argument(
+        '--no-framenumber', action='store_false', dest="framenumber", default="true",
+        help='dont render the framenumber on the video')
+    parser.add_argument(
+        '--osgdesc', type=str, default='posts3.osg',
+        help='osg file descriptor string')
 
-    obj_ids = [738,3065,1607,1925,1586]
-    obj_ids = [738]
+    argv = rospy.myargv()
+    args = parser.parse_args(argv[1:])
 
-    uuid   = 'be130ece9db611e2b8fe6c626d3a008a'
+    if (not args.h5_file) and (not args.uuid):
+        parser.error("Specify a UUID or a H5 file")
 
-    outdir = '/mnt/strawarchive/John/post-for-lisa-ist/'
-    outdir = os.getcwd()
+    if args.uuid is not None:
+        if len(args.uuid) > 1:
+            parser.error("Only one uuid supported for making movies")
 
-    fm = autodata.files.FileModel()
-    fm.select_uuid(uuid)
-    h5_fname = fm.get_file_model("simple_flydra.h5").fullpath
+        uuid = args.uuid[0]
 
-    print "h5 fname", h5_fname
+        fm = autodata.files.FileModel(basedir=args.basedir)
+        fm.select_uuid(uuid)
+        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+    else:
+        uuid = ''
 
-    for obj_id in obj_ids:
-        tmpdir = tempfile.mkdtemp(str(obj_id), dir="/mnt/ssd/tmp/")
+        h5_file = args.h5_file
 
-        try:
-            fmf_fname = autodata.files.get_fmf_file(uuid, obj_id,"Basler_21266086",raise_exception=True)
-            doit(h5_fname, fmf_fname, obj_id, tmpdir, outdir, sml='_sml')
-        except autodata.files.NoFile, e:
-            print "missing file", e
+    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_move_dir(uuid)
+
+    try:
+        assert len(args.idfilt) == 1
+        obj_id = args.idfilt[0]
+    except:
+        obj_id = None
+
+    if obj_id is None:
+        parser.error("You must specify --idfilt with a single obj_id")
+
+    doit(h5_file, args.movie_file, obj_id, args.tmpdir, outdir, args.calibration, args.tfix, args.framenumber,
+            '_sml',
+            args.osgdesc)
+
+##examples
+# LISA
+#    obj_ids = [738,3065,1607,1925,1586]
+#    obj_ids = [738]
+#    uuid   = 'be130ece9db611e2b8fe6c626d3a008a'
+#    outdir = '/mnt/strawarchive/John/post-for-lisa-ist/'
+#    outdir = os.getcwd()
+#python movie-osgfile-virtualworld.py --uuid be130ece9db611e2b8fe6c626d3a008a --movie-file /mnt/strawscience/movies/Flycave/be130ece9db611e2b8fe6c626d3a008a/Basler_21266086/738.fmf --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag --idfilt 738 --outdir /tmp/
+
+##Colored BOX GoPro
+#python movie-osgfile-virtualworld.py --uuid 39665d18d81011e292be6c626d3a008a --movie-file '/mnt/ssd/tmp/GOPRO/|60.0|1371559150.51' --idfilt 16 --outdir . --tmpdir /mnt/ssd/tmp/ --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
+
+##Colored BOX Movie cam
+#python movie-osgfile-virtualworld.py --uuid 39665d18d81011e292be6c626d3a008a --movie-file /mnt/strawscience/movies/Flycave/39665d18d81011e292be6c626d3a008a/Basler_21266086/16.fmf --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag --idfilt 16 --outdir . --tmpdir /mnt/ssd/tmp/ --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
 
 
