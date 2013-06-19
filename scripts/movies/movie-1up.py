@@ -53,7 +53,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix):
     print "fmf fname", fmf_fname
 
     fmf = motmot.FlyMovieFormat.FlyMovieFormat.FlyMovie(fmf_fname)
-    fmftimes = fmf.get_all_timestamps()
 
     timestamps = np.arange(
                         start,
