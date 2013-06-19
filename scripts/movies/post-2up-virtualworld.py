@@ -46,16 +46,18 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
     trajectory_start_times = h5.root.trajectory_start_times
 
     renderers = {}
+    osgslaves = {}
     for name in VR_PANELS:
         node = "/ds_%s" % name
         dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
-        dsc.set_mode('StimulusOSGFile')
+
         renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
+        osgslaves[name] = flyvr.display_client.OSGFileStimulusSlave(dsc, OSG_FILE)
+
 
     pub_stimulus = rospy.Publisher('stimulus_filename', std_msgs.msg.String, latch=True)
     pub_stimulus.publish(OSG_FILE)
 
-    pose_pub = rospy.Publisher('pose', geometry_msgs.msg.Pose, latch=True)
 
     # setup camera position
     for name in VR_PANELS:
@@ -186,14 +188,9 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, sml):
                 _canv.scatter([col], [row], color_rgba=(1,0,0,0.8), radius=6, markeredgewidth=5 )
 
             #do the VR 
-            msg = geometry_msgs.msg.Pose()
-            msg.position.x = x
-            msg.position.y = y
-            msg.position.z = z
-            pose_pub.publish(msg)
-            time.sleep(0.01) # give message a change to get to display server
-
             for name in VR_PANELS:
+                renderers[name].set_pose(x=x,y=y,z=z)
+
                 fn = os.path.basename(imgfname)
                 myfname = imgfname.replace(fn,name+fn)
                 renderers[name].render_frame(myfname, msg)
