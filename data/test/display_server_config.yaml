@@ -13,6 +13,8 @@ stimulus_plugins:
   name: StimulusOSGFile
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusCylinder
+- path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusCylinderAndModel
 display:
   displayNum: 0
   screenNum: 0
