@@ -89,23 +89,23 @@ class Node(object):
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinder')
 
-        self.rotation_pub = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
-        self.rotation_velocity_pub = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
-        self.v_offset_value_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
-        self.v_offset_rate_pub = rospy.Publisher(TOPIC_CYL_V_OFFSET_RATE, Float32, latch=True, tcp_nodelay=True)
-        self.image_pub = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
-        self.cyl_centre_pub = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
-        self.cyl_radius_pub = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
-        self.cyl_height_pub = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
+        self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
+        self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_value = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_rate = rospy.Publisher(TOPIC_CYL_V_OFFSET_RATE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_image = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
+        self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
+        self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
+        self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
 
-        self.pushover_pub = rospy.Publisher('note', String)
-        self.save_pub = rospy.Publisher('save_object', UInt32)
+        self.pub_pushover = rospy.Publisher('note', String)
+        self.pub_save = rospy.Publisher('save_object', UInt32)
 
-        self.rotation_pub.publish(0)
-        self.v_offset_value_pub.publish(0)
+        self.pub_rotation.publish(0)
+        self.pub_v_offset_value.publish(0)
 
-        self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
-        self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
+        self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
+        self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
@@ -175,9 +175,9 @@ class Node(object):
 
         if self.rad_locked < 0:
             #HACK
-            self.cyl_height_pub.publish(-4.5*self.rad_locked)
+            self.pub_cyl_height.publish(-4.5*self.rad_locked)
         else:
-            self.cyl_height_pub.publish(1.0)
+            self.pub_cyl_height.publish(1.0)
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
@@ -282,15 +282,15 @@ class Node(object):
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
 
                 self.log.rotation_rate = rate
-                self.rotation_velocity_pub.publish(rate)
+                self.pub_rotation_velocity.publish(rate)
 
                 self.log.v_offset_rate = v_rate
-                self.v_offset_rate_pub.publish(v_rate)
+                self.pub_v_offset_rate.publish(v_rate)
 
                 if self.rad_locked > 0:
-                    self.cyl_centre_pub.publish(fly_x,fly_y,0)
+                    self.pub_cyl_centre.publish(fly_x,fly_y,0)
                 else:
-                    self.cyl_centre_pub.publish(0,0,0)
+                    self.pub_cyl_centre.publish(0,0,0)
 
                 self.log.framenumber = framenumber
 
@@ -326,7 +326,7 @@ class Node(object):
 
     def update(self):
         self.log.update()
-        self.lock_object.publish( self.log.lock_object )
+        self.pub_lock_object.publish( self.log.lock_object )
 
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
@@ -349,9 +349,9 @@ class Node(object):
 
             self.ratio_total = 0
 
-        self.image_pub.publish( self.img_fn )
+        self.pub_image.publish( self.img_fn )
 
-        self.cyl_radius_pub.publish(np.abs(self.rad_locked))
+        self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
         self.update()
 
@@ -376,16 +376,16 @@ class Node(object):
             self.log.cyl_x = 0
             self.log.cyl_y = 0
 
-        self.image_pub.publish(GRAY_FN)
-        self.rotation_velocity_pub.publish(0)
+        self.pub_image.publish(GRAY_FN)
+        self.pub_rotation_velocity.publish(0)
 
-        self.cyl_radius_pub.publish(0.5)
-        self.cyl_centre_pub.publish(0,0,0)
+        self.pub_cyl_radius.publish(0.5)
+        self.pub_cyl_centre.publish(0,0,0)
 
         if (self.ratio_total > 2) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
-                self.pushover_pub.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
-                self.save_pub.publish(old_id)
+                self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+                self.pub_save.publish(old_id)
 
         self.update()
 
