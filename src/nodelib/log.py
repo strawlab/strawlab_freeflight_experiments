@@ -132,8 +132,8 @@ class CsvLogger:
 
                 try:
                     yield klass(*row)
-                except TypeError:
-                    rospy.logwarn("invalid row: %r" % row)
+                except TypeError, e:
+                    rospy.logwarn("\ninvalid row: %r\n%s" % (row,e))
                     continue
 
     def write_record(self, obj):
