@@ -21,13 +21,110 @@ import analysislib.plots as aplt
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
-class CombineH5WithCSV(object):
+#results = {
+#   condition:{
+#       df:[dataframe,...],
+#       start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...]
+#       count:[n_frames,...],
+#   }
+#}
+
+class _Combine(object):
+
+    def __init__(self, **kwargs):
+        self._debug = kwargs.get("debug",True)
+
+    def enable_debug(self):
+        self._debug = True
+    def disable_debug(self):
+        self._debug = False
+
+    def debug(self, m):
+        if self._debug:
+            print m
+
+    def warn(self, m):
+        print m
+
+    def _get_trajectories(self, h5):
+        trajectories = h5.root.trajectories
+
+        #unexplainable protip - adding an index on the framenumber table makes
+        #things slloooowwww
+        if trajectories.cols.framenumber.is_indexed:
+            trajectories.cols.framenumber.removeIndex()
+
+        if not trajectories.cols.obj_id.is_indexed:
+            try:
+                trajectories.cols.obj_id.createIndex()
+            except tables.exceptions.FileModeError:
+                self.warn("obj_id column not indexed, this will be slow. reindex")
+
+        return trajectories
+
+class CombineH5(_Combine):
+
+    plotdir = None
+    h5_file = ''
+
+    def __init__(self, **kwargs):
+        _Combine.__init__(self, **kwargs)
+        self._dt = None
+
+    def add_from_args(self, args):
+        if args.uuid is not None:
+            uuid = args.uuid[0]
+            fm = autodata.files.FileModel(basedir=args.basedir)
+            fm.select_uuid(uuid)
+            h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+        else:
+            h5_file = args.h5_file
+
+        self.add_h5_file(h5_file)
+
+    def add_h5_file(self, h5_file):
+        self.debug("reading %s" % h5_file)
+
+        warnings = {}
+
+        self.h5_file = h5_file
+
+        h5 = tables.openFile(h5_file, mode='r')
+
+        self._trajectories = self._get_trajectories(h5)
+        dt = 1.0/self._trajectories.attrs['frames_per_second']
+
+        self._trajectory_start_times = h5.root.trajectory_start_times
+
+        if self._dt is None:
+            self._dt = dt
+        else:
+            assert dt == self._dt
+
+    def get_one_result(self, obj_id):
+        query = "obj_id == %d" % obj_id
+
+        traj = self._trajectories.readWhere(query)
+        start = self._trajectory_start_times.readWhere(query)
+
+        _,tsec,tnsec = start[0]
+        t0 = tsec+(tnsec*1e-9)
+
+        df = pandas.DataFrame(
+                {i:traj[i] for i in 'xyz'},
+                index=traj['framenumber']
+        )
+
+        return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
+
+class CombineH5WithCSV(_Combine):
 
     plotdir = None
     csv_file = ''
     h5_file = ''
 
-    def __init__(self, loggerklass, *csv_rows):
+    def __init__(self, loggerklass, *csv_rows, **kwargs):
+        _Combine.__init__(self, **kwargs)
         self._lklass = loggerklass
 
         rows = ["framenumber"]
@@ -103,8 +200,8 @@ class CombineH5WithCSV(object):
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
-        print "reading", csv_fname
-        print "reading", h5_file
+        self.debug("reading %s" % csv_fname)
+        self.debug("reading %s" % h5_file)
 
         warnings = {}
 
@@ -114,19 +211,8 @@ class CombineH5WithCSV(object):
         infile = self._lklass(fname=csv_fname, mode="r")
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
-        trajectories = h5.root.trajectories
 
-        #unexplainable protip - adding an index on the framenumber table makes
-        #things slloooowwww
-        if trajectories.cols.framenumber.is_indexed:
-            trajectories.cols.framenumber.removeIndex()
-
-        if not trajectories.cols.obj_id.is_indexed:
-            try:
-                trajectories.cols.obj_id.createIndex()
-            except tables.exceptions.FileModeError:
-                print "obj_id column not indexed, this will be slow. reindex"
-
+        trajectories = self._get_trajectories(h5)
         dt = 1.0/trajectories.attrs['frames_per_second']
 
         if self._dt is None:
@@ -161,12 +247,11 @@ class CombineH5WithCSV(object):
                         except AttributeError:
                             this_row[k] = np.nan
                             if k not in warnings:
-                                print "WARNING: no such column in csv:",k
+                                self.warn("WARNING: no such column in csv:%s" % k)
                                 warnings[k] = True
 
                 if not _cond in results:
                     results[_cond] = dict(count=0,
-                                          framenumber=[],
                                           start_obj_ids=[],
                                           df=[])
                     skipped[_cond] = 0
@@ -225,12 +310,12 @@ class CombineH5WithCSV(object):
                         n_samples = len(validx)
 
                         if n_samples < dur_samples: # must be at least this long
-                            print 'insufficient samples (%d) for obj_id %d' % (n_samples,query_id)
+                            self.debug('insufficient samples (%d) for obj_id %d' % (n_samples,query_id))
                             self._skipped[_cond] += 1
                         else:
-                            print '%s %d: frame0 %d, %d samples'%(_cond, query_id,
+                            self.debug('%s %d: frame0 %d, %d samples'%(_cond, query_id,
                                                                 valid[0]['framenumber'],
-                                                                n_samples)
+                                                                n_samples))
 
                             dfd = {'x':validx,'y':validy,'z':validz}
 
@@ -259,14 +344,19 @@ class CombineH5WithCSV(object):
                                 csv_results[k].append(this_row[k])
 
                 else:
-                    print "CANT GO BACK %d vs %d" % (_id,this_id)
+                    self.warn("CANT GO BACK %d vs %d" % (_id,this_id))
                     continue
             except ValueError, e:
-                print "ERROR: ", e
-                print row
+                self.warn("ERROR: %s\n\t%r" % (e,row))
 
         h5.close()
 
     def get_results(self):
         return self._results, self._dt
+
+    def get_one_result(self, obj_id):
+        for i,(current_condition,r) in enumerate(self._results.iteritems()):
+            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                if _obj_id == obj_id:
+                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
 
