@@ -24,3 +24,7 @@ tethered_mode: false
 stimulus_plugins: 
 - path: /home/strawlab/ros-flycave.electric.boost1.46/strawlab_freeflight_experiments/lib
   name: StimulusOSGFile
+- path: /home/strawlab/ros-flycave.electric.boost1.46/strawlab_freeflight_experiments/lib
+  name: StimulusCylinderAndModel
+- path: /home/strawlab/ros-flycave.electric.boost1.46/strawlab_freeflight_experiments/lib
+  name: StimulusCylinder

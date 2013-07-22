@@ -1,6 +1,6 @@
 <launch>
   <node name="ds_virtual_world" pkg="flyvr" type="display_server" args="--mode=virtual_world --observer_radius -0.015">
-    <rosparam command="load" file="render_display_config.yaml" />
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
     <remap from="pose" to="ds_virtual_world/pose"/>
     <remap from="model_scale" to="ds_virtual_world/model_scale"/>
     <remap from="model_pose" to="ds_virtual_world/model_pose"/>
@@ -8,7 +8,7 @@
   </node>
 
   <node name="ds_geometry" pkg="flyvr" type="display_server" args="--mode=geometry --observer_radius -0.015">
-    <rosparam command="load" file="render_display_config.yaml" />
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
     <remap from="pose" to="ds_geometry/pose"/>
     <remap from="model_scale" to="ds_geometry/model_scale"/>
     <remap from="model_pose" to="ds_geometry/model_pose"/>
