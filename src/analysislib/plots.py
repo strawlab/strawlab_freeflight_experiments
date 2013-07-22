@@ -3,6 +3,7 @@ import contextlib
 import os.path
 import sys
 import operator
+import json
 
 try:
     import strawlab_mpl.defaults
@@ -477,13 +478,33 @@ def save_args(args, combine, name="README"):
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
 
-def save_results(combine, name="data.pkl"):
+def save_results(combine, maxn=20):
+
     results,dt = combine.get_results()
     plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = os.path.join(plotdir,"data.pkl")
+    best = _get_flight_lengths(combine)
 
     with open(name, "w+b") as f:
         pickle.dump({"results":results,"dt":dt}, f)
+
+    name = os.path.join(plotdir,"data.json")
+    with open(name, "w") as f:
+        data = dict()
+        data["conditions"] = results.keys()
+        data["dt"] = dt
+        data["longest_trajectories"] = {}
+
+        for cond in best:
+            trajs = []
+            sorted_best = sorted(best[cond].items(), key=operator.itemgetter(1), reverse=True)
+            for n,(obj_id,ln) in enumerate(sorted_best):
+                trajs.append( (obj_id,ln) )
+                if n > maxn:
+                    break
+            data["longest_trajectories"][cond] = trajs
+
+        json.dump(data, f)
 
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
