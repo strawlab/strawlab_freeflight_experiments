@@ -30,6 +30,7 @@ import autodata.files
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.args
 import analysislib.movie
+import analysislib.combine
 
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
@@ -37,11 +38,11 @@ MARGIN = 0
 ZOOM_REGION_WH = 50
 ZOOM_REGION_DISPLAY_WH = 100
 
-def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_framenumber, zoom_fly):
-    h5 = tables.openFile(h5_file, mode='r')
-    trajectories = h5.root.trajectories
-    dt = 1.0/trajectories.attrs['frames_per_second']
-    trajectory_start_times = h5.root.trajectory_start_times
+def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly):
+    combine = analysislib.combine.CombineH5()
+    combine.add_h5_file(h5_file)
+
+    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
     camera = camera_model.load_camera_from_bagfile( open(calibration) )
 
@@ -52,16 +53,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
                 tmpdir,
                 ("%s_2up" % obj_id) + ("_zoom" if zoom_fly else "")
     )
-
-    query = "obj_id == %d" % obj_id
-    valid = trajectories.readWhere(query)
-
-    starts = trajectory_start_times.readWhere(query)
-    start = starts['first_timestamp_secs'][0] + (starts['first_timestamp_nsecs'][0]*1e-9)
-
-    if tfix:
-        print "adjusting times by", tfix
-        start += tfix
 
     print "fmf fname", fmf_fname
 
@@ -113,7 +104,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
     zhist = collections.deque(maxlen=MAXLEN)
 
     tfirst = None
-    for n,(t,uv,xyz,framenumber) in enumerate(zip(timestamps,pixel,xyz,valid['framenumber'])):
+    for n,(t,uv,xyz,(framenumber,dfrow)) in enumerate(zip(timestamps,pixel,xyz,valid.iterrows())):
 
         pbar.update(n)
 
@@ -194,9 +185,6 @@ if __name__ == "__main__":
         '--camera', type=str, default="Basler_21266086",
         help='camera uuid that recorded fmf file')
     parser.add_argument(
-        '--tfix', type=float, default=0.0,
-        help='time offset to fixup movie')
-    parser.add_argument(
         '--tmpdir', type=str, default='/tmp/',
         help='path to temporary directory')
     parser.add_argument(
@@ -225,7 +213,7 @@ if __name__ == "__main__":
 
         h5_file = args.h5_file
 
-    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_move_dir(uuid)
+    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
     if args.fmf_file:
         obj_ids = [int(os.path.basename(fmf_file)[:-4]) for fmf_file in args.fmf_file]
@@ -241,7 +229,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.tfix, args.framenumber, args.zoom_fly)
+            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly)
         except IOError, e:
             print "missing file", e
 
