@@ -33,18 +33,10 @@ class _Combine(object):
 
     def __init__(self, **kwargs):
         self._debug = kwargs.get("debug",True)
-
-    def enable_debug(self):
-        self._debug = True
-    def disable_debug(self):
-        self._debug = False
-
-    def debug(self, m):
-        if self._debug:
-            print m
-
-    def warn(self, m):
-        print m
+        self._dt = None
+        self._lenfilt = None
+        self._skipped = {}
+        self._results = {}
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -61,6 +53,111 @@ class _Combine(object):
                 self.warn("obj_id column not indexed, this will be slow. reindex")
 
         return trajectories
+
+    @property
+    def fname(self):
+        return os.path.join(self.plotdir,os.path.basename(self.csv_file).split('.')[0])
+
+    @property
+    def min_num_frames(self):
+        try:
+            return self._lenfilt / self._dt
+        except TypeError:
+            return 1
+
+    @property
+    def framerate(self):
+        return 1.0 / self._dt
+
+    def get_num_skipped(self, condition):
+        return self._skipped.get(condition,0)
+
+    def get_num_analysed(self, condition):
+        return self._results[condition]['count']
+
+    def get_num_trials(self, condition):
+        return self.get_num_skipped(condition) + self.get_num_analysed(condition) 
+
+    def get_num_frames(self, seconds):
+        return seconds / self._dt
+
+    def enable_debug(self):
+        self._debug = True
+    def disable_debug(self):
+        self._debug = False
+
+    def debug(self, m):
+        if self._debug:
+            print m
+
+    def warn(self, m):
+        print m
+
+    def get_results(self):
+        return self._results, self._dt
+
+class CombineCSV(_Combine):
+
+    plotdir = None
+    csv_file = ''
+
+    def __init__(self, **kwargs):
+        _Combine.__init__(self, **kwargs)
+
+    def add_from_args(self, args):
+        self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+        self.add_csv_file(args.csv_file, args.lenfilt)
+
+    def add_csv_file(self, csv_file, lenfilt=None):
+        self._lenfilt = lenfilt
+
+        self.debug("reading %s" % csv_file)
+        self.csv_file = csv_file
+        df = pandas.DataFrame.from_csv(self.csv_file,index_col="framenumber")
+
+        assert 'lock_object' in df.columns
+
+        self._df = df.fillna(method="pad")
+        self._df['time'] = self._df['t_sec'] + (self._df['t_nsec'] * 1e-9)
+
+        self._dt = (self._df['time'].values[-1] - self._df['time'].values[0]) / len(self._df)
+
+        results = {}
+
+        for cond,dfc in self._df.groupby('condition'):
+            results[cond] = {'df':[],'start_obj_ids':[],'count':0}
+            for obj_id,dfo in dfc.groupby('lock_object'):
+                if obj_id == 0:
+                    continue
+
+                if not self._df_ok(dfo):
+                    continue
+
+                results[cond]['df'].append(dfo)
+                results[cond]['start_obj_ids'].append(self._get_result(dfo))
+                results[cond]['count'] += 1
+
+        self._results = results
+
+    def _df_ok(self, df):
+        if len(df) < self.min_num_frames:
+            return False
+        else:
+            return True
+
+    def _get_result(self, df):
+        ser = df.irow(0)
+        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time']
+
+    def get_one_result(self, obj_id):
+        df = self._df[self._df['lock_object'] == obj_id]
+        if not len(df):
+            raise ValueError("object %s not found" % obj_id)
+
+        if not self._df_ok(df):
+            raise ValueError("result is too short")
+
+        return df,self._dt,self._get_result(df)
 
 class CombineH5(_Combine):
 
@@ -80,6 +177,12 @@ class CombineH5(_Combine):
         else:
             h5_file = args.h5_file
 
+        self.add_h5_file(h5_file)
+
+    def add_from_uuid(self, uuid, *args, **kwargs):
+        fm = autodata.files.FileModel(basedir=os.environ.get("FLYDRA_AUTODATA_BASEDIR"))
+        fm.select_uuid(uuid)
+        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
         self.add_h5_file(h5_file)
 
     def add_h5_file(self, h5_file):
@@ -126,39 +229,9 @@ class CombineH5WithCSV(_Combine):
     def __init__(self, loggerklass, *csv_rows, **kwargs):
         _Combine.__init__(self, **kwargs)
         self._lklass = loggerklass
-
         rows = ["framenumber"]
         rows.extend(csv_rows)
         self._rows = set(rows)
-
-        self._results = {}
-        self._skipped = {}
-        self._dt = None
-        self._lenfilt = None
-
-    @property
-    def fname(self):
-        return os.path.join(self.plotdir,os.path.basename(self.csv_file).split('.')[0])
-
-    @property
-    def min_num_frames(self):
-        return self._lenfilt / self._dt
-
-    @property
-    def framerate(self):
-        return 1.0 / self._dt
-
-    def get_num_skipped(self, condition):
-        return self._skipped.get(condition,0)
-
-    def get_num_analysed(self, condition):
-        return self._results[condition]['count']
-
-    def get_num_trials(self, condition):
-        return self.get_num_skipped(condition) + self.get_num_analysed(condition) 
-
-    def get_num_frames(self, seconds):
-        return seconds / self._dt
 
     def add_from_uuid(self, uuid, csv_suffix, plotdir=None, frames_before=0, **kwargs):
         fm = autodata.files.FileModel(basedir=os.environ.get("FLYDRA_AUTODATA_BASEDIR"))
@@ -350,9 +423,6 @@ class CombineH5WithCSV(_Combine):
                 self.warn("ERROR: %s\n\t%r" % (e,row))
 
         h5.close()
-
-    def get_results(self):
-        return self._results, self._dt
 
     def get_one_result(self, obj_id):
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
