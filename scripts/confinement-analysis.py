@@ -25,8 +25,7 @@ if __name__=='__main__':
     analysislib.args.check_args(parser, args)
 
     combine = analysislib.combine.CombineH5WithCSV(
-                            confinement.Logger,
-                            "framenumber",
+                            confinement.Logger
     )
     combine.add_from_args(args, "confinement.csv", frames_before=0)
 
@@ -50,8 +49,6 @@ if __name__=='__main__':
 
     aplt.save_args(args, combine)
     aplt.save_results(combine)
-
-    aplt.save_longest_flights(combine, args, maxn=10)
 
     aplt.plot_trial_times(combine, args,
                 name="%s.trialtimes" % fname)

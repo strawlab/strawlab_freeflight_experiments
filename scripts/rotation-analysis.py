@@ -32,7 +32,7 @@ if __name__=='__main__':
 
     combine = analysislib.combine.CombineH5WithCSV(
                             rotation.Logger,
-                            "framenumber","ratio","rotation_rate",
+                            "ratio","rotation_rate",
     )
     combine.add_from_args(args, "rotation.csv", frames_before=0)
 
@@ -55,8 +55,6 @@ if __name__=='__main__':
 
     aplt.save_args(args, combine)
     aplt.save_results(combine)
-
-    aplt.save_longest_flights(combine, args, maxn=10)
 
     aplt.save_most_loops(combine, args)
 
