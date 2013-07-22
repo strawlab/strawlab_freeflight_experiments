@@ -17,7 +17,7 @@ class CsvLogger:
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None):
+    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None):
         assert len(self.STATE)
 
         if directory is None:
@@ -28,7 +28,7 @@ class CsvLogger:
         self._flydra_data_file = ''
         self._exp_uuid = ''
 
-        self._state = list(self.STATE)
+        self._state = list(state) if state is not None else list(self.STATE)
         self._state.extend(("condition","lock_object","framenumber"))
 
         self._cols = list(self._state)
