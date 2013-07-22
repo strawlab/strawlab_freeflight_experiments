@@ -66,6 +66,8 @@ class MovieMaker:
         self.num = 0
         self.fps = fps
 
+        print "movies temporary files saved to %s" % self.tmpdir
+
     @property
     def frame_number(self):
         return self.num
