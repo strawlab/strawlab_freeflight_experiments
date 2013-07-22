@@ -13,8 +13,6 @@ import collections
 import benu.benu
 import benu.utils
 
-from mpl_toolkits.mplot3d import axes3d
-
 import motmot.FlyMovieFormat.FlyMovieFormat
 
 import roslib
@@ -167,51 +165,9 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, tfix, show_fra
             user_rect = (0,0,m["width"], m["height"])
             with canv.set_user_coords(device_rect, user_rect) as _canv:
                 with _canv.get_figure(m["dw"], m["dh"]) as fig:
-                        ax = fig.add_subplot(111, projection='3d')
-
-                        AZIMUTH_HOME = 48
-                        wiggle = 8 * np.sin(0.03*movie.frame_number)
-
-                        ax.view_init(45, AZIMUTH_HOME + wiggle)
-
-                        ax.plot( xhist, yhist, zhist, 'w-', lw=1.5, alpha=1.0, rasterized=False)
-                        ax.plot( [x], [y], [z], 'ro', rasterized=False )
-
-                        ax.set_xlabel('')    
-                        ax.set_ylabel('')    
-                        ax.set_zlabel('')    
-
-                        for rad in [0.5]:
-                            theta = np.linspace(0, 2*np.pi, 100)
-                            ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta), 'r-',
-                                     lw=2, alpha=0.5 )
-                            ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta), 'r-',
-                                     lw=2, alpha=0.5 )
-
-                        benu.utils.set_foregroundcolor(ax, 'white')
-                        benu.utils.set_backgroundcolor(ax, 'black')
-
-                        ax.w_xaxis.set_pane_color((0.3, 0.3, 0.3, 1.0))
-                        ax.w_yaxis.set_pane_color((0.3, 0.3, 0.3, 1.0))
-                        ax.w_zaxis.set_pane_color((0.3, 0.3, 0.3, 1.0))
-                        for a in (ax.w_xaxis, ax.w_yaxis, ax.w_zaxis):
-                            a._axinfo['grid']['color'] = (0.6, 0.6, 0.6, 1.0)
-
-                        #ax.grid(False)
-                        for a in (ax.w_xaxis, ax.w_yaxis, ax.w_zaxis):
-                            for t in a.get_ticklines():
-                                t.set_visible(False)
-                        #        t.set_color('green')
-                            for t in a.get_ticklabels():
-                                t.set_visible(False)
-                        #        t.set_color('yellow')
-                        #    a.line.set_visible(False)
-                        #    a.line.set_color('green')
-                        #    a.pane.set_visible(False)
-                        #    a.pane.set_color((0.3, 0.3, 0.3, 1.0))
-
-                        fig.patch.set_facecolor('none')
-                        #fig.tight_layout() 
+                    analysislib.movie.plot_xyz(fig, movie.frame_number,
+                        xhist, yhist, zhist, x, y, z
+                    )
 
                 if show_framenumber:
                     _canv.text(str(framenumber),m["dw"]-100,m["dh"]-20, color_rgba=(0.5,0.5,0.5,1.0))
