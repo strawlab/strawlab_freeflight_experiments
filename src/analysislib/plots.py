@@ -346,13 +346,7 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
-def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
-
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
-
-    results,dt = combine.get_results()
-
+def _calculate_nloops(df):
     #dont change this, is has to be ~= 1. It is the dratio/dt value to detect
     #a wrap of 1->0 (but remember this is kinda related to the step increment),
     #that is a huge step increment and a small ALMOST_1 could miss flies
@@ -361,31 +355,41 @@ def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
     #change this to include more flies that didn't quite go a full revolution
     MINIMUM_RATIO = 0.9
 
+    #find when the ratio wraps. This is
+    #when the derivitive is -ve once nan's have been forward filled. The
+    #second fillna(0) is because the first elements derifitive is NaN.
+    #yay pandas
+    dratio = df['ratio'].fillna(value=None, method='pad').diff().fillna(0)
+    ncrossings = (dratio < -ALMOST_1).sum()
+    if ncrossings == 1:
+        #only 1 wrap, consider only long trajectories
+        wrap = dratio.argmin()
+        if wrap > 0:
+            a = df['ratio'][0:wrap].min()
+            b = df['ratio'][wrap:].max()
+            if np.abs(b - a) < (1-MINIMUM_RATIO):
+                return 1
+    elif ncrossings > 1:
+        return ncrossings
+    else:
+        return 0
+
+def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
+
+    plotdir = combine.plotdir
+    name = os.path.join(plotdir,name)
+
+    results,dt = combine.get_results()
+
     best = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
         if not r['count']:
             continue
         for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-            #find when the ratio wraps. This is
-            #when the derivitive is -ve once nan's have been forward filled. The
-            #second fillna(0) is because the first elements derifitive is NaN.
-            #yay pandas
-            dratio = df['ratio'].fillna(value=None, method='pad').diff().fillna(0)
-            ncrossings = (dratio < -ALMOST_1).sum()
-            if ncrossings == 1:
-                #only 1 wrap, consider only long trajectories
-                wrap = dratio.argmin()
-                if wrap > 0:
-                    a = df['ratio'][0:wrap].min()
-                    b = df['ratio'][wrap:].max()
-                    if np.abs(b - a) < (1-MINIMUM_RATIO):
-                        try:
-                            best[current_condition][obj_id] = 1
-                        except KeyError:
-                            best[current_condition] = {obj_id:1}
-            elif ncrossings > 1:
+            ncrossings = _calculate_nloops(df)
+            if ncrossings > 0:
                 try:
-                    best[current_condition][obj_id] = 1
+                    best[current_condition][obj_id] = ncrossings
                 except KeyError:
                     best[current_condition] = {obj_id:ncrossings}
 
@@ -421,10 +425,7 @@ def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
         f.write("\n### best flies summary\n\n")
         f.write("    %s\n" % " ".join(allbest))
 
-def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
-
+def _get_flight_lengths(combine):
     results,dt = combine.get_results()
 
     best = {}
@@ -436,6 +437,15 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
                 best[current_condition][obj_id] = len(df)
             except KeyError:
                 best[current_condition] = {obj_id:len(df)}
+
+    return best
+
+def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
+    plotdir = combine.plotdir
+    name = os.path.join(plotdir,name)
+
+    results,dt = combine.get_results()
+    best = _get_flight_lengths(combine)
 
     COL_WIDTH = 20
     with open(name, 'w') as f:
