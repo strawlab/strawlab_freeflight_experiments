@@ -103,7 +103,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
     yhist = collections.deque(maxlen=MAXLEN)
     zhist = collections.deque(maxlen=MAXLEN)
 
-    tfirst = None
     for n,(t,uv,xyz,(framenumber,dfrow)) in enumerate(zip(timestamps,pixel,xyz,valid.iterrows())):
 
         pbar.update(n)
@@ -115,7 +114,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
 
         if ts > t0:
             t0 = ts
-            tfirst = ts if tfirst is None else tfirst
 
             col,row = uv
             x,y,z = xyz
