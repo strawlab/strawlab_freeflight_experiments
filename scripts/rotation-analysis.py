@@ -3,6 +3,7 @@ import os.path
 import sys
 import operator
 import numpy as np
+import itertools
 
 if not os.environ.get('DISPLAY'):
     import matplotlib
@@ -22,6 +23,7 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
+import analysislib.curvature as curve
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -94,6 +96,26 @@ if __name__=='__main__':
             fplt.plot_tracking_data(
                         f.add_subplot(1,2,1),
                         f.add_subplot(1,2,2))
+
+    #correlation and histogram plots
+    correlations = (('rotation_rate','dtheta'),('v_offset_rate','az'))
+    histograms = ("velocity","dtheta","rcurve")
+    correlation_options = {i[0]:{} for i in correlations}
+    histogram_options = {"normed":{"velocity":True,
+                                   "dtheta":True,
+                                   "rcurve":True},
+                         "range":{"velocity":(0,1),
+                                  "dtheta":(-0.5,0.5),
+                                  "rcurve":(0,1)},
+                         "xlabel":{"velocity":"velocity (m/s)",
+                                   "dtheta":"turn rate (rad/s)",
+                                   "rcurve":"radius of curvature (m)"},
+    }
+    flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
+
+    flat_data,nens = curve.flatten_data(args, combine, flatten_columns)
+    curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
+    curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
 
     if args.show:
         plt.show()
