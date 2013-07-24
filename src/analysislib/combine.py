@@ -32,6 +32,8 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 
 class _Combine(object):
 
+    plotdir = None
+
     def __init__(self, **kwargs):
         self._debug = kwargs.get("debug",True)
         self._dt = None
@@ -99,7 +101,6 @@ class _Combine(object):
 
 class CombineCSV(_Combine):
 
-    plotdir = None
     csv_file = ''
 
     def __init__(self, **kwargs):
@@ -162,7 +163,6 @@ class CombineCSV(_Combine):
 
 class CombineH5(_Combine):
 
-    plotdir = None
     h5_file = ''
 
     def __init__(self, **kwargs):
@@ -223,7 +223,6 @@ class CombineH5(_Combine):
 
 class CombineH5WithCSV(_Combine):
 
-    plotdir = None
     csv_file = ''
     h5_file = ''
 
