@@ -2,10 +2,11 @@ import os.path
 import sys
 import argparse
 import Queue
-import pandas
+import random
+import time
 
 import tables
-import pandas
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -113,7 +114,7 @@ class CombineCSV(_Combine):
 
         self.debug("reading %s" % csv_file)
         self.csv_file = csv_file
-        df = pandas.DataFrame.from_csv(self.csv_file,index_col="framenumber")
+        df = pd.DataFrame.from_csv(self.csv_file,index_col="framenumber")
 
         assert 'lock_object' in df.columns
 
@@ -213,7 +214,7 @@ class CombineH5(_Combine):
         _,tsec,tnsec = start[0]
         t0 = tsec+(tnsec*1e-9)
 
-        df = pandas.DataFrame(
+        df = pd.DataFrame(
                 {i:traj[i] for i in 'xyz'},
                 index=traj['framenumber']
         )
@@ -394,9 +395,9 @@ class CombineH5WithCSV(_Combine):
 
                             for k in self._rows:
                                 if k != "framenumber":
-                                    dfd[k] = pandas.Series(csv_results[k],index=csv_results['framenumber'])
+                                    dfd[k] = pd.Series(csv_results[k],index=csv_results['framenumber'])
 
-                            df = pandas.DataFrame(dfd,index=validframenumber)
+                            df = pd.DataFrame(dfd,index=validframenumber)
 
                             r['count'] += 1
                             r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber, start_time) )
