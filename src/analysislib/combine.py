@@ -99,6 +99,13 @@ class _Combine(object):
     def get_results(self):
         return self._results, self._dt
 
+    def get_one_result(self, obj_id):
+        for i,(current_condition,r) in enumerate(self._results.iteritems()):
+            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                if _obj_id == obj_id:
+                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+
+
 class CombineCSV(_Combine):
 
     csv_file = ''
@@ -424,9 +431,5 @@ class CombineH5WithCSV(_Combine):
 
         h5.close()
 
-    def get_one_result(self, obj_id):
-        for i,(current_condition,r) in enumerate(self._results.iteritems()):
-            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-                if _obj_id == obj_id:
-                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+
 
