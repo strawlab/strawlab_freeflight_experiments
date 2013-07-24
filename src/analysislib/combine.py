@@ -18,6 +18,7 @@ import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
+import analysislib.curvature
 import analysislib.plots as aplt
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
@@ -105,6 +106,141 @@ class _Combine(object):
                 if _obj_id == obj_id:
                     return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
 
+class _CombineFakeInfinity(_Combine):
+    def __init__(self, **kwargs):
+        _Combine.__init__(self, **kwargs)
+        self._nconditions = kwargs.get('nconditions',1)
+        self._ntrials = kwargs.get('ntrials', 100)
+
+        self._results = {}
+        self._dt = 1/100.0
+        self._t0 = time.time()
+
+        obj_id = 1
+        framenumber = 1
+
+        for c in range(self._nconditions):
+            cond = "tex%d/svg/1.0/1.0/adv/..." % c
+
+            try:
+                self._results[cond]
+            except KeyError:
+                self._results[cond] = {"df":[],"start_obj_ids":[],"count":0}
+
+            for t in range(self._ntrials):
+                if obj_id == 1:
+                    #make sure the first infinity is full and perfect
+                    df = self.get_fake_infinity(5,0,0,0,framenumber,0,0,self._dt)
+                else:
+                    df = self.get_fake_infinity(
+                                n_infinity=5,
+                                random_stddev=0.008,
+                                x_offset=0.1 * (random.random() - 0.5),
+                                y_offset=0.1 * (random.random() - 0.5),
+                                frame0=framenumber,
+                                nan_pct=1,
+                                latency=10,
+                                dt=self._dt
+                    )
+                    #take some random last number of trajectory
+                    df = df.tail(random.randrange(10,len(df)))
+
+                first = df.irow(0)
+                last = df.irow(-1)
+                f0 = first.name
+
+                self._results[cond]["df"].append(df)
+                self._results[cond]["count"] += 1
+                self._results[cond]["start_obj_ids"].append(
+                        (first['x'],first['y'],obj_id,f0,self._t0 + (f0 * self._dt))
+                )
+
+                obj_id += 1
+                framenumber += len(df)
+
+    @staticmethod
+    def get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0):
+        def get_noise(d):
+            if random_stddev:
+                return (np.random.random(len(d)) - 0.5) * random_stddev
+            else:
+                return np.zeros_like(d)
+
+        pi = np.pi
+        leaft = np.linspace(-pi/4.,pi/4., 100)
+        leaftrev = (leaft-pi)[::-1] #reverse
+
+        theta = np.concatenate( (leaft, leaftrev[1:]) )
+
+        r = np.cos(2*theta)
+
+        x = np.concatenate( ([0], r*np.cos( theta )) )
+        y = np.concatenate( ([0], r*np.sin( theta )) )
+
+        x *= 0.4
+        y *= 0.8
+
+        x += x_offset
+        y += y_offset
+
+        N = len(x)
+
+        z = np.zeros_like(x)
+        z[:] = 0.7
+
+        ratio = np.array(range(0,N)) / float(N)
+
+        if n_infinity > 1:
+            df = pd.DataFrame({
+                    "x":np.concatenate( [x + get_noise(x) for i in range(n_infinity) ] ),
+                    "y":np.concatenate( [y + get_noise(y) for i in range(n_infinity) ] ),
+                    "z":np.concatenate( [z + get_noise(z) for i in range(n_infinity) ] ),
+                    "ratio":np.concatenate( [ratio + get_noise(ratio) for i in range(n_infinity) ] )},
+                    index=range(frame0,frame0+(N*n_infinity))
+            )
+        else:
+            df = pd.DataFrame({
+                    "x":x + get_noise(x),
+                    "y":y + get_noise(y),
+                    "z":z + get_noise(z),
+                    "ratio":ratio + get_noise(ratio)},
+                    index=range(frame0,frame0+N)
+            )
+
+        return df
+
+    @staticmethod
+    def get_fake_infinity(n_infinity, random_stddev, x_offset, y_offset, frame0, nan_pct, latency, dt):
+        df = _CombineFakeInfinity.get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0)
+
+        #despite these being recomputed later, we need to get them first
+        #to make sure rrate is correlated to dtheta, we remove the added colums later
+        cols = []
+        cols.extend( analysislib.curvature.calc_velocities(df, dt) )
+        cols.extend( analysislib.curvature.calc_angular_velocities(df, dt) )
+
+        #add some uncorrelated noise to rrate
+        rrate = (df['dtheta'].values * 10.0) + (0.0 * (np.random.random(len(df)) - 0.5))
+
+        if latency > 0:
+            rrate = np.concatenate( (rrate[latency:],np.random.random(latency)) )
+
+        #rotation rate comes from a csv file, with a lower freq, so trim some % of the data
+        #to simulate missing values
+        trim = np.random.random(len(rrate)) < (nan_pct / 100.0)
+        rrate[trim] = np.nan
+
+        df['rotation_rate'] = rrate
+        df['v_offset_rate'] = np.zeros_like(df['az'].values)
+
+        for c in cols:
+            del df[c]
+
+        return df
+
+    def add_from_args(self, args):
+        self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+        self.csv_file = "test"
 
 class CombineCSV(_Combine):
 
