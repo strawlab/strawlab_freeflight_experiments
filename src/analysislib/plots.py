@@ -21,8 +21,12 @@ import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
 
-RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
-WRAP_TEXT=bool(int( os.environ.get('WRAP_TEXT','1')))
+RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
+WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
+WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
+
+LEGEND_TEXT_BIG     = 10
+LEGEND_TEXT_SML     = 8
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
@@ -33,7 +37,8 @@ def mpl_fig(fname_base,args,**kwargs):
     fig = plt.figure( **kwargs )
     yield fig
     fig.savefig(fname_base+'.png',bbox_inches='tight')
-    fig.savefig(fname_base+'.svg',bbox_inches='tight')
+    if WRITE_SVG:
+        fig.savefig(fname_base+'.svg',bbox_inches='tight')
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
@@ -73,7 +78,7 @@ def plot_trial_times(combine, args, name):
         nconds = len(starts)
 
         ax.legend(loc='upper right', numpoints=1,
-            prop={'size':11} if nconds <= 4 else {'size':9}
+            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
 def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
@@ -285,7 +290,7 @@ def plot_nsamples(combine, args, name):
         #of colors as the bottom one anyway
         ax_outliers.legend(loc='upper right', numpoints=1,
             columnspacing=0.05,
-            prop={'size':11} if nconds <= 4 else {'size':9},
+            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
             ncol=1 if nconds <= 4 else 2
         )
 
