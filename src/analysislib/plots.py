@@ -509,6 +509,7 @@ def save_results(combine, maxn=20):
         data["conditions"] = results.keys()
         data["dt"] = dt
         data["longest_trajectories"] = {}
+        data["argv"] = " ".join(sys.argv)
 
         for cond in best:
             trajs = []
