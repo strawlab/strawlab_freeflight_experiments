@@ -297,10 +297,19 @@ class CombineCSV(_Combine):
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
 
-    def add_from_args(self, args):
+    def add_from_args(self, args, csv_suffix):
         self._idfilt = args.idfilt
-        self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
-        self.add_csv_file(args.csv_file, args.lenfilt)
+
+        if (args.uuid is not None) and (len(args.uuid) == 1):
+            fm = autodata.files.FileModel(basedir=args.basedir)
+            fm.select_uuid(args.uuid[0])
+            csv_file = fm.get_file_model(csv_suffix).fullpath
+            self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
+        else:
+            csv_file = args.csv_file
+            self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+
+        self.add_csv_file(csv_file, args.lenfilt)
 
     def add_csv_file(self, csv_file, lenfilt=None):
         self._lenfilt = lenfilt
