@@ -139,6 +139,7 @@ class _CombineFakeInfinity(_Combine):
         self._dt = 1/100.0
         self._t0 = time.time()
 
+    def _add(self):
         obj_id = 1
         framenumber = 1
 
@@ -149,6 +150,7 @@ class _CombineFakeInfinity(_Combine):
                 self._results[cond]
             except KeyError:
                 self._results[cond] = {"df":[],"start_obj_ids":[],"count":0}
+                self._skipped[cond] = 0
 
             for t in range(self._ntrials):
                 if obj_id == 1:
@@ -274,8 +276,19 @@ class _CombineFakeInfinity(_Combine):
         return df
 
     def add_from_args(self, args):
+        self._lenfilt = args.lenfilt
+        if args.customfilt is not None and args.customfilt_len is not None:
+            self.add_custom_filter(args.customfilt,args.customfilt_len)
         self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
         self.csv_file = "test"
+
+        self._add()
+
+    def add_test_infinities(self):
+        self._lenfilt = 0
+        self.plotdir = "/tmp"
+        self.csv_file = "test"
+        self._add()
 
 class CombineCSV(_Combine):
 
