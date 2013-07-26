@@ -298,6 +298,7 @@ class CombineCSV(_Combine):
         _Combine.__init__(self, **kwargs)
 
     def add_from_args(self, args):
+        self._idfilt = args.idfilt
         self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
         self.add_csv_file(args.csv_file, args.lenfilt)
 
@@ -324,6 +325,9 @@ class CombineCSV(_Combine):
                     continue
 
                 if not self._df_ok(dfo):
+                    continue
+
+                if self._idfilt and (obj_id not in self._idfilt):
                     continue
 
                 results[cond]['df'].append(dfo)
