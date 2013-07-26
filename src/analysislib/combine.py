@@ -80,13 +80,20 @@ class _Combine(object):
         return self._results[condition]['count']
 
     def get_num_trials(self, condition):
-        return self.get_num_skipped(condition) + self.get_num_analysed(condition) 
+        return self.get_num_skipped(condition) + self.get_num_analysed(condition)
+
+    def get_total_trials(self):
+        return sum([self.get_num_trials(c) for c in self.get_conditions()])
+
+    def get_conditions(self):
+        return self._results.keys()
 
     def get_num_frames(self, seconds):
         return seconds / self._dt
 
     def enable_debug(self):
         self._debug = True
+
     def disable_debug(self):
         self._debug = False
 
@@ -105,6 +112,20 @@ class _Combine(object):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 if _obj_id == obj_id:
                     return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+
+    def get_result_columns(self):
+        for current_condition,r in self._results.iteritems():
+            for df in r['df']:
+                return list(df.columns)
+        return []
+
+    def add_custom_filter(self, s, post_filter_min):
+        if 'df[' not in s:
+            raise Exception("incorrectly formatted filter string: %s" % s)
+        if post_filter_min is None:
+            raise Exception("filter minimum must be given")
+        self._custom_filter = s
+        self._custom_filter_min = post_filter_min
 
 class _CombineFakeInfinity(_Combine):
     def __init__(self, **kwargs):
