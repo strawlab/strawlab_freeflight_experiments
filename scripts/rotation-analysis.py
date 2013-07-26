@@ -98,7 +98,7 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-    correlations = (('rotation_rate','dtheta'),('v_offset_rate','az'))
+    correlations = (('rotation_rate','dtheta'),)
     histograms = ("velocity","dtheta","rcurve")
     correlation_options = {i[0]:{} for i in correlations}
     histogram_options = {"normed":{"velocity":True,
