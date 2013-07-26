@@ -41,6 +41,8 @@ class _Combine(object):
         self._lenfilt = None
         self._skipped = {}
         self._results = {}
+        self._custom_filter = None
+        self._custom_filter_min = 1
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -165,6 +167,18 @@ class _CombineFakeInfinity(_Combine):
                     )
                     #take some random last number of trajectory
                     df = df.tail(random.randrange(10,len(df)))
+
+                if len(df) < self.min_num_frames:
+                    self._skipped[cond] += 1
+                    continue
+
+                if self._custom_filter is not None:
+                    df = eval(self._custom_filter)
+                    n_samples = len(df)
+                    if n_samples < self._custom_filter_min:
+                        self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,obj_id))
+                        self._skipped[cond] += 1
+                        continue
 
                 first = df.irow(0)
                 last = df.irow(-1)
@@ -342,6 +356,9 @@ class CombineH5(_Combine):
         else:
             h5_file = args.h5_file
 
+        if args.customfilt is not None and args.customfilt_len is not None:
+            self.add_custom_filter(args.customfilt,args.customfilt_len)
+
         self.add_h5_file(h5_file)
 
     def add_from_uuid(self, uuid, *args, **kwargs):
@@ -412,6 +429,9 @@ class CombineH5WithCSV(_Combine):
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_from_args(self, args, csv_suffix, frames_before=0):
+        if args.customfilt is not None and args.customfilt_len is not None:
+            self.add_custom_filter(args.customfilt,args.customfilt_len)
+
         if args.uuid is not None:
             if len(args.uuid) > 1:
                 self.plotdir = args.outdir + "/"
@@ -545,6 +565,7 @@ class CombineH5WithCSV(_Combine):
                         validframenumber = valid['framenumber'][valid_cond]
 
                         n_samples = len(validx)
+                        df = None
 
                         if n_samples < dur_samples: # must be at least this long
                             self.debug('insufficient samples (%d) for obj_id %d' % (n_samples,query_id))
@@ -562,8 +583,18 @@ class CombineH5WithCSV(_Combine):
 
                             df = pd.DataFrame(dfd,index=validframenumber)
 
+                            if self._custom_filter is not None:
+                                df = eval(self._custom_filter)
+                                n_samples = len(df)
+                                if n_samples < self._custom_filter_min:
+                                    self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,query_id))
+                                    self._skipped[_cond] += 1
+                                    df = None
+
+                        if df is not None:
+                            first = df.irow(0)
                             r['count'] += 1
-                            r['start_obj_ids'].append(  (validx[0], validy[0], query_id, query_framenumber, start_time) )
+                            r['start_obj_ids'].append( (first['x'], first['y'], query_id, first.name, start_time) )
                             r['df'].append( df )
 
                     this_id = _id

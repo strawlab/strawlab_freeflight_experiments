@@ -91,6 +91,15 @@ def get_parser(*only_these_options):
         parser.add_argument(
             '--idfilt', type=int, default=[], nargs='*',
             help='only show these obj_ids')
+    if not only_these_options or "customfilt" in only_these_options:
+        parser.add_argument(
+            '--customfilt', type=str, default=None,
+            help='string to eval against a dataframe')
+        parser.add_argument(
+            '--customfilt-len', type=int, default=None,
+            help='minimum length of dataframe after applying custom filter')
+
+
 
     return parser
 
