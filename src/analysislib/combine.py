@@ -39,6 +39,7 @@ class _Combine(object):
         self._debug = kwargs.get("debug",True)
         self._dt = None
         self._lenfilt = None
+        self._idfilt = []
         self._skipped = {}
         self._results = {}
         self._custom_filter = None
