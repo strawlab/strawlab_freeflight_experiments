@@ -88,6 +88,9 @@ class _Combine(object):
     def get_total_trials(self):
         return sum([self.get_num_trials(c) for c in self.get_conditions()])
 
+    def get_num_conditions(self):
+        return len(self._results)
+
     def get_conditions(self):
         return self._results.keys()
 

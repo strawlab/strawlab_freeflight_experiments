@@ -168,7 +168,7 @@ if __name__=='__main__':
     fname = os.path.basename(csv_file).split('.')[0]
 
     results,dt = get_results(csv_file, h5_file, args, frames_before=0)
-    ncond = len(results)
+    ncond = combine.get_num_conditions()
     if not args.portrait:
         figsize = (5*ncond,5)
         NF_R = 1

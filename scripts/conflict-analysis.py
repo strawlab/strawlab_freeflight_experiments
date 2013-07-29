@@ -43,7 +43,7 @@ if __name__=='__main__':
 
     print "plots stored in", combine.plotdir
     print "files saved as", fname
-    ncond = len(results)
+    ncond = combine.get_num_conditions()
     if not args.portrait:
         figsize = (5*ncond,5)
         NF_R = 1
