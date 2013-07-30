@@ -22,7 +22,6 @@ class TestCombine(unittest.TestCase):
         aplt.plot_histograms(combine, args,
                     figsize=(5*ncond,5),
                     fignrows=1, figncols=ncond,
-                    radius=[0.5],
                     name='%s.hist' % combine.fname)
 
     def _tplot(self, combine, args):
@@ -31,7 +30,6 @@ class TestCombine(unittest.TestCase):
                     figsize=(5*ncond,5),
                     fignrows=1, figncols=ncond,
                     in3d=False,
-                    radius=[0.5],
                     name='%s.traces' % combine.fname,
                     show_starts=True,
                     show_ends=True)

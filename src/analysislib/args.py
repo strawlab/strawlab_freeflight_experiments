@@ -98,8 +98,10 @@ def get_parser(*only_these_options):
         parser.add_argument(
             '--customfilt-len', type=int, default=None,
             help='minimum length of dataframe after applying custom filter')
-
-
+    if not only_these_options or "arena" in only_these_options:
+        parser.add_argument(
+            '--arena', type=str, default='flycave',
+            help='name of arena type')
 
     return parser
 

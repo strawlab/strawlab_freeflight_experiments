@@ -53,8 +53,6 @@ if __name__=='__main__':
         NF_R = ncond
         NF_C = 1
 
-    radius = [0.5]
-
     aplt.save_args(args, combine)
     aplt.save_results(combine)
 
@@ -67,7 +65,6 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=False,
-                radius=radius,
                 name='%s.traces' % fname,
                 show_starts=True,
                 show_ends=True)
@@ -76,13 +73,11 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=True,
-                radius=radius,
                 name='%s.traces3d' % fname)
 
     aplt.plot_histograms(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                radius=radius,
                 name='%s.hist' % fname)
 
 
