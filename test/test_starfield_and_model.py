@@ -14,6 +14,7 @@ import rospy
 import rostest
 from flyvr.msg import ROSPath
 
+@unittest.skip("skipping ros test")
 class TestStarfieldAndModel(unittest.TestCase):
 
     def __init__(self, *args):
