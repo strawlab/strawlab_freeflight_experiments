@@ -12,7 +12,7 @@ def get_default_args(**kwargs):
     args = parser.parse_args("--zfilt trim --rfilt trim".split(' '))
     for k,v in kwargs.iteritems():
         setattr(args,k,v)
-    return args
+    return parser,args
 
 def get_parser(*only_these_options):
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)

@@ -57,7 +57,7 @@ class TestCombine(unittest.TestCase):
                                 "ratio","rotation_rate",
                                 debug=False,
         )
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                     uuid=["75344a94e4c711e2b4c76c626d3a008a"],
                     outdir=tdir
         )
@@ -82,7 +82,7 @@ class TestCombine(unittest.TestCase):
                                 "ratio","rotation_rate",
                                 debug=False,
         )
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                     uuid=["75344a94e4c711e2b4c76c626d3a008a","69d1d022e58a11e29e446c626d3a008a"],
                     outdir=tdir
         )
@@ -99,6 +99,12 @@ class TestCombine(unittest.TestCase):
         self._hplot(combine, args)
         self.assertTrue(os.path.isfile(combine.fname + ".hist.png"))
 
+    def test_combine_requires_outdir(self):
+        parser,args = analysislib.args.get_default_args(
+                    uuid=["75344a94e4c711e2b4c76c626d3a008a","69d1d022e58a11e29e446c626d3a008a"],
+        )
+
+        self.assertRaises(SystemExit, analysislib.args.check_args, parser, args)
 
 if __name__=='__main__':
     unittest.main()

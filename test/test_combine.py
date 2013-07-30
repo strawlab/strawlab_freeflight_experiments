@@ -51,7 +51,7 @@ class TestCombine(unittest.TestCase):
                                 "ratio","rotation_rate",
                                 debug=False,
         )
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
         )
@@ -79,7 +79,7 @@ class TestCombine(unittest.TestCase):
 
     def test_csv_args(self):
         combine = analysislib.combine.CombineCSV()
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
         )

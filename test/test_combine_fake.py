@@ -14,7 +14,7 @@ class TestCombineFake(unittest.TestCase):
 
     def setUp(self):
         self.combine = analysislib.combine._CombineFakeInfinity(nconditions=3)
-        self.args = analysislib.args.get_default_args(
+        parser,self.args = analysislib.args.get_default_args(
                 outdir='/tmp/',
                 lenfilt=0,
                 show='--show' in sys.argv
@@ -57,7 +57,7 @@ class TestCombineFake(unittest.TestCase):
 
     def test_load_from_args(self):
         c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                 outdir='/tmp/',
                 show='--show' in sys.argv,
                 customfilt="df[(df['ratio'] > 0.2) & (df['ratio'] < 0.8)]",

@@ -452,7 +452,7 @@ class CombineH5WithCSV(_Combine):
 
         self.plotdir = (plotdir if plotdir else os.getcwd()) + "/"
 
-        args = analysislib.args.get_default_args()
+        parser,args = analysislib.args.get_default_args()
         for k in kwargs:
             setattr(args,k,kwargs[k])
 
