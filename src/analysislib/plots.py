@@ -512,7 +512,7 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
                     f.write("\n")
                     break
 
-def save_args(args, combine, name="README"):
+def save_args(combine, args, name="README"):
     plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
 
@@ -525,7 +525,7 @@ def save_args(args, combine, name="README"):
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
 
-def save_results(combine, maxn=20):
+def save_results(combine, args, maxn=20):
 
     results,dt = combine.get_results()
     plotdir = combine.plotdir

@@ -180,8 +180,8 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args, combine)
-    aplt.save_results(combine)
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,

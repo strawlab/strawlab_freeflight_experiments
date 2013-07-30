@@ -102,6 +102,23 @@ class TestCombine(unittest.TestCase):
 
         self.assertRaises(SystemExit, analysislib.args.check_args, parser, args)
 
+    def test_misc_plots(self):
+        tdir = tempfile.mkdtemp()
+        combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
+        parser,args = analysislib.args.get_default_args(
+                outdir=tdir,
+                lenfilt=3.5
+        )
+        combine.add_from_args(args)
+
+        aplt.save_args(combine, args)
+        self.assertTrue(os.path.isfile(combine.plotdir + "README"))
+
+        aplt.save_results(combine, args)
+        self.assertTrue(os.path.isfile(combine.plotdir + "data.json"))
+        self.assertTrue(os.path.isfile(combine.plotdir + "data.pkl"))
+
+
 if __name__=='__main__':
     unittest.main()
 

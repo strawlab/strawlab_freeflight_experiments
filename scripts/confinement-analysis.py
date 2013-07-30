@@ -45,8 +45,8 @@ if __name__=='__main__':
         NF_R = ncond
         NF_C = 1
 
-    aplt.save_args(args, combine)
-    aplt.save_results(combine)
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
 
     aplt.plot_trial_times(combine, args)
 
