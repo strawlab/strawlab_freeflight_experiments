@@ -76,11 +76,10 @@ def plot_trial_times(combine, args, name):
             prop={'size':11} if nconds <= 4 else {'size':9}
         )
 
-def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, arena=None, show_starts=False, show_ends=False):
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
-        limit = 0.5
         axes = set()
         for i,(current_condition,r) in enumerate(results.iteritems()):
             if in3d:
@@ -117,17 +116,14 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, 
                 else:
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
-
-            for rad in radius:
-                theta = np.linspace(0, 2*np.pi, 100)
-                ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'r-',
-                         lw=2, alpha=0.3, clip_on=False )
-
+            arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
 
         for ax in axes:
-            ax.set_xlim(-limit,limit)
-            ax.set_ylim(-limit,limit)
+            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            ax.set_xlim(xmin,xmax)
+            ax.set_ylim(ymin,ymax)
+
             ax.set_aspect('equal')
 
             if in3d:
@@ -144,24 +140,38 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, radius, name, 
                 else:
                     spine.set_color('none') # don't draw spine
 
-            ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            xlocs = arena.get_xtick_locations()
+            if xlocs is None:
+                ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            else:
+                ax.set_xticks(xlocs)
             if not in3d:
                 ax.xaxis.set_ticks_position('bottom')
 
-            ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            ylocs = arena.get_ytick_locations()
+            if ylocs is None:
+                ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+            else:
+                ax.set_yticks(ylocs)
             if not in3d:
                 ax.yaxis.set_ticks_position('left')
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
-def plot_histograms(combine, args, figsize, fignrows, figncols, radius, name, colorbar=False):
+def plot_histograms(combine, args, figsize, fignrows, figncols, name, arena=None, colorbar=False):
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
-        limit = 1.0
-        xbins = np.linspace(-limit,limit,40)
-        ybins = np.linspace(-limit,limit,40)
+
+        (xmin,xmax, ymin,ymax) = arena.get_bounds()
+        x_range = xmax-xmin
+        y_range = ymax-ymin
+        max_range = max(y_range,x_range)
+        binsize = max_range/20.0
+        eps = 1e-10
+        xbins = np.arange(xmin,xmax+eps,binsize)
+        ybins = np.arange(ymin,ymax+eps,binsize)
 
         cmap=plt.get_cmap('jet')
         norm = colors.Normalize(0,5)
@@ -186,17 +196,16 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, radius, name, co
             im = ax.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
                       origin='lower', cmap=cmap, norm=norm)
 
-            for rad in radius:
-                theta = np.linspace(0, 2*np.pi, 100)
-                ax.plot( rad*np.cos(theta), rad*np.sin(theta), 'w:', lw=2 )
+            arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
 
             ax.set_aspect('equal')
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
-            ax.set_xlim( -0.5, 0.5 )
-            ax.set_ylim( -0.5, 0.5 )
+            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            ax.set_xlim(xmin,xmax)
+            ax.set_ylim(ymin,ymax)
 
             if colorbar:
                 fig.colorbar(im)

@@ -22,6 +22,7 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
+import analysislib.arenas as aarena
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -51,7 +52,12 @@ if __name__=='__main__':
         NF_R = ncond
         NF_C = 1
 
-    radius = [0.5]
+    if args.arena=='flycave':
+        arena = aarena.FlyCaveCylinder(radius=0.5)
+    elif args.arena=='flycube':
+        arena = aarena.FlyCube()
+    else:
+        raise ValueError('unknown arena %r'%args.arena)
 
     aplt.save_args(args, combine)
     aplt.save_results(combine)
@@ -65,7 +71,7 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=False,
-                radius=radius,
+                arena=arena,
                 name='%s.traces' % fname,
                 show_starts=True,
                 show_ends=True)
@@ -74,13 +80,13 @@ if __name__=='__main__':
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
                 in3d=True,
-                radius=radius,
+                arena=arena,
                 name='%s.traces3d' % fname)
 
     aplt.plot_histograms(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                radius=radius,
+                arena=arena,
                 name='%s.hist' % fname)
 
 

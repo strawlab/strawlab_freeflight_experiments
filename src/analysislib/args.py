@@ -91,7 +91,10 @@ def get_parser(*only_these_options):
         parser.add_argument(
             '--idfilt', type=int, default=[], nargs='*',
             help='only show these obj_ids')
-
+    if not only_these_options or "arena" in only_these_options:
+        parser.add_argument(
+            '--arena', type=str, default='flycave',
+            help='name of arena type')
     return parser
 
 def check_args(parser, args):
