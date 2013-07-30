@@ -92,7 +92,9 @@ def plot_trial_times(combine, args, name):
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
-def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
+    if name is None:
+        name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
     arena = get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
@@ -176,7 +178,9 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, show_sta
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
-def plot_histograms(combine, args, figsize, fignrows, figncols, name, colorbar=False):
+def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
+    if name is None:
+        name = '%s.hist' % combine.fname
     arena = get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
@@ -232,7 +236,9 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name, colorbar=F
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
 
-def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
+def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
+    if name is None:
+        name = '%s.track' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -258,7 +264,9 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
 
 
 
-def plot_nsamples(combine, args, name):
+def plot_nsamples(combine, args, name=None):
+    if name is None:
+        name = '%s.nsamples' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
 
@@ -316,7 +324,9 @@ def plot_nsamples(combine, args, name):
             ncol=1 if nconds <= 4 else 2
         )
 
-def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
+def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
+    if name is None:
+        name = name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None

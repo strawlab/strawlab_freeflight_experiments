@@ -48,29 +48,24 @@ if __name__=='__main__':
     aplt.save_args(args, combine)
     aplt.save_results(combine)
 
-    aplt.plot_trial_times(combine, args,
-                name="%s.trialtimes" % fname)
+    aplt.plot_trial_times(combine, args)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                in3d=False,
-                name='%s.traces' % fname)
+                in3d=False)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                in3d=True,
-                name='%s.traces3d' % fname)
+                in3d=True)
 
     aplt.plot_histograms(combine, args,
                 figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
-                name='%s.hist' % fname)
+                fignrows=NF_R, figncols=NF_C)
 
 
-    aplt.plot_nsamples(combine, args,
-                name='%s.nsamples' % fname)
+    aplt.plot_nsamples(combine, args)
 
 
     if args.plot_tracking_stats and len(args.uuid) == 1:
