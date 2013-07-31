@@ -1,5 +1,6 @@
 import numpy as np
 
+SHRINK_FACTOR = 1.0
 
 N = 100
 pi = np.pi
@@ -11,8 +12,8 @@ r = np.cos(2*theta)
 x = r*np.cos( theta )
 y = r*np.sin( theta )
 
-x *= (150*0.7)
-y *= (280*0.7)
+x *= (150*SHRINK_FACTOR)
+y *= (280*SHRINK_FACTOR)
 
 x += 250
 y += 250
@@ -21,7 +22,14 @@ if 1:
     TEMPLATE = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg width="500" height="500">
 """
-    with open('infinity.svg',mode='w') as fd:
+    if SHRINK_FACTOR != 1.0:
+        shrink_suffix = "{:0>2.0f}".format(SHRINK_FACTOR*10.0)
+    else:
+        shrink_suffix = ''
+
+    filename = 'infinity%s.svg' % shrink_suffix
+
+    with open(filename,mode='w') as fd:
         fd.write(TEMPLATE)
         xy_pairs = []
         for i in range(len(x)):
@@ -31,7 +39,9 @@ if 1:
         fd.write('<path d="%s" fill="none" stroke="blue" stroke-width="1"/>'%s)
         fd.write('</svg\n>')
 
-if 1:
+        print "wrote", filename
+
+if 0:
     import matplotlib.pyplot as plt
 
     ax1=plt.subplot(2,1,1,polar=True)
