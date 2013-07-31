@@ -56,7 +56,9 @@ def fmt_date_xaxes(ax):
         tl.set_rotation(30)
         tl.set_ha("right")
 
-def plot_trial_times(combine, args, name):
+def plot_trial_times(combine, args, name=None):
+    if name is None:
+        name = '%s.trialtimes' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
