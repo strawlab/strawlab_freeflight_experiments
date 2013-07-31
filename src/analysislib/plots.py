@@ -5,12 +5,6 @@ import sys
 import operator
 import json
 
-try:
-    import strawlab_mpl.defaults
-    strawlab_mpl.defaults.setup_defaults()
-except ImportError:
-    print "install strawlab styleguide for nice plots"
-
 import pandas
 import numpy as np
 import matplotlib.mlab
