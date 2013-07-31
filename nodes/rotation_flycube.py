@@ -388,7 +388,7 @@ class Node(object):
         self.update()
 
 def main():
-    rospy.init_node("rotation_flycube")
+    rospy.init_node("rotation")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
