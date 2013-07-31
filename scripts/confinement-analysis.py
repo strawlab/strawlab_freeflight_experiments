@@ -2,8 +2,11 @@
 import sys
 import os.path
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
+if not os.environ.get('DISPLAY'):
+    print "DISPLAY NOT SET: USING AGG BACKEND"
+    import matplotlib
+    matplotlib.use('agg')
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import confinement
@@ -77,5 +80,5 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     if args.show:
-        plt.show()
+        aplt.show_plots()
 

@@ -6,11 +6,9 @@ import numpy as np
 import itertools
 
 if not os.environ.get('DISPLAY'):
+    print "DISPLAY NOT SET: USING AGG BACKEND"
     import matplotlib
     matplotlib.use('agg')
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import conflict
@@ -108,5 +106,5 @@ if __name__=='__main__':
     curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
 
     if args.show:
-        plt.show()
+        aplt.show_plots()
 

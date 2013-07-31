@@ -39,6 +39,12 @@ def get_arena_from_args(args):
         raise ValueError('unknown arena %r'%args.arena)
     return arena
 
+def show_plots():
+    try:
+        __IPYTHON__
+    except NameError:
+        plt.show()
+
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
     if args and args.outdir:
