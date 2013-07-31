@@ -174,8 +174,19 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name, arena=None
         ybins = np.arange(ymin,ymax+eps,binsize)
 
         cmap=plt.get_cmap('jet')
-        norm = colors.Normalize(0,5)
+        valmax=0
 
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            if not r['count']:
+                continue
+            allx = np.concatenate( [df['x'].values for df in r['df']] )
+            ally = np.concatenate( [df['y'].values for df in r['df']] )
+            dur = len(allx)*dt
+            hdata,xedges,yedges = np.histogram2d( allx, ally,
+                                                  bins=[xbins,ybins] )
+            valmax=max(valmax,np.max(np.max(hdata.T/dur)))
+
+        norm = colors.Normalize(0,valmax)
         for i,(current_condition,r) in enumerate(results.iteritems()):
             ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
 
