@@ -21,8 +21,8 @@ class TestCurvature(unittest.TestCase):
 
         #fill with nans
         a2 = a.copy(); b2 = b.copy()
-        a2[np.random.random(50) < 0.05] = np.nan
-        b2[np.random.random(50) < 0.05] = np.nan
+        a2[np.random.random(50) < 0.1] = np.nan
+        b2[np.random.random(50) < 0.1] = np.nan
         self.assertTrue(np.isnan(a2).sum() > 0)
 
         #check that nans are removed
