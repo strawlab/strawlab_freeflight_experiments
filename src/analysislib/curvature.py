@@ -168,11 +168,17 @@ def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurv
 
     d = np.zeros((len(df)))
     d.fill(np.nan)
-    for i in range(0,len(df),NPTS):
+    for i in range(0,len(df)+1,NPTS):
         x = df['x'][i:i+NPTS].values
         y = df['y'][i:i+NPTS].values
         if len(x) == NPTS:
-            d[i:i+NPTS] = method(x,y)
+            c = method(x,y)
+            d[i:i+NPTS] = c
+
+    #handle the last value for curves not divisible by NPTS
+    if i < len(d):
+        #equiv to -(len(d)-i)
+        d[i-len(d):] = c
 
     if clip is not None:
         d = np.clip(d,*clip)
