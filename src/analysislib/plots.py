@@ -141,14 +141,14 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
 
         for ax in axes:
-            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
 
             ax.set_aspect('equal')
 
             if in3d:
-                ax.set_zlim(0,1)
+                ax.set_zlim(zmin,zmax)
 
             ax.set_aspect('equal')
             ax.set_ylabel( 'y (m)' )
@@ -188,7 +188,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
 
-        (xmin,xmax, ymin,ymax) = arena.get_bounds()
+        (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
         x_range = xmax-xmin
         y_range = ymax-ymin
         max_range = max(y_range,x_range)
@@ -227,7 +227,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
-            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
 
