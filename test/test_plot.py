@@ -15,7 +15,7 @@ import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
 
-class TestCombine(unittest.TestCase):
+class TestPlot(unittest.TestCase):
 
     def _hplot(self, combine, args):
         ncond = combine.get_num_conditions()
