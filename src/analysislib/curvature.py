@@ -331,7 +331,7 @@ def calc_unwrapped_ratio(df, data):
 def _strictly_increasing(L):
     return all(x<y for x, y in zip(L, L[1:]))
 
-def calc_interpolate_dataframe(df,dt):
+def calc_interpolate_dataframe(df,dt,columns):
     #where data is measured at a lower rate, such as from the csv file,
     #it should be interpolated or filled as appropriate as later analysis may
     #not handle NaNs correctly.
@@ -339,28 +339,33 @@ def calc_interpolate_dataframe(df,dt):
     #after filling, we should only have nans at the start. for performance (and
     #animated plotting reasons) I scrub these only when needed, like to calculate
     #correlations, but enable DEBUG to test that here.
-    try:
-        vals = df['rotation_rate'].interpolate().values
-        df['rotation_rate'] = vals
+    for c in columns:
+        try:
+            if DEBUG:
+                bf = np.sum(np.isnan(df[c].values))
 
-        if DEBUG:
-            idx, = np.where(np.isnan(vals))
-            if len(idx):
-                assert _strictly_increasing(idx)
-    except ValueError:
-        #not enough/any points to interpolate
-        pass
-    except KeyError:
-        #no such column
-        pass
+            vals = df[c].interpolate().values
+            df[c] = vals
+
+            if DEBUG:
+                ldf = len(df)
+                print "INTERPOLATED %.1f%% of %d %s values" % (
+                            (bf/float(ldf)) * 100, ldf, c)
+
+                idx, = np.where(np.isnan(vals))
+                if len(idx):
+                    assert _strictly_increasing(idx)
+        except ValueError:
+            #not enough/any points to interpolate
+            pass
+        except KeyError:
+            #no such column
+            pass
 
 def calculate_correlation_and_remove_nans(a,b):
     #the remaining nans after the dataframe being filled lie at the start
     #of individual trials. a and b now contain many many concatinated trials
     #so remove all data where one partner is nan
-    #
-    #enable DEBUG to test, and see calc_interpolate_dataframe for further
-    #explanation
     nans_a, = np.where(np.isnan(a))
     nans_b, = np.where(np.isnan(b))
 
@@ -370,7 +375,13 @@ def calculate_correlation_and_remove_nans(a,b):
     clean_b = np.delete(b,nans_all)
 
     if DEBUG:
-        print "%.1f%% NANS (from %d points)" % (nans_all.sum()/len(a),len(a))
+        assert len(clean_b) == len(clean_a)
+        assert len(a) == len(b)
+
+        nc = len(a) - len(clean_a)
+        print "CLEANED %.1f%% nans (%d from %d points)" % (
+                                100 * (float(nc) / len(a)), nc, len(a))
+
         assert np.isnan(clean_a).sum() == 0
         assert np.isnan(clean_b).sum() == 0
 
@@ -623,7 +634,7 @@ def flatten_data(args, combine, flatten_columns):
 
             calc_velocities(df, dt)
             calc_angular_velocities(df, dt)
-            calc_interpolate_dataframe(df,dt)
+#            calc_interpolate_dataframe(df,dt,columns=['rotation_rate'])
             calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
 
             if df['rotation_rate'].count() < MIN_ROTATION_RATE_SAMPLES:
@@ -664,9 +675,6 @@ if __name__ == "__main__":
     calc_curvature(df, dt, 10)
 
     calc_unwrapped_ratio(df, dt)
-
-    #interpolate to fill nans (bad for correlation estimation).
-    #calc_interpolate_dataframe(df,dt)
 
     if 1:
         anim = animate_plots(df,dt,

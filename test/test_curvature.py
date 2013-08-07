@@ -8,6 +8,17 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.curvature as curve
 
+def _gen_known_correlation(n,ccef):
+    #http://www.sitmo.com/article/generating-correlated-random-numbers/
+
+    r = ccef
+
+    x1 = np.random.randn(n)
+    x2 = np.random.randn(n)
+    y1 = r*x1 + (np.sqrt(1-(r**2))*x2)
+
+    return x1,y1
+
 class TestCurvature(unittest.TestCase):
 
     def test_correlations(self):
@@ -30,6 +41,24 @@ class TestCurvature(unittest.TestCase):
         self.assertEqual(ccef,1.0)
         self.assertTrue(len(cleana) < len(a2))
         self.assertTrue(len(cleanb) < len(b2))
+
+    def test_correlations_two(self):
+        n = 100000
+        ccef = 0.66
+
+        x,y = _gen_known_correlation(n,ccef)
+
+        _,_,ccef1 = curve.calculate_correlation_and_remove_nans(x,y)
+        self.assertAlmostEqual(ccef,ccef1,2) #2 decimal places
+
+        #fill with nans
+        x2 = x.copy(); y2 = y.copy()
+        x2[np.random.random(n) < 0.1] = np.nan
+        y2[np.random.random(n) < 0.1] = np.nan
+
+        #check that nans are removed
+        _,_,ccef2 = curve.calculate_correlation_and_remove_nans(x2,y2)
+        self.assertAlmostEqual(ccef,ccef2,2)
 
     def test_velocity(self):
         EXPECTED_V = 100.0
