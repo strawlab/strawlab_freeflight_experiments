@@ -31,6 +31,26 @@ class TestCurvature(unittest.TestCase):
         self.assertTrue(len(cleana) < len(a2))
         self.assertTrue(len(cleanb) < len(b2))
 
+    def test_velocity(self):
+        EXPECTED_V = 100.0
+
+        dt = 1/100.0
+        x = np.array(range(100))
+        y = np.array(range(100))
+        z = np.array(range(100))
+        df = pd.DataFrame({"x":x,"y":y,"z":z})
+
+        cols = curve.calc_velocities(df, dt)
+        self.assertEqual(cols, ["vx","vy","vz","velocity"])
+
+        for i in ('vx','vy','vz'):
+            #all velocity is the same
+            self.assertTrue( np.allclose(df[i].values,EXPECTED_V) )
+
+        #velocity in xy is 
+        vxy = np.sqrt((EXPECTED_V**2) + (EXPECTED_V**2))
+        self.assertTrue( np.allclose(df['velocity'].values,vxy) )
+
 if __name__=='__main__':
     unittest.main()
 

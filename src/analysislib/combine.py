@@ -270,7 +270,7 @@ class _CombineFakeInfinity(_Combine):
         rrate[trim] = np.nan
 
         df['rotation_rate'] = rrate
-        df['v_offset_rate'] = np.zeros_like(df['az'].values)
+        df['v_offset_rate'] = np.zeros_like(rrate)
 
         for c in cols:
             del df[c]

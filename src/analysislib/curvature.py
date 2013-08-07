@@ -65,25 +65,38 @@ def get_data(uuid, obj_id, suffix="rotation.csv"):
     return df,dt
 
 def calc_velocities(df, dt):
-    df['vx'] = np.gradient(df['x'].values + 10) / dt
-    df['vy'] = np.gradient(df['y'].values + 10) / dt
-    df['vz'] = np.gradient(df['z'].values + 10) / dt
+    vx = np.gradient(df['x'].values + 10) / dt
+    vy = np.gradient(df['y'].values + 10) / dt
+    vz = np.gradient(df['z'].values + 10) / dt
+    velocity = np.sqrt( (vx**2) + (vy**2) )
+
+    df['vx'] = vx
+    df['vy'] = vy
+    df['vz'] = vz
+    df['velocity'] = velocity
+
+    return ['vx','vy','vz', 'velocity']
+
+def calc_accelerations(df, dt):
+    df['ax'] = np.gradient(df['vx'].values) / dt
+    df['ay'] = np.gradient(df['vy'].values) / dt
     df['az'] = np.gradient(df['vz'].values) / dt
 
-    return ['vx','vy','vz','az']
+    return ['ax','ay','az']
 
 def calc_angular_velocities(df, dt):
+    velocity = df['velocity'].values
+
     theta       = np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
     dtheta      = np.gradient(theta)
-    velocity    = np.sqrt( (df['vx'].values**2) + (df['vy'].values**2) )
     radius      = np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
+
     df['theta']     = theta
     df['dtheta']    = dtheta
-    df['velocity']  = velocity
     df['radius']    = radius
     df['omega']     = (velocity*np.cos(theta))/radius
 
-    return ['theta','dtheta','velocity','radius','omega']
+    return ['theta','dtheta','radius','omega']
 
 
 def calc_circle_algebraic(x,y):
@@ -402,7 +415,7 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',nbins=100,correlatio
 
     return func(rr,dtheta,bins=nbins,**hkwargs)
 
-def plot_hist_v_offset_rate_vs_vz(vor,vz,ax,title='',nbins=100,**outer_kwargs):
+def plot_hist_v_offset_rate_vs_az(vor,az,ax,title='',nbins=100,**outer_kwargs):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -433,7 +446,7 @@ def plot_hist_v_offset_rate_vs_vz(vor,vz,ax,title='',nbins=100,**outer_kwargs):
     except AttributeError:
         func = hist2d
 
-    return func(vor,vz,bins=nbins,**outer_kwargs)
+    return func(vor,az,bins=nbins,**outer_kwargs)
 
 def plot_correlation_latency_sweep(fig,rotation_rate,dtheta,data_dt,hist2d=False,latencies=None,latencies_to_plot=None,extra_title='',correlation_options=None):
 
