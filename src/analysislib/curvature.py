@@ -502,27 +502,20 @@ def flatten_data(args, combine, flatten_columns):
 if __name__ == "__main__":
     import analysislib.util as autil
 
-    #df,dt = get_one_data()
-
-    #df,dt = analysislib.combine._CombineFakeInfinity.get_fake_infinity(), 1/100.
     #combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
     #combine.add_test_infinities()
     #df,dt,_ = combine.get_one_result(1)
 
     #GOOD DATA FOR SID
-    #df,dt = get_data("9b97392ebb1611e2a7e46c626d3a008a", 9)
+    #df,dt = autil.get_one_trajectory("9b97392ebb1611e2a7e46c626d3a008a", 9)
 
     #conflict
-    #df,dt = get_data("0aba1bb0ebc711e2a2706c626d3a008a", 422, "conflict.csv")
+    #df,dt = autil.get_one_trajectory("0aba1bb0ebc711e2a2706c626d3a008a", 422, "conflict.csv")
 
-    pdf,dt = autil.get_one_trajectory("14ab4982ff7711e2aa636c626d3a008a", 689, "rotation.csv")
-
-#    df = remove_pre_infinity(df)
-
-    calc_unwrapped_ratio(pdf, dt)
+    df,dt = autil.get_one_trajectory("14ab4982ff7711e2aa636c626d3a008a", 689, "rotation.csv")
 
     if 1:
-        anim = animate_plots(pdf,dt,
+        anim = animate_plots(df,dt,
             plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
             ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)},
         )
