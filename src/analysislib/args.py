@@ -14,7 +14,7 @@ def get_default_args(**kwargs):
         setattr(args,k,v)
     return parser,args
 
-def get_parser(*only_these_options):
+def get_parser(*only_these_options, **defaults):
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
 
     parser = argparse.ArgumentParser()
@@ -36,7 +36,8 @@ def get_parser(*only_these_options):
             help='reindex simple_flydra h5 file')
     if not only_these_options or "show" in only_these_options:
         parser.add_argument(
-            '--show', action='store_true', default=False,
+            '--show', action='store_true',
+            default=defaults.get('show',False),
             help='show plots')
     if not only_these_options or "no-trackingstats" in only_these_options:
         parser.add_argument(
@@ -49,7 +50,8 @@ def get_parser(*only_these_options):
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,
-            required=True,
+            required=False if 'zfilt' in defaults else True,
+            default=defaults.get('zfilt', 'trim'),
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
@@ -76,7 +78,8 @@ def get_parser(*only_these_options):
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
             '--rfilt', type=str, choices=filt_choices,
-            required=True,
+            required=False if 'rfilt' in defaults else True,
+            default=defaults.get('rfilt', 'trim'),
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
