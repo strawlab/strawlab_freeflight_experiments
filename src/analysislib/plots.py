@@ -4,6 +4,7 @@ import os.path
 import sys
 import operator
 import json
+import collections
 
 import pandas
 import numpy as np
@@ -14,6 +15,7 @@ import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import animation
 
 import arenas
 
@@ -384,6 +386,119 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
+    if name is None:
+        name = '%s.infinity' % combine.fname
+
+    arena = get_arena_from_args(args)
+
+    _plot_axes = [p for p in plot_axes if p in _df]
+    n_plot_axes = len(_plot_axes)
+
+    with mpl_fig(name,args,figsize=figsize) as _fig:
+
+        _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
+        _ax.set_xlim(-0.5, 0.5)
+        _ax.set_ylim(-0.5, 0.5)
+        _ax.plot(_df['x'], _df['y'], 'k-')
+        arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+
+        _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
+        _ax.plot(_df.index, _df['z'], 'k-')
+        _ax.set_xlim(_df.index[0], _df.index[-1])
+        _ax.set_ylim(*ylimits.get("z",(0, 1)))
+        _ax.set_ylabel("z")
+
+        for i,p in enumerate(_plot_axes):
+            _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
+            _ax.plot(_df.index, _df[p], 'k-')
+            _ax.set_xlim(_df.index[0], _df.index[-1])
+            _ax.set_ylim(*ylimits.get(p,
+                            (_df[p].min(), _df[p].max())))
+            _ax.set_ylabel(p)
+
+            #only label the last x axis
+            if i != (n_plot_axes - 1):
+                for tl in _ax.get_xticklabels():
+                    tl.set_visible(False)
+
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8)):
+    _plot_axes = [p for p in plot_axes if p in _df]
+    n_plot_axes = len(_plot_axes)
+
+    arena = get_arena_from_args(args)
+
+    _fig = plt.figure(figsize=figsize)
+
+    _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
+    _ax.set_xlim(-0.5, 0.5)
+    _ax.set_ylim(-0.5, 0.5)
+    arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+    _linexy,_linexypt = _ax.plot([], [], 'k-', [], [], 'r.')
+
+    _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
+    _linez,_linezpt = _ax.plot([], [], 'k-', [], [], 'r.')
+    _ax.set_xlim(_df.index[0], _df.index[-1])
+    _ax.set_ylim(*ylimits.get("z",(0, 1)))
+    _ax.set_ylabel("z")
+
+    _init_axes = [_linexy,_linexypt,_linez,_linezpt]
+    _line_axes = collections.OrderedDict()
+    _pt_axes   = collections.OrderedDict()
+
+    for i,p in enumerate(_plot_axes):
+        _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
+        _line,_linept = _ax.plot([], [], 'k-', [], [], 'r.')
+        _ax.set_xlim(_df.index[0], _df.index[-1])
+        _ax.set_ylim(*ylimits.get(p,
+                        (_df[p].min(), _df[p].max())))
+        _ax.set_ylabel(p)
+
+        #only label the last x axis
+        if i != (n_plot_axes - 1):
+            for tl in _ax.get_xticklabels():
+                tl.set_visible(False)
+
+        _init_axes.extend([_line,_linept])
+        _line_axes[p] = _line
+        _pt_axes[p] = _linept
+
+    _plot_axes.append("z")
+    _pt_axes["z"] = _linezpt
+    _line_axes["z"] = _linez
+
+    # initialization function: plot the background of each frame
+    def init():
+        _linexy.set_data(_df['x'],_df['y'])
+        _linexypt.set_data([], [])
+
+        #_linez.set_data(df.index,df['z'])
+        #_linezpt.set_data([], [])
+
+        for p in _plot_axes:
+            _line_axes[p].set_data(_df.index.values,_df[p])
+            _pt_axes[p].set_data([], [])
+
+        return _init_axes
+
+    # animation function.  This is called sequentially
+    def animate(i, df, xypt, pt_axes):
+        xypt.set_data(df['x'][i], df['y'][i])
+        for p in pt_axes:
+            pt_axes[p].set_data(i, df[p][i])
+
+        return [xypt] + pt_axes.values()
+
+    anim = animation.FuncAnimation(_fig,
+                               animate,
+                               frames=_df.index,
+                               init_func=init,
+                               interval=50, blit=True,
+                               fargs=(_df,_linexypt,_pt_axes),
+    )
+
+    return anim
 
 def _calculate_nloops(df):
     #dont change this, is has to be ~= 1. It is the dratio/dt value to detect
