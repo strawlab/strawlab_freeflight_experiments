@@ -14,7 +14,6 @@ from matplotlib import gridspec
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.plots as aplt
-import analysislib.combine
 from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML
 
 sys.path.append(os.path.join(
@@ -25,44 +24,6 @@ import rotation
 import conflict
 
 DEBUG = False
-
-def get_one_data():
-    obj_id = 1278
-    fname = "1d06dfe0a2c711e2b7ca6c626d3a008a_1278.pkl"
-
-    data = pickle.load(open(fname))
-    r = data['results']['checkerboard16.png/infinity.svg/+0.3/-10/0.1/0.20']
-
-    df = None
-    for _df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-        if obj_id == _obj_id:
-            df = _df
-
-    return df,data['dt']
-
-def get_data(uuid, obj_id, suffix="rotation.csv"):
-
-    if suffix == "rotation.csv":
-        combine = analysislib.combine.CombineH5WithCSV(
-                                rotation.Logger,
-                                "ratio","rotation_rate","v_offset_rate",
-        )
-        combine.add_from_uuid(uuid,suffix)
-    elif suffix == "conflict.csv":
-        combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
-                                "ratio","rotation_rate","v_offset_rate",
-        )
-        combine.add_from_uuid(uuid,suffix)
-    elif not suffix:
-        combine = analysislib.combine.CombineH5()
-        combine.add_from_uuid(uuid)
-    else:
-        raise Exception("Suffix Not Supported")
-
-    df,dt,_ = combine.get_one_result(obj_id)
-
-    return df,dt
 
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values + 10) / dt
@@ -539,12 +500,14 @@ def flatten_data(args, combine, flatten_columns):
     return flat_data, nens
 
 if __name__ == "__main__":
+    import analysislib.util as autil
+
     #df,dt = get_one_data()
 
     #df,dt = analysislib.combine._CombineFakeInfinity.get_fake_infinity(), 1/100.
-    combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-    combine.add_test_infinities()
-    df,dt,_ = combine.get_one_result(1)
+    #combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
+    #combine.add_test_infinities()
+    #df,dt,_ = combine.get_one_result(1)
 
     #GOOD DATA FOR SID
     #df,dt = get_data("9b97392ebb1611e2a7e46c626d3a008a", 9)
@@ -552,16 +515,14 @@ if __name__ == "__main__":
     #conflict
     #df,dt = get_data("0aba1bb0ebc711e2a2706c626d3a008a", 422, "conflict.csv")
 
-    df = remove_pre_infinity(df)
+    pdf,dt = autil.get_one_trajectory("14ab4982ff7711e2aa636c626d3a008a", 689, "rotation.csv")
 
-    calc_velocities(df, dt)
-    calc_angular_velocities(df, dt)
-    calc_curvature(df, dt, 10)
+#    df = remove_pre_infinity(df)
 
-    calc_unwrapped_ratio(df, dt)
+    calc_unwrapped_ratio(pdf, dt)
 
     if 1:
-        anim = animate_plots(df,dt,
+        anim = animate_plots(pdf,dt,
             plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
             ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)},
         )

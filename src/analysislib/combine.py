@@ -471,9 +471,12 @@ class CombineH5WithCSV(_Combine):
 
         self.plotdir = (plotdir if plotdir else os.getcwd()) + "/"
 
-        parser,args = analysislib.args.get_default_args()
-        for k in kwargs:
-            setattr(args,k,kwargs[k])
+        if 'args' in kwargs:
+            args = kwargs['args']
+        else:
+            parser,args = analysislib.args.get_default_args()
+            for k in kwargs:
+                setattr(args,k,kwargs[k])
 
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
