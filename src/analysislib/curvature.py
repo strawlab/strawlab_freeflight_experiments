@@ -632,11 +632,6 @@ def flatten_data(args, combine, flatten_columns):
 
         for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
 
-            calc_velocities(df, dt)
-            calc_angular_velocities(df, dt)
-#            calc_interpolate_dataframe(df,dt,columns=['rotation_rate'])
-            calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
-
             if df['rotation_rate'].count() < MIN_ROTATION_RATE_SAMPLES:
                 continue
 

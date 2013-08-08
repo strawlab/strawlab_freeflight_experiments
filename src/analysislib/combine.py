@@ -16,7 +16,7 @@ import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
-import analysislib.curvature
+import analysislib.curvature as acurve
 import analysislib.plots as aplt
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
@@ -32,6 +32,9 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 class _Combine(object):
 
     plotdir = None
+    calc_linear_stats = True
+    calc_angular_stats = True
+    calc_turn_stats = False
 
     def __init__(self, **kwargs):
         self._debug = kwargs.get("debug",True)
@@ -255,8 +258,8 @@ class _CombineFakeInfinity(_Combine):
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
         cols = []
-        cols.extend( analysislib.curvature.calc_velocities(df, dt) )
-        cols.extend( analysislib.curvature.calc_angular_velocities(df, dt) )
+        cols.extend( acurve.calc_velocities(df, dt) )
+        cols.extend( acurve.calc_angular_velocities(df, dt) )
 
         #add some uncorrelated noise to rrate
         rrate = (df['dtheta'].values * 10.0) + (0.0 * (np.random.random(len(df)) - 0.5))
@@ -340,6 +343,15 @@ class CombineCSV(_Combine):
 
                 if self._idfilt and (obj_id not in self._idfilt):
                     continue
+
+                dt = self._dt
+                if self.calc_linear_stats:
+                    acurve.calc_velocities(dfo, dt)
+                    acurve.calc_accelerations(dfo, dt)
+                if self.calc_angular_stats:
+                    acurve.calc_angular_velocities(dfo, dt)
+                if self.calc_turn_stats:
+                    acurve.calc_curvature(dfo, dt, 10, 'leastsq', clip=(0,1))
 
                 results[cond]['df'].append(dfo)
                 results[cond]['start_obj_ids'].append(self._get_result(dfo))
@@ -427,6 +439,15 @@ class CombineH5(_Combine):
                 {i:traj[i] for i in 'xyz'},
                 index=traj['framenumber']
         )
+
+        dt = self._dt
+        if self.calc_linear_stats:
+            acurve.calc_velocities(df, dt)
+            acurve.calc_accelerations(df, dt)
+        if self.calc_angular_stats:
+            acurve.calc_angular_velocities(df, dt)
+        if self.calc_turn_stats:
+            acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
 
@@ -610,6 +631,15 @@ class CombineH5WithCSV(_Combine):
                                     dfd[k] = pd.Series(csv_results[k],index=csv_results['framenumber'])
 
                             df = pd.DataFrame(dfd,index=validframenumber)
+
+                            dt = self._dt
+                            if self.calc_linear_stats:
+                                acurve.calc_velocities(df, dt)
+                                acurve.calc_accelerations(df, dt)
+                            if self.calc_angular_stats:
+                                acurve.calc_angular_velocities(df, dt)
+                            if self.calc_turn_stats:
+                                acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
 
                             if self._custom_filter is not None:
                                 df = eval(self._custom_filter)

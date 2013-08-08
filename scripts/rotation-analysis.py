@@ -34,6 +34,7 @@ if __name__=='__main__':
                             rotation.Logger,
                             "ratio","rotation_rate",
     )
+    combine.calc_turn_stats = True
     combine.add_from_args(args, "rotation*.csv", frames_before=0)
 
     fname = combine.fname
