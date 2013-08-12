@@ -200,7 +200,7 @@ class _CombineFakeInfinity(_Combine):
                     df = eval(self._custom_filter)
                     n_samples = len(df)
                     if n_samples < self.custom_filter_min_num_frames:
-                        self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,obj_id))
+                        self.debug('FILTER: %d for obj_id %d' % (n_samples,obj_id))
                         self._skipped[cond] += 1
                         continue
 
@@ -336,7 +336,7 @@ class CombineCSV(_Combine):
     def add_csv_file(self, csv_file, lenfilt=None):
         self._lenfilt = lenfilt
 
-        self.debug("reading %s" % csv_file)
+        self.debug("IO:     reading %s" % csv_file)
         self.csv_file = csv_file
         df = pd.DataFrame.from_csv(self.csv_file,index_col="framenumber")
 
@@ -425,7 +425,7 @@ class CombineH5(_Combine):
         self.add_h5_file(h5_file)
 
     def add_h5_file(self, h5_file):
-        self.debug("reading %s" % h5_file)
+        self.debug("IO:     reading %s" % h5_file)
 
         warnings = {}
 
@@ -526,8 +526,8 @@ class CombineH5WithCSV(_Combine):
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
-        self.debug("reading %s" % csv_fname)
-        self.debug("reading %s" % h5_file)
+        self.debug("IO:     reading %s" % csv_fname)
+        self.debug("IO:     reading %s" % h5_file)
 
         warnings = {}
 
@@ -637,12 +637,11 @@ class CombineH5WithCSV(_Combine):
                         df = None
 
                         if n_samples < dur_samples: # must be at least this long
-                            self.debug('insufficient samples (%d) for obj_id %d' % (n_samples,query_id))
+                            self.debug('TRIM:   %d samples for obj_id %d' % (n_samples,query_id))
                             self._skipped[_cond] += 1
                         else:
-                            self.debug('%s %d: frame0 %d, %d samples'%(_cond, query_id,
-                                                                valid[0]['framenumber'],
-                                                                n_samples))
+                            self.debug('SAVE:   %d samples for obj_id %d (%s)' % (
+                                                    n_samples,query_id,_cond))
 
                             dfd = {'x':validx,'y':validy,'z':validz}
 
@@ -665,7 +664,7 @@ class CombineH5WithCSV(_Combine):
                                 df = eval(self._custom_filter)
                                 n_samples = len(df)
                                 if n_samples < self.custom_filter_min_num_frames:
-                                    self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,query_id))
+                                    self.debug('FILTER: %d for obj_id %d' % (n_samples,query_id))
                                     self._skipped[_cond] += 1
                                     df = None
 
