@@ -100,7 +100,9 @@ def get_parser(*only_these_options, **defaults):
             help='string to eval against a dataframe')
         parser.add_argument(
             '--customfilt-len', type=int, default=None,
-            help='minimum length of dataframe after applying custom filter')
+            help='minimum length of remaining (seconds) after applying custom filter. '\
+                 'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
+                 'operations')
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str, default='flycave',

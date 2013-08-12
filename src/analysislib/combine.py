@@ -44,7 +44,7 @@ class _Combine(object):
         self._skipped = {}
         self._results = {}
         self._custom_filter = None
-        self._custom_filter_min = 1
+        self._custom_filter_min = None
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -70,6 +70,13 @@ class _Combine(object):
     def min_num_frames(self):
         try:
             return self._lenfilt / self._dt
+        except TypeError:
+            return 1
+
+    @property
+    def custom_filter_min_num_frames(self):
+        try:
+            return self._custom_filter_min / self._dt
         except TypeError:
             return 1
 
@@ -119,6 +126,7 @@ class _Combine(object):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 if _obj_id == obj_id:
                     return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+        raise ValueError("No such obj_id: %s" % obj_id)
 
     def get_result_columns(self):
         for current_condition,r in self._results.iteritems():
@@ -179,10 +187,19 @@ class _CombineFakeInfinity(_Combine):
                     self._skipped[cond] += 1
                     continue
 
+                dt = self._dt
+                if self.calc_linear_stats:
+                    acurve.calc_velocities(df, dt)
+                    acurve.calc_accelerations(df, dt)
+                if self.calc_angular_stats:
+                    acurve.calc_angular_velocities(df, dt)
+                if self.calc_turn_stats:
+                    acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
+
                 if self._custom_filter is not None:
                     df = eval(self._custom_filter)
                     n_samples = len(df)
-                    if n_samples < self._custom_filter_min:
+                    if n_samples < self.custom_filter_min_num_frames:
                         self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,obj_id))
                         self._skipped[cond] += 1
                         continue
@@ -647,7 +664,7 @@ class CombineH5WithCSV(_Combine):
                             if self._custom_filter is not None:
                                 df = eval(self._custom_filter)
                                 n_samples = len(df)
-                                if n_samples < self._custom_filter_min:
+                                if n_samples < self.custom_filter_min_num_frames:
                                     self.debug('insufficient samples (%d) for obj_id %d after custom filter' % (n_samples,query_id))
                                     self._skipped[_cond] += 1
                                     df = None
