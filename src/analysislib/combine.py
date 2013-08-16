@@ -45,6 +45,7 @@ class _Combine(object):
         self._results = {}
         self._custom_filter = None
         self._custom_filter_min = None
+        self._tzname = 'Europe/Vienna'
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -61,6 +62,10 @@ class _Combine(object):
                 self.warn("obj_id column not indexed, this will be slow. reindex")
 
         return trajectories
+
+    @property
+    def timezone(self):
+        return pytz.timezone(self._tzname)
 
     @property
     def fname(self):
@@ -151,6 +156,7 @@ class _CombineFakeInfinity(_Combine):
         self._results = {}
         self._dt = 1/100.0
         self._t0 = time.time()
+        self._tzname = 'UTC'
 
     def _add(self):
         obj_id = 1
@@ -437,11 +443,14 @@ class CombineH5(_Combine):
         dt = 1.0/self._trajectories.attrs['frames_per_second']
 
         self._trajectory_start_times = h5.root.trajectory_start_times
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
 
         if self._dt is None:
             self._dt = dt
+            self._tzname = tzname
         else:
             assert dt == self._dt
+            assert tzname == self._tzname
 
     def get_one_result(self, obj_id):
         query = "obj_id == %d" % obj_id
@@ -541,11 +550,15 @@ class CombineH5WithCSV(_Combine):
         trajectories = self._get_trajectories(h5)
         dt = 1.0/trajectories.attrs['frames_per_second']
 
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
+
         if self._dt is None:
             self._dt = dt
             self._lenfilt = args.lenfilt
+            self._tzname = tzname
         else:
             assert dt == self._dt
+            assert tzname == self._tzname
 
         dur_samples = self.min_num_frames
 
