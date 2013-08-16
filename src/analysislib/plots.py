@@ -82,7 +82,11 @@ def plot_trial_times(combine, args, name=None):
         colors = [matplotlib.pyplot.cm.jet(i) for i in np.linspace(0, 0.9, len(starts))]
 
         for i,condition in enumerate(starts):
-            ax.plot_date(mdates.epoch2num(starts[condition]),lengths[condition],label=condition,marker='o',color=colors[i])
+            ax.plot_date(
+                    mdates.epoch2num(starts[condition]),
+                    lengths[condition],
+                    label=condition,marker='o',color=colors[i],
+                    tz=combine.timezone)
 
         ax.set_xlabel("start")
         ax.set_ylabel("samples (n)")

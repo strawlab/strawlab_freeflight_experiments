@@ -8,6 +8,9 @@ import time
 import tables
 import pandas as pd
 import numpy as np
+import pytz
+import datetime
+import calendar
 
 import roslib
 
@@ -20,6 +23,7 @@ import analysislib.curvature as acurve
 import analysislib.plots as aplt
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
+from strawlab.constants import DATE_FMT
 
 #results = {
 #   condition:{
@@ -46,6 +50,9 @@ class _Combine(object):
         self._custom_filter = None
         self._custom_filter_min = None
         self._tzname = 'Europe/Vienna'
+        self._tfilt_before = None
+        self._tfilt_after = None
+        self._tfilt = None
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -62,6 +69,34 @@ class _Combine(object):
                 self.warn("obj_id column not indexed, this will be slow. reindex")
 
         return trajectories
+
+    def _maybe_apply_tfilt_should_save(self, ts):
+        #returns true to indicate the data should be saved
+        if (self._tfilt_before is None) and (self._tfilt_after is None):
+            return True
+
+        #now we should have parsed an h5 file, so can actually create a
+        #timestamp in utc from the timezone of the data and the datetime spec
+        #as given
+        if self._tfilt is None:
+            spec = self._tfilt_before if self._tfilt_before is not None else self._tfilt_after
+            lt = self.timezone.localize(spec)
+            self._tfilt = calendar.timegm(lt.utctimetuple())
+
+        if self._tfilt_before is not None:
+            return ts < self._tfilt
+        else:
+            return ts > self._tfilt
+
+    def _maybe_add_tfilt(self, args):
+        for f in ("tfilt_before", "tfilt_after"):
+            v = getattr(args,f,None)
+            if v is not None:
+                setattr(self, "_%s" % f, datetime.datetime.strptime(v, DATE_FMT))
+
+    def _maybe_add_customfilt(self, args):
+        if args.customfilt is not None and args.customfilt_len is not None:
+            self.add_custom_filter(args.customfilt, args.customfilt_len)
 
     @property
     def timezone(self):
@@ -305,8 +340,8 @@ class _CombineFakeInfinity(_Combine):
 
     def add_from_args(self, args):
         self._lenfilt = args.lenfilt
-        if args.customfilt is not None and args.customfilt_len is not None:
-            self.add_custom_filter(args.customfilt,args.customfilt_len)
+        self._maybe_add_tfilt(args)
+        self._maybe_add_customfilt(args)
         self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
         self.csv_file = "test"
 
@@ -327,6 +362,7 @@ class CombineCSV(_Combine):
 
     def add_from_args(self, args, csv_suffix):
         self._idfilt = args.idfilt
+        self._maybe_add_tfilt(args)
 
         if (args.uuid is not None) and (len(args.uuid) == 1):
             fm = autodata.files.FileModel(basedir=args.basedir)
@@ -411,6 +447,9 @@ class CombineH5(_Combine):
         self._dt = None
 
     def add_from_args(self, args):
+        self._maybe_add_tfilt(args)
+        self._maybe_add_customfilt(args)
+
         if args.uuid is not None:
             uuid = args.uuid[0]
             fm = autodata.files.FileModel(basedir=args.basedir)
@@ -418,9 +457,6 @@ class CombineH5(_Combine):
             h5_file = fm.get_file_model("simple_flydra.h5").fullpath
         else:
             h5_file = args.h5_file
-
-        if args.customfilt is not None and args.customfilt_len is not None:
-            self.add_custom_filter(args.customfilt,args.customfilt_len)
 
         self.add_h5_file(h5_file)
 
@@ -507,8 +543,8 @@ class CombineH5WithCSV(_Combine):
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_from_args(self, args, csv_suffix, frames_before=0):
-        if args.customfilt is not None and args.customfilt_len is not None:
-            self.add_custom_filter(args.customfilt,args.customfilt_len)
+        self._maybe_add_tfilt(args)
+        self._maybe_add_customfilt(args)
 
         if args.uuid is not None:
             if len(args.uuid) > 1:
@@ -653,9 +689,6 @@ class CombineH5WithCSV(_Combine):
                             self.debug('TRIM:   %d samples for obj_id %d' % (n_samples,query_id))
                             self._skipped[_cond] += 1
                         else:
-                            self.debug('SAVE:   %d samples for obj_id %d (%s)' % (
-                                                    n_samples,query_id,_cond))
-
                             dfd = {'x':validx,'y':validy,'z':validz}
 
                             for k in self._rows:
@@ -681,7 +714,13 @@ class CombineH5WithCSV(_Combine):
                                     self._skipped[_cond] += 1
                                     df = None
 
+                            if not self._maybe_apply_tfilt_should_save(start_time):
+                                df = None
+
                         if df is not None:
+                            self.debug('SAVE:   %d samples for obj_id %d (%s)' % (
+                                                    n_samples,query_id,_cond))
+
                             first = df.irow(0)
                             r['count'] += 1
                             r['start_obj_ids'].append( (first['x'], first['y'], query_id, first.name, start_time) )

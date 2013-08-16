@@ -1,9 +1,12 @@
 import os.path
 import argparse
+import datetime
 
 import roslib
 roslib.load_manifest('flycave')
 import autodata.files
+
+from strawlab.constants import DATE_FMT
 
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
 
@@ -107,6 +110,17 @@ def get_parser(*only_these_options, **defaults):
         parser.add_argument(
             '--arena', type=str, default='flycave',
             help='name of arena type')
+    if not only_these_options or "tfilt" in only_these_options:
+        parser.add_argument(
+            '--tfilt-before', type=str,
+            help='keep only trajectories before this time (%s). '\
+                 'note: in local time (i.e. the times in the start_time plot)'\
+                  % DATE_FMT.replace("%","%%"))
+        parser.add_argument(
+            '--tfilt-after', type=str,
+            help='keep only trajectories after this time (%s). '\
+                 'note: in local time (i.e. the times in the start_time plot)'\
+                 % DATE_FMT.replace("%","%%"))
 
     return parser
 
@@ -120,4 +134,11 @@ def check_args(parser, args):
         if None in (args.csv_file, args.h5_file):
             parser.error("both --csv-file and --h5-file are required")
 
+    for f in ("tfilt_before", "tfilt_after"):
+        v = getattr(args, f, None)
+        if v is not None:
+            try:
+                datetime.datetime.strptime(v, DATE_FMT)
+            except ValueError:
+                parser.error("could not parse tfilt-%s: %s" % (f,v))
 
