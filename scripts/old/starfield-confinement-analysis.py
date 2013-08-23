@@ -168,7 +168,7 @@ if __name__=='__main__':
     fname = os.path.basename(csv_file).split('.')[0]
 
     results,dt = get_results(csv_file, h5_file, args, frames_before=0)
-    ncond = len(results)
+    ncond = combine.get_num_conditions()
     if not args.portrait:
         figsize = (5*ncond,5)
         NF_R = 1
@@ -180,8 +180,8 @@ if __name__=='__main__':
 
     radius = [0.5]
 
-    aplt.save_args(args, combine)
-    aplt.save_results(combine)
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,

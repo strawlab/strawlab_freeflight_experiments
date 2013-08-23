@@ -4,12 +4,7 @@ import os.path
 import sys
 import operator
 import json
-
-try:
-    import strawlab_mpl.defaults
-    strawlab_mpl.defaults.setup_defaults()
-except ImportError:
-    print "install strawlab styleguide for nice plots"
+import collections
 
 import pandas
 import numpy as np
@@ -20,9 +15,32 @@ import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import animation
 
-RASTERIZE=bool(int( os.environ.get('RASTERIZE','1')))
-WRAP_TEXT=bool(int( os.environ.get('WRAP_TEXT','1')))
+import arenas
+
+RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
+WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
+WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
+WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
+
+LEGEND_TEXT_BIG     = 10
+LEGEND_TEXT_SML     = 8
+
+def get_arena_from_args(args):
+    if args.arena=='flycave':
+        arena = arenas.FlyCaveCylinder(radius=0.5)
+    elif args.arena=='flycube':
+        arena = arenas.FlyCube()
+    else:
+        raise ValueError('unknown arena %r'%args.arena)
+    return arena
+
+def show_plots():
+    try:
+        __IPYTHON__
+    except NameError:
+        plt.show()
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
@@ -33,14 +51,17 @@ def mpl_fig(fname_base,args,**kwargs):
     fig = plt.figure( **kwargs )
     yield fig
     fig.savefig(fname_base+'.png',bbox_inches='tight')
-    fig.savefig(fname_base+'.svg',bbox_inches='tight')
+    if WRITE_SVG:
+        fig.savefig(fname_base+'.svg',bbox_inches='tight')
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
         tl.set_rotation(30)
         tl.set_ha("right")
 
-def plot_trial_times(combine, args, name):
+def plot_trial_times(combine, args, name=None):
+    if name is None:
+        name = '%s.trialtimes' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
@@ -62,7 +83,11 @@ def plot_trial_times(combine, args, name):
         colors = [matplotlib.pyplot.cm.jet(i) for i in np.linspace(0, 0.9, len(starts))]
 
         for i,condition in enumerate(starts):
-            ax.plot_date(mdates.epoch2num(starts[condition]),lengths[condition],label=condition,marker='o',color=colors[i])
+            ax.plot_date(
+                    mdates.epoch2num(starts[condition]),
+                    lengths[condition],
+                    label=condition,marker='o',color=colors[i],
+                    tz=combine.timezone)
 
         ax.set_xlabel("start")
         ax.set_ylabel("samples (n)")
@@ -73,10 +98,13 @@ def plot_trial_times(combine, args, name):
         nconds = len(starts)
 
         ax.legend(loc='upper right', numpoints=1,
-            prop={'size':11} if nconds <= 4 else {'size':9}
+            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
-def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, arena=None, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
+    if name is None:
+        name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
+    arena = get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -120,14 +148,14 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, arena=No
             ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
 
         for ax in axes:
-            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
 
             ax.set_aspect('equal')
 
             if in3d:
-                ax.set_zlim(0,1)
+                ax.set_zlim(zmin,zmax)
 
             ax.set_aspect('equal')
             ax.set_ylabel( 'y (m)' )
@@ -159,12 +187,15 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name, arena=No
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
-def plot_histograms(combine, args, figsize, fignrows, figncols, name, arena=None, colorbar=False):
+def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
+    if name is None:
+        name = '%s.hist' % combine.fname
+    arena = get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
 
-        (xmin,xmax, ymin,ymax) = arena.get_bounds()
+        (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
         x_range = xmax-xmin
         y_range = ymax-ymin
         max_range = max(y_range,x_range)
@@ -214,7 +245,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name, arena=None
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
-            (xmin,xmax, ymin,ymax) = arena.get_bounds()
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
 
@@ -225,7 +256,9 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name, arena=None
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
 
 
-def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
+def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
+    if name is None:
+        name = '%s.track' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -251,7 +284,9 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name):
 
 
 
-def plot_nsamples(combine, args, name):
+def plot_nsamples(combine, args, name=None):
+    if name is None:
+        name = '%s.nsamples' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args) as fig:
 
@@ -305,11 +340,13 @@ def plot_nsamples(combine, args, name):
         #of colors as the bottom one anyway
         ax_outliers.legend(loc='upper right', numpoints=1,
             columnspacing=0.05,
-            prop={'size':11} if nconds <= 4 else {'size':9},
+            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
             ncol=1 if nconds <= 4 else 2
         )
 
-def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name):
+def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
+    if name is None:
+        name = name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -365,6 +402,119 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', _autowrap_text)
+
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
+    if name is None:
+        name = '%s.infinity' % combine.fname
+
+    arena = get_arena_from_args(args)
+
+    _plot_axes = [p for p in plot_axes if p in _df]
+    n_plot_axes = len(_plot_axes)
+
+    with mpl_fig(name,args,figsize=figsize) as _fig:
+
+        _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
+        _ax.set_xlim(-0.5, 0.5)
+        _ax.set_ylim(-0.5, 0.5)
+        _ax.plot(_df['x'], _df['y'], 'k-')
+        arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+
+        _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
+        _ax.plot(_df.index, _df['z'], 'k-')
+        _ax.set_xlim(_df.index[0], _df.index[-1])
+        _ax.set_ylim(*ylimits.get("z",(0, 1)))
+        _ax.set_ylabel("z")
+
+        for i,p in enumerate(_plot_axes):
+            _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
+            _ax.plot(_df.index, _df[p], 'k-')
+            _ax.set_xlim(_df.index[0], _df.index[-1])
+            _ax.set_ylim(*ylimits.get(p,
+                            (_df[p].min(), _df[p].max())))
+            _ax.set_ylabel(p)
+
+            #only label the last x axis
+            if i != (n_plot_axes - 1):
+                for tl in _ax.get_xticklabels():
+                    tl.set_visible(False)
+
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8)):
+    _plot_axes = [p for p in plot_axes if p in _df]
+    n_plot_axes = len(_plot_axes)
+
+    arena = get_arena_from_args(args)
+
+    _fig = plt.figure(figsize=figsize)
+
+    _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
+    _ax.set_xlim(-0.5, 0.5)
+    _ax.set_ylim(-0.5, 0.5)
+    arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+    _linexy,_linexypt = _ax.plot([], [], 'k-', [], [], 'r.')
+
+    _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
+    _linez,_linezpt = _ax.plot([], [], 'k-', [], [], 'r.')
+    _ax.set_xlim(_df.index[0], _df.index[-1])
+    _ax.set_ylim(*ylimits.get("z",(0, 1)))
+    _ax.set_ylabel("z")
+
+    _init_axes = [_linexy,_linexypt,_linez,_linezpt]
+    _line_axes = collections.OrderedDict()
+    _pt_axes   = collections.OrderedDict()
+
+    for i,p in enumerate(_plot_axes):
+        _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
+        _line,_linept = _ax.plot([], [], 'k-', [], [], 'r.')
+        _ax.set_xlim(_df.index[0], _df.index[-1])
+        _ax.set_ylim(*ylimits.get(p,
+                        (_df[p].min(), _df[p].max())))
+        _ax.set_ylabel(p)
+
+        #only label the last x axis
+        if i != (n_plot_axes - 1):
+            for tl in _ax.get_xticklabels():
+                tl.set_visible(False)
+
+        _init_axes.extend([_line,_linept])
+        _line_axes[p] = _line
+        _pt_axes[p] = _linept
+
+    _plot_axes.append("z")
+    _pt_axes["z"] = _linezpt
+    _line_axes["z"] = _linez
+
+    # initialization function: plot the background of each frame
+    def init():
+        _linexy.set_data(_df['x'],_df['y'])
+        _linexypt.set_data([], [])
+
+        #_linez.set_data(df.index,df['z'])
+        #_linezpt.set_data([], [])
+
+        for p in _plot_axes:
+            _line_axes[p].set_data(_df.index.values,_df[p])
+            _pt_axes[p].set_data([], [])
+
+        return _init_axes
+
+    # animation function.  This is called sequentially
+    def animate(i, df, xypt, pt_axes):
+        xypt.set_data(df['x'][i], df['y'][i])
+        for p in pt_axes:
+            pt_axes[p].set_data(i, df[p][i])
+
+        return [xypt] + pt_axes.values()
+
+    anim = animation.FuncAnimation(_fig,
+                               animate,
+                               frames=_df.index,
+                               init_func=init,
+                               interval=50, blit=True,
+                               fargs=(_df,_linexypt,_pt_axes),
+    )
+
+    return anim
 
 def _calculate_nloops(df):
     #dont change this, is has to be ~= 1. It is the dratio/dt value to detect
@@ -495,7 +645,7 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
                     f.write("\n")
                     break
 
-def save_args(args, combine, name="README"):
+def save_args(combine, args, name="README"):
     plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
 
@@ -508,7 +658,7 @@ def save_args(args, combine, name="README"):
             f.write("%s\n    %r\n" % (k,v))
         f.write("\n")
 
-def save_results(combine, maxn=20):
+def save_results(combine, args, maxn=20):
 
     results,dt = combine.get_results()
     plotdir = combine.plotdir
@@ -516,7 +666,8 @@ def save_results(combine, maxn=20):
     best = _get_flight_lengths(combine)
 
     with open(name, "w+b") as f:
-        pickle.dump({"results":results,"dt":dt}, f)
+        if WRITE_PKL:
+            pickle.dump({"results":results,"dt":dt}, f)
 
     name = os.path.join(plotdir,"data.json")
     with open(name, "w") as f:
@@ -524,6 +675,7 @@ def save_results(combine, maxn=20):
         data["conditions"] = results.keys()
         data["dt"] = dt
         data["longest_trajectories"] = {}
+        data["argv"] = " ".join(sys.argv)
 
         for cond in best:
             trajs = []

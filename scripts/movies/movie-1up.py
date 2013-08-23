@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
         h5_file = args.h5_file
 
-    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_move_dir(uuid)
+    outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
     if args.fmf_file:
         obj_ids = [int(os.path.basename(fmf_file)[:-4]) for fmf_file in args.fmf_file]

@@ -51,7 +51,7 @@ class TestCombine(unittest.TestCase):
                                 "ratio","rotation_rate",
                                 debug=False,
         )
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
         )
@@ -79,11 +79,11 @@ class TestCombine(unittest.TestCase):
 
     def test_csv_args(self):
         combine = analysislib.combine.CombineCSV()
-        args = analysislib.args.get_default_args(
+        parser,args = analysislib.args.get_default_args(
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
         )
-        combine.add_from_args(args)
+        combine.add_from_args(args, "rotation_tethered.csv")
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)

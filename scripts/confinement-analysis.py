@@ -2,8 +2,11 @@
 import sys
 import os.path
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
+if not os.environ.get('DISPLAY'):
+    print "DISPLAY NOT SET: USING AGG BACKEND"
+    import matplotlib
+    matplotlib.use('agg')
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import confinement
@@ -35,7 +38,7 @@ if __name__=='__main__':
     print "plots stored in", combine.plotdir
     print "files saved as", fname
 
-    ncond = len(results)
+    ncond = combine.get_num_conditions()
     if not args.portrait:
         figsize = (5*ncond,5)
         NF_R = 1
@@ -45,37 +48,27 @@ if __name__=='__main__':
         NF_R = ncond
         NF_C = 1
 
-    radius = [0.5]
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
 
-    aplt.save_args(args, combine)
-    aplt.save_results(combine)
-
-    aplt.plot_trial_times(combine, args,
-                name="%s.trialtimes" % fname)
+    aplt.plot_trial_times(combine, args)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                in3d=False,
-                radius=radius,
-                name='%s.traces' % fname)
+                in3d=False)
 
     aplt.plot_traces(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                in3d=True,
-                radius=radius,
-                name='%s.traces3d' % fname)
+                in3d=True)
 
     aplt.plot_histograms(combine, args,
                 figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
-                radius=radius,
-                name='%s.hist' % fname)
+                fignrows=NF_R, figncols=NF_C)
 
 
-    aplt.plot_nsamples(combine, args,
-                name='%s.nsamples' % fname)
+    aplt.plot_nsamples(combine, args)
 
 
     if args.plot_tracking_stats and len(args.uuid) == 1:
@@ -87,5 +80,5 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     if args.show:
-        plt.show()
+        aplt.show_plots()
 

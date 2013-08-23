@@ -1,9 +1,12 @@
 import os.path
 import argparse
+import datetime
 
 import roslib
 roslib.load_manifest('flycave')
 import autodata.files
+
+from strawlab.constants import DATE_FMT
 
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
 
@@ -12,9 +15,9 @@ def get_default_args(**kwargs):
     args = parser.parse_args("--zfilt trim --rfilt trim".split(' '))
     for k,v in kwargs.iteritems():
         setattr(args,k,v)
-    return args
+    return parser,args
 
-def get_parser(*only_these_options):
+def get_parser(*only_these_options, **defaults):
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
 
     parser = argparse.ArgumentParser()
@@ -36,7 +39,8 @@ def get_parser(*only_these_options):
             help='reindex simple_flydra h5 file')
     if not only_these_options or "show" in only_these_options:
         parser.add_argument(
-            '--show', action='store_true', default=False,
+            '--show', action='store_true',
+            default=defaults.get('show',False),
             help='show plots')
     if not only_these_options or "no-trackingstats" in only_these_options:
         parser.add_argument(
@@ -49,7 +53,8 @@ def get_parser(*only_these_options):
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,
-            required=True,
+            required=False if 'zfilt' in defaults else True,
+            default=defaults.get('zfilt', 'trim'),
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
@@ -76,7 +81,8 @@ def get_parser(*only_these_options):
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
             '--rfilt', type=str, choices=filt_choices,
-            required=True,
+            required=False if 'rfilt' in defaults else True,
+            default=defaults.get('rfilt', 'trim'),
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
@@ -91,10 +97,31 @@ def get_parser(*only_these_options):
         parser.add_argument(
             '--idfilt', type=int, default=[], nargs='*',
             help='only show these obj_ids')
+    if not only_these_options or "customfilt" in only_these_options:
+        parser.add_argument(
+            '--customfilt', type=str, default=None,
+            help='string to eval against a dataframe')
+        parser.add_argument(
+            '--customfilt-len', type=int, default=None,
+            help='minimum length of remaining (seconds) after applying custom filter. '\
+                 'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
+                 'operations')
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str, default='flycave',
             help='name of arena type')
+    if not only_these_options or "tfilt" in only_these_options:
+        parser.add_argument(
+            '--tfilt-before', type=str,
+            help='keep only trajectories before this time (%s). '\
+                 'note: in local time (i.e. the times in the start_time plot)'\
+                  % DATE_FMT.replace("%","%%"))
+        parser.add_argument(
+            '--tfilt-after', type=str,
+            help='keep only trajectories after this time (%s). '\
+                 'note: in local time (i.e. the times in the start_time plot)'\
+                 % DATE_FMT.replace("%","%%"))
+
     return parser
 
 def check_args(parser, args):
@@ -107,4 +134,11 @@ def check_args(parser, args):
         if None in (args.csv_file, args.h5_file):
             parser.error("both --csv-file and --h5-file are required")
 
+    for f in ("tfilt_before", "tfilt_after"):
+        v = getattr(args, f, None)
+        if v is not None:
+            try:
+                datetime.datetime.strptime(v, DATE_FMT)
+            except ValueError:
+                parser.error("could not parse tfilt-%s: %s" % (f,v))
 
