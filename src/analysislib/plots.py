@@ -22,6 +22,7 @@ import arenas
 RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
 WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
 WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
+WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
@@ -654,7 +655,8 @@ def save_results(combine, args, maxn=20):
     best = _get_flight_lengths(combine)
 
     with open(name, "w+b") as f:
-        pickle.dump({"results":results,"dt":dt}, f)
+        if WRITE_PKL:
+            pickle.dump({"results":results,"dt":dt}, f)
 
     name = os.path.join(plotdir,"data.json")
     with open(name, "w") as f:
