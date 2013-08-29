@@ -88,6 +88,51 @@ class TestCombine(unittest.TestCase):
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)
 
+    def test_multi_csv_args(self):
+        c1 = analysislib.combine.CombineCSV()
+        parser,args = analysislib.args.get_default_args(
+                uuid=["34e60d6efddc11e2848064315026cb58"],
+                outdir='/tmp/',
+                lenfilt=5,
+        )
+        c1.add_from_args(args, "rotation_tethered.csv")
+
+        nc1 = c1.get_total_trials()
+        self.assertEqual(nc1, 16)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1375713692)
+        self.assertEqual(len(df), 19945)
+
+        del c1
+        c2 = analysislib.combine.CombineCSV()
+        parser,args = analysislib.args.get_default_args(
+                uuid=["31b764cafb6c11e299c864315026cb58"],
+                outdir='/tmp/',
+                lenfilt=5,
+        )
+        c2.add_from_args(args, "rotation_tethered.csv")
+
+        nc2 = c2.get_total_trials()
+        self.assertEqual(nc2, 32)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = c2.get_one_result(1375445854)
+        self.assertEqual(len(df), 17472)
+
+        del c2
+        cc = analysislib.combine.CombineCSV()
+        parser,args = analysislib.args.get_default_args(
+                uuid=["34e60d6efddc11e2848064315026cb58","31b764cafb6c11e299c864315026cb58"],
+                outdir='/tmp/',
+                lenfilt=5,
+        )
+        cc.add_from_args(args, "rotation_tethered.csv")
+
+        ncc = cc.get_total_trials()
+        self.assertEqual(ncc, nc1 + nc2)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = cc.get_one_result(1375713692)
+        self.assertEqual(len(df), 19945)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = cc.get_one_result(1375445854)
+        self.assertEqual(len(df), 17472)
+
 if __name__=='__main__':
     unittest.main()
 
