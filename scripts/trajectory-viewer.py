@@ -20,6 +20,8 @@ if __name__=='__main__':
     )
     parser.add_argument(
         "--animate", action="store_true")
+    parser.add_argument(
+        "--save", action="store_true", help="save a csv of this trajectory")
     
     args = parser.parse_args()
 
@@ -29,12 +31,13 @@ if __name__=='__main__':
         parser.error("one obj_id must be specified")
 
     uuid = args.uuid[0]
+    obj_id = args.idfilt[0]
     
     suffix = autil.get_csv_for_uuid(uuid)
     combine = autil.get_combiner(suffix)
     combine.calc_turn_stats = True
     combine.add_from_uuid(uuid,suffix,args=args)
-    df,dt,_ = combine.get_one_result(args.idfilt[0])
+    df,dt,_ = combine.get_one_result(obj_id)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
     ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)}
@@ -56,4 +59,8 @@ if __name__=='__main__':
 
             
     aplt.show_plots()
+
+    if args.save:
+        df.to_csv("%s_%s.csv" % (uuid, obj_id))
+        df.save("%s_%s.df" % (uuid, obj_id))
 
