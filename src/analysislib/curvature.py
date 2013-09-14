@@ -26,9 +26,9 @@ import conflict
 DEBUG = False
 
 def calc_velocities(df, dt):
-    vx = np.gradient(df['x'].values + 10) / dt
-    vy = np.gradient(df['y'].values + 10) / dt
-    vz = np.gradient(df['z'].values + 10) / dt
+    vx = np.gradient(df['x'].values) / dt
+    vy = np.gradient(df['y'].values) / dt
+    vz = np.gradient(df['z'].values) / dt
     velocity = np.sqrt( (vx**2) + (vy**2) )
 
     df['vx'] = vx
