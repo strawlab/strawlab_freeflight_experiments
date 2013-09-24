@@ -2,6 +2,20 @@ import argparse
 import sys
 import os.path
 import uuid
+import numpy
+import matplotlib.mlab
+
+def read_uuid_from_csv(fname):
+    uuids = []
+    try:
+        rec = matplotlib.mlab.csv2rec(fname)
+        uuids.extend( str(r) for r in numpy.unique(rec['exp_uuid']) )
+    except ValueError:
+        #no such column
+        pass
+
+    print "DETECTED UUID:\n\t%r" % uuids
+    return uuids
 
 def add_uuid_to_csv(csv,u):
     assert os.path.exists(csv)
@@ -43,11 +57,20 @@ def add_uuid_to_csv(csv,u):
                     fo.write(u)
                     fo.write('\n')
 
+    print "ADDED UUID:\n\t%s" % u
     return u
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=True)
-    parser.add_argument('--uuid', type=str, default=uuid.uuid1().get_hex(), required=False)
+    parser.add_argument('--uuid', type=str, required=False)
     args = parser.parse_args()
-    print "ADDED UUID:\n\t%s" % add_uuid_to_csv(args.file, args.uuid)
+
+    if not os.path.exists(args.file):
+        parser.error("file not found")
+
+    if args.uuid:
+        add_uuid_to_csv(args.file, args.uuid)
+    else:
+        read_uuid_from_csv(args.file)
+
