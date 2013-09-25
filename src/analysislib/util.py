@@ -31,7 +31,6 @@ def get_combiner(suffix):
                                 conflict.Logger,
                                 "ratio","rotation_rate","v_offset_rate",
         )
-        combine.add_from_uuid(uuid,suffix,**kwargs)
     elif not suffix:
         combine = analysislib.combine.CombineH5()
     else:
