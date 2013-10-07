@@ -103,8 +103,15 @@ if __name__=='__main__':
     flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
 
     flat_data,nens = curve.flatten_data(args, combine, flatten_columns)
-    curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
-    curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
+    try:
+        curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
+    except curve.NotEnoughDataError:
+        pass
+
+    try:
+        curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
+    except curve.NotEnoughDataError:
+        pass
 
     if args.show:
         aplt.show_plots()

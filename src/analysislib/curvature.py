@@ -25,6 +25,9 @@ import conflict
 
 DEBUG = False
 
+class NotEnoughDataError(Exception):
+    pass
+
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values) / dt
     vy = np.gradient(df['y'].values) / dt
@@ -382,7 +385,10 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         fn = current_condition.translate(None, ''.join('/.+-'))
         with aplt.mpl_fig("%s_%s_corr_latency" % (fname, fn), args, figsize=(10,8)) as fig:
 
-            rotation_rates = np.concatenate(flat_data['rotation_rate'][current_condition])
+            tmp = flat_data['rotation_rate'][current_condition]
+            if len(tmp)==0:
+                raise NotEnoughDataError
+            rotation_rates = np.concatenate(tmp)
             dthetas = np.concatenate(flat_data['dtheta'][current_condition])
 
             ccef_sweeps[current_condition] = plot_correlation_latency_sweep(fig,rotation_rates,dthetas,dt,
@@ -444,7 +450,10 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
         with aplt.mpl_fig("%s_%s" % (fname,h), args) as fig:
             ax = fig.gca()
             for current_condition in sorted(nens):
-                n,bins,patches = ax.hist(np.concatenate(flat_data[h][current_condition]),
+                tmp = flat_data[h][current_condition]
+                if len(tmp)==0:
+                    raise NotEnoughDataError
+                n,bins,patches = ax.hist(np.concatenate(tmp),
                                       bins=100,
                                       normed=histogram_options['normed'].get(h,True),
                                       range=histogram_options['range'].get(h),
