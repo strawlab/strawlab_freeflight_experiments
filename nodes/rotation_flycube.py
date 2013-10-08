@@ -173,7 +173,7 @@ class Node(object):
 
         if self.rad_locked < 0:
             #HACK
-            self.cyl_height_pub.publish(-4.5*self.rad_locked)
+            self.cyl_height_pub.publish(-20*self.rad_locked)
         else:
             self.cyl_height_pub.publish(1.0)
         
