@@ -43,7 +43,7 @@ FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST   = 0.2
 
 START_RADIUS    = 0.15
-START_ZDIST     = 0.368*0.4
+START_ZDIST     = 0.08
 
 GRAY_FN = "gray.png"
 
@@ -64,9 +64,9 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity06.svg/+0.2/-10.0/0.1/0.30/0.184",
-              "checkerboard16.png/infinity06.svg/+0.0/-10.0/0.1/0.00/0.184",
-              "gray.png/infinity06.svg/+0.3/-10.0/0.1/0.20/0.184",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.22",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.50/0.22",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.30/0.22",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
