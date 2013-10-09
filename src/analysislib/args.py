@@ -18,6 +18,13 @@ def get_default_args(**kwargs):
     return parser,args
 
 def get_parser(*only_these_options, **defaults):
+    """
+    returns an ArgumentParser instance configured with common filtering
+    and plotting options. This object is suitable for extending with additional
+    analysis specific options, and for passing to
+    :py:meth:`analysislib.combine.CombineH5WithCSV`
+    """
+
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
 
     parser = argparse.ArgumentParser()

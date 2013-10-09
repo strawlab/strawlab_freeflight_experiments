@@ -15,6 +15,8 @@ import calendar
 import roslib
 
 roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
+
 import autodata.files
 import analysislib.filters
 import analysislib.combine
@@ -159,9 +161,32 @@ class _Combine(object):
         print m
 
     def get_results(self):
+        """Returns all data for all conditions that passed the configured filters
+
+        Returns:
+            A two-tuple.
+
+            the first retured variable is a nested dict of the following 
+            structure
+
+            results = {
+               condition:{
+                   df:[dataframe,...],
+                   start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...]
+                   count:[n_frames,...],
+               }
+
+            The second is dt
+
+        """
         return self._results, self._dt
 
     def get_one_result(self, obj_id):
+        """
+        Get the data associated with a single object_id
+
+        returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
+        """
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 if _obj_id == obj_id:
@@ -546,6 +571,10 @@ class CombineH5(_Combine):
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
 
 class CombineH5WithCSV(_Combine):
+    """
+    Combines the data from a smoothed (simple_flydra) h5 file with
+    a csv file based on the framenumber
+    """
 
     csv_file = ''
     h5_file = ''
