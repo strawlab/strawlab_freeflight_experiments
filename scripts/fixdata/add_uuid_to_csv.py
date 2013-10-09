@@ -74,5 +74,6 @@ if __name__ == "__main__":
     if args.uuid:
         add_uuid_to_csv(args.file, args.uuid)
     else:
+        print 'no UUID given - not adding UUID'
         read_uuid_from_csv(args.file)
 
