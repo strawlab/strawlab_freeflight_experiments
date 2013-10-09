@@ -43,7 +43,7 @@ class _Combine(object):
     calc_turn_stats = False
 
     def __init__(self, **kwargs):
-        self._debug = kwargs.get("debug",True)
+        self.__debug = kwargs.get("debug",True)
         self._dt = None
         self._lenfilt = None
         self._idfilt = []
@@ -68,7 +68,7 @@ class _Combine(object):
             try:
                 trajectories.cols.obj_id.createIndex()
             except tables.exceptions.FileModeError:
-                self.warn("obj_id column not indexed, this will be slow. reindex")
+                self._warn("obj_id column not indexed, this will be slow. reindex")
 
         return trajectories
 
@@ -99,6 +99,13 @@ class _Combine(object):
     def _maybe_add_customfilt(self, args):
         if args.customfilt is not None and args.customfilt_len is not None:
             self.add_custom_filter(args.customfilt, args.customfilt_len)
+
+    def _debug(self, m):
+        if self.__debug:
+            print m
+
+    def _warn(self, m):
+        print m
 
     @property
     def timezone(self):
@@ -148,17 +155,10 @@ class _Combine(object):
         return seconds / self._dt
 
     def enable_debug(self):
-        self._debug = True
+        self.__debug = True
 
     def disable_debug(self):
-        self._debug = False
-
-    def debug(self, m):
-        if self._debug:
-            print m
-
-    def warn(self, m):
-        print m
+        self.__debug = False
 
     def get_results(self):
         """Returns all data for all conditions that passed the configured filters
@@ -266,7 +266,7 @@ class _CombineFakeInfinity(_Combine):
                     df = eval(self._custom_filter)
                     n_samples = len(df)
                     if n_samples < self.custom_filter_min_num_frames:
-                        self.debug('FILTER: %d for obj_id %d' % (n_samples,obj_id))
+                        self._debug('FILTER: %d for obj_id %d' % (n_samples,obj_id))
                         self._skipped[cond] += 1
                         continue
 
@@ -418,7 +418,7 @@ class CombineCSV(_Combine):
             self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
 
     def add_csv_file(self, csv_file, lenfilt=None):
-        self.debug("IO:     reading %s" % csv_file)
+        self._debug("IO:     reading %s" % csv_file)
         self.csv_file = csv_file
 
         df = pd.DataFrame.from_csv(self.csv_file,index_col="framenumber")
@@ -524,7 +524,7 @@ class CombineH5(_Combine):
         self.add_h5_file(h5_file)
 
     def add_h5_file(self, h5_file):
-        self.debug("IO:     reading %s" % h5_file)
+        self._debug("IO:     reading %s" % h5_file)
 
         warnings = {}
 
@@ -639,8 +639,8 @@ class CombineH5WithCSV(_Combine):
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
-        self.debug("IO:     reading %s" % csv_fname)
-        self.debug("IO:     reading %s" % h5_file)
+        self._debug("IO:     reading %s" % csv_fname)
+        self._debug("IO:     reading %s" % h5_file)
 
         warnings = {}
 
@@ -690,7 +690,7 @@ class CombineH5WithCSV(_Combine):
                         except AttributeError:
                             this_row[k] = np.nan
                             if k not in warnings:
-                                self.warn("WARNING: no such column in csv:%s" % k)
+                                self._warn("WARNING: no such column in csv:%s" % k)
                                 warnings[k] = True
 
                 if _cond not in results:
@@ -754,7 +754,7 @@ class CombineH5WithCSV(_Combine):
                         df = None
 
                         if n_samples < dur_samples: # must be at least this long
-                            self.debug('TRIM:   %d samples for obj_id %d' % (n_samples,query_id))
+                            self._debug('TRIM:   %d samples for obj_id %d' % (n_samples,query_id))
                             self._skipped[_cond] += 1
                         else:
                             dfd = {'x':validx,'y':validy,'z':validz}
@@ -778,7 +778,7 @@ class CombineH5WithCSV(_Combine):
                                 df = eval(self._custom_filter)
                                 n_samples = len(df)
                                 if n_samples < self.custom_filter_min_num_frames:
-                                    self.debug('FILTER: %d for obj_id %d' % (n_samples,query_id))
+                                    self._debug('FILTER: %d for obj_id %d' % (n_samples,query_id))
                                     self._skipped[_cond] += 1
                                     df = None
 
@@ -786,7 +786,7 @@ class CombineH5WithCSV(_Combine):
                                 df = None
 
                         if df is not None:
-                            self.debug('SAVE:   %d samples for obj_id %d (%s)' % (
+                            self._debug('SAVE:   %d samples for obj_id %d (%s)' % (
                                                     n_samples,query_id,_cond))
 
                             first = df.irow(0)
@@ -809,10 +809,10 @@ class CombineH5WithCSV(_Combine):
                                 csv_results[k].append(this_row[k])
 
                 else:
-                    self.warn("CANT GO BACK %d vs %d" % (_id,this_id))
+                    self._warn("CANT GO BACK %d vs %d" % (_id,this_id))
                     continue
             except ValueError, e:
-                self.warn("ERROR: %s\n\t%r" % (e,row))
+                self._warn("ERROR: %s\n\t%r" % (e,row))
 
         h5.close()
 
