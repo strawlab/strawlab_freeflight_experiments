@@ -25,11 +25,13 @@ def get_combiner(suffix):
         combine = analysislib.combine.CombineH5WithCSV(
                                 rotation.Logger,
                                 "ratio","rotation_rate","v_offset_rate",
+                                csv_suffix=suffix
         )
     elif suffix == "conflict.csv":
         combine = analysislib.combine.CombineH5WithCSV(
                                 conflict.Logger,
                                 "ratio","rotation_rate","v_offset_rate",
+                                csv_suffix=suffix
         )
     elif not suffix:
         combine = analysislib.combine.CombineH5()
