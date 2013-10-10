@@ -48,7 +48,7 @@ class TestCombineFake(unittest.TestCase):
 
     def test_custom_filter(self):
         c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['ratio'] > 0.2) & (df['ratio'] < 0.8)]", 2.0)
+        c1.add_custom_filter("df[(df['ratio']>0.2)&(df['ratio']<0.8)]", 2.0)
         c1.add_from_args(self.args)
 
         #the filtered dataframe should be shorter than the original one
@@ -56,7 +56,7 @@ class TestCombineFake(unittest.TestCase):
         self.assertLess(len(df), len(self.df0))
 
         c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity'] > 1.22)]", 3.0)
+        c1.add_custom_filter("df[(df['velocity']>1.22)]", 3.0)
         c1.add_from_args(self.args)
 
         #the filtered dataframe should be shorter than the original one
@@ -64,7 +64,7 @@ class TestCombineFake(unittest.TestCase):
         self.assertLess(len(df), len(self.df0))
 
         c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity'] > 9999)]", 1.0)
+        c1.add_custom_filter("df[(df['velocity']>9999)]", 1.0)
         c1.add_from_args(self.args)
 
         #no data left after filtering
@@ -75,7 +75,7 @@ class TestCombineFake(unittest.TestCase):
         parser,args = analysislib.args.get_default_args(
                 outdir='/tmp/',
                 show='--show' in sys.argv,
-                customfilt="df[(df['ratio'] > 0.2) & (df['ratio'] < 0.8)]",
+                customfilt="df[(df['ratio']>0.2)&(df['ratio']<0.8)]",
                 customfilt_len=1.0,
                 lenfilt=1
         )

@@ -220,6 +220,8 @@ class _Combine(object):
     def add_custom_filter(self, s, post_filter_min):
         if 'df[' not in s:
             raise Exception("incorrectly formatted filter string: %s" % s)
+        if ' ' in s:
+            raise Exception("incorrectly formatted filter string (containts spaces): %s" % s)
         if post_filter_min is None:
             raise Exception("filter minimum must be given")
         self._custom_filter = s
