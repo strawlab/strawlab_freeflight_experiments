@@ -6,6 +6,7 @@ import collections
 import pandas as pd
 import numpy as np
 import scipy.optimize
+import scipy.stats
 
 from matplotlib import pyplot as plt
 from matplotlib import animation
@@ -215,7 +216,11 @@ def calc_interpolate_dataframe(df,dt,columns):
             #no such column
             pass
 
-def calculate_correlation_and_remove_nans(a,b):
+def calculate_linregress(cleana, cleanb):
+    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(cleana, cleanb)
+    return slope, intercept, r_value, p_value, std_err
+
+def remove_nans(a,b):
     #the remaining nans after the dataframe being filled lie at the start
     #of individual trials. a and b now contain many many concatinated trials
     #so remove all data where one partner is nan
@@ -238,6 +243,10 @@ def calculate_correlation_and_remove_nans(a,b):
         assert np.isnan(clean_a).sum() == 0
         assert np.isnan(clean_b).sum() == 0
 
+    return clean_a,clean_b
+
+def calculate_correlation_and_remove_nans(a,b):
+    clean_a, clean_b = remove_nans(a,b)
     return clean_a,clean_b,np.corrcoef(clean_a,clean_b)[0,1]
 
 def plot_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',correlation_options=None):
@@ -375,6 +384,52 @@ def plot_correlation_latency_sweep(fig,rotation_rate,dtheta,data_dt,hist2d=False
     )
 
     return ccefs
+
+def plot_regression_analysis(args, combine, flat_data, nens, regression, regression_options, resolution):
+    assert len(regression) == 2
+
+    results,dt = combine.get_results()
+    fname = combine.fname
+
+    xaxis_mids = np.arange(0,1.5,resolution) + resolution/2.0
+    yaxis_slope = {k:[] for k in nens}
+    yaxis_r2value = {k:[] for k in nens}
+
+    for cond in nens:
+        data = {k:np.concatenate(flat_data[k][cond]) for k in regression}
+        a,b = remove_nans(*list(data[k] for k in regression))
+
+        #in steps of RESOLUTION regress regression[0] against regression[1]
+        for i in np.arange(0,1.5,resolution):
+            aa = np.abs(a)
+            valid = (aa > i) & (aa < i+resolution)
+            
+            _a = a[valid]
+            _b = b[valid]
+
+            slope, intercept, r_value, p_value, std_err = calculate_linregress(a, b)
+
+            yaxis_slope[cond].append(slope)
+            yaxis_r2value[cond].append(r_value**2)
+
+    for name,yaxis in [("slope",yaxis_slope),("r2",yaxis_r2value)]:
+        with aplt.mpl_fig("%s_regress_%s_vs_%s" % (name,regression[0],regression[1]), args) as fig:
+                ax = fig.gca()
+                for current_condition in sorted(nens):
+                    ax.plot(
+                        xaxis_mids,
+                        yaxis[current_condition],
+                        marker='+',
+                        label=current_condition)
+
+                ax.legend(loc='upper right', numpoints=1,
+                    prop={'size':LEGEND_TEXT_BIG} if len(nens) <= 4 else {'size':LEGEND_TEXT_SML},
+                )
+                ax.set_xlabel(regression[0])
+                ax.set_ylabel(name)
+
+                ax.set_title("least-squares regression %s value for %s vs %s" % (name,regression[0],regression[1]))
+
 
 def plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options):
     results,dt = combine.get_results()

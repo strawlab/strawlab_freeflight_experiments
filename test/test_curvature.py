@@ -7,6 +7,7 @@ import pandas as pd
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.curvature as curve
+import analysislib.combine as comb
 
 def _gen_known_correlation(n,ccef):
     #http://www.sitmo.com/article/generating-correlated-random-numbers/
@@ -19,7 +20,51 @@ def _gen_known_correlation(n,ccef):
 
     return x1,y1
 
+def _shuffle_in_unison_inplace(a, b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
+
 class TestCurvature(unittest.TestCase):
+
+    def test_linregress(self):
+        a = np.linspace(1,100)
+        b = np.linspace(1,100) * 2
+        cleana,cleanb,ccef = curve.calculate_correlation_and_remove_nans(a,b)
+        self.assertEqual(ccef,1.0)
+
+        slope, intercept, r_value, p_value, std_err = curve.calculate_linregress(cleana, cleanb)
+        self.assertEqual(r_value**2, 1.0)
+
+    def test_regress_inf(self):
+        dt = 1/100.0
+        df = comb._CombineFakeInfinity.get_fake_infinity_trajectory(5, 0, 0, 0, 1)
+        curve.calc_velocities(df, dt)
+        curve.calc_angular_velocities(df, dt)
+
+        dtheta = df['dtheta'].values
+
+        s = 0.12
+        i = 0.04
+        #add rotation rate with known slope/inter
+        rr = (dtheta * s) + i
+
+        #check we recover the same values
+        slope, intercept, r_value, p_value, std_err = curve.calculate_linregress(dtheta, rr)
+        self.assertAlmostEqual(r_value**2, 1.0, 5)
+        self.assertAlmostEqual(slope, s, 5)
+        self.assertAlmostEqual(intercept, i, 5)
+
+        #now randomly shuffle the data and check we get the same thing
+        srr,sdtheta = _shuffle_in_unison_inplace(rr,dtheta)
+        self.assertFalse(np.allclose(rr,srr))
+        self.assertFalse(np.allclose(dtheta,sdtheta))
+
+        #check we recover the same values
+        slope, intercept, r_value, p_value, std_err = curve.calculate_linregress(sdtheta, srr)
+        self.assertAlmostEqual(r_value**2, 1.0, 5)
+        self.assertAlmostEqual(slope, s, 5)
+        self.assertAlmostEqual(intercept, i, 5)
 
     def test_correlations(self):
         a = np.linspace(1,100)
