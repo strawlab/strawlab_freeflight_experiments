@@ -12,7 +12,7 @@ import analysislib.util as autil
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
                     "uuid", "zfilt", "rfilt", "idfilt","show","reindex","lenfilt",
-                    "zfilt-min","zfilt-max","rfilt-max","outdir","arena",
+                    "zfilt-min","zfilt-max","rfilt-max","outdir","arena","csv-file","h5-file",
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
@@ -25,8 +25,8 @@ if __name__=='__main__':
     
     args = parser.parse_args()
 
-    if not args.uuid or len(args.uuid) != 1:
-        parser.error("one uuid must be specified")
+    analysislib.args.check_args(parser, args, max_uuids=1)
+
     if not args.idfilt or len(args.idfilt) != 1:
         parser.error("one obj_id must be specified")
 

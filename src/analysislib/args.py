@@ -130,10 +130,12 @@ def get_parser(*only_these_options, **defaults):
 
     return parser
 
-def check_args(parser, args):
+def check_args(parser, args, max_uuids=1000):
     if args.uuid:
         if None not in (args.csv_file, args.h5_file):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
+        if len(args.uuid) > max_uuids:
+            parser.error("only %d uuids supported" % max_uuids)
         if len(args.uuid) > 1 and args.outdir is None:
             parser.error("if multiple uuids are given, --outdir is required")
     else:
