@@ -109,6 +109,7 @@ class _Combine(object):
 
     @property
     def timezone(self):
+        """the timezone in which the experiment was started"""
         return pytz.timezone(self._tzname)
 
     @property
@@ -117,6 +118,7 @@ class _Combine(object):
 
     @property
     def min_num_frames(self):
+        """the minimum number of frames for the given lenfilt and dt"""
         try:
             return self._lenfilt / self._dt
         except TypeError:
@@ -124,6 +126,7 @@ class _Combine(object):
 
     @property
     def custom_filter_min_num_frames(self):
+        """the minimum number of frames for the given customfilter and dt"""
         try:
             return self._custom_filter_min / self._dt
         except TypeError:
@@ -131,32 +134,43 @@ class _Combine(object):
 
     @property
     def framerate(self):
+        """the framerate of the data"""
         return 1.0 / self._dt
 
     def get_plot_filename(self, prefix=None):
+        """return a full path to the autodata directory to save any plots"""
         if prefix is None:
             prefix = os.path.basename(self.csv_file).split('.')[0]
         return os.path.join(self.plotdir,prefix)
 
     def get_num_skipped(self, condition):
+        """returns the number of skipped trials for the given condition.
+
+        trials are skipped if they do not meet all the filter criteria"""
         return self._skipped.get(condition,0)
 
     def get_num_analysed(self, condition):
+        """returns the number of trials which met the filter criteria"""
         return self._results[condition]['count']
 
     def get_num_trials(self, condition):
+        """returns the total number of trials in the data for the givent condition"""
         return self.get_num_skipped(condition) + self.get_num_analysed(condition)
 
     def get_total_trials(self):
+        """returns the total trials for all conditions"""
         return sum([self.get_num_trials(c) for c in self.get_conditions()])
 
     def get_num_conditions(self):
+        """returns the number of experimental conditions"""
         return len(self._results)
 
     def get_conditions(self):
+        """returns a list of the names of the experimental conditions"""
         return self._results.keys()
 
     def get_num_frames(self, seconds):
+        """returns the number of frames that should be recorded for the given seconds"""
         return seconds / self._dt
 
     def enable_debug(self):
@@ -199,6 +213,7 @@ class _Combine(object):
         raise ValueError("No such obj_id: %s" % obj_id)
 
     def get_result_columns(self):
+        """get the names of the columns in the combined dataframe"""
         for current_condition,r in self._results.iteritems():
             for df in r['df']:
                 return list(df.columns)
@@ -593,6 +608,9 @@ class CombineH5WithCSV(_Combine):
         self._csv_suffix = kwargs.get("csv_suffix")
 
     def add_from_uuid(self, uuid, csv_suffix=None, frames_before=0, **kwargs):
+        """Add a csv and h5 file collected from the experiment with the
+        given uuid
+        """
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -616,6 +634,9 @@ class CombineH5WithCSV(_Combine):
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_from_args(self, args, csv_suffix=None, frames_before=0):
+        """Add possibly multiple csv and h5 files based on the command line
+        arguments given
+        """
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -647,6 +668,8 @@ class CombineH5WithCSV(_Combine):
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
+        """Add a single csv and h5 file"""
+
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
 

@@ -21,6 +21,11 @@ def get_csv_for_uuid(uuid):
     return csvname
 
 def get_combiner(suffix):
+    """
+    return and appropriately setup
+    :py:class:`analysislib.combine.CombineH5WithCSV` for the given
+    csv file (because we need to know the colums in the csv file
+    """
     if suffix.startswith("rotation"):
         combine = analysislib.combine.CombineH5WithCSV(
                                 rotation.Logger,
@@ -41,6 +46,10 @@ def get_combiner(suffix):
     return combine
 
 def get_one_trajectory(uuid, obj_id, suffix, **kwargs):
+    """
+    returns a dataframe for the given experiment uuid and
+    object_id
+    """
     combine = get_combiner(suffix)
     combine.add_from_uuid(uuid,suffix,**kwargs)
     df,dt,_ = combine.get_one_result(obj_id)

@@ -1,3 +1,7 @@
+"""
+functions for building interactive command line analysis tools
+"""
+
 import os.path
 import argparse
 import datetime
@@ -11,6 +15,12 @@ from strawlab.constants import DATE_FMT
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
 
 def get_default_args(**kwargs):
+    """
+    returns an argument parser result filled with sensible defaults.
+    You probbably want to use the 
+    :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_uuid`
+    instead
+    """
     parser = get_parser()
     args = parser.parse_args("--zfilt trim --rfilt trim".split(' '))
     for k,v in kwargs.iteritems():
@@ -22,7 +32,7 @@ def get_parser(*only_these_options, **defaults):
     returns an ArgumentParser instance configured with common filtering
     and plotting options. This object is suitable for extending with additional
     analysis specific options, and for passing to
-    :py:meth:`analysislib.combine.CombineH5WithCSV`
+    :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_args`
     """
 
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
@@ -131,6 +141,11 @@ def get_parser(*only_these_options, **defaults):
     return parser
 
 def check_args(parser, args, max_uuids=1000):
+    """
+    checks that the command line arguments parsed to the parser make sense.
+    In particular this checks if the number of uuids passed to idfilt
+    make sense
+    """
     if args.uuid:
         if None not in (args.csv_file, args.h5_file):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")

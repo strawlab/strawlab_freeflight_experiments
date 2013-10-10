@@ -1,12 +1,37 @@
-Welcome to strawlab_freeflight_experiments's documentation!
-===========================================================
+Freeflight Analysis
+===================
 
-This module contains code for working with freeflight data.
+This module contains code for working with freeflight data. It is designed
+to let you create both interactive and programmatic analysis scripts.
+
+For interactive commandline tools you should use
+:py:func:`analysislib.args.get_parser` and :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_args`.
+
+For programmatic scripts you should use
+
+:py:func:`analysislib.util.get_combiner` and 
+:py:meth:`analysislib.combine.CombineH5WithCSV.get_results` or
+:py:meth:`analysislib.combine.CombineH5WithCSV.get_one_result`. Or simply
+:py:func:`analysislib.util.get_one_trajectory`.
+
+
+Combining Data
+==============
 
 .. autoclass:: analysislib.combine.CombineH5WithCSV
    :member-order: groupwise
-   :members:
-   :undoc-members:
    :inherited-members:
 
-.. autofunction:: analysislib.args.get_parser
+Programmatic Scripts
+====================
+
+.. automodule:: analysislib.util
+   :members:
+
+Command Line Tools
+==================
+
+.. automodule:: analysislib.args
+   :members:
+
+
