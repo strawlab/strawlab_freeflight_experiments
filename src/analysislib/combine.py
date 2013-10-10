@@ -133,6 +133,11 @@ class _Combine(object):
     def framerate(self):
         return 1.0 / self._dt
 
+    def get_plot_filename(self, prefix=None):
+        if prefix is None:
+            prefix = os.path.basename(self.csv_file).split('.')[0]
+        return os.path.join(self.plotdir,prefix)
+
     def get_num_skipped(self, condition):
         return self._skipped.get(condition,0)
 
@@ -518,7 +523,7 @@ class CombineH5(_Combine):
         self.add_h5_file(h5_file)
 
     def add_from_uuid(self, uuid, *args, **kwargs):
-        fm = autodata.files.FileModel(basedir=os.environ.get("FLYDRA_AUTODATA_BASEDIR"))
+        fm = autodata.files.FileModel()
         fm.select_uuid(uuid)
         h5_file = fm.get_file_model("simple_flydra.h5").fullpath
         self.add_h5_file(h5_file)
@@ -591,7 +596,7 @@ class CombineH5WithCSV(_Combine):
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
-        fm = autodata.files.FileModel(basedir=os.environ.get("FLYDRA_AUTODATA_BASEDIR"))
+        fm = autodata.files.FileModel()
         fm.select_uuid(uuid)
         csv_file = fm.get_file_model(csv_suffix).fullpath
         h5_file = fm.get_file_model("simple_flydra.h5").fullpath
@@ -603,7 +608,10 @@ class CombineH5WithCSV(_Combine):
             for k in kwargs:
                 setattr(args,k,kwargs[k])
 
-        self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+        #this handles the single uuid case
+        if not self.plotdir:
+            print args.outdir,"--------------",fm.get_plot_dir()
+            self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
 
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 

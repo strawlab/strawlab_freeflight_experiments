@@ -77,9 +77,8 @@ def get_parser(*only_these_options, **defaults):
             help='get the appropriate csv and h5 file for this UUID (multiple may be specified)')
     if not only_these_options or "basedir" in only_these_options:
         parser.add_argument(
-            '--basedir', type=str,
-            help='base directory in which data files can be found by UUID',
-            default=os.environ.get("FLYDRA_AUTODATA_BASEDIR")
+            '--basedir', type=str, default=None,
+            help='base directory in which data files can be found by UUID'
         )
     if not only_these_options or "outdir" in only_these_options:
         parser.add_argument(
