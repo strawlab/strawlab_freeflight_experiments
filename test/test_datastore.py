@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 import os.path
-import sys
-import numpy as np
 import unittest
-import collections
-import tempfile
-import shutil
 
 import roslib
 import roslib.packages
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.util as autil
+import strawlab.constants
 
 class TestDataStore(unittest.TestCase):
 

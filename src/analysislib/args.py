@@ -7,7 +7,7 @@ import argparse
 import datetime
 
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 
 from strawlab.constants import DATE_FMT

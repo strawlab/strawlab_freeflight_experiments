@@ -1,3 +1,4 @@
+import os
 import progressbar
 
 def get_progress_bar(name, maxval):
@@ -5,3 +6,4 @@ def get_progress_bar(name, maxval):
                progressbar.Bar(), progressbar.ETA()]
     pbar = progressbar.ProgressBar(widgets=widgets,maxval=maxval).start()
     return pbar
+

@@ -13,8 +13,6 @@ import datetime
 import calendar
 
 import roslib
-
-roslib.load_manifest('flycave')
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
@@ -628,7 +626,6 @@ class CombineH5WithCSV(_Combine):
 
         #this handles the single uuid case
         if not self.plotdir:
-            print args.outdir,"--------------",fm.get_plot_dir()
             self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
 
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)

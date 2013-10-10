@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import rotation
 
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
 import analysislib.filters

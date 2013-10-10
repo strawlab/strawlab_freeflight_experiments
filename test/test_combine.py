@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
 import conflict
 
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.args
 

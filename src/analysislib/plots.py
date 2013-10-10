@@ -17,7 +17,10 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 
-import arenas
+import roslib
+roslib.load_manifest('strawlab_freeflight_experiments')
+import analysislib.arenas
+import strawlab.constants
 
 RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
 WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
@@ -29,9 +32,9 @@ LEGEND_TEXT_SML     = 8
 
 def get_arena_from_args(args):
     if args.arena=='flycave':
-        arena = arenas.FlyCaveCylinder(radius=0.5)
+        arena = analysislib.arenas.FlyCaveCylinder(radius=0.5)
     elif args.arena=='flycube':
-        arena = arenas.FlyCube()
+        arena = analysislib.arenas.FlyCube()
     else:
         raise ValueError('unknown arena %r'%args.arena)
     return arena
@@ -44,6 +47,7 @@ def show_plots():
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,**kwargs):
+    strawlab.constants.set_permissions()
     if args and args.outdir:
         if not os.path.exists(args.outdir):
             os.makedirs(args.outdir)
