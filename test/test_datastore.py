@@ -34,6 +34,11 @@ class TestDataStore(unittest.TestCase):
         n = self.combine.get_total_trials()
         self.assertEqual(n, 4)
         df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(5)
+        self.assertEqual(len(df), 1908)
+
+    def testSingleLoad(self):
+        df,dt = autil.get_one_trajectory(self.uuid, 5, "rotation.csv")
+        self.assertEqual(len(df), 1908)
 
     def testFilenames(self):
         readme = self.combine.get_plot_filename("README")
