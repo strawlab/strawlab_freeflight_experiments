@@ -438,9 +438,11 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         with aplt.mpl_fig("%s_%s" % (fname,fn), args) as fig:
             plot_hist_rotation_rate_vs_dtheta(
                     rrate,dtheta,fig.gca(),
-                    title="%s\nmax corr @%.1fs = %.3f (n=%d)" % (current_condition,dt*shift,ccef,nens[current_condition]),
+                    title="%s\nmax corr @%.2fs = %.3f (n=%d)" % (current_condition,dt*shift,ccef,nens[current_condition]),
                     correlation_options=correlation_options['rotation_rate']
             )
+
+    return max_corr_at_latency
 
 def plot_histograms(args, combine, flat_data, nens, histograms, histogram_options):
     results,dt = combine.get_results()
