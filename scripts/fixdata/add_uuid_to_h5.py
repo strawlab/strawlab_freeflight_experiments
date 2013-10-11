@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     if args.uuid:
 
-        if not is_simple_h5:
+        if is_simple_h5:
             if 1:
                 raise NotImplementedError('need to write pytables-free add_uuid_to_simple_h5()')
             add_uuid_to_simple_h5(args.file, args.uuid)
