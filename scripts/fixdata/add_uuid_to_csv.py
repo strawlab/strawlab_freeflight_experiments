@@ -65,7 +65,8 @@ def add_uuid_to_csv(csv,u):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=True)
-    parser.add_argument('--uuid', type=str, required=False)
+    parser.add_argument('--uuid', type=str, required=False,
+             help='if not specified, print any existing UUIDs')
     args = parser.parse_args()
 
     if not os.path.exists(args.file):
