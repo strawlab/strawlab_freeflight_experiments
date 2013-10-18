@@ -16,6 +16,7 @@ class CsvLogger:
 
     STATE =         tuple()
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
+    FLY_STATE =     ("condition","lock_object","framenumber")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False):
@@ -31,11 +32,24 @@ class CsvLogger:
 
         self._use_rostime = use_rostime
 
-        self._state = list(state) if state is not None else list(self.STATE)
-        self._state.extend(("condition","lock_object","framenumber"))
+        #backwards compat code to keep the same csv colum order and protect 
+        #from duplicate columns
+        if state is None:
+            state = list(self.STATE)
+
+        self._state = []
+        for s in state:
+            if (s not in self._state) and (s not in self.FLY_STATE) and (s not in self.EXTRA_STATE):
+                self._state.append(s)
+
+        for e in self.FLY_STATE:
+            if e not in self._state:
+                self._state.append(e)
 
         self._cols = list(self._state)
-        self._cols.extend(self.EXTRA_STATE)
+        for e in self.EXTRA_STATE:
+            if e not in self._cols:
+                self._cols.append(e)
 
         for s in self._cols:
             setattr(self, s, None)

@@ -43,24 +43,28 @@ class TestLog(unittest.TestCase):
         self.assertEqual(l.close(), fn)
 
     def test_read(self):
-        fn = os.path.join(self._tdir,"log.csv")
-
-        def _get_rdr():
-            return nodelib.log.CsvLogger(fn,'w',state=TEST_STATE_NAMES)
-
-        l = _get_rdr()
+        l = nodelib.log.CsvLogger(self._fn,'w',state=TEST_STATE_NAMES)
         for s in TEST_STATE_NAMES:
             setattr(l,s,TEST_STATE[s](50))
         l.update()
         fn2 = l.close()
-        self.assertEqual(fn,fn2)
+        self.assertEqual(self._fn,fn2)
+
+        HEAD = 'a_float,b_int,c_string,condition,lock_object,framenumber,t_sec,t_nsec,flydra_data_file,exp_uuid\n'
 
         with open(fn2) as f:
             header,line = f.readlines()
-            self.assertEqual(header, 'a_float,b_int,c_string,condition,lock_object,framenumber,t_sec,t_nsec,flydra_data_file,exp_uuid\n')
+            self.assertEqual(header, HEAD)
             self.assertTrue(line.startswith('50.0,50,50,None,None,None,'))
 
-        
+        #try duplicate csv row
+        l = nodelib.log.CsvLogger(self._fn+'.2','w',state=TEST_STATE_NAMES+['framenumber'])
+        l.update()
+        fn2 = l.close()
+
+        with open(fn2) as f:
+            header,line = f.readlines()
+            self.assertEqual(header, HEAD)
 
     def test_write_many_read(self):
         N = 10000
