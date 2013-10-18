@@ -3,6 +3,7 @@ import time
 import csv
 import collections
 import tempfile
+import threading
 
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
@@ -17,16 +18,18 @@ class CsvLogger:
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None):
-        assert len(self.STATE)
+    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False):
 
         if directory is None:
             directory = self.DEFAULT_DIRECTORY
         if use_tmpdir:
             directory = tempfile.mkdtemp()
 
+        self._wlock = threading.Lock()
         self._flydra_data_file = ''
         self._exp_uuid = ''
+
+        self._use_rostime = use_rostime
 
         self._state = list(state) if state is not None else list(self.STATE)
         self._state.extend(("condition","lock_object","framenumber"))
@@ -105,16 +108,30 @@ class CsvLogger:
     def columns(self):
         return self._cols
 
-    def update(self, check=False):
+    def _update(self, check=False):
+        if self._use_rostime:
+            t = rospy.get_rostime()
+            tsecs = t.secs
+            tnsecs = t.nsecs
+        else:
+            #taken from ros.rostime (so the calculation is identical). we
+            #never use the ros clock support anyway
+            float_secs = time.time()
+            tsecs = int(float_secs)
+            tnsecs = int((float_secs - tsecs) * 1000000000)
+
         vals = [getattr(self,s) for s in self._state]
 
         if check and None in vals:
             rospy.logwarn("no state to save")
 
         self._fd.write(",".join(map(str,vals)))
-        t = rospy.get_rostime()
-        self._fd.write(",%d,%d,%s,%s\n" % (t.secs,t.nsecs,self._flydra_data_file,self._exp_uuid))
+        self._fd.write(",%d,%d,%s,%s\n" % (tsecs,tnsecs,self._flydra_data_file,self._exp_uuid))
         self._fd.flush()
+
+    def update(self, check=False):
+        with self._wlock:
+            self._update(check)
 
     def close(self):
         self._fd.close()
