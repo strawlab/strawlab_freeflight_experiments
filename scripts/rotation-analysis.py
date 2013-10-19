@@ -111,3 +111,5 @@ if __name__=='__main__':
     if args.show:
         aplt.show_plots()
 
+    sys.exit(0)
+

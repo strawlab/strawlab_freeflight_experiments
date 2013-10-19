@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -16,7 +17,6 @@ if __name__=='__main__':
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
-                    show=True
     )
     parser.add_argument(
         "--animate", action="store_true")
@@ -43,6 +43,7 @@ if __name__=='__main__':
     ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)}
 
     if args.animate:
+        args.show = True
         anim = aplt.animate_infinity(
                 combine, args,
                 df,dt,
@@ -57,10 +58,12 @@ if __name__=='__main__':
                 ylimits=ylimits
         )
 
-            
-    aplt.show_plots()
+
+    if args.show:
+        aplt.show_plots()
 
     if args.save:
         df.to_csv("%s_%s.csv" % (uuid, obj_id))
         df.save("%s_%s.df" % (uuid, obj_id))
 
+    sys.exit(0)
