@@ -140,6 +140,7 @@ class Node(object):
         svg_filename = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
         self.svg_pub.publish(svg_filename)
 
+        self.log.stimulus_filename = self.stimulus_filename
         self.log.condition = self.condition
         self.log.startr = START_RADIUS
         rospy.loginfo('condition: %s (%f,%f)' % (self.condition,self.x0,self.y0))
