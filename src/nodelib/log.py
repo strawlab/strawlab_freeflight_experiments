@@ -32,28 +32,6 @@ class CsvLogger:
 
         self._use_rostime = use_rostime
 
-        #backwards compat code to keep the same csv colum order and protect 
-        #from duplicate columns
-        if state is None:
-            state = list(self.STATE)
-
-        self._state = []
-        for s in state:
-            if (s not in self._state) and (s not in self.FLY_STATE) and (s not in self.EXTRA_STATE):
-                self._state.append(s)
-
-        for e in self.FLY_STATE:
-            if e not in self._state:
-                self._state.append(e)
-
-        self._cols = list(self._state)
-        for e in self.EXTRA_STATE:
-            if e not in self._cols:
-                self._cols.append(e)
-
-        for s in self._cols:
-            setattr(self, s, None)
-
         if mode not in ('r','w'):
             raise IOError("mode must be 'r' or 'w'. to continue an existing file set continue_existing=/PATH/TO/FILE")
 
@@ -73,6 +51,36 @@ class CsvLogger:
                             time.strftime('%Y%m%d_%H%M%S') + '.%s.csv' % rospy.get_name()[1:])
         else:
             self._fname = os.path.abspath(fname)
+
+        if mode in ('w','a'):
+            #record_iterator returns all defined cols, so there is no need in requiring the
+            #user pass state here.
+
+            #backwards compat code to keep the same csv colum order and protect 
+            #from duplicate columns
+            if state is None:
+                state = list(self.STATE)
+
+            if not state:
+                rospy.logwarn("you have not defined any additional state to save in the CSV file")
+
+            self._state = []
+            for s in state:
+                if (s not in self._state) and (s not in self.FLY_STATE) and (s not in self.EXTRA_STATE):
+                    self._state.append(s)
+
+            for e in self.FLY_STATE:
+                if e not in self._state:
+                    self._state.append(e)
+
+            self._cols = list(self._state)
+            for e in self.EXTRA_STATE:
+                if e not in self._cols:
+                    self._cols.append(e)
+
+            #set default values for properties
+            for s in self._cols:
+                setattr(self, s, None)
 
         if mode == 'r':
             rospy.loginfo("reading %s" % self._fname)

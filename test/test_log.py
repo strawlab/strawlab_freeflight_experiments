@@ -25,6 +25,39 @@ class TestLog(unittest.TestCase):
         self._tdir = tempfile.mkdtemp()
         self._fn = os.path.join(self._tdir,"log.csv")
 
+    def test_attempt_read_extra_rows(self):
+        N = 10
+
+        def _write():
+            l = nodelib.log.CsvLogger(self._fn,'w',state=TEST_STATE_NAMES)
+            for i in range(N):
+                for s in TEST_STATE_NAMES:
+                    setattr(l,s,TEST_STATE[s](i))
+                l.update()
+            return l.close()
+
+        #extra row definitions are ignored, record_iterator returns row objects
+        #with all cols set by default
+        l = nodelib.log.CsvLogger(_write(),'r',state=TEST_STATE_NAMES+['extra'])
+
+        i = 0
+        for row in l.record_iterator():
+            for s in TEST_STATE_NAMES:
+                self.assertEqual(TEST_STATE[s](i), TEST_STATE[s](getattr(row,s)))
+            i += 1
+        self.assertEqual(i,N)
+
+        #state is even optional for readers
+        l = nodelib.log.CsvLogger(_write(),'r')
+
+        i = 0
+        for row in l.record_iterator():
+            for s in TEST_STATE_NAMES:
+                self.assertEqual(TEST_STATE[s](i), TEST_STATE[s](getattr(row,s)))
+            i += 1
+        self.assertEqual(i,N)
+
+
     def test_constuct(self):
         fn = os.path.join(self._tdir,"log.csv")
         l = Logger(fn, 'w')
