@@ -16,13 +16,6 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.plots as aplt
 from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML
 
-sys.path.append(os.path.join(
-        roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
-        "nodes")
-)
-import rotation
-import conflict
-
 DEBUG = False
 
 class NotEnoughDataError(Exception):

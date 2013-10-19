@@ -5,12 +5,9 @@ import numpy as np
 import unittest
 import tempfile
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
-import conflict
-import rotation
-
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
+
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
@@ -35,7 +32,6 @@ class TestPlot(unittest.TestCase):
     def test_conflict(self):
 
         combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate",
                                 debug=False,
         )
@@ -49,7 +45,6 @@ class TestPlot(unittest.TestCase):
         tdir = tempfile.mkdtemp()
 
         combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate",
                                 debug=False,
         )
@@ -74,7 +69,6 @@ class TestPlot(unittest.TestCase):
         tdir = tempfile.mkdtemp()
 
         combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate",
                                 debug=False,
         )

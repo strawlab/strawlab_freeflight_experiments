@@ -5,9 +5,6 @@ import numpy as np
 import unittest
 import collections
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
-import conflict
-
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
@@ -30,7 +27,6 @@ class TestCombine(unittest.TestCase):
 
     def test_combine_h5(self):
         combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate",
                                 debug=False,
         )
@@ -47,7 +43,6 @@ class TestCombine(unittest.TestCase):
         self._assert_two_equal(a,b)
 
         combine3 = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate",
                                 debug=False,
         )

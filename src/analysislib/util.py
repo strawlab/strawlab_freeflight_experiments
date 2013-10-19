@@ -6,13 +6,6 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import autodata.files
 
-sys.path.append(os.path.join(
-        roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
-        "nodes")
-)
-import rotation
-import conflict
-
 def get_csv_for_uuid(uuid):
     fm = autodata.files.FileModel()
     fm.select_uuid(uuid)
@@ -26,16 +19,23 @@ def get_combiner(suffix):
     :py:class:`analysislib.combine.CombineH5WithCSV` for the given
     csv file (because we need to know the colums in the csv file
     """
+
+    #the csv reader returns a row object with all col values set by
+    #default. the list of colums here are those that should be cast to float
+    #and put in the dataframe - i.e. not strings.
     if suffix.startswith("rotation"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                rotation.Logger,
                                 "ratio","rotation_rate","v_offset_rate",
                                 csv_suffix=suffix
         )
-    elif suffix == "conflict.csv":
+    elif suffix.startswith("conflict"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                conflict.Logger,
                                 "ratio","rotation_rate","v_offset_rate",
+                                csv_suffix=suffix
+        )
+    elif suffix.startswith("confine"):
+        combine = analysislib.combine.CombineH5WithCSV(
+                                "startr",
                                 csv_suffix=suffix
         )
     elif not suffix:

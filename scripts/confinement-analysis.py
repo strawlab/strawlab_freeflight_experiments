@@ -8,17 +8,15 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
-import confinement
-
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
+import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -27,9 +25,7 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    combine = analysislib.combine.CombineH5WithCSV(
-                            confinement.Logger
-    )
+    combine = autil.get_combiner("confine")
     combine.add_from_args(args, "confinement.csv", frames_before=0)
 
     fname = combine.fname

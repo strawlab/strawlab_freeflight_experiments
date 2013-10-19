@@ -16,6 +16,8 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
+import nodelib.log
+
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
@@ -599,9 +601,8 @@ class CombineH5WithCSV(_Combine):
     csv_file = ''
     h5_file = ''
 
-    def __init__(self, loggerklass, *csv_rows, **kwargs):
+    def __init__(self, *csv_rows, **kwargs):
         _Combine.__init__(self, **kwargs)
-        self._lklass = loggerklass
         rows = ["framenumber"]
         rows.extend(csv_rows)
         self._rows = set(rows)
@@ -677,7 +678,9 @@ class CombineH5WithCSV(_Combine):
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
-        infile = self._lklass(fname=csv_fname, mode="r")
+        #record_iterator in the csv_file returns all defined cols by default.
+        #those specified in csv_rows are float()'d and put into the dataframe
+        infile = nodelib.log.CsvLogger(csv_fname, "r")
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
 

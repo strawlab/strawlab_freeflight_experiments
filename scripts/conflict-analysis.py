@@ -10,11 +10,8 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'..','nodes'))
-import conflict
-
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
 import analysislib.filters
@@ -22,6 +19,7 @@ import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
 import analysislib.curvature as curve
+import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -30,10 +28,7 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    combine = analysislib.combine.CombineH5WithCSV(
-                            conflict.Logger,
-                            "ratio","rotation_rate",
-    )
+    combine = autil.get_combiner("conflict")
     combine.calc_turn_stats = True
     combine.add_from_args(args, "conflict.csv", frames_before=0)
 
