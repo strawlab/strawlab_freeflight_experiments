@@ -19,4 +19,6 @@
   <depend package="rostest" />
 
   <rosdep name="python-rospkg"/>
+  <rosdep name="python-pandas"/>
+  <rosdep name="python-nose"/>
 </package>

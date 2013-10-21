@@ -1,2 +1,6 @@
 python-rospkg:
   ubuntu: python-rospkg
+python-pandas:
+  ubuntu: python-pandas
+python-nose:
+  ubuntu: python-nose
