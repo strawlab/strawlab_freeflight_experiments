@@ -66,7 +66,7 @@ MAX_ROTATION_RATE = 1.5
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.22",
               "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.50/0.22",
-              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.30/0.22",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
