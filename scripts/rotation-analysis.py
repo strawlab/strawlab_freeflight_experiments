@@ -89,7 +89,7 @@ if __name__=='__main__':
                                    "dtheta":True,
                                    "rcurve":True},
                          "range":{"velocity":(0,1),
-                                  "dtheta":(-0.5,0.5),
+                                  "dtheta":(-20,20),
                                   "rcurve":(0,1)},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)",

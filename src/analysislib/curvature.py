@@ -238,7 +238,7 @@ def plot_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',correlation_options=None)
         ax.set_title(title)
     ax.plot(rr,dtheta,'k.')
     if correlation_options is not None:
-        ax.set_ylim(*correlation_options.get("dtheta_range",[-0.15, 0.15]))
+        ax.set_ylim(*correlation_options.get("dtheta_range",[-10, 10]))
         ax.set_xlim(*correlation_options.get("rrate_range",[-1.45, 1.45]))
     ax.set_xlabel('rotation rate')
     ax.set_ylabel('dtheta')
@@ -269,7 +269,7 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',nbins=100,correlatio
     hkwargs = {}
     if correlation_options is not None:
         hkwargs["range"] = [correlation_options.get("rrate_range",[-1.45, 1.45]),
-                            correlation_options.get("dtheta_range",[-0.15, 0.15])]
+                            correlation_options.get("dtheta_range",[-10, 10])]
 
     try:
         func = ax.hist2d
@@ -521,7 +521,7 @@ if __name__ == "__main__":
     if 1:
         anim = animate_plots(df,dt,
             plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)},
+            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
         )
 #        #needs new mpl
 #        writer = animation.FileMovieWriter()
@@ -530,7 +530,7 @@ if __name__ == "__main__":
     else:
         plot_infinity(df,dt,
             plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)},
+            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
         )
 
 
