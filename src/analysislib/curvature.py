@@ -45,7 +45,7 @@ def calc_angular_velocities(df, dt):
     velocity = df['velocity'].values
 
     theta       = np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
-    dtheta      = np.gradient(theta)
+    dtheta      = np.gradient(theta) / dt
     radius      = np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
 
     df['theta']     = theta

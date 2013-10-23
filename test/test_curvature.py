@@ -123,6 +123,24 @@ class TestCurvature(unittest.TestCase):
             #second quarter has beg radius
             self.assertTrue( np.allclose(v[-half//2:],rad) )
 
+    def test_dtheta(self):
+        # 2*pi in 10 sec --> 0.628319 rad/s
+        phi = np.linspace(0,2*np.pi, 1000)
+        t = np.linspace(0,10, 1000) 
+        dt = t[1]-t[0] 
+
+        x = np.cos(phi)
+        y = np.sin(phi)
+        z = y*0
+        df = pd.DataFrame({'x': x, 'y': y, 'z':z})
+
+        curve.calc_velocities(df, dt)
+        curve.calc_angular_velocities(df, dt)
+
+        dtheta = df['dtheta'].values
+
+        self.assertTrue( np.allclose(dtheta[10:90],0.628319) )
+
 if __name__=='__main__':
     unittest.main()
 
