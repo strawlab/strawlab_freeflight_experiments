@@ -39,11 +39,16 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 5.0
-FLY_DIST_MIN_DIST   = 0.2
+FLY_DIST_CHECK_TIME = 5.0       # time interval in seconds to check fly movement
+FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
 
-START_RADIUS    = 0.15
-START_ZDIST     = 0.08
+START_RADIUS    = 0.15      # radius of trigger volume centered around self.x/y
+START_ZDIST     = 0.08      # +/- height of trigger volume centered around z_target
+
+
+# z range for fly tracking (dropped outside)
+Z_MINIMUM = 0.05
+Z_MAXIMUM = 0.35
 
 GRAY_FN = "gray.png"
 
@@ -64,9 +69,9 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.22",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.50/0.22",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.19",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.22",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -161,7 +166,7 @@ class Node(object):
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
         self.z_target = float(z_target)
-        
+
         self.log.cyl_r = self.rad_locked
 
         if str(svg):
@@ -176,7 +181,7 @@ class Node(object):
             self.cyl_height_pub.publish(-20*self.rad_locked)
         else:
             self.cyl_height_pub.publish(1.0)
-        
+
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):
@@ -244,7 +249,8 @@ class Node(object):
                     self.drop_lock_on()
                     continue
 
-                if (fly_z > 0.95) or (fly_z < 0):
+                # check if fly is in an acceptable z range
+                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
                     self.drop_lock_on()
                     continue
 
@@ -263,7 +269,7 @@ class Node(object):
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
                     self.fly_dist = 0
-                    if fly_dist < FLY_DIST_MIN_DIST:
+                    if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
                         continue
 
