@@ -13,6 +13,14 @@ def get_csv_for_uuid(uuid):
     csvname = '.'.join(name.rsplit('.',2)[1:])
     return csvname
 
+def get_csv_for_args(args):
+    if args.uuid:
+        return get_csv_for_uuid(args.uuid[0])
+    elif args.csv_file:
+        return os.path.basename(args.csv_file)
+    else:
+        raise Exception("uuid or csv file must be provided")
+
 def get_combiner(suffix):
     """
     return and appropriately setup
