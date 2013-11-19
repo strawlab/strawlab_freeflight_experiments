@@ -50,12 +50,15 @@ X_MIN = -0.20
 X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
-Z_MIN =  0.05
-Z_MAX =  0.31
+Z_MIN =  0.02
+Z_MAX =  0.38
+
+FLY_HEIGHT_CHECK_TIME = 2.0       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
-Z_MINIMUM = 0.05
-Z_MAXIMUM = 0.31
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Z_MINIMUM = 0.06
+Z_MAXIMUM = 0.30
 
 GRAY_FN = "gray.png"
 
@@ -77,8 +80,9 @@ MAX_ROTATION_RATE = 1.5
 #
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.2/0.20/0.18",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.15/0.18",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.05/0.30/0.18",
+              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.30/0.18",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -258,8 +262,8 @@ class Node(object):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                # check if fly is in an acceptable z range
-                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
+                # check if fly is in an acceptable z range after a give interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM)):
                     self.drop_lock_on()
                     if (fly_z > Z_MAXIMUM):
                         rospy.loginfo('MAXIMUM: too high (Z = %.2f > Z_MAXIMUM %.2f )' % (fly_z, Z_MAXIMUM))
@@ -278,6 +282,8 @@ class Node(object):
                                            (fly_y-self.last_fly_y)**2 +
                                            (fly_z-self.last_fly_z)**2)
                 self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
+
+                # drop slow moving flies
                 if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
