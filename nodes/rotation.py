@@ -59,7 +59,7 @@ MAX_ROTATION_RATE = 1.5
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
-#             radius_when_locked(-ve disables cx,xy changing)/
+#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
 #             v_gain"
 #
