@@ -29,6 +29,7 @@ WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
+TITLE_FONT_SIZE     = 10
 
 def get_arena_from_args(args):
     if args.arena=='flycave':
@@ -149,7 +150,7 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
             arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
+            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
 
         for ax in axes:
             (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
@@ -245,7 +246,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
 
             ax.set_aspect('equal')
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']))
+            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -365,7 +366,7 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
             nsamples = 0
             for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 ts = df.index.values - framenumber0
-                
+
                 try:
                     val = df[valname].values
                 except KeyError:
@@ -728,7 +729,7 @@ def _do_autowrap_text(textobj, renderer):
     # Set the text to rotate about the left edge (doesn't make sense otherwise)
     textobj.set_rotation_mode('anchor')
 
-    # Get the amount of space in the direction of rotation to the left and 
+    # Get the amount of space in the direction of rotation to the left and
     # right of x0, y0 (left and right are relative to the rotation, as well)
     rotation = textobj.get_rotation()
     right_space = _min_dist_inside((x0, y0), rotation, clip)
@@ -737,14 +738,14 @@ def _do_autowrap_text(textobj, renderer):
     # Use either the left or right distance depending on the horiz alignment.
     alignment = textobj.get_horizontalalignment()
     if alignment is 'left':
-        new_width = right_space 
+        new_width = right_space
     elif alignment is 'right':
         new_width = left_space
     else:
         new_width = 2 * min(left_space, right_space)
 
     # Estimate the width of the new size in characters...
-    aspect_ratio = 0.5 # This varies with the font!! 
+    aspect_ratio = 0.5 # This varies with the font!!
     fontsize = textobj.get_size()
     pixels_per_char = aspect_ratio * renderer.points_to_pixels(fontsize)
 
@@ -773,17 +774,17 @@ def _min_dist_inside(point, rotation, box):
     x0, y0 = point
     rotation = radians(rotation)
     distances = []
-    threshold = 0.0001 
-    if cos(rotation) > threshold: 
+    threshold = 0.0001
+    if cos(rotation) > threshold:
         # Intersects the right axis
         distances.append((box.x1 - x0) / cos(rotation))
-    if cos(rotation) < -threshold: 
+    if cos(rotation) < -threshold:
         # Intersects the left axis
         distances.append((box.x0 - x0) / cos(rotation))
-    if sin(rotation) > threshold: 
+    if sin(rotation) > threshold:
         # Intersects the top axis
         distances.append((box.y1 - y0) / sin(rotation))
-    if sin(rotation) < -threshold: 
+    if sin(rotation) < -threshold:
         # Intersects the bottom axis
         distances.append((box.y0 - y0) / sin(rotation))
     return min(distances)
