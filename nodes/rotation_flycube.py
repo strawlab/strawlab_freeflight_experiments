@@ -13,7 +13,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import display_client
+import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -39,16 +39,23 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 5.0       # time interval in seconds to check fly movement
+FLY_DIST_CHECK_TIME = 1.0       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
 
-START_RADIUS    = 0.15      # radius of trigger volume centered around self.x/y
-START_ZDIST     = 0.08      # +/- height of trigger volume centered around z_target
+#START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
+#START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
+# start volume defined as cube
+X_MIN = -0.20
+X_MAX =  0.20
+Y_MIN = -0.14
+Y_MAX =  0.14
+Z_MIN =  0.05
+Z_MAX =  0.31
 
 # z range for fly tracking (dropped outside)
 Z_MINIMUM = 0.05
-Z_MAXIMUM = 0.35
+Z_MAXIMUM = 0.31
 
 GRAY_FN = "gray.png"
 
@@ -69,9 +76,9 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.19",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.22",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.20",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.18",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.20/0.18",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.2/0.20/0.18",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -109,7 +116,7 @@ class Node(object):
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
-        #protect the traked id and fly position between the time syncronous main loop and the asyn
+        #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
         with self.trackinglock:
@@ -158,6 +165,7 @@ class Node(object):
         self.log.condition = self.condition
 
         self.drop_lock_on()
+        rospy.loginfo('SWITCH: switch conditions')
 
         img,svg,p,rad,advance,v_gain,z_target = self.condition.split('/')
         self.img_fn = str(img)
@@ -247,11 +255,16 @@ class Node(object):
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
+                    rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
                 # check if fly is in an acceptable z range
                 if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
                     self.drop_lock_on()
+                    if (fly_z > Z_MAXIMUM):
+                        rospy.loginfo('MAXIMUM: too high (Z = %.2f > Z_MAXIMUM %.2f )' % (fly_z, Z_MAXIMUM))
+                    else:
+                        rospy.loginfo('MINIMUM: too low (Z = %.2f < Z_MINIMUM %.2f )' % (fly_z, Z_MINIMUM))
                     continue
 
                 if np.isnan(fly_x):
@@ -271,6 +284,7 @@ class Node(object):
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
+                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
@@ -306,11 +320,13 @@ class Node(object):
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,pos):
-        c = np.array( (self.x0,self.y0) )
-        p = np.array( (pos.x, pos.y) )
-        dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < START_RADIUS) and (abs(pos.z-self.z_target) < START_ZDIST):
-            return True
+#        c = np.array( (self.x0,self.y0) )
+#        p = np.array( (pos.x, pos.y) )
+#        dist = np.sqrt(np.sum((c-p)**2))
+#        if (dist < START_RADIUS) and (abs(pos.z-self.z_target) < START_ZDIST):
+#            return True
+        if ((pos.x>X_MIN) and (pos.x<X_MAX) and (pos.y>Y_MIN) and (pos.y<Y_MAX) and (pos.z>Z_MIN) and (pos.z<Z_MAX)):
+             return True
         return False
 
     def on_flydra_mainbrain_super_packets(self,data):
@@ -340,6 +356,7 @@ class Node(object):
             self.first_seen_time = now
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
+            self.last_check_flying_time = now
 
             if self.svg_fn:
                 px,py = XFORM.xy_to_pxpy(obj.position.x,obj.position.y)
