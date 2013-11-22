@@ -51,9 +51,9 @@ X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.38
+Z_MAX =  0.36
 
-FLY_HEIGHT_CHECK_TIME = 2.0       # time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 1.5       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
