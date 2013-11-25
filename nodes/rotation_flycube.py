@@ -51,9 +51,9 @@ X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.36
+Z_MAX =  0.35
 
-FLY_HEIGHT_CHECK_TIME = 1.5       # time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 1.2       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -80,8 +80,8 @@ MAX_ROTATION_RATE = 1.5
 #
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.15/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.05/0.30/0.18",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.2/0.18",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.05/0.20/0.18",
               "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.30/0.18",
 ]
 START_CONDITION = CONDITIONS[0]
