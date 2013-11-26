@@ -39,7 +39,7 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 1.0       # time interval in seconds to check fly movement
+FLY_DIST_CHECK_TIME = 1.5       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
 
 #START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
@@ -51,7 +51,7 @@ X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.35
+Z_MAX =  0.36
 
 FLY_HEIGHT_CHECK_TIME = 1.2       # time interval in seconds to check fly movement after lock on
 
