@@ -58,7 +58,7 @@ FLY_HEIGHT_CHECK_TIME = 3       # time interval in seconds to check fly movement
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
 Z_MINIMUM = 0.06
-Z_MAXIMUM = 0.30
+Z_MAXIMUM = 0.36
 
 GRAY_FN = "gray.png"
 
@@ -80,9 +80,9 @@ MAX_ROTATION_RATE = 1.5
 #
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.35/0.18",
-              "checkerboard16.png/infinity05.svg/+0.25/-10.0/0.15/0.30/0.18",
               "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.30/0.18",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.15/0.30/0.10",
+              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.15/0.30/0.10",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
