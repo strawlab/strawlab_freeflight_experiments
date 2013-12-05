@@ -18,6 +18,9 @@ def read_uuid_from_h5(h5):
             pass
 
     print "DETECTED UUID:\n\t%r" % uuids
+    if len(uuids)==0:
+        suggest = uuid.uuid1().get_hex()
+        print 'Might I suggest the new UUID I just generated for you: %s' % suggest
     return uuids
 
 def add_uuid_to_old_h5(h5,u):
