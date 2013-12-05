@@ -59,7 +59,7 @@ MAX_ROTATION_RATE = 1.5
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
-#             radius_when_locked(-ve disables cx,xy changing)/
+#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
 #             v_gain"
 #
@@ -173,11 +173,8 @@ class Node(object):
         else:
             self.svg_fn = ''
 
-        if self.rad_locked < 0:
-            #HACK
-            self.pub_cyl_height.publish(-4.5*self.rad_locked)
-        else:
-            self.pub_cyl_height.publish(1.0)
+        #HACK
+        self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
