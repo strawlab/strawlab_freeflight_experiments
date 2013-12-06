@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import argparse
+import datetime
 import os.path
 import re
 import time
@@ -23,14 +24,22 @@ parser.add_argument(
     '-t', '--type', required=True,
     help='analyse only this type', choices=["rotation","confinement","conflict"])
 parser.add_argument(
+    '-s', '--start', required=True, metavar="2013/03/21",
+    help='date from which to rerun analysis scripts')
+parser.add_argument(
     '-d', '--dry-run', action='store_true', default=False)
 parser.add_argument(
     '-e', '--extra-args',
     help='extra args to add to the command')
 args = parser.parse_args()
 
+try:
+    datetime.datetime.strptime(args.start, "%Y/%m/%d")
+except ValueError:
+    parser.error("could not parse start date %s" % args.start)
+
 model = autodata.model.SQLModel()
-model.select(start="2013/03/21")
+model.select(start=args.start)
 
 todo = []
 for res in model.query(model.table('experiment'), distinct_on="start_secs"):
