@@ -51,18 +51,18 @@ X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.36
+Z_MAX =  0.34
 
 FLY_HEIGHT_CHECK_TIME = 3       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
 Z_MINIMUM = 0.06
-Z_MAXIMUM = 0.36
+Z_MAXIMUM = 0.34
 
 GRAY_FN = "gray.png"
 
-TIMEOUT             = 0.5
+TIMEOUT             = 3
 IMPOSSIBLE_OBJ_ID   = 0
 
 PI = np.pi
@@ -79,11 +79,11 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.18",
-              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.30/0.18",
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.15/0.30/0.10",
-              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.15/0.30/0.10",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.40/0.15",
+              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.40/0.15",
+              "gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
+
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
