@@ -46,14 +46,14 @@ FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interv
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.20
-X_MAX =  0.20
+X_MIN = -0.22
+X_MAX =  0.22
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.34
+Z_MAX =  0.35
 
-FLY_HEIGHT_CHECK_TIME = 3       # time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 1.0       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -62,7 +62,7 @@ Z_MAXIMUM = 0.34
 
 GRAY_FN = "gray.png"
 
-TIMEOUT             = 3
+TIMEOUT             = 5
 IMPOSSIBLE_OBJ_ID   = 0
 
 PI = np.pi
@@ -79,9 +79,9 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.40/0.15",
-              "checkerboard16.png/infinity05.svg/+0.15/-10.0/0.1/0.40/0.15",
-              "gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
+              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.2/0.15",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.15",
+              #"gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
 
 START_CONDITION = CONDITIONS[0]
