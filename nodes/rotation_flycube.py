@@ -39,21 +39,21 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 3       # time interval in seconds to check fly movement
+FLY_DIST_CHECK_TIME = 2       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
 
 #START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.22
-X_MAX =  0.22
+X_MIN = -0.25
+X_MAX =  0.25
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
 Z_MAX =  0.35
 
-FLY_HEIGHT_CHECK_TIME = 1.0       # time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 0.5       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -262,7 +262,7 @@ class Node(object):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                # check if fly is in an acceptable z range after a give interval after lock_on
+                # check if fly is in an acceptable z range after a given interval after lock_on
                 if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM)):
                     self.drop_lock_on()
                     if (fly_z > Z_MAXIMUM):
