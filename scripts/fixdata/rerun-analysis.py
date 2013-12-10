@@ -31,6 +31,9 @@ parser.add_argument(
 parser.add_argument(
     '-e', '--extra-args',
     help='extra args to add to the command')
+parser.add_argument(
+    '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
+    help='dont reindex h5 file')
 args = parser.parse_args()
 
 try:
@@ -89,7 +92,12 @@ for uuid in todo:
     t = time.time()
     try:
         argslist = ["strawlab_freeflight_experiments", "%s-analysis.py" % args.type]
-        argslist.extend(opts.split(' '))
+        for opt in opts.split(' '):
+            if opt.strip() == '--reindex':
+                if args.reindex:
+                    argslist.append(opt)
+            else:
+                argslist.append(opt)
 
         if not args.dry_run:
             sh.rosrun(
@@ -98,7 +106,7 @@ for uuid in todo:
                 _err=os.path.join("LOG","%s.stderr" % uuid))
 
         dt = time.time() - t
-        print "succeeded (%.1fs)" % dt, opts
+        print "succeeded (%.1fs)" % dt, " ".join(argslist[1:])
     except Exception, e:
         print "failed", opts, e
 
