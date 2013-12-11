@@ -46,19 +46,27 @@ FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interv
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.25
-X_MAX =  0.25
+X_MIN = -0.20
+X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.35
+Z_MAX =  0.39
 
 FLY_HEIGHT_CHECK_TIME = 0.5       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
 Z_MINIMUM = 0.06
-Z_MAXIMUM = 0.34
+Z_MAXIMUM = 0.40
+
+
+# y range for fly tracking (dropped outside)
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Y_MINIMUM = -0.18
+Y_MAXIMUM = 0.18
+
+
 
 GRAY_FN = "gray.png"
 
@@ -68,7 +76,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 1
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -79,8 +87,8 @@ MAX_ROTATION_RATE = 1.5
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.2/0.15",
-              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.15",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.2",
+              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.2",
               #"gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
 
@@ -276,6 +284,17 @@ class Node(object):
                     continue
 
                 active = True
+
+                # check if fly is in an acceptable y range after a given interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_y > Y_MAXIMUM) or (fly_y < Y_MINIMUM)):
+                    self.drop_lock_on()
+                    if (fly_y > Y_MAXIMUM):
+                        rospy.loginfo('WALL: Wall (Y = %.2f > Y_MAXIMUM %.2f )' % (fly_y, Y_MAXIMUM))
+                    else:
+                        rospy.loginfo('WALL: Wall (Y = %.2f < Z_MINIMUM %.2f )' % (fly_y, Y_MINIMUM))
+                    continue
+
+              
 
                 #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
