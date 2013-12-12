@@ -40,7 +40,7 @@ if __name__=='__main__':
     df,dt,_ = combine.get_one_result(obj_id)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
-    ylimits={"omega":(-2,2),"dtheta":(-0.15,0.15),"rcurve":(0,1)}
+    ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     if args.animate:
         args.show = True
