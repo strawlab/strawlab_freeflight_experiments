@@ -51,14 +51,14 @@ X_MAX =  0.20
 Y_MIN = -0.14
 Y_MAX =  0.14
 Z_MIN =  0.02
-Z_MAX =  0.39
+Z_MAX =  0.38
 
-FLY_HEIGHT_CHECK_TIME = 0.5       # time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 0.2       # time interval in seconds to check fly movement after lock on
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
 Z_MINIMUM = 0.06
-Z_MAXIMUM = 0.40
+Z_MAXIMUM = 0.38
 
 
 # y range for fly tracking (dropped outside)
@@ -70,13 +70,13 @@ Y_MAXIMUM = 0.18
 
 GRAY_FN = "gray.png"
 
-TIMEOUT             = 5
+TIMEOUT             = 0.5
 IMPOSSIBLE_OBJ_ID   = 0
 
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1
+MAX_ROTATION_RATE = 1.5
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -87,8 +87,10 @@ MAX_ROTATION_RATE = 1
 #             z_target"
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.2",
-              "checkerboard16.png/infinity05.svg/+0.1/-10.0/0.1/0.1/0.2",
+              "checkerboard16.png/ellipse4.svg/+0.1/-10.0/0.1/0.1/0.18",
+              "checkerboard16.png/ellipse3.svg/+0.1/-10.0/0.1/0.1/0.18",
+              "checkerboard16.png/ellipse2.svg/+0.1/-10.0/0.1/0.1/0.18",
+              "checkerboard16.png/ellipse1.svg/+0.1/-10.0/0.1/0.1/0.18",
               #"gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
 
