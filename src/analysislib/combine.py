@@ -40,7 +40,7 @@ class _Combine(object):
     plotdir = None
     calc_linear_stats = True
     calc_angular_stats = True
-    calc_turn_stats = False
+    calc_turn_stats = True
 
     def __init__(self, **kwargs):
         self.__debug = kwargs.get("debug",True)
