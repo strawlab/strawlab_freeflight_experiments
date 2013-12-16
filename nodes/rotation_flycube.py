@@ -76,7 +76,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 1
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
