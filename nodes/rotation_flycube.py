@@ -88,9 +88,9 @@ MAX_ROTATION_RATE = 1
 #
 CONDITIONS = [
               "checkerboard16.png/ellipse1.svg/+0.1/-10.0/0.1/0.1/0.18",
-              "checkerboard16.png/ellipse4.svg/+0.1/-10.0/0.1/0.1/0.18",
+              "checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.1/0.18",
               "checkerboard16.png/infinityround2.svg/+0.1/-10.0/0.1/0.1/0.18",
-              "checkerboard16.png/infinityround.svg/+0.1/-10.0/0.1/0.1/0.18",
+              "checkerboard16.png/infinityround2.svg/+0.2/-10.0/0.1/0.1/0.18",
               #"gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
 
