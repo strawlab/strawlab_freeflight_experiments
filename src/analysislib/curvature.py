@@ -448,7 +448,11 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                 tmp = flat_data[h][current_condition]
                 if len(tmp)==0:
                     raise NotEnoughDataError
-                n,bins,patches = ax.hist(np.concatenate(tmp),
+                #note: it is not necessary to remove NaNs here (such as
+                #in rotation_rate) because mpl and numpy
+                #histogram functions handle/ignore them fine.
+                all_data = np.concatenate(tmp)
+                n,bins,patches = ax.hist(all_data,
                                       bins=100,
                                       normed=histogram_options['normed'].get(h,True),
                                       range=histogram_options['range'].get(h),

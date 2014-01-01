@@ -78,7 +78,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
     #define the size of the output
     device_y0 = MARGIN
     device_y1 = TARGET_OUT_H-MARGIN
-    max_height = device_y1-device_y0
 
     #define the panels maximum size
     panels = {}
@@ -87,14 +86,18 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
         height = fmf.height,
         device_x0 = MARGIN,
         device_x1 = 0.5*TARGET_OUT_W - MARGIN//2,
+        device_y0 = MARGIN,
+        device_y1 = TARGET_OUT_H-MARGIN,
     )
     panels["plot"] = dict(
         width = 500,
         height = 400,
         device_x0 = 0.5*TARGET_OUT_W + MARGIN//2,
         device_x1 = 1.0*TARGET_OUT_W - MARGIN//2,
+        device_y0 = MARGIN,
+        device_y1 = TARGET_OUT_H-MARGIN,
     )
-    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels, max_height, MARGIN)
+    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels)
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 

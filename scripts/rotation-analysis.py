@@ -83,17 +83,20 @@ if __name__=='__main__':
 
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
-    histograms = ("velocity","dtheta","rcurve")
+    histograms = ("velocity","dtheta","rcurve","rotation_rate")
     correlation_options = {i[0]:{} for i in correlations}
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
-                                   "rcurve":True},
+                                   "rcurve":True,
+                                   "rotation_rate":True},
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
-                                  "rcurve":(0,1)},
+                                  "rcurve":(0,1),
+                                  "rotation_rate":(-1.55,1.55)},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)",
-                                   "rcurve":"radius of curvature (m)"},
+                                   "rcurve":"radius of curvature (m)",
+                                   "rotation_rate":"rotation rate (rad/s)"},
     }
     flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
 
