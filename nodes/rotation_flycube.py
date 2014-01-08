@@ -39,7 +39,7 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 2       # time interval in seconds to check fly movement
+FLY_DIST_CHECK_TIME = 1       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
 
 #START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
@@ -76,7 +76,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.2
+MAX_ROTATION_RATE = 1.5
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
