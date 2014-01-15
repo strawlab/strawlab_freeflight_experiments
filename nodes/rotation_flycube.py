@@ -39,33 +39,32 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 1       # time interval in seconds to check fly movement
-FLY_DIST_MIN_DIST   = 0.2       # minimum distance fly must move in above interval to not be ignored
+FLY_DIST_CHECK_TIME = 0.5       # time interval in seconds to check fly movement
+FLY_DIST_MIN_DIST   =0.0005      # minimum distance fly must move in above interval to not be ignored
 
 #START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.20
-X_MAX =  0.20
-Y_MIN = -0.14
-Y_MAX =  0.14
-Z_MIN =  0.02
+X_MIN = -0.22
+X_MAX =  0.22
+Y_MIN = -0.15
+Y_MAX =  0.15
+Z_MIN =  0.01
 Z_MAX =  0.38
 
-FLY_HEIGHT_CHECK_TIME = 0.2       # time interval in seconds to check fly movement after lock on
+# time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 5       
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
-Z_MINIMUM = 0.06
+Z_MINIMUM = 0.01
 Z_MAXIMUM = 0.38
-
 
 # y range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
 Y_MINIMUM = -0.18
 Y_MAXIMUM = 0.18
-
 
 
 GRAY_FN = "gray.png"
@@ -76,7 +75,9 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 1
+
+
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -85,20 +86,23 @@ MAX_ROTATION_RATE = 1.5
 #             advance_threshold(m)/
 #             z_gain,
 #             z_target"
-#
+
+
 CONDITIONS = [#"checkerboard16.png/infinity05.svg/+0.2/-10.0/0.1/0.2/0.22",
-              "checkerboard16.png/infinity05.svg/+0.3/-10.0/0.1/0.2/0.22",  
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
-              "checkerboard16.png/ellipse1.svg/+0.3/-10.0/0.1/0.2/0.22",
+              "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.2/-10.0/0.1/0.2/0.22",
-              "checkerboard16.png/infinityround2.svg/+0.3/-10.0/0.1/0.2/0.22",
+              "checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"gray.png/infinity05.svg/+0.2/-10.0/0.1/0.30/0.15",
 ]
+
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
 COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -131,6 +135,9 @@ class Node(object):
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
+
+
+
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
@@ -148,6 +155,7 @@ class Node(object):
             self.model = None
 
             self.ratio_total = 0
+
 
         #start criteria for experiment
         self.x0 = 0
@@ -201,7 +209,7 @@ class Node(object):
 
         if self.rad_locked < 0:
             #HACK
-            self.cyl_height_pub.publish(-20*self.rad_locked)
+            self.cyl_height_pub.publish(-5*self.rad_locked)
         else:
             self.cyl_height_pub.publish(1.0)
 
@@ -346,6 +354,9 @@ class Node(object):
             r.sleep()
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
+
+
+
 
     def is_in_trigger_volume(self,pos):
 #        c = np.array( (self.x0,self.y0) )
