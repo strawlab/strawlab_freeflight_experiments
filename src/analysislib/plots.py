@@ -26,6 +26,7 @@ RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
 WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
 WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
 WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
+SVG_SUFFIX=os.environ.get('SVG_SUFFIX','.svg')
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
@@ -47,7 +48,7 @@ def show_plots():
         plt.show()
 
 @contextlib.contextmanager
-def mpl_fig(fname_base,args,**kwargs):
+def mpl_fig(fname_base,args,write_svg=None,**kwargs):
     strawlab.constants.set_permissions()
     if args and args.outdir:
         if not os.path.exists(args.outdir):
@@ -56,8 +57,8 @@ def mpl_fig(fname_base,args,**kwargs):
     fig = plt.figure( **kwargs )
     yield fig
     fig.savefig(fname_base+'.png',bbox_inches='tight')
-    if WRITE_SVG:
-        fig.savefig(fname_base+'.svg',bbox_inches='tight')
+    if WRITE_SVG or write_svg:
+        fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
@@ -433,7 +434,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
-            _ax.plot(_df.index, _df[p], 'k-')
+            _ax.plot(_df.index.values, _df[p].values, 'k-')
             _ax.set_xlim(_df.index[0], _df.index[-1])
             _ax.set_ylim(*ylimits.get(p,
                             (_df[p].min(), _df[p].max())))

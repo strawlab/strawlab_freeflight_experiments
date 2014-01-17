@@ -7,6 +7,9 @@ class ArenaBase(object):
     def get_ytick_locations(self):
         # override to specify tick locations, otherwise, auto-determined
         return None
+    def get_ztick_locations(self):
+        # override to specify tick locations, otherwise, auto-determined
+        return None
 
 class FlyCaveCylinder(ArenaBase):
     def __init__(self,radius=0.5,height=1.0):
@@ -19,6 +22,12 @@ class FlyCaveCylinder(ArenaBase):
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, 0, self.height)
+    def get_xtick_locations(self):
+        return [-self.radius,0.0,self.radius]
+    def get_ytick_locations(self):
+        return [-self.radius,0.0,self.radius]
+    def get_ztick_locations(self):
+        return [self.height/2.0,self.height]
 
 class FlyCube(ArenaBase):
     def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
