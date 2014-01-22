@@ -62,6 +62,10 @@ class PolyLine2:
             self._length += length
 
     @property
+    def lines(self):
+        return self._lines
+
+    @property
     def p1(self):
         """ first point """
         return self.points[0].copy()
