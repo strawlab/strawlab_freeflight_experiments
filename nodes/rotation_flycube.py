@@ -46,8 +46,8 @@ FLY_DIST_MIN_DIST   =0.0005      # minimum distance fly must move in above inter
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.22
-X_MAX =  0.22
+X_MIN = -0.30
+X_MAX =  0.30
 Y_MIN = -0.15
 Y_MAX =  0.15
 Z_MIN =  0.01
@@ -88,12 +88,12 @@ MAX_ROTATION_RATE = 1
 #             z_target"
 
 
-CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
+CONDITIONS = [#"checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
-              "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
+          #    "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
 ]
 
 
