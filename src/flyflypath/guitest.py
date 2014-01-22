@@ -94,5 +94,7 @@ class Tester:
         return True
 
 if __name__ == "__main__":
-    t = Tester(sys.argv[1] if len(sys.argv) > 1 else "plain.svg")
+    import os.path
+    plain = os.path.join(os.path.dirname(__file__),'..','..','data','svgpaths','plain.svg')
+    t = Tester(sys.argv[1] if len(sys.argv) > 1 else plain)
     Gtk.main()
