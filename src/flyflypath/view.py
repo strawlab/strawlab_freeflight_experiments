@@ -80,8 +80,11 @@ class SvgPathWidget(Gtk.DrawingArea):
                 cr.arc(pt.x, pt.y, 2, 0, 2.0 * math.pi)
                 cr.fill()
                 cr.move_to(5,offset)
-                cr.show_text("z: %.2f" % pt.z)
-                cr.stroke()
+                try:
+                    cr.show_text("z: %.2f" % pt.z)
+                    cr.stroke()
+                except AttributeError:
+                    pass
                 offset += 12
 
 
