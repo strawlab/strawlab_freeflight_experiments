@@ -54,7 +54,7 @@ Z_MIN =  0.01
 Z_MAX =  0.38
 
 # time interval in seconds to check fly movement after lock on
-FLY_HEIGHT_CHECK_TIME = 5       
+FLY_HEIGHT_CHECK_TIME = 0.5       
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -93,7 +93,7 @@ CONDITIONS = [#"checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
-          #    "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
+              "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
 ]
 
 
