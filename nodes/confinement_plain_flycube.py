@@ -39,13 +39,30 @@ START_CONDITION = 0
 CONTROL_RATE = 40.0
 
 SWITCH_MODE_TIME    = 5.0*60
+
 FLY_DIST_CHECK_TIME = 5.0
+FLY_DIST_MIN_DIST = 0.0005
 
-FLY_DIST_MIN_DIST = 0.2
+# start volume defined as cube
+X_MIN = -0.30
+X_MAX =  0.30
+Y_MIN = -0.15
+Y_MAX =  0.15
+Z_MIN =  0.01
+Z_MAX =  0.38
 
-START_RADIUS    = 0.4
-START_ZDIST     = 0.4
-START_Z         = 0.5
+# time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 5       
+
+# z range for fly tracking (dropped outside)
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Z_MINIMUM = 0.01
+Z_MAXIMUM = 0.38
+
+# y range for fly tracking (dropped outside)
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Y_MINIMUM = -0.18
+Y_MAXIMUM = 0.18
 
 TIMEOUT = 0.5
 
@@ -150,10 +167,16 @@ class Node(object):
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
+                    rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                if (fly_z > 0.95) or (fly_z < 0):
+                # check if fly is in an acceptable z range after a given interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM)):
                     self.drop_lock_on()
+                    if (fly_z > Z_MAXIMUM):
+                        rospy.loginfo('MAXIMUM: too high (Z = %.2f > Z_MAXIMUM %.2f )' % (fly_z, Z_MAXIMUM))
+                    else:
+                        rospy.loginfo('MINIMUM: too low (Z = %.2f < Z_MINIMUM %.2f )' % (fly_z, Z_MINIMUM))
                     continue
 
                 if np.isnan(fly_x):
@@ -162,17 +185,30 @@ class Node(object):
 
                 active = True
 
+                # check if fly is in an acceptable y range after a given interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_y > Y_MAXIMUM) or (fly_y < Y_MINIMUM)):
+                    self.drop_lock_on()
+                    if (fly_y > Y_MAXIMUM):
+                        rospy.loginfo('WALL: Wall (Y = %.2f > Y_MAXIMUM %.2f )' % (fly_y, Y_MAXIMUM))
+                    else:
+                        rospy.loginfo('WALL: Wall (Y = %.2f < Z_MINIMUM %.2f )' % (fly_y, Y_MINIMUM))
+                    continue
+
+
                 #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
                                            (fly_y-self.last_fly_y)**2 +
                                            (fly_z-self.last_fly_z)**2)
                 self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
+
+                # drop slow moving flies
                 if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
                     self.fly_dist = 0
-                    if fly_dist < FLY_DIST_MIN_DIST:
+                    if fly_dist < FLY_DIST_MIN_DIST:  # drop fly if it does not move enough
                         self.drop_lock_on()
+                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -190,12 +226,14 @@ class Node(object):
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
     def is_in_trigger_volume(self,pos):
-        c = np.array( (self.x0,self.y0) )
-        p = np.array( (pos.x, pos.y) )
-        dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < START_RADIUS) and (abs(pos.z-START_Z) < START_ZDIST):
-            return True
-        return False
+#        c = np.array( (self.x0,self.y0) )
+#        p = np.array( (pos.x, pos.y) )
+#        dist = np.sqrt(np.sum((c-p)**2))
+#        if (dist < START_RADIUS) and (abs(pos.z-START_Z) < START_ZDIST):
+#            return True
+        if ((pos.x>X_MIN) and (pos.x<X_MAX) and (pos.y>Y_MIN) and (pos.y<Y_MAX) and (pos.z>Z_MIN) and (pos.z<Z_MAX)):
+             return True 
+       return False
 
     def on_flydra_mainbrain_super_packets(self,data):
         now = rospy.get_time()
@@ -223,7 +261,6 @@ class Node(object):
             self.first_seen_time = now
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
-            self.last_check_flying_time = now 
 
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
