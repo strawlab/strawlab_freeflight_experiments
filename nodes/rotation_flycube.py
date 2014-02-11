@@ -51,7 +51,7 @@ X_MAX =  0.30
 Y_MIN = -0.15
 Y_MAX =  0.15
 Z_MIN =  0.01
-Z_MAX =  0.38
+Z_MAX =  0.36
 
 # time interval in seconds to check fly movement after lock on
 FLY_HEIGHT_CHECK_TIME = 0.5       
