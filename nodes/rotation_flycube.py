@@ -39,7 +39,7 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 0.5       # time interval in seconds to check fly movement
+FLY_DIST_CHECK_TIME = 0.2       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   =0.0005      # minimum distance fly must move in above interval to not be ignored
 
 #START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
@@ -54,7 +54,7 @@ Z_MIN =  0.01
 Z_MAX =  0.38
 
 # time interval in seconds to check fly movement after lock on
-FLY_HEIGHT_CHECK_TIME = 5       
+FLY_HEIGHT_CHECK_TIME = 0.5       
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -88,12 +88,12 @@ MAX_ROTATION_RATE = 1
 #             z_target"
 
 
-CONDITIONS = [#"checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
+CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
-          #    "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
+              "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
 ]
 
 
