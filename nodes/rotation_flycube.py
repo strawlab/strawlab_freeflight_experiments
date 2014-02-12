@@ -102,6 +102,7 @@ START_CONDITION = CONDITIONS[0]
 #message is sent and a video recorded
 COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 
+
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
@@ -132,6 +133,8 @@ class Node(object):
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
+
+
 
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
@@ -209,13 +212,9 @@ class Node(object):
         else:
             self.cyl_height_pub.publish(1.0)
 
-
-
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
-   
-
- def get_v_rate(self,fly_z):
+    def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
