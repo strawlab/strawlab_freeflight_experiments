@@ -40,10 +40,11 @@ class _Combine(object):
     plotdir = None
     calc_linear_stats = True
     calc_angular_stats = True
-    calc_turn_stats = False
+    calc_turn_stats = True
 
     def __init__(self, **kwargs):
         self.__debug = kwargs.get("debug",True)
+        self.__warn = kwargs.get("warn",True)
         self._dt = None
         self._lenfilt = None
         self._idfilt = []
@@ -105,7 +106,8 @@ class _Combine(object):
             print m
 
     def _warn(self, m):
-        print m
+        if self.__warn:
+            print m
 
     @property
     def timezone(self):
@@ -178,6 +180,13 @@ class _Combine(object):
 
     def disable_debug(self):
         self.__debug = False
+
+    def enable_warn(self):
+        self.__warn = True
+
+    def disable_warn(self):
+        self.__warn = False
+
 
     def get_results(self):
         """Returns all data for all conditions that passed the configured filters
