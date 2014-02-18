@@ -59,6 +59,11 @@ def get_parser(*only_these_options, **defaults):
             '--show', action='store_true',
             default=defaults.get('show',False),
             help='show plots')
+    if not only_these_options or "ignore-permission-errors" in only_these_options:
+        parser.add_argument(
+            '--ignore-permission-errors', action='store_true',
+            default=False,
+            help='ignore permission errors (warning, plots might not be readable by others)')
     if not only_these_options or "no-trackingstats" in only_these_options:
         parser.add_argument(
             '--plot-tracking-stats', action='store_true', default=False,
