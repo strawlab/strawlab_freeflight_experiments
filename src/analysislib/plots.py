@@ -49,7 +49,10 @@ def show_plots():
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,write_svg=None,**kwargs):
-    strawlab.constants.set_permissions()
+    if not strawlab.constants.set_permissions():
+        if not args.ignore_permission_errors:
+            raise Exception("Could not change process permissions (see --ignore-permission-errors)")
+        print "WARNING: could not set process permissions"
     if args and args.outdir:
         if not os.path.exists(args.outdir):
             os.makedirs(args.outdir)
