@@ -32,6 +32,12 @@ LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 10
 
+def _perm_check(args):
+    if not strawlab.constants.set_permissions():
+        if not args.ignore_permission_errors:
+            raise Exception("Could not change process permissions (see --ignore-permission-errors)")
+        print "WARNING: could not set process permissions"
+
 def get_arena_from_args(args):
     if args.arena=='flycave':
         arena = analysislib.arenas.FlyCaveCylinder(radius=0.5)
@@ -49,7 +55,7 @@ def show_plots():
 
 @contextlib.contextmanager
 def mpl_fig(fname_base,args,write_svg=None,**kwargs):
-    strawlab.constants.set_permissions()
+    _perm_check(args)
     if args and args.outdir:
         if not os.path.exists(args.outdir):
             os.makedirs(args.outdir)
@@ -571,6 +577,8 @@ def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
     allbest = []
 
+    _perm_check(args)
+
     COL_WIDTH = 20
     with open(name, 'w') as f:
         l = "number of loops"
@@ -623,6 +631,8 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
     results,dt = combine.get_results()
     best = _get_flight_lengths(combine)
 
+    _perm_check(args)
+
     COL_WIDTH = 20
     with open(name, 'w') as f:
         l = "longest trajectories"
@@ -655,6 +665,8 @@ def save_args(combine, args, name="README"):
     plotdir = combine.plotdir
     name = os.path.join(plotdir,name)
 
+    _perm_check(args)
+
     with open(name, 'w') as f:
         f.write("These plots were generated with the following command line arguments\n\n")
         f.write(" ".join(sys.argv))
@@ -670,6 +682,8 @@ def save_results(combine, args, maxn=20):
     plotdir = combine.plotdir
     name = os.path.join(plotdir,"data.pkl")
     best = _get_flight_lengths(combine)
+
+    _perm_check(args)
 
     with open(name, "w+b") as f:
         if WRITE_PKL:
