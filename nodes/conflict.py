@@ -17,7 +17,6 @@ import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import flyflypath.model
 import flyflypath.transform
@@ -39,6 +38,10 @@ START_RADIUS    = 0.35
 START_ZDIST     = 0.4
 START_Z         = 0.5
 
+# z range for fly tracking (dropped outside)
+Z_MINIMUM = 0.00
+Z_MAXIMUM = 0.95
+
 GRAY_FN = "gray.png"
 
 TIMEOUT             = 0.5
@@ -52,10 +55,13 @@ MAX_ROTATION_RATE = 1.5
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
-#             radius_when_locked(-ve disables cx,xy changing)/
+#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
-#             v_gain/
+#             z_gain/
 #             model_filename+x+y+z"
+#
+# if you set nan for either gain then you get a replay experiment on the
+# corresponding bias term
 #
 CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20/",
@@ -107,7 +113,7 @@ class Node(object):
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
-        #protect the traked id and fly position between the time syncronous main loop and the asyn
+        #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
         with self.trackinglock:
@@ -161,7 +167,8 @@ class Node(object):
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        
+        self.z_target = 0.7
+
         self.log.cyl_r = self.rad_locked
 
         if str(svg):
@@ -171,11 +178,8 @@ class Node(object):
         else:
             self.svg_fn = ''
 
-        if self.rad_locked < 0:
-            #HACK
-            self.pub_cyl_height.publish(-4.5*self.rad_locked)
-        else:
-            self.pub_cyl_height.publish(1.0)
+        #HACK
+        self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
 
         if not model_filename:
             model_filename = '/dev/null'
@@ -203,8 +207,7 @@ class Node(object):
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):
-        target_z = 0.7
-        return self.v_gain*(fly_z-target_z)
+        return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
         if self.svg_fn:
@@ -266,9 +269,10 @@ class Node(object):
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
                     self.drop_lock_on()
+                    rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                if (fly_z > 0.95) or (fly_z < 0):
+                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
                     self.drop_lock_on()
                     continue
 
@@ -283,12 +287,15 @@ class Node(object):
                                            (fly_y-self.last_fly_y)**2 +
                                            (fly_z-self.last_fly_z)**2)
                 self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
+
+                # drop slow moving flies
                 if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
                     fly_dist = self.fly_dist
                     self.last_check_flying_time = now
                     self.fly_dist = 0
-                    if fly_dist < FLY_DIST_MIN_DIST:
+                    if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
+                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
@@ -297,10 +304,10 @@ class Node(object):
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
                 trg_px, trg_py = XFORM.xy_to_pxpy(trg_x,trg_y)
-                self.trg_pub.publish(trg_px,trg_py,START_Z)
+                self.trg_pub.publish(trg_px,trg_py,self.z_target)
 
                 self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
-                self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = START_Z
+                self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = self.z_target
 
                 self.log.rotation_rate = rate
                 self.pub_rotation_velocity.publish(rate)
@@ -358,6 +365,7 @@ class Node(object):
             self.first_seen_time = now
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
+            self.last_check_flying_time = now
 
             if self.svg_fn:
                 px,py = XFORM.xy_to_pxpy(obj.position.x,obj.position.y)

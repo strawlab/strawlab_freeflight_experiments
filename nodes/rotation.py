@@ -23,16 +23,9 @@ import flyflypath.transform
 import nodelib.log
 import strawlab_freeflight_experiments.replay as sfe_replay
 
-pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
+from strawlab_freeflight_experiments.topics import *
 
-TOPIC_CYL_ROTATION      = "cylinder_rotation"
-TOPIC_CYL_ROTATION_RATE = "cylinder_rotation_rate"
-TOPIC_CYL_V_OFFSET_VALUE= "cylinder_v_offset_value"
-TOPIC_CYL_V_OFFSET_RATE = "cylinder_v_offset_rate"
-TOPIC_CYL_IMAGE         = "cylinder_image"
-TOPIC_CYL_CENTRE        = "cylinder_centre"
-TOPIC_CYL_RADIUS        = "cylinder_radius"
-TOPIC_CYL_HEIGHT        = "cylinder_height"
+pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -45,6 +38,10 @@ FLY_DIST_MIN_DIST   = 0.2
 START_RADIUS    = 0.35
 START_ZDIST     = 0.4
 START_Z         = 0.5
+
+# z range for fly tracking (dropped outside)
+Z_MINIMUM = 0.00
+Z_MAXIMUM = 0.95
 
 GRAY_FN = "gray.png"
 
@@ -275,7 +272,7 @@ class Node(object):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                if (fly_z > 0.95) or (fly_z < 0):
+                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
                     self.drop_lock_on()
                     continue
 
@@ -384,8 +381,7 @@ class Node(object):
             self.replay_rotation.reset()
             self.replay_z.reset()
 
-        self.pub_image.publish( self.img_fn )
-
+        self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
         self.update()
@@ -413,7 +409,6 @@ class Node(object):
 
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
-
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
