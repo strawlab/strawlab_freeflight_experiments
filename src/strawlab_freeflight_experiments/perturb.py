@@ -19,9 +19,12 @@ def get_ratio_ragefuncs(*chunks):
     return funcs
 
 class NoPerturb:
+
+    progress = 0
+
     def __init__(self, *args):
         pass
-    def should_perturb(self):
+    def should_perturb(self, *args):
         return False
     def reset(self, *args):
         pass
@@ -32,7 +35,7 @@ class PerturberStep:
     def __init__(self, descriptor):
         """
         descriptor is
-        'step'|duration|ratio_min|a|b|c|d|e|f
+        'step'|value|duration|ratio_min|a|b|c|d|e|f
 
         duration is the duration of the step.
 
@@ -41,23 +44,23 @@ class PerturberStep:
         a,b c,d e,f are pairs or ranges in the ratio
         """
         
-        me,duration,ratio_min,chunks = descriptor.split('|', 3)
+        me,value,duration,ratio_min,chunks = descriptor.split('|', 4)
         if me != 'step':
             raise Exception("Incorrect PerturberStep configuration")
         self.duration = float(duration)
         self.ratio_min = float(ratio_min)
-
-        self._started = False
+        self.value = float(value)
 
         self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
 
         self.reset()
 
     def reset(self):
+        self.progress = -1
         self.now = None
         self.oid = None
+        self._frame0 = 0
         self._started = False
-        print "step reset"
 
     def should_perturb(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, ratio, ratio_total, now, framenumber, currently_locked_obj_id):
         if self._started:
@@ -72,6 +75,8 @@ class PerturberStep:
                 self.now = now
                 self.oid = currently_locked_obj_id
                 self._started = True
+                self._frame0 = framenumber
+                print "START"
 
         if should: 
             return (now - self.now) < self.duration
@@ -79,8 +84,9 @@ class PerturberStep:
         return False
 
     def step_rotation(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
-        print "step", now - self.now
-        return 0.4
+        self.progress = framenumber - self._frame0
+        print "STEP", self.progress
+        return self.value
 
 
 if __name__ == "__main__":

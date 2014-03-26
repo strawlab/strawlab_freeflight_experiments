@@ -76,7 +76,7 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 #
 CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|5|0.3|0.43|0.6|0.93|1.0|0.0|0.1",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|5|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
 #              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
@@ -85,11 +85,8 @@ CONDITIONS = [
               "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 
-# condition: perterber class
-_in_middle = lambda _ratio: ((_ratio >= 0.43) and (_ratio < 0.6)) or ((_ratio >= 0.93) and (_ratio < 1.0)) or ((_ratio >= 0.0) and (_ratio < 0.1))
-
 PERTURBATIONS = {
-    "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|5|0.3|0.43|0.6|0.93|1.0|0.0|0.1":sfe_perturb.PerturberStep
+    "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|5|0.4|0.43|0.6|0.93|1.0|0.0|0.1":sfe_perturb.PerturberStep
 } 
 
 START_CONDITION = CONDITIONS[0]
@@ -100,7 +97,7 @@ COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -336,6 +333,8 @@ class Node(object):
 
                 self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = self.z_target
+
+                self.log.perturb_progress = self.perturber.progress
 
                 self.log.rotation_rate = rate
                 self.pub_rotation_velocity.publish(rate)
