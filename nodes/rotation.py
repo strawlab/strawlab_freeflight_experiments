@@ -295,7 +295,7 @@ class Node(object):
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
-                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
+                        rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
