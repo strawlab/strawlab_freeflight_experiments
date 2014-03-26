@@ -20,7 +20,7 @@ def get_ratio_ragefuncs(*chunks):
 
 class NoPerturb:
 
-    progress = 0
+    progress = -1
 
     def __init__(self, *args):
         pass
