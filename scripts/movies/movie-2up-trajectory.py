@@ -9,6 +9,7 @@ import sh
 import time
 import shutil
 import collections
+import pymvg
 
 import benu.benu
 import benu.utils
@@ -19,9 +20,6 @@ import roslib
 
 roslib.load_manifest('rosbag')
 import rosbag
-
-roslib.load_manifest('camera_model')
-import camera_model
 
 roslib.load_manifest('flycave')
 import strawlab.constants
@@ -44,7 +42,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
 
     valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
-    camera = camera_model.load_camera_from_bagfile( open(calibration) )
+    camera = pymvg.CameraModel.load_camera_from_bagfile( open(calibration) )
 
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
