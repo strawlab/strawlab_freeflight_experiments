@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+import rospy
+import std_msgs.msg
+import strawlab_freeflight_experiments.optotune as optotune
+
+import threading
+
+class Node(object):
+    def __init__(self, port, debug):
+        self._dev = optotune.OptoTuneLensDriver(port, debug)
+        if not self._dev.is_connected():
+            raise Exception("Could not connect to device")
+
+        rospy.Subscriber("~focus",
+                         std_msgs.msg.UInt16,
+                         self._on_focus)
+
+    def close(self):
+        self._dev.close()
+
+    def _on_focus(self, msg):
+        self._dev.set_current(msg.data)
+
+if __name__ == "__main__":
+    rospy.init_node('optotune')
+    n = Node(
+            port=rospy.get_param('~port','/dev/ttyACM0'),
+            debug=bool(int(rospy.get_param('~debug',False)))
+    )
+    rospy.spin()
+    n.close()
