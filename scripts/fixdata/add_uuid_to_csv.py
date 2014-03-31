@@ -5,16 +5,17 @@ import sys
 import os.path
 import uuid
 import numpy
-import matplotlib.mlab
+import pandas as pd
 
 def read_uuid_from_csv(fname):
+    df = pd.read_csv(fname)
     uuids = []
     try:
-        rec = matplotlib.mlab.csv2rec(fname)
-        uuids.extend( str(r) for r in numpy.unique(rec['exp_uuid']) )
-    except ValueError:
-        #no such column
-        pass
+        uuids = df['exp_uuid'].dropna().unique().tolist()
+    except KeyError:
+        print "MISSING EXP_UUID COLUMN"
+    except Exception, e:
+        print "CORRUPT CSV", e
 
     print "DETECTED UUID:\n\t%r" % uuids
     return uuids
@@ -23,8 +24,10 @@ def add_uuid_to_csv(csv,u):
     assert os.path.exists(csv)
     has_col = False
     header = ''
+    newcsv = csv+'.new'
+    oldcsv = csv+'.old'
     with open(csv,'r') as fi:
-        with open(csv+'.new','w') as fo:
+        with open(newcsv,'w') as fo:
             for i,line in enumerate(fi):
                 if i == 0:
                     #[0:-1] strips the \n
@@ -60,6 +63,10 @@ def add_uuid_to_csv(csv,u):
                     fo.write('\n')
 
     print "ADDED UUID:\n\t%s" % u
+
+    os.rename(csv,oldcsv)
+    os.rename(newcsv,csv)
+
     return u
 
 if __name__ == "__main__":
