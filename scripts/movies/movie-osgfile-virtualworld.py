@@ -322,7 +322,8 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
                     with _canv.get_figure(m["dw"], m["dh"]) as fig:
                         analysislib.movie.plot_xyz(fig, movie.frame_number,
-                            xhist, yhist, zhist, x, y, z
+                            xhist, yhist, zhist, x, y, z,
+                            draw_arena_callback=analysislib.movie.draw_flycave,
                         )
 
             #do the VR 
