@@ -75,19 +75,14 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|5|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
-#              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.2|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|-0.2|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|-0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
               "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
-              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+#              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
-
-PERTURBATIONS = {
-    "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|5|0.4|0.43|0.6|0.93|1.0|0.0|0.1":sfe_perturb.PerturberStep
-} 
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -212,12 +207,13 @@ class Node(object):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-            self.perturber = PERTURBATIONS.get(self.condition, sfe_perturb.NoPerturb)(perturb_desc)
+            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        rospy.loginfo('perturbation: %r' % self.perturber)
 
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment

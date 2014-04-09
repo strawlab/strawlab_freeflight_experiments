@@ -18,12 +18,25 @@ def get_ratio_ragefuncs(*chunks):
 
     return funcs
 
+def get_perturb_class(perturb_descriptor):
+
+    try:
+        name = perturb_descriptor.split('|')[0]
+        if name == 'step':
+            return PerturberStep
+    except:
+        pass
+
+    return NoPerturb
+
 class NoPerturb:
 
     progress = -1
 
     def __init__(self, *args):
         pass
+    def __repr__(self):
+        return "<NoPerturb>"
     def should_perturb(self, *args):
         return False
     def reset(self, *args):
@@ -54,6 +67,9 @@ class PerturberStep:
         self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
 
         self.reset()
+
+    def __repr__(self):
+        return "<PerturberStep value=%.1f duration=%.1f>" % (self.value, self.duration)
 
     def reset(self):
         self.progress = -1
@@ -98,6 +114,11 @@ if __name__ == "__main__":
 #        for f in funcs:
 #            print c+0.01,f,f(c+0.01)
 
-    PerturberStep("step|5|0.3|0.43|0.6|0.93|1.0|0.0|0.1")
-    
+    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
+    print desc
+    klass = get_perturb_class(desc)
+    print klass
+    obj = klass(desc)
+    print obj
+
 
