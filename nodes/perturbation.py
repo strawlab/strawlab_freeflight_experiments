@@ -75,7 +75,7 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
               "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|5|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
 #              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
@@ -166,6 +166,9 @@ class Node(object):
                          self.on_flydra_mainbrain_super_packets)
 
     @property
+    def is_perturbation_experiment(self):
+        return not isinstance(self.perturber, sfe_perturb.NoPerturb)
+    @property
     def is_replay_experiment_rotation(self):
         return np.isnan(self.p_const)
     @property
@@ -183,7 +186,13 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
+        try:
+            img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
+        except ValueError:
+            #no perturbation defined
+            perturb_desc = None
+            img,svg,p,rad,advance,v_gain = self.condition.split('/')
+
         self.img_fn = str(img)
         self.p_const = float(p)
         self.v_gain = float(v_gain)
@@ -193,6 +202,10 @@ class Node(object):
 
         self.log.cyl_r = self.rad_locked
 
+        #default to no perturb
+        self.perturber = sfe_perturb.NoPerturb()
+
+        self.svg_fn = ''
         ssvg = str(svg)
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
@@ -200,10 +213,6 @@ class Node(object):
             self.svg_pub.publish(self.svg_fn)
 
             self.perturber = PERTURBATIONS.get(self.condition, sfe_perturb.NoPerturb)(perturb_desc)
-        else:
-            self.svg_fn = ''
-            self.perturber = sfe_perturb.NoPerturb()
-
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
@@ -220,7 +229,7 @@ class Node(object):
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         could_perturb = False
         if self.svg_fn and (not self.is_replay_experiment_rotation):
-            could_perturb = True
+            could_perturb = self.is_perturbation_experiment
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
