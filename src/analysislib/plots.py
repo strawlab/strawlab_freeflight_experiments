@@ -454,7 +454,7 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8), title=None):
     if name is None:
         name = '%s.infinity' % combine.fname
 
@@ -464,6 +464,9 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
     n_plot_axes = len(_plot_axes)
 
     with mpl_fig(name,args,figsize=figsize) as _fig:
+
+        if title:
+            _fig.suptitle(title, fontsize=12)
 
         _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
         _ax.set_xlim(-0.5, 0.5)
@@ -490,13 +493,16 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8)):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
     _fig = plt.figure(figsize=figsize)
+
+    if title:
+        _fig.suptitle(title, fontsize=12)
 
     _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
     _ax.set_xlim(-0.5, 0.5)

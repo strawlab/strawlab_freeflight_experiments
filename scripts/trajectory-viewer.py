@@ -37,33 +37,45 @@ if __name__=='__main__':
     combine = autil.get_combiner(suffix)
     combine.calc_turn_stats = True
     combine.add_from_uuid(uuid,suffix,args=args)
-    df,dt,_ = combine.get_one_result(obj_id)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
     ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
-    if args.animate:
-        args.show = True
-        anim = aplt.animate_infinity(
-                combine, args,
-                df,dt,
-                plot_axes=plot_axes,
-                ylimits=ylimits
-        )
-    else:
-        aplt.plot_infinity(
-                combine, args,
-                df,dt,
-                plot_axes=plot_axes,
-                ylimits=ylimits
-        )
+    results, dt = combine.get_results()
 
+    anims = []
+    for i,(current_condition,r) in enumerate(results.iteritems()):
+        for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+            if _obj_id == obj_id:
+
+                name = analysislib.combine.safe_condition_string(current_condition)
+                title = "%s: %s" % (obj_id, current_condition)
+
+                if args.animate:
+                    args.show = True
+                    anim = aplt.animate_infinity(
+                            combine, args,
+                            df,dt,
+                            plot_axes=plot_axes,
+                            ylimits=ylimits,
+                            title=title,
+                    )
+                    anims.append(anim)
+                else:
+                    aplt.plot_infinity(
+                            combine, args,
+                            df,dt,
+                            name=name,
+                            plot_axes=plot_axes,
+                            ylimits=ylimits,
+                            title=title,
+                    )
+
+                if args.save:
+                    df.to_csv("%s_%s_%s.csv" % (uuid, obj_id, name))
+                    df.save("%s_%s_%s.df" % (uuid, obj_id, name))
 
     if args.show:
         aplt.show_plots()
-
-    if args.save:
-        df.to_csv("%s_%s.csv" % (uuid, obj_id))
-        df.save("%s_%s.df" % (uuid, obj_id))
 
     sys.exit(0)

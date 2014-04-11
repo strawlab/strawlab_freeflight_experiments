@@ -5,6 +5,7 @@ import Queue
 import random
 import time
 import cPickle as pickle
+import re
 
 import tables
 import pandas as pd
@@ -35,6 +36,9 @@ from strawlab.constants import DATE_FMT
 #       count:[n_frames,...],
 #   }
 #}
+
+def safe_condition_string(s):
+    return "".join([c for c in s if re.match(r'\w', c)])
 
 class _Combine(object):
 
