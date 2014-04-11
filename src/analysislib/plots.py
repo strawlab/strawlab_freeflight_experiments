@@ -558,8 +558,7 @@ def _calculate_nloops(df):
 
 def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     results,dt = combine.get_results()
 
@@ -625,8 +624,7 @@ def _get_flight_lengths(combine):
     return best
 
 def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     results,dt = combine.get_results()
     best = _get_flight_lengths(combine)
@@ -662,8 +660,7 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
                     break
 
 def save_args(combine, args, name="README"):
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     _perm_check(args)
 
@@ -679,17 +676,16 @@ def save_args(combine, args, name="README"):
 def save_results(combine, args, maxn=20):
 
     results,dt = combine.get_results()
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,"data.pkl")
-    best = _get_flight_lengths(combine)
 
     _perm_check(args)
 
+    name = combine.get_plot_filename("data.pkl")
     with open(name, "w+b") as f:
         if WRITE_PKL:
             pickle.dump({"results":results,"dt":dt}, f)
 
-    name = os.path.join(plotdir,"data.json")
+    best = _get_flight_lengths(combine)
+    name = combine.get_plot_filename("data.json")
     with open(name, "w") as f:
         data = dict()
         data["conditions"] = results.keys()

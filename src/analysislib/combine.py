@@ -37,7 +37,6 @@ from strawlab.constants import DATE_FMT
 
 class _Combine(object):
 
-    plotdir = None
     calc_linear_stats = True
     calc_angular_stats = True
     calc_turn_stats = True
@@ -56,6 +55,7 @@ class _Combine(object):
         self._tfilt_before = None
         self._tfilt_after = None
         self._tfilt = None
+        self._plotdir = None
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -110,13 +110,23 @@ class _Combine(object):
             print m
 
     @property
+    def plotdir(self):
+        """the directory in which to store plots for this analysis"""
+        return self._plotdir
+
+    @plotdir.setter
+    def plotdir(self, val):
+        self._plotdir = val
+
+    @property
     def timezone(self):
         """the timezone in which the experiment was started"""
         return pytz.timezone(self._tzname)
 
     @property
     def fname(self):
-        return os.path.join(self.plotdir,os.path.basename(self.csv_file).split('.')[0])
+        return self.get_plot_filename(
+                        os.path.basename(self.csv_file).split('.')[0])
 
     @property
     def min_num_frames(self):
@@ -139,11 +149,9 @@ class _Combine(object):
         """the framerate of the data"""
         return 1.0 / self._dt
 
-    def get_plot_filename(self, prefix=None):
+    def get_plot_filename(self, name):
         """return a full path to the autodata directory to save any plots"""
-        if prefix is None:
-            prefix = os.path.basename(self.csv_file).split('.')[0]
-        return os.path.join(self.plotdir,prefix)
+        return os.path.join(self.plotdir,name)
 
     def get_num_skipped(self, condition):
         """returns the number of skipped trials for the given condition.
@@ -398,7 +406,7 @@ class _CombineFakeInfinity(_Combine):
         self._lenfilt = args.lenfilt
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
-        self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+        self.plotdir = args.outdir if args.outdir else os.getcwd()
         self.csv_file = "test"
 
         self._add()
@@ -432,7 +440,7 @@ class CombineCSV(_Combine):
 
         if args.uuid is not None:
             if len(args.uuid) > 1:
-                self.plotdir = args.outdir + "/"
+                self.plotdir = args.outdir
 
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
@@ -441,12 +449,12 @@ class CombineCSV(_Combine):
 
                 #this handles the single uuid case
                 if self.plotdir is None:
-                    self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
+                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
                 self.add_csv_file(csv_file, args.lenfilt)
         else:
             self.add_csv_file(args.csv_file, args.lenfilt)
-            self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+            self.plotdir = args.outdir if args.outdir else os.getcwd()
 
     def add_csv_file(self, csv_file, lenfilt=None):
         self._debug("IO:     reading %s" % csv_file)
@@ -638,7 +646,7 @@ class CombineH5WithCSV(_Combine):
 
         #this handles the single uuid case
         if not self.plotdir:
-            self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
+            self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
         self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
@@ -654,7 +662,7 @@ class CombineH5WithCSV(_Combine):
 
         if args.uuid is not None:
             if len(args.uuid) > 1:
-                self.plotdir = args.outdir + "/"
+                self.plotdir = args.outdir
 
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
@@ -664,7 +672,7 @@ class CombineH5WithCSV(_Combine):
 
                 #this handles the single uuid case
                 if self.plotdir is None:
-                    self.plotdir = (args.outdir if args.outdir else fm.get_plot_dir()) + "/"
+                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
                 self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
@@ -672,7 +680,7 @@ class CombineH5WithCSV(_Combine):
             csv_file = args.csv_file
             h5_file = args.h5_file
 
-            self.plotdir = (args.outdir if args.outdir else os.getcwd()) + "/"
+            self.plotdir = args.outdir if args.outdir else os.getcwd()
 
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 

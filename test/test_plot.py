@@ -99,11 +99,11 @@ class TestPlot(unittest.TestCase):
         combine.add_from_args(args)
 
         aplt.save_args(combine, args)
-        self.assertTrue(os.path.isfile(combine.plotdir + "README"))
+        self.assertTrue(os.path.isfile(os.path.join(combine.plotdir,"README")))
 
         aplt.save_results(combine, args)
-        self.assertTrue(os.path.isfile(combine.plotdir + "data.json"))
-        self.assertTrue(os.path.isfile(combine.plotdir + "data.pkl"))
+        self.assertTrue(os.path.isfile(os.path.join(combine.plotdir,"data.json")))
+        self.assertTrue(os.path.isfile(os.path.join(combine.plotdir,"data.pkl")))
 
 
 if __name__=='__main__':
