@@ -795,8 +795,9 @@ class CombineH5WithCSV(_Combine):
                     if _cond != this_cond:
                         self._debug('SPAN:   obj_id %d spans multiple conditions' % (query_id))
 
-
                     if (not args.idfilt) or (query_id in args.idfilt):
+
+                        assert this_cond == query_cond
 
                         r = results[query_cond]
 
@@ -871,7 +872,7 @@ class CombineH5WithCSV(_Combine):
                             self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                                     n_samples,
                                                     start_frame,stop_frame,
-                                                    query_id,_cond))
+                                                    query_id,query_cond))
 
                             first = df.irow(0)
                             r['count'] += 1
