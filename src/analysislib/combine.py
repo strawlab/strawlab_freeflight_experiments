@@ -738,6 +738,7 @@ class CombineH5WithCSV(_Combine):
 
         _ids = Queue.Queue(maxsize=2)
         this_id = IMPOSSIBLE_OBJ_ID
+        this_cond = None
         csv_results = {}
 
         results = self._results
@@ -774,12 +775,14 @@ class CombineH5WithCSV(_Combine):
                     continue
                 if _id == IMPOSSIBLE_OBJ_ID:
                     continue
-                elif _id != this_id:
+                elif (_id != this_id) or (_cond != this_cond):
+
                     try:
                         query_id,query_framenumber,start_time,query_cond = _ids.get(False)
                     except Queue.Empty:
                         #first time
                         this_id = _id
+                        this_cond = _cond
                         csv_results = {k:[] for k in self._rows}
                         query_id = None
                     finally:
@@ -789,16 +792,25 @@ class CombineH5WithCSV(_Combine):
                     if query_id is None:
                         continue
 
+                    if _cond != this_cond:
+                        self._debug('SPAN:   obj_id %d spans multiple conditions' % (query_id))
+
+
                     if (not args.idfilt) or (query_id in args.idfilt):
 
                         r = results[query_cond]
 
-                        if frames_before < 0:
-                            query = "obj_id == %d" % query_id
+                        if frames_before != 0:
+                            start_frame = query_framenumber - frames_before
                         else:
-                            query = "(obj_id == %d) & (framenumber >= %d)" % (
+                            start_frame = query_framenumber
+
+                        stop_frame = _framenumber
+
+                        query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
                                         query_id,
-                                        query_framenumber-frames_before)
+                                        start_frame,
+                                        stop_frame)
 
                         valid = trajectories.readWhere(query)
 
@@ -856,8 +868,10 @@ class CombineH5WithCSV(_Combine):
                                 df = None
 
                         if df is not None:
-                            self._debug('SAVE:   %d samples for obj_id %d (%s)' % (
-                                                    n_samples,query_id,_cond))
+                            self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
+                                                    n_samples,
+                                                    start_frame,stop_frame,
+                                                    query_id,_cond))
 
                             first = df.irow(0)
                             r['count'] += 1
@@ -865,6 +879,7 @@ class CombineH5WithCSV(_Combine):
                             r['df'].append( df )
 
                     this_id = _id
+                    this_cond = _cond
                     csv_results = {k:[] for k in self._rows}
 
                 elif _id == this_id:
