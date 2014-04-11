@@ -36,6 +36,27 @@ MARGIN = 0
 ZOOM_REGION_WH = 50
 ZOOM_REGION_DISPLAY_WH = 100
 
+def draw_flycube2(ax):
+    x0 = 0.3115
+    y0 = 0.1745
+    z1 = 0.355
+    maxv = np.max(abs(np.array([x0,y0,z1])))
+
+    x = [-x0, -x0, x0,  x0, -x0]
+    y = [-y0,  y0, y0, -y0, -y0]
+    ax.plot( x, y, np.zeros_like(x), 'r-',
+             lw=2, alpha=0.5 )
+    ax.plot( x, y, z1*np.ones_like(x), 'r-',
+             lw=2, alpha=0.5 )
+
+    # a couple points to fix the aspect ratio correctly
+    ax.plot( [-maxv, maxv],
+             [-maxv, maxv],
+             [-maxv, maxv],
+             'w.',
+             alpha=0.0001,
+             markersize=0.0001 )
+
 def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly):
     combine = analysislib.combine.CombineH5()
     combine.add_h5_file(h5_file)
@@ -157,7 +178,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
                 with _canv.get_figure(m["dw"], m["dh"]) as fig:
                     analysislib.movie.plot_xyz(fig, movie.frame_number,
                         xhist, yhist, zhist, x, y, z,
-                        draw_arena_callback=analysislib.movie.draw_flycave,
+                        draw_arena_callback=draw_flycube2,
                     )
 
                 if show_framenumber:
