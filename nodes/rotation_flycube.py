@@ -88,9 +88,9 @@ MAX_ROTATION_RATE = 1
 #             z_target"
 
 
-CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
+CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
+              "checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
               "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
