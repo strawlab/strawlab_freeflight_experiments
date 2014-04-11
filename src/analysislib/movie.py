@@ -11,7 +11,15 @@ from mpl_toolkits.mplot3d import axes3d
 
 import sh
 
-def plot_xyz(fig, frame_number, xhist, yhist, zhist, x, y, z):
+def draw_flycave(ax):
+    rad = 0.5
+    theta = np.linspace(0, 2*np.pi, 100)
+    ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta), 'r-',
+             lw=2, alpha=0.5 )
+    ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta), 'r-',
+             lw=2, alpha=0.5 )
+
+def plot_xyz(fig, frame_number, xhist, yhist, zhist, x, y, z, draw_arena_callback=None):
     ax = fig.add_subplot(111, projection='3d')
 
     AZIMUTH_HOME = 48
@@ -26,12 +34,8 @@ def plot_xyz(fig, frame_number, xhist, yhist, zhist, x, y, z):
     ax.set_ylabel('')    
     ax.set_zlabel('')    
 
-    for rad in [0.5]:
-        theta = np.linspace(0, 2*np.pi, 100)
-        ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta), 'r-',
-                 lw=2, alpha=0.5 )
-        ax.plot( rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta), 'r-',
-                 lw=2, alpha=0.5 )
+    if draw_arena_callback is not None:
+        draw_arena_callback(ax)
 
     benu.utils.set_foregroundcolor(ax, 'white')
     benu.utils.set_backgroundcolor(ax, 'black')

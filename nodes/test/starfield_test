@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+import numpy as np
+import sys
+
+# ROS imports ############################
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+import rospy
+from geometry_msgs.msg import Vector3
+
+import flyvr.display_client as display_client
+
+class Node(object):
+    def __init__(self):
+        rospy.init_node("starfield_test")
+        self.pub = rospy.Publisher('velocity', Vector3)
+
+    def run(self):
+        r = rospy.Rate(200) # 200hz
+        while not rospy.is_shutdown():
+            #self.step()
+            t = rospy.get_time()
+            msg = Vector3()
+            msg.x = 0
+            msg.y = 0
+            msg.z = np.sin(2*np.pi*t)
+            self.pub.publish(msg)
+            r.sleep()
+
+def main():
+    node = Node()
+    return node.run()
+
+if __name__=='__main__':
+    main()

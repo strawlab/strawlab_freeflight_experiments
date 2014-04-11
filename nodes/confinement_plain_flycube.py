@@ -29,8 +29,9 @@ HOLD_COND = "noposts.osg"
 
 #CONDITION = "stimulus_filename,x0,y0,lag (ms, -ve = infinite)"
 CONDITIONS = [
-#              "midgray.osg/+0.0/+0.0/0",
-              "posts2.osg/+0.0/+0.0/0",
+             # "midgray.osg/+0.0/+0.0/0",
+              "justpost1.osg/+0.0/+0.0/0",  
+              "posts2.osg/+0.0/+0.0/1",
               "posts3.osg/+0.0/+0.0/0",
               "noposts.osg/+0.0/+0.0/0",
 ]
@@ -42,7 +43,7 @@ SWITCH_MODE_TIME    = 5.0*60
 FLY_DIST_CHECK_TIME = 0.2
 FLY_DIST_MIN_DIST = 0.0005
 
-#START_RADIUS    = 0.4
+START_RADIUS    = 0.1
 #START_ZDIST     = 0.4
 #START_Z         = 0.5
 
@@ -287,10 +288,10 @@ class Node(object):
             self.log.lock_object = IMPOSSIBLE_OBJ_ID
             self.log.framenumber = 0
 
-        if (dt > 15) and (old_id is not None):
-            if self.stimulus_filename != "noposts.osg":
-                self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
-                self.save_pub.publish(old_id)
+#        if (dt > 15) and (old_id is not None):
+#            if self.stimulus_filename != "noposts.osg":
+#                self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
+#                self.save_pub.publish(old_id)
 
         self.pub_stimulus.publish( HOLD_COND )
         self.update()

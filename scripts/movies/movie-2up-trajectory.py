@@ -9,6 +9,7 @@ import sh
 import time
 import shutil
 import collections
+import pymvg
 
 import benu.benu
 import benu.utils
@@ -19,9 +20,6 @@ import roslib
 
 roslib.load_manifest('rosbag')
 import rosbag
-
-roslib.load_manifest('camera_model')
-import camera_model
 
 roslib.load_manifest('flycave')
 import strawlab.constants
@@ -38,13 +36,34 @@ MARGIN = 0
 ZOOM_REGION_WH = 50
 ZOOM_REGION_DISPLAY_WH = 100
 
+def draw_flycube2(ax):
+    x0 = 0.3115
+    y0 = 0.1745
+    z1 = 0.355
+    maxv = np.max(abs(np.array([x0,y0,z1])))
+
+    x = [-x0, -x0, x0,  x0, -x0]
+    y = [-y0,  y0, y0, -y0, -y0]
+    ax.plot( x, y, np.zeros_like(x), 'r-',
+             lw=2, alpha=0.5 )
+    ax.plot( x, y, z1*np.ones_like(x), 'r-',
+             lw=2, alpha=0.5 )
+
+    # a couple points to fix the aspect ratio correctly
+    ax.plot( [-maxv, maxv],
+             [-maxv, maxv],
+             [-maxv, maxv],
+             'w.',
+             alpha=0.0001,
+             markersize=0.0001 )
+
 def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly):
     combine = analysislib.combine.CombineH5()
     combine.add_h5_file(h5_file)
 
     valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
-    camera = camera_model.load_camera_from_bagfile( open(calibration) )
+    camera = pymvg.CameraModel.load_camera_from_bagfile( open(calibration) )
 
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
@@ -78,7 +97,6 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
     #define the size of the output
     device_y0 = MARGIN
     device_y1 = TARGET_OUT_H-MARGIN
-    max_height = device_y1-device_y0
 
     #define the panels maximum size
     panels = {}
@@ -87,14 +105,18 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
         height = fmf.height,
         device_x0 = MARGIN,
         device_x1 = 0.5*TARGET_OUT_W - MARGIN//2,
+        device_y0 = MARGIN,
+        device_y1 = TARGET_OUT_H-MARGIN,
     )
     panels["plot"] = dict(
         width = 500,
         height = 400,
         device_x0 = 0.5*TARGET_OUT_W + MARGIN//2,
         device_x1 = 1.0*TARGET_OUT_W - MARGIN//2,
+        device_y0 = MARGIN,
+        device_y1 = TARGET_OUT_H-MARGIN,
     )
-    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels, max_height, MARGIN)
+    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels)
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 
@@ -155,7 +177,8 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
             with canv.set_user_coords(device_rect, user_rect) as _canv:
                 with _canv.get_figure(m["dw"], m["dh"]) as fig:
                     analysislib.movie.plot_xyz(fig, movie.frame_number,
-                        xhist, yhist, zhist, x, y, z
+                        xhist, yhist, zhist, x, y, z,
+                        draw_arena_callback=draw_flycube2,
                     )
 
                 if show_framenumber:

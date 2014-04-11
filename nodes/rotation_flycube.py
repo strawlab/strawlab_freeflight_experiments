@@ -88,9 +88,10 @@ MAX_ROTATION_RATE = 1
 #             z_target"
 
 
-CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
+CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
+              "checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
               "checkerboard16.png/ellipse1.svg/+0.3/-5.0/0.1/0.2/0.22",
               #"checkerboard16.png/infinityround2.svg/+0.3/-5.0/0.1/0.2/0.22",
               "gray.png/infinity05.svg/+0.2/-5.0/0.1/0.2/0.22",
@@ -100,7 +101,9 @@ CONDITIONS = ["checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.2/0.22",
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set([CONDITIONS[0],CONDITIONS[2]])
+for c in COOL_CONDITIONS:
+    print 'MAKING .FMF MOVIE OF CONDITION',c
 
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -440,7 +443,7 @@ class Node(object):
         self.cyl_radius_pub.publish(0.5)
         self.cyl_centre_pub.publish(0,0,0)
 
-        if (self.ratio_total > 2) and (old_id is not None):
+        if (self.ratio_total > 0.5) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pushover_pub.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.save_pub.publish(old_id)

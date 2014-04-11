@@ -80,8 +80,17 @@ class SvgPathWidget(Gtk.DrawingArea):
                 cr.arc(pt.x, pt.y, 2, 0, 2.0 * math.pi)
                 cr.fill()
                 cr.move_to(5,offset)
-                cr.show_text("z: %.2f" % pt.z)
-                cr.stroke()
+                try:
+                    #the reason I don't show x: and y: here is because at this
+                    #stage they are in pixels (and z is in m). I think it would
+                    #be a layring violation to have the transform in here, however
+                    #it is undoubtedly ugly to have different units for x,y and z.
+                    #
+                    #C'est la vie I guess.
+                    cr.show_text("z: %.2f" % pt.z)
+                    cr.stroke()
+                except AttributeError:
+                    pass
                 offset += 12
 
 

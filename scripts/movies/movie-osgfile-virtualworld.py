@@ -25,6 +25,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.args
 import analysislib.movie
 import analysislib.combine
+import analysislib.util
 import std_msgs.msg
 import geometry_msgs.msg
 
@@ -79,28 +80,21 @@ STIMULUS_CLASS_MAP = {
 
 STIMULUS_CSV_MAP = {
     "StimulusOSGFile":None,
-    "StimulusCylinderAndModel":("conflict","conflict.csv",("ratio","rotation_rate")),
+    "StimulusCylinderAndModel":"conflict.csv",
 }
 
 def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
     try:
-        logger,csvsuffix,csvparams = STIMULUS_CSV_MAP[stimname]
-
-        #YUCK - import the logger for the experiment
-        #FIXME: this could use the new logger constructor that takes
-        #a list of the csv file headings
-        sys.path.append(os.path.join(os.path.dirname(__file__),'..','..','nodes'))
-        klass = getattr(__import__(logger), "Logger")
-
-        combine = analysislib.combine.CombineH5WithCSV(
-                                klass,
-                                *csvparams
-        )
+        csvsuffix = STIMULUS_CSV_MAP[stimname]
+        if csvsuffix is None:
+            raise TypeError
+        combine = analysislib.util.get_combiner(csvsuffix)
         combine.add_from_args(args, csvsuffix)
-
     except TypeError:
         combine = analysislib.combine.CombineH5()
         combine.add_from_args(args)
+    except KeyError:
+        print "no renderslave for",stimname
 
     valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
@@ -167,10 +161,11 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
 
     movie = analysislib.movie.MovieMaker(
                                 tmpdir,
-                                "%s%s_%s%s" % (obj_id,
+                                "%s%s_%s%s%s" % (obj_id,
                                                sml,
                                                "_".join(VR_PANELS),
-                                               "" if (not fmf_fname or fmf_fname.endswith(".fmf")) else "_gopro")
+                                               "" if (not fmf_fname or fmf_fname.endswith(".fmf")) else "_gopro",
+                                               "_plot" if plot else "")
     )
 
     timestamps = np.arange(
@@ -202,11 +197,10 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
 
     if fmf is not None:
         fmftimestamps = fmf.get_all_timestamps()
-
         print "fmf ranges from", fmftimestamps[0], "to", fmftimestamps[-1]
-
-        num = 0
-        t0 = fmf.get_frame_at_or_before_timestamp(timestamps[0])[1]
+        t0 = max(timestamps[0],fmftimestamps[0])
+        if t0 > min(timestamps[-1],fmftimestamps[-1]):
+            raise IOError("%s (contains no overlapping time period)" % fmf_fname)
     else:
         t0 = timestamps[0]
 
@@ -220,7 +214,6 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
     #define the size of the output
     device_y0 = MARGIN
     device_y1 = target_out_h-MARGIN
-    max_height = device_y1-device_y0
 
     #define the panels maximum size
     panels = {}
@@ -230,6 +223,8 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
             height = fmf.height,
             device_x0 = MARGIN,
             device_x1 = target_out_w//(1+len(VR_PANELS)) - MARGIN//2,
+            device_y0 = device_y0,
+            device_y1 = device_y1,
         )
     if plot:
         panels["plot"] = dict(
@@ -237,6 +232,8 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
             height = 400,
             device_x0 = MARGIN,
             device_x1 = target_out_w//(1+len(VR_PANELS)) - MARGIN//2,
+            device_y0 = device_y0,
+            device_y1 = device_y1,
         )
 
     if len(panels) > 0:
@@ -246,7 +243,9 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
                 width = renderers[name].dsc.width,
                 height = renderers[name].dsc.height,
                 device_x0 = (1+n)*target_out_w//(1+len(VR_PANELS)) + MARGIN//2,
-                device_x1 = (2+n)*target_out_w//(1+len(VR_PANELS)) - MARGIN//2
+                device_x1 = (2+n)*target_out_w//(1+len(VR_PANELS)) - MARGIN//2,
+                device_y0 = device_y0,
+                device_y1 = device_y1,
             )
     else:
         for n,name in enumerate(VR_PANELS):
@@ -255,9 +254,11 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
                 height = renderers[name].dsc.height,
                 device_x0 = (n)*target_out_w//(len(VR_PANELS)) + MARGIN//2,
                 device_x1 = (1+n)*target_out_w//(len(VR_PANELS)) - MARGIN//2,
+                device_y0 = device_y0,
+                device_y1 = device_y1,
             )
     #calculate sizes of the panels that fit
-    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels, max_height, MARGIN)
+    actual_out_w, actual_out_h = benu.utils.negotiate_panel_size(panels)
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 
@@ -268,7 +269,6 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
 
     assert len(valid) == len(xyz)
 
-    tfirst = None
     for n,(t,uv,xyz,(dfidx,dfrow)) in enumerate(zip(timestamps,pixel,xyz,valid.iterrows())):
 
         pbar.update(n)
@@ -284,7 +284,6 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
 
         if ts > t0:
             t0 = ts
-            tfirst = ts if tfirst is None else tfirst
 
             col,row = uv
             x,y,z = xyz
@@ -323,7 +322,8 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
                     with _canv.get_figure(m["dw"], m["dh"]) as fig:
                         analysislib.movie.plot_xyz(fig, movie.frame_number,
-                            xhist, yhist, zhist, x, y, z
+                            xhist, yhist, zhist, x, y, z,
+                            draw_arena_callback=analysislib.movie.draw_flycave,
                         )
 
             #do the VR 

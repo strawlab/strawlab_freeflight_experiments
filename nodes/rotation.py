@@ -17,11 +17,11 @@ import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import flyflypath.model
 import flyflypath.transform
 import nodelib.log
+import strawlab_freeflight_experiments.replay as sfe_replay
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -56,6 +56,15 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
+REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
+                                              "data","replay_experiments",
+                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
+                            colname="rotation_rate")
+REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
+                                              "data","replay_experiments",
+                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
+                     colname="v_offset_rate")
+
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
@@ -63,9 +72,12 @@ MAX_ROTATION_RATE = 1.5
 #             advance_threshold(m)/
 #             v_gain"
 #
+# if you set nan for either gain then you get a replay experiment on the
+# corresponding bias term
+#
 CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
@@ -127,6 +139,9 @@ class Node(object):
 
             self.ratio_total = 0
 
+            self.replay_rotation = sfe_replay.ReplayStimulus(**REPLAY_ARGS_ROTATION)
+            self.replay_z = sfe_replay.ReplayStimulus(**REPLAY_ARGS_Z)
+
         #start criteria for experiment
         self.x0 = self.y0 = 0
         #target (for moving points)
@@ -145,6 +160,13 @@ class Node(object):
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
+
+    @property
+    def is_replay_experiment_rotation(self):
+        return np.isnan(self.p_const)
+    @property
+    def is_replay_experiment_z(self):
+        return np.isnan(self.v_gain)
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -179,11 +201,15 @@ class Node(object):
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):
+        #return early if this is a replay experiment
+        if self.is_replay_experiment_z:
+            return self.replay_z.next()
+
         target_z = 0.7
         return self.v_gain*(fly_z-target_z)
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
-        if self.svg_fn:
+        if self.svg_fn and (not self.is_replay_experiment_rotation):
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -193,6 +219,10 @@ class Node(object):
                     self.ratio_total += ADVANCE_RATIO
         else:
             self.trg_x = self.trg_y = 0.0
+
+        #return early if this is a replay experiment
+        if self.is_replay_experiment_rotation:
+            return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
@@ -345,6 +375,9 @@ class Node(object):
                 self.trg_x = self.trg_y = 0.0
 
             self.ratio_total = 0
+
+            self.replay_rotation.reset()
+            self.replay_z.reset()
 
         self.pub_image.publish( self.img_fn )
 
