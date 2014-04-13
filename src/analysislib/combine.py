@@ -4,6 +4,7 @@ import argparse
 import Queue
 import random
 import time
+import cPickle as pickle
 
 import tables
 import pandas as pd
@@ -687,13 +688,23 @@ class CombineH5WithCSV(_Combine):
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
         """Add a single csv and h5 file"""
 
-        self._debug("IO:     reading %s" % csv_fname)
-        self._debug("IO:     reading %s" % h5_file)
-
         warnings = {}
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
+
+        if args.cached:
+            name = self.get_plot_filename("data.pkl")
+            self._debug("IO:     reading %s" % name)
+            if os.path.isfile(name):
+                with open(name,'r+b') as f:
+                    d = pickle.load(f)
+                    self._results = d['results']
+                    self._dt = d['dt']
+                    return
+
+        self._debug("IO:     reading %s" % csv_fname)
+        self._debug("IO:     reading %s" % h5_file)
 
         #record_iterator in the csv_file returns all defined cols by default.
         #those specified in csv_rows are float()'d and put into the dataframe

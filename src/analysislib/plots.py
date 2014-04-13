@@ -1,10 +1,10 @@
-import pickle
 import contextlib
 import os.path
 import sys
 import operator
 import json
 import collections
+import cPickle as pickle
 
 import pandas
 import numpy as np
