@@ -113,7 +113,16 @@ class _Combine(object):
     @property
     def plotdir(self):
         """the directory in which to store plots for this analysis"""
-        return self._plotdir
+        if self._plotdir is None:
+            return self._plotdir
+
+        me = os.path.basename(sys.argv[0])
+        pd = os.path.join(self._plotdir, me)
+ 
+        if not os.path.isdir(pd):
+            os.makedirs(pd)
+
+        return pd
 
     @plotdir.setter
     def plotdir(self, val):
