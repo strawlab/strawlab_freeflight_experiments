@@ -375,7 +375,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
 
     ccef_sweeps = {}
     for current_condition in sorted(nens):
-        fn = current_condition.translate(None, ''.join('/.+-'))
+        fn = aplt.get_safe_filename(current_condition)
         with aplt.mpl_fig("%s_%s_corr_latency" % (fname, fn), args, figsize=(10,8)) as fig:
 
             tmp = flat_data['rotation_rate'][current_condition]
@@ -427,7 +427,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                                 dtheta[shift:] if shift > 0 else dtheta
         )
 
-        fn = current_condition.translate(None, ''.join('/.+-'))
+        fn = aplt.get_safe_filename(current_condition)
         with aplt.mpl_fig("%s_%s" % (fname,fn), args) as fig:
             plot_hist_rotation_rate_vs_dtheta(
                     rrate,dtheta,fig.gca(),

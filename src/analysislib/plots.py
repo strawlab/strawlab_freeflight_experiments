@@ -38,6 +38,9 @@ def _perm_check(args):
             raise Exception("Could not change process permissions (see --ignore-permission-errors)")
         print "WARNING: could not set process permissions"
 
+def get_safe_filename(s):
+    return s.translate(None, ''.join('/.+-|'))
+
 def get_arena_from_args(args):
     if args.arena=='flycave':
         arena = analysislib.arenas.FlyCaveCylinder(radius=0.5)
