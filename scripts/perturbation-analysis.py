@@ -38,12 +38,24 @@ if __name__=='__main__':
     fname = combine.fname
     results,dt = combine.get_results()
 
+    print "plots stored in", combine.plotdir
+    print "files saved as", fname
+    ncond = combine.get_num_conditions()
+    if not args.portrait:
+        figsize = (5*ncond,5)
+        NF_R = 1
+        NF_C = ncond
+    else:
+        figsize = (5*ncond,5)
+        NF_R = ncond
+        NF_C = 1
+
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
+
     step_conds = [c for c in results if 'step' in c]
 
     for cond in step_conds:
-
-        fig = plt.figure(cond)
-        ax = fig.add_subplot(1,1,1)
 
         series = {}
 
@@ -56,26 +68,35 @@ if __name__=='__main__':
             if len(z[0]):
                 lidx = z[0][0]
                 df['align'] = np.array(range(len(df)), dtype=int) - lidx
-
-                ax.plot(df['align'].values, df['dtheta'].values, 'k-', alpha=0.1)
-                ax.plot(df['align'].values[-1], df['dtheta'].values[-1], 'ko', alpha=0.4)
-
                 series["%d" % obj_id] = pd.Series(df['dtheta'].values, index=df['align'].values)
 
-        ax.set_ylim(-10,10)
-        ax.set_xlim(-100,1000)
+        if series:
+            name = combine.get_plot_filename('ts_%s' % aplt.get_safe_filename(cond))
 
-        df = pd.DataFrame(series)
-        means = df.mean(1)
+            with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
 
-        t = means.index.values
+                fig.suptitle(cond, fontsize=12)
+                ax = fig.add_subplot(1,1,1)
 
-        v = means.values
-        std = df.std(1).values
+                for s in series.itervalues():
 
-        ax.plot(t, v, 'r-', lw=2.0, alpha=0.8, label="mean")
-        #ax.fill_between(t, v+std, v-std, facecolor='red', alpha=0.1)
+                    ax.plot(s.index.values, s.values, 'k-', alpha=0.1)
+                    ax.plot(s.index.values[-1], s.values[-1], 'ko', alpha=0.4)
 
+
+                ax.set_ylim(-10,10)
+                ax.set_xlim(-100,1000)
+
+                df = pd.DataFrame(series)
+                means = df.mean(1)
+
+                t = means.index.values
+
+                v = means.values
+                std = df.std(1).values
+
+                ax.plot(t, v, 'r-', lw=2.0, alpha=0.8, label="mean")
+                #ax.fill_between(t, v+std, v-std, facecolor='red', alpha=0.1)
 
 
     if args.show:
