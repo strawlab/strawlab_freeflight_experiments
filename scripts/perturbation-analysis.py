@@ -84,6 +84,8 @@ if __name__=='__main__':
                     ax.plot(s.index.values[-1], s.values[-1], 'ko', alpha=0.4)
 
 
+                ax.set_ylabel('dtheta')
+                ax.set_xlabel('framenumber')
                 ax.set_ylim(-10,10)
                 ax.set_xlim(-100,1000)
 
@@ -98,6 +100,7 @@ if __name__=='__main__':
                 ax.plot(t, v, 'r-', lw=2.0, alpha=0.8, label="mean")
                 #ax.fill_between(t, v+std, v-std, facecolor='red', alpha=0.1)
 
+                fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
     if args.show:
         aplt.show_plots()

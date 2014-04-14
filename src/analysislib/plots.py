@@ -39,7 +39,7 @@ def _perm_check(args):
         print "WARNING: could not set process permissions"
 
 def get_safe_filename(s):
-    return s.translate(None, ''.join('/.+-|'))
+    return s.translate(None, ''.join("\"\\/.+|'"))
 
 def get_arena_from_args(args):
     if args.arena=='flycave':
@@ -200,7 +200,7 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
                 ax.yaxis.set_ticks_position('left')
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
     if name is None:
@@ -268,7 +268,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
                 fig.colorbar(im)
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 
 def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
@@ -295,7 +295,7 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
             ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 
 
@@ -416,7 +416,7 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
     if name is None:
@@ -710,7 +710,7 @@ def save_results(combine, args, maxn=20):
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
 #http://stackoverflow.com/questions/8802918/my-matplotlib-title-gets-cropped
-def _autowrap_text(event):
+def autowrap_text(event):
     """Auto-wraps all text objects in a figure at draw-time"""
     import matplotlib as mpl
     fig = event.canvas.figure
