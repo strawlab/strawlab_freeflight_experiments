@@ -810,16 +810,18 @@ def _do_autowrap_text(textobj, renderer):
 
     # If wrap_width is < 1, just make it 1 character
     wrap_width = max(1, new_width // pixels_per_char)
+
     try:
-        #textwrap breaks on hyphens, which is not what we want because
+        #textwrap breaks on spaces and hyphens, which is not what we want because
         #we separate experimental phases by /, and often these phases
         #contain negative numbers (i.e. -ve).
-        #so replace "-" with a placeholder "!", then replace "/" with "-"
+        #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
-        safe_txt = textobj.get_text().replace("-","!").replace("/","-")
+
+        safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
         #reverse the above transform
-        wrapped_text = wrapped_text.replace("-","/").replace("!","-")
+        wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
     except TypeError:
         # This appears to be a single word
         wrapped_text = textobj.get_text()
