@@ -233,9 +233,11 @@ def calculate_correlation_and_remove_nans(a,b):
 
     return clean_a,clean_b,np.corrcoef(clean_a,clean_b)[0,1]
 
-def plot_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',correlation_options=None):
+def plot_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',note='',correlation_options=None):
     if title:
         ax.set_title(title)
+    if note:
+        aplt.make_note(ax,note)
     ax.plot(rr,dtheta,'k.')
     if correlation_options is not None:
         ax.set_ylim(*correlation_options.get("dtheta_range",[-10, 10]))
@@ -243,7 +245,7 @@ def plot_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',correlation_options=None)
     ax.set_xlabel('rotation rate')
     ax.set_ylabel('dtheta')
 
-def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',nbins=100,correlation_options=None):
+def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',note='',nbins=100,correlation_options=None):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -263,6 +265,9 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',nbins=100,correlatio
 
     if title:
         ax.set_title(title)
+    if note:
+        aplt.make_note(ax,note,color='white')
+
     ax.set_xlabel('rotation rate')
     ax.set_ylabel('dtheta')
 
@@ -278,7 +283,7 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,ax,title='',nbins=100,correlatio
 
     return func(rr,dtheta,bins=nbins,**hkwargs)
 
-def plot_hist_v_offset_rate_vs_az(vor,az,ax,title='',nbins=100,**outer_kwargs):
+def plot_hist_v_offset_rate_vs_az(vor,az,ax,title='',nbins=100,note='',**outer_kwargs):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -299,6 +304,9 @@ def plot_hist_v_offset_rate_vs_az(vor,az,ax,title='',nbins=100,**outer_kwargs):
 
     if title:
         ax.set_title(title)
+    if note:
+        aplt.make_note(ax,note,color='white')
+
     ax.set_xlabel('v offset rate')
     ax.set_ylabel('az')
 
@@ -431,7 +439,8 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         with aplt.mpl_fig("%s_%s" % (fname,fn), args) as fig:
             plot_hist_rotation_rate_vs_dtheta(
                     rrate,dtheta,fig.gca(),
-                    title="%s\nmax corr @%.2fs = %.3f (n=%d)" % (current_condition,dt*shift,ccef,nens[current_condition]),
+                    title=current_condition,
+                    note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens[current_condition]),
                     correlation_options=correlation_options['rotation_rate']
             )
 
