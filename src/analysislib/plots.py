@@ -116,6 +116,54 @@ def plot_trial_times(combine, args, name=None):
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
+def make_note(ax, txt, color='k'):
+    ax.text(0.01, 0.99, #top left
+            txt,
+            fontsize=10,
+            horizontalalignment='left',
+            verticalalignment='top',
+            transform=ax.transAxes,
+            color=color)
+
+def layout_trajectory_plots(ax, arena, in3d):
+    arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+
+    (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
+    ax.set_xlim(xmin,xmax)
+    ax.set_ylim(ymin,ymax)
+
+    ax.set_aspect('equal')
+
+    if in3d:
+        ax.set_zlim(zmin,zmax)
+
+    ax.set_aspect('equal')
+    ax.set_ylabel( 'y (m)' )
+    ax.set_xlabel( 'x (m)' )
+
+    locations = ['left','bottom']
+    for loc, spine in ax.spines.items():
+        if loc in locations:
+            spine.set_position( ('outward',10) ) # outward by 10 points
+        else:
+            spine.set_color('none') # don't draw spine
+
+    xlocs = arena.get_xtick_locations()
+    if xlocs is None:
+        ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+    else:
+        ax.set_xticks(xlocs)
+    if not in3d:
+        ax.xaxis.set_ticks_position('bottom')
+
+    ylocs = arena.get_ytick_locations()
+    if ylocs is None:
+        ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+    else:
+        ax.set_yticks(ylocs)
+    if not in3d:
+        ax.yaxis.set_ticks_position('left')
+
 def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -159,45 +207,13 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
                 else:
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
-            arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            if not in3d:
+                make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
         for ax in axes:
-            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
-            ax.set_xlim(xmin,xmax)
-            ax.set_ylim(ymin,ymax)
-
-            ax.set_aspect('equal')
-
-            if in3d:
-                ax.set_zlim(zmin,zmax)
-
-            ax.set_aspect('equal')
-            ax.set_ylabel( 'y (m)' )
-            ax.set_xlabel( 'x (m)' )
-
-            locations = ['left','bottom']
-            for loc, spine in ax.spines.items():
-                if loc in locations:
-                    spine.set_position( ('outward',10) ) # outward by 10 points
-                else:
-                    spine.set_color('none') # don't draw spine
-
-            xlocs = arena.get_xtick_locations()
-            if xlocs is None:
-                ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
-            else:
-                ax.set_xticks(xlocs)
-            if not in3d:
-                ax.xaxis.set_ticks_position('bottom')
-
-            ylocs = arena.get_ytick_locations()
-            if ylocs is None:
-                ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
-            else:
-                ax.set_yticks(ylocs)
-            if not in3d:
-                ax.yaxis.set_ticks_position('left')
+            layout_trajectory_plots(ax, arena, in3d)
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
@@ -256,7 +272,10 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
 
             ax.set_aspect('equal')
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -292,12 +311,12 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
             ax.hist(times,maxl, range=(0,maxl))
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
-            ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 'n=%d' % r['count'])
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
-
-
 
 def plot_nsamples(combine, args, name=None):
     if name is None:
@@ -406,7 +425,9 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
 
             ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
             ax.set_xlabel('frame (n)')
-            ax.set_title('%s%s %s\n(n=%d)' % ('d' if dvdt else '',valname,current_condition,nsamples))
+
+            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,current_condition))
+            make_note(ax, 'n=%d' % nsamples)
 
             df = pandas.DataFrame(series)
             means = df.mean(1) #column wise
