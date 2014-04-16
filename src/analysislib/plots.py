@@ -14,6 +14,7 @@ import matplotlib.ticker as mticker
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
+import matplotlib.legend as mlegend
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 
@@ -31,6 +32,8 @@ SVG_SUFFIX=os.environ.get('SVG_SUFFIX','.svg')
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 10
+
+OUTSIDE_LEGEND = True
 
 def _perm_check(args):
     if not strawlab.constants.set_permissions():
@@ -65,7 +68,15 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
         fname_base = os.path.join(args.outdir,fname_base)
     fig = plt.figure( **kwargs )
     yield fig
-    fig.savefig(fname_base+'.png',bbox_inches='tight')
+
+    bbox_extra_artists = []
+    for ax in fig.axes:
+        for artist in ax.get_children():
+            if isinstance(artist, mlegend.Legend):
+                bbox_extra_artists.append( artist )
+
+    fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
+
     if WRITE_SVG or write_svg:
         fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
 
@@ -112,7 +123,10 @@ def plot_trial_times(combine, args, name=None):
 
         nconds = len(starts)
 
-        ax.legend(loc='upper right', numpoints=1,
+        ax.legend(
+            loc='upper center' if OUTSIDE_LEGEND else 'upper right',
+            bbox_to_anchor=(0.5, -0.15) if OUTSIDE_LEGEND else None,
+            numpoints=1,
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
@@ -370,13 +384,23 @@ def plot_nsamples(combine, args, name=None):
 
         ax_outliers.set_title("trial length")
 
-        #set the legend on the top figure, it has the same data and association
-        #of colors as the bottom one anyway
-        ax_outliers.legend(loc='upper right', numpoints=1,
-            columnspacing=0.05,
-            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
-            ncol=1 if nconds <= 4 else 2
-        )
+        if OUTSIDE_LEGEND:
+            ax.legend(
+                loc='upper center',
+                bbox_to_anchor=(0.5, -0.1),
+                numpoints=1,
+                columnspacing=0.05,
+                prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
+                ncol=1 if nconds <= 4 else 2
+            )
+        else:
+            #set the legend on the top figure, it has the same data and association
+            #of colors as the bottom one anyway
+            ax_outliers.legend(loc='upper right', numpoints=1,
+                columnspacing=0.05,
+                prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
+                ncol=1 if nconds <= 4 else 2
+            )
 
 def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
     if name is None:

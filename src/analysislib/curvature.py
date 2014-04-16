@@ -14,7 +14,7 @@ from matplotlib import gridspec
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.plots as aplt
-from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML
+from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
 
 DEBUG = False
 
@@ -419,7 +419,10 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
             if smax is not None:
                 max_corr_at_latency[current_condition] = (smax,cmax)
 
-        ax.legend(loc='upper right', numpoints=1,
+        ax.legend(
+            loc='upper center' if OUTSIDE_LEGEND else 'upper right',
+            bbox_to_anchor=(0.5, -0.1) if OUTSIDE_LEGEND else None,
+            numpoints=1,
             prop={'size':LEGEND_TEXT_BIG} if len(nens) <= 4 else {'size':LEGEND_TEXT_SML},
         )
         ax.set_xlabel("latency, shift (s)")
@@ -467,7 +470,10 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                                       range=histogram_options['range'].get(h),
                                       histtype='step', alpha=0.75, label=current_condition
                 )
-            ax.legend(loc='upper right', numpoints=1,
+            ax.legend(
+                loc='upper center' if OUTSIDE_LEGEND else 'upper right',
+                bbox_to_anchor=(0.5, -0.1) if OUTSIDE_LEGEND else None,
+                numpoints=1,
                 prop={'size':LEGEND_TEXT_BIG} if len(nens) <= 4 else {'size':LEGEND_TEXT_SML},
             )
             ax.set_title(h)
