@@ -400,6 +400,8 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                                                 correlation_options=correlation_options
             )
 
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+
     max_corr_at_latency = {}
     with aplt.mpl_fig("%s_corr_latency" % fname, args, ) as fig:
         ax = fig.gca()
@@ -428,6 +430,8 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         ax.set_xlabel("latency, shift (s)")
         ax.set_ylabel("correlation")
 
+        fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+
     #plot higher resolution flat_data at the maximally correlated latency
     for current_condition,(shift,ccef) in max_corr_at_latency.items():
         rrate =  np.concatenate(flat_data['rotation_rate'][current_condition])
@@ -446,6 +450,8 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                     note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens[current_condition]),
                     correlation_options=correlation_options['rotation_rate']
             )
+
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
     return max_corr_at_latency
 
@@ -479,6 +485,8 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
             ax.set_title(h)
             ax.set_xlabel(histogram_options['xlabel'].get(h,h))
             ax.set_ylabel('normalized counts (n)' if histogram_options['normed'].get(h) else 'counts (n)')
+
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
 def flatten_data(args, combine, flatten_columns):
     MIN_ROTATION_RATE_SAMPLES   = 80
