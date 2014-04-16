@@ -153,7 +153,7 @@ if __name__=='__main__':
                     t,v = step_obj.get_perturb_vs_time(t0,t1)
                     ax2.plot(t,v, 'b-')
                     v0,v1 = step_obj.get_value_limits()
-                    ax2.set_ylim(min(-0.1,1.2*v0),1.2*v1)
+                    ax2.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
                     for tl in ax2.get_yticklabels():
                         tl.set_color('b')
 
