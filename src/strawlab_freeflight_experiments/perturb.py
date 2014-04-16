@@ -1,3 +1,5 @@
+import numpy as np
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -43,6 +45,12 @@ class NoPerturb:
         pass
     def step_rotation(self, *args):
         pass
+    def get_perturb_vs_time(self, t0, t1):
+        return [],[]
+    def get_time_limits(self):
+        return 0,0
+    def get_value_limits(self):
+        return 0,0
 
 class PerturberStep:
     def __init__(self, descriptor):
@@ -103,6 +111,28 @@ class PerturberStep:
         self.progress = framenumber - self._frame0
         print "STEP", self.progress
         return self.value
+
+    def get_perturb_vs_time(self, t0, t1):
+        t = []
+        v = []
+        if t0 < 0:
+            t.extend( np.linspace(t0,0,num=50) )
+            v.extend( np.zeros(50) )
+
+        t.extend( np.linspace(0,min(self.duration,t1),num=50) )
+        v.extend( np.ones(50)*self.value )
+
+        if t1 > self.duration:
+            t.extend( np.linspace(self.duration,t1,num=50) )
+            v.extend( np.zeros(50) )
+
+        return t,v
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self):
+        return min(self.value,0),max(self.value,0)
 
 
 if __name__ == "__main__":
