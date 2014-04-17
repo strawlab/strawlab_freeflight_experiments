@@ -174,7 +174,11 @@ if __name__=='__main__':
                     pdf = _df.iloc[idxs[oid]:lidxs[oid]]
                     xv = pdf['x'].values
                     yv = pdf['y'].values
-                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
+                    if len(xv):
+                        ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
+
+                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
+                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
                 aplt.layout_trajectory_plots(ax, arena, in3d=False)
 
