@@ -49,7 +49,11 @@ class TestView(view.SvgPathWidget):
 
         return vecs,[(src_pt,(1,0,0)),(trg_pt,(0,1,0))],[]
 
+    def get_annotations(self):
+        return [(euclid.Point2(20,20),(0,1,0),"ratio: %.2f" % self.model.ratio)]
+
     def add_to_background(self, cr):
+
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (0.5)
 
