@@ -243,8 +243,16 @@ class Node(object):
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
             
-                rate = self.perturber.step_rotation(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                                    now, framenumber, currently_locked_obj_id)
+                rate,finished = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
+
+                if finished and (self.condition in COOL_CONDITIONS):
+                    #fly is still flying
+                    if abs(fly_z-self.z_target) < 0.1:
+                        self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+                        self.pub_save.publish(currently_locked_obj_id)
+
                 return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
@@ -445,7 +453,7 @@ class Node(object):
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
-        if (self.ratio_total > 2) and (old_id is not None):
+        if (self.ratio_total > 3) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)

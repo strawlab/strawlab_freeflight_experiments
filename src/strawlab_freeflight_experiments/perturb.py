@@ -43,8 +43,8 @@ class NoPerturb:
         return False
     def reset(self, *args):
         pass
-    def step_rotation(self, *args):
-        pass
+    def step(self, *args):
+        return 0,False
     def get_perturb_vs_time(self, t0, t1):
         return [],[]
     def get_time_limits(self):
@@ -107,10 +107,11 @@ class PerturberStep:
 
         return False
 
-    def step_rotation(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
-        print "STEP", self.progress
-        return self.value
+        finished = (now - self.now) >= self.duration
+        print "STEP", self.progress, "FIN", finished
+        return self.value, finished
 
     def get_perturb_vs_time(self, t0, t1):
         t = []
