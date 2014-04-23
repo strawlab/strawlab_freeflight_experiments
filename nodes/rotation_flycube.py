@@ -443,7 +443,7 @@ class Node(object):
         self.cyl_radius_pub.publish(0.5)
         self.cyl_centre_pub.publish(0,0,0)
 
-        if (self.ratio_total > 0.5) and (old_id is not None):
+        if (self.ratio_total > 1.0) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pushover_pub.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.save_pub.publish(old_id)
