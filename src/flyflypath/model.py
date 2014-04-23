@@ -43,6 +43,10 @@ class MovingPointSvgPath:
     def moving_pt(self):
         return self._moving_pt
 
+    @property
+    def ratio(self):
+        return self._ratio
+
     def start_move_from_ratio(self, ratio):
         """ set the ratio and point to this """
         self._ratio = ratio

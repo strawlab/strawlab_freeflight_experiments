@@ -12,7 +12,7 @@ import analysislib.args
 
 class TestCombine(unittest.TestCase):
 
-    RT_CSV = '/mnt/strawarchive/data/TETHERED/str01/20130718_192901.rotation_tethered.csv'
+    RT_CSV = '/mnt/strawscience/data/TETHERED/str01/20130718_192901.rotation_tethered.csv'
     RT_CSV_OBJ_ID = 1374168638
 
     def _assert_two_equal(self, a, b):

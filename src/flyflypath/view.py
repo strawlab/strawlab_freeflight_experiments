@@ -18,6 +18,10 @@ class SvgPathWidget(Gtk.DrawingArea):
         self._surface = None
         self._need_bg_redraw = False
 
+    @property
+    def model(self):
+        return self._model
+
     def redraw(self):
         if self._need_bg_redraw:
             self._draw_background()
@@ -104,6 +108,13 @@ class SvgPathWidget(Gtk.DrawingArea):
             cr.close_path()
             cr.stroke()
 
+        annots = self.get_annotations()
+        for pt,rgb,txt in annots:
+            cr.set_source_rgb (*rgb)
+            cr.move_to(pt.x, pt.y)
+            cr.show_text(txt)
+            cr.stroke()
+
     def _on_configure_event(self, widget, event):
         allocation = self.get_allocation()
         self._surface = self.get_window().create_similar_surface(
@@ -121,5 +132,12 @@ class SvgPathWidget(Gtk.DrawingArea):
             [euclid.Point2,]
         """
         raise NotImplementedError
+
+    def get_annotations(self):
+        """
+        returns a list of 3-tuples
+            [(euclid.Point2,(r,g,b),"txt"),...]
+        """
+        return []
 
 

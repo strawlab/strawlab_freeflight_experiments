@@ -1,10 +1,10 @@
-import pickle
 import contextlib
 import os.path
 import sys
 import operator
 import json
 import collections
+import cPickle as pickle
 
 import pandas
 import numpy as np
@@ -14,6 +14,7 @@ import matplotlib.ticker as mticker
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
+import matplotlib.legend as mlegend
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 
@@ -32,11 +33,16 @@ LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 10
 
+OUTSIDE_LEGEND = True
+
 def _perm_check(args):
     if not strawlab.constants.set_permissions():
         if not args.ignore_permission_errors:
             raise Exception("Could not change process permissions (see --ignore-permission-errors)")
         print "WARNING: could not set process permissions"
+
+def get_safe_filename(s):
+    return s.translate(None, ''.join("\"\\/.+|'"))
 
 def get_arena_from_args(args):
     if args.arena=='flycave':
@@ -62,7 +68,15 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
         fname_base = os.path.join(args.outdir,fname_base)
     fig = plt.figure( **kwargs )
     yield fig
-    fig.savefig(fname_base+'.png',bbox_inches='tight')
+
+    bbox_extra_artists = []
+    for ax in fig.axes:
+        for artist in ax.get_children():
+            if isinstance(artist, mlegend.Legend):
+                bbox_extra_artists.append( artist )
+
+    fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
+
     if WRITE_SVG or write_svg:
         fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
 
@@ -109,9 +123,60 @@ def plot_trial_times(combine, args, name=None):
 
         nconds = len(starts)
 
-        ax.legend(loc='upper right', numpoints=1,
+        ax.legend(
+            loc='upper center' if OUTSIDE_LEGEND else 'upper right',
+            bbox_to_anchor=(0.5, -0.15) if OUTSIDE_LEGEND else None,
+            numpoints=1,
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
+
+def make_note(ax, txt, color='k'):
+    ax.text(0.01, 0.99, #top left
+            txt,
+            fontsize=10,
+            horizontalalignment='left',
+            verticalalignment='top',
+            transform=ax.transAxes,
+            color=color)
+
+def layout_trajectory_plots(ax, arena, in3d):
+    arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+
+    (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
+    ax.set_xlim(xmin,xmax)
+    ax.set_ylim(ymin,ymax)
+
+    ax.set_aspect('equal')
+
+    if in3d:
+        ax.set_zlim(zmin,zmax)
+
+    ax.set_aspect('equal')
+    ax.set_ylabel( 'y (m)' )
+    ax.set_xlabel( 'x (m)' )
+
+    locations = ['left','bottom']
+    for loc, spine in ax.spines.items():
+        if loc in locations:
+            spine.set_position( ('outward',10) ) # outward by 10 points
+        else:
+            spine.set_color('none') # don't draw spine
+
+    xlocs = arena.get_xtick_locations()
+    if xlocs is None:
+        ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+    else:
+        ax.set_xticks(xlocs)
+    if not in3d:
+        ax.xaxis.set_ticks_position('bottom')
+
+    ylocs = arena.get_ytick_locations()
+    if ylocs is None:
+        ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
+    else:
+        ax.set_yticks(ylocs)
+    if not in3d:
+        ax.yaxis.set_ticks_position('left')
 
 def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
     if name is None:
@@ -156,48 +221,16 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
                 else:
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
-            arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            if not in3d:
+                make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
         for ax in axes:
-            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
-            ax.set_xlim(xmin,xmax)
-            ax.set_ylim(ymin,ymax)
-
-            ax.set_aspect('equal')
-
-            if in3d:
-                ax.set_zlim(zmin,zmax)
-
-            ax.set_aspect('equal')
-            ax.set_ylabel( 'y (m)' )
-            ax.set_xlabel( 'x (m)' )
-
-            locations = ['left','bottom']
-            for loc, spine in ax.spines.items():
-                if loc in locations:
-                    spine.set_position( ('outward',10) ) # outward by 10 points
-                else:
-                    spine.set_color('none') # don't draw spine
-
-            xlocs = arena.get_xtick_locations()
-            if xlocs is None:
-                ax.xaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
-            else:
-                ax.set_xticks(xlocs)
-            if not in3d:
-                ax.xaxis.set_ticks_position('bottom')
-
-            ylocs = arena.get_ytick_locations()
-            if ylocs is None:
-                ax.yaxis.set_major_locator( mticker.MaxNLocator(nbins=3) )
-            else:
-                ax.set_yticks(ylocs)
-            if not in3d:
-                ax.yaxis.set_ticks_position('left')
+            layout_trajectory_plots(ax, arena, in3d)
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
     if name is None:
@@ -253,7 +286,10 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
 
             ax.set_aspect('equal')
-            ax.set_title('%s\n(%.1fs, n=%d)'%(current_condition,dur,r['count']), fontsize=TITLE_FONT_SIZE)
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
             ax.set_ylabel( 'y (m)' )
             ax.set_xlabel( 'x (m)' )
 
@@ -265,7 +301,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
                 fig.colorbar(im)
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 
 def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
@@ -289,12 +325,12 @@ def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
             ax.hist(times,maxl, range=(0,maxl))
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
-            ax.set_title('%s\n(n=%d)'%(current_condition,r['count']))
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 'n=%d' % r['count'])
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
-
-
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 def plot_nsamples(combine, args, name=None):
     if name is None:
@@ -348,13 +384,23 @@ def plot_nsamples(combine, args, name=None):
 
         ax_outliers.set_title("trial length")
 
-        #set the legend on the top figure, it has the same data and association
-        #of colors as the bottom one anyway
-        ax_outliers.legend(loc='upper right', numpoints=1,
-            columnspacing=0.05,
-            prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
-            ncol=1 if nconds <= 4 else 2
-        )
+        if OUTSIDE_LEGEND:
+            ax.legend(
+                loc='upper center',
+                bbox_to_anchor=(0.5, -0.1),
+                numpoints=1,
+                columnspacing=0.05,
+                prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
+                ncol=1 if nconds <= 4 else 2
+            )
+        else:
+            #set the legend on the top figure, it has the same data and association
+            #of colors as the bottom one anyway
+            ax_outliers.legend(loc='upper right', numpoints=1,
+                columnspacing=0.05,
+                prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML},
+                ncol=1 if nconds <= 4 else 2
+            )
 
 def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
     if name is None:
@@ -403,7 +449,9 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
 
             ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
             ax.set_xlabel('frame (n)')
-            ax.set_title('%s%s %s\n(n=%d)' % ('d' if dvdt else '',valname,current_condition,nsamples))
+
+            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,current_condition))
+            make_note(ax, 'n=%d' % nsamples)
 
             df = pandas.DataFrame(series)
             means = df.mean(1) #column wise
@@ -413,7 +461,7 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
             ax.plot( meds.index.values, meds.values, 'b-', lw=2.0, alpha=0.8, rasterized=RASTERIZE, label="median" )
 
         if WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', _autowrap_text)
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
     if name is None:
@@ -558,8 +606,7 @@ def _calculate_nloops(df):
 
 def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     results,dt = combine.get_results()
 
@@ -625,8 +672,7 @@ def _get_flight_lengths(combine):
     return best
 
 def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     results,dt = combine.get_results()
     best = _get_flight_lengths(combine)
@@ -662,8 +708,7 @@ def save_longest_flights(combine, args, maxn=10, name="LONGEST.md"):
                     break
 
 def save_args(combine, args, name="README"):
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,name)
+    name = combine.get_plot_filename(name)
 
     _perm_check(args)
 
@@ -679,17 +724,16 @@ def save_args(combine, args, name="README"):
 def save_results(combine, args, maxn=20):
 
     results,dt = combine.get_results()
-    plotdir = combine.plotdir
-    name = os.path.join(plotdir,"data.pkl")
-    best = _get_flight_lengths(combine)
 
     _perm_check(args)
 
+    name = combine.get_plot_filename("data.pkl")
     with open(name, "w+b") as f:
         if WRITE_PKL:
             pickle.dump({"results":results,"dt":dt}, f)
 
-    name = os.path.join(plotdir,"data.json")
+    best = _get_flight_lengths(combine)
+    name = combine.get_plot_filename("data.json")
     with open(name, "w") as f:
         data = dict()
         data["conditions"] = results.keys()
@@ -711,7 +755,7 @@ def save_results(combine, args, maxn=20):
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
 #http://stackoverflow.com/questions/8802918/my-matplotlib-title-gets-cropped
-def _autowrap_text(event):
+def autowrap_text(event):
     """Auto-wraps all text objects in a figure at draw-time"""
     import matplotlib as mpl
     fig = event.canvas.figure
@@ -766,16 +810,18 @@ def _do_autowrap_text(textobj, renderer):
 
     # If wrap_width is < 1, just make it 1 character
     wrap_width = max(1, new_width // pixels_per_char)
+
     try:
-        #textwrap breaks on hyphens, which is not what we want because
+        #textwrap breaks on spaces and hyphens, which is not what we want because
         #we separate experimental phases by /, and often these phases
         #contain negative numbers (i.e. -ve).
-        #so replace "-" with a placeholder "!", then replace "/" with "-"
+        #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
-        safe_txt = textobj.get_text().replace("-","!").replace("/","-")
+
+        safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
         #reverse the above transform
-        wrapped_text = wrapped_text.replace("-","/").replace("!","-")
+        wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
     except TypeError:
         # This appears to be a single word
         wrapped_text = textobj.get_text()

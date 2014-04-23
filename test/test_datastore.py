@@ -44,7 +44,7 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(fname, os.path.join(self.pdir,self.uuid,"20131004_161631"))
 
         plotdir = self.combine.plotdir
-        self.assertEqual(plotdir, os.path.join(self.pdir,self.uuid)+"/")
+        self.assertEqual(plotdir, os.path.join(self.pdir,self.uuid))
 
     def tearDown(self):
         del os.environ['FLYDRA_AUTODATA_BASEDIR']

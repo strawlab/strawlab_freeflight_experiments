@@ -31,7 +31,12 @@ def get_combiner(suffix):
     #the csv reader returns a row object with all col values set by
     #default. the list of colums here are those that should be cast to float
     #and put in the dataframe - i.e. not strings.
-    if suffix.startswith("rotation"):
+    if suffix.startswith("perturbation"):
+        combine = analysislib.combine.CombineH5WithCSV(
+                                "ratio","rotation_rate","v_offset_rate","perturb_progress",
+                                csv_suffix=suffix
+        )
+    elif suffix.startswith("rotation"):
         combine = analysislib.combine.CombineH5WithCSV(
                                 "ratio","rotation_rate","v_offset_rate",
                                 csv_suffix=suffix
