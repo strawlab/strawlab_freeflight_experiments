@@ -28,6 +28,8 @@ def get_perturb_class(perturb_descriptor):
         name = perturb_descriptor.split('|')[0]
         if name == 'step':
             return PerturberStep
+        elif name.startswith('chirp'):
+            return PerturberChirp
     except:
         pass
 
@@ -127,7 +129,7 @@ class PerturberStep(Perturber):
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
-        return "<PerturberStep value=%.1f duration=%.1f>" % (self.value, self.duration)
+        return "<PerturberStep val=%.1f dur=%.1fs>" % (self.value, self.duration)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
@@ -158,7 +160,7 @@ class PerturberStep(Perturber):
 
 class PerturberChirp(Perturber):
 
-    DEFAULT_DESC = "linear|1.0|3|1.0|5.0|0.4"
+    DEFAULT_DESC = "chirp_linear|1.0|3|1.0|5.0|0.4"
 
     def __init__(self, descriptor):
         """
@@ -173,10 +175,10 @@ class PerturberChirp(Perturber):
         """
         print descriptor
         ctype,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 6)
-        if ctype not in ('linear','quadratic','logarithmic'):
+        if not ctype.startswith('chirp'):
             raise Exception("Incorrect PerturberChirp configuration")
 
-        self.method = ctype
+        self.method = ctype.replace('chirp_','')
         self.value = float(value)
         self.t1 = float(t1)
         self.f0 = float(f0)
@@ -200,7 +202,7 @@ class PerturberChirp(Perturber):
         Perturber.__init__(self, chunks, ratio_min, self.t1)
 
     def __repr__(self):
-        return "<PerturberChirp %s value=%.1f duration=%.1f>" % (self.method, self.value, self.duration)
+        return "<PerturberChirp %s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method, self.value, self.duration,self.f0,self.f1)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
