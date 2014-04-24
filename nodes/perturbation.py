@@ -75,12 +75,13 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.2|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|-0.2|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|-0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1",
-              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
+              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step|1.2|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 
@@ -249,7 +250,7 @@ class Node(object):
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
-                rospy.logdebug('perturbation progress: %s' % self.perturber.progress)
+                print 'perturbation progress: %s' % self.perturber.progress
 
                 if finished:
                     self.drop_lock_on(blacklist=True)
@@ -446,7 +447,7 @@ class Node(object):
             now = rospy.get_time()
             dt = now - self.first_seen_time
 
-            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s (tracked for %.1f, %.1f loops)' % (old_id, dt, self.ratio_total))
 
             self.currently_locked_obj_id = None
 
