@@ -141,6 +141,8 @@ class Node(object):
             self.replay_rotation = sfe_replay.ReplayStimulus(**REPLAY_ARGS_ROTATION)
             self.replay_z = sfe_replay.ReplayStimulus(**REPLAY_ARGS_Z)
 
+            self.blacklist = {}
+
         #start criteria for experiment
         self.x0 = self.y0 = 0
         #target (for moving points)
@@ -243,8 +245,23 @@ class Node(object):
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
             
-                rate = self.perturber.step_rotation(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                                    now, framenumber, currently_locked_obj_id)
+                rate,finished = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
+
+                rospy.logdebug('perturbation progress: %s' % self.perturber.progress)
+
+                if finished:
+                    self.drop_lock_on(blacklist=True)
+
+                    rospy.loginfo('perturbation finished')
+
+                    if self.condition in COOL_CONDITIONS:
+                        #fly is still flying
+                        if abs(fly_z-self.z_target) < 0.1:
+                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+                            self.pub_save.publish(currently_locked_obj_id)
+
                 return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
@@ -362,7 +379,11 @@ class Node(object):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def is_in_trigger_volume(self,pos):
+    def should_lock_on(self, obj):
+        if obj.obj_id in self.blacklist:
+            return False
+
+        pos = obj.position
         c = np.array( (self.x0,self.y0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
@@ -381,7 +402,7 @@ class Node(object):
                         self.flyv = obj.velocity
                         self.framenumber = packet.framenumber
                 else:
-                    if self.is_in_trigger_volume(obj.position):
+                    if self.should_lock_on(obj):
                         self.lock_on(obj,packet.framenumber)
 
     def update(self):
@@ -419,7 +440,7 @@ class Node(object):
 
         self.update()
 
-    def drop_lock_on(self):
+    def drop_lock_on(self, blacklist=False):
         with self.trackinglock:
             old_id = self.currently_locked_obj_id
             now = rospy.get_time()
@@ -440,12 +461,15 @@ class Node(object):
             self.log.cyl_x = 0
             self.log.cyl_y = 0
 
+            if blacklist:
+                self.blacklist[old_id] = True
+
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
-        if (self.ratio_total > 2) and (old_id is not None):
+        if (self.ratio_total > 3) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)
