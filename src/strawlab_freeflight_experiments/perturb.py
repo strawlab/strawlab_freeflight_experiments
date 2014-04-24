@@ -221,6 +221,10 @@ class PerturberChirp(Perturber):
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb)
+
     DEBUG = True
 
 #    chunks = 0.43,0.6,0.93,1.0,0.0,0.1
@@ -236,4 +240,10 @@ if __name__ == "__main__":
     obj = klass(desc)
     print obj
 
+    for p in PERTURBERS:
+        obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+        f = plt.figure(repr(obj))
+        ax = f.add_subplot(1,1,1)
+        obj.plot(ax)
 
+    plt.show()
