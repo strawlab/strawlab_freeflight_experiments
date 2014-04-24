@@ -101,7 +101,7 @@ CONDITIONS = [
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set( (CONDITIONS[0], CONDITIONS[2]) )
 
 XFORM = flyflypath.transform.SVGTransform()
 
