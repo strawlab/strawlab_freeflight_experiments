@@ -17,7 +17,7 @@ import strawlab.constants
 
 EXCEPT = set()
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '-t', '--type', required=True,
     help='analyse only this type', choices=["all","perturbation","rotation","confinement","conflict"])
@@ -59,22 +59,25 @@ for uuid in todo:
 
     fm = autodata.files.FileModel(uuid=uuid)
 
+    how = 'no readme nor json'
     try:
         readme = open(fm.get_output_file("README").fullpath).read()
+        how = 'readme'
     except autodata.files.NoFile, e:
         readme = ""
 
     try:
         jsondata = json.loads(open(fm.get_output_file("data.json").fullpath).read())
+        how = 'json'
     except autodata.files.NoFile, e:
         jsondata = None
 
     #if the experiment contains neither json nor readme, use the default args
     analysis_type = None
     if jsondata:
-        match = re.search("(.*-analysis.py)", jsondata['argv'])
+        match = re.search("(.*-analysis.*.py)", jsondata['argv'])
     elif readme:
-        match = re.search("(.*-analysis.py)", readme)
+        match = re.search("(.*-analysis.*.py)", readme)
     else:
         match = None
 
@@ -109,7 +112,7 @@ for uuid in todo:
                     print "\tOK %s" % other
 
     else:
-        print uuid, "NO ANALYSIS", fm.get_plot_dir()
+        print uuid, "NO ANALYSIS", fm.get_plot_dir(), how
 
 
 
