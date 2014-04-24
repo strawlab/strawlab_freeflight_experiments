@@ -39,12 +39,12 @@ FLY_DIST_MIN_DIST   = 0.0005    # minimum distance fly must move in above interv
 #START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
 
 # start volume defined as cube
-X_MIN = -0.20
-X_MAX =  0.20
-Y_MIN = -0.14
-Y_MAX =  0.14
-Z_MIN =  0.02
-Z_MAX =  0.36
+X_MIN = -0.30
+X_MAX =  0.30
+Y_MIN = -0.15
+Y_MAX =  0.15
+Z_MIN =  0.01
+Z_MAX =  0.38
 
 # time interval in seconds to check fly movement after lock on
 FLY_HEIGHT_CHECK_TIME = 0.5       
