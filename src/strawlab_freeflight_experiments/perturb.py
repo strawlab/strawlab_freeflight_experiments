@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.signal.waveforms as waveforms
+import scipy.interpolate as interp
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -153,6 +155,69 @@ class PerturberStep(Perturber):
 
     def get_value_limits(self):
         return min(self.value,0),max(self.value,0)
+
+class PerturberChirp(Perturber):
+
+    DEFAULT_DESC = "linear|1.0|3|1.0|5.0|0.4"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'linear'|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+
+        duration is the duration of the step.
+
+        ratio_min is the minimum amount of the path the target must have flown
+
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        print descriptor
+        ctype,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 6)
+        if ctype not in ('linear','quadratic','logarithmic'):
+            raise Exception("Incorrect PerturberChirp configuration")
+
+        self.method = ctype
+        self.value = float(value)
+        self.t1 = float(t1)
+        self.f0 = float(f0)
+        self.f1 = float(f1)
+
+        #oversample by 10 times the framerate (100)
+        self._t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
+        self._w = waveforms.chirp(self._t,
+                                  f0=self.f0,
+                                  f1=self.f1,
+                                  t1=self.t1,
+                                  method=self.method) * self.value
+
+        #we can call this at slightly different times.
+        self._f = interp.interp1d(self._t, self._w,
+                                  kind='linear',
+                                  copy=False,
+                                  bounds_error=False,
+                                  fill_value=0.0)
+
+        Perturber.__init__(self, chunks, ratio_min, self.t1)
+
+    def __repr__(self):
+        return "<PerturberChirp %s value=%.1f duration=%.1f>" % (self.method, self.value, self.duration)
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        self.progress = framenumber - self._frame0
+        dt = now - self.now
+        finished = dt >= (0.99*self.duration)
+        return self._f(dt), finished
+
+    def get_perturb_vs_time(self, t0, t1):
+        t = np.linspace(t0,t1,num=2000)
+        v = self._f(t)
+        return t,v
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self):
+        return -self.value,self.value
 
 
 if __name__ == "__main__":
