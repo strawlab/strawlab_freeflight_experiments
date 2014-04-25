@@ -40,7 +40,12 @@ ZOOM_REGION_DISPLAY_WH = 100
 def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
     h5_file = combine.h5_file
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+    df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+
+    if show_values:
+        valid = df.fillna(method='ffill')
+    else:
+        valid = df
 
     camera = pymvg.CameraModel.load_camera_from_bagfile( open(calibration) )
 
@@ -161,6 +166,13 @@ def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
 
                 if show_framenumber:
                     _canv.text(str(framenumber),m["dw"]-100,m["dh"]-20, color_rgba=(0.5,0.5,0.5,1.0))
+
+                if show_values:
+                    h = 10
+                    for s in show_values:
+                        _canv.text("%s: %+.1f" % (s,dfrow[s]),
+                                   m["dw"]-200, h, color_rgba=(0.5,0.5,0.5,1.0))
+                        h += 12
                         
             canv.save()
 
@@ -192,6 +204,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--zoom-fly', action='store_true',
         help='render zoomed region around fly')
+    parser.add_argument(
+        '--show-values', type=str, default='',
+        help='comma separated list of extra colums to display')
 
     args = parser.parse_args()
     analysislib.args.check_args(parser, args, max_uuids=1)
@@ -222,6 +237,10 @@ if __name__ == "__main__":
 
     print "h5 fname", combine.h5_file
 
+    if args.show_values:
+        show_values = args.show_values.split(',')
+    else:
+        show_values = []
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
