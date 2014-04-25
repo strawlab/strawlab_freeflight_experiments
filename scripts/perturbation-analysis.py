@@ -64,11 +64,17 @@ if __name__=='__main__':
                "rotation_rate":{},
     }
 
-    step_conds = [c for c in results if 'step' in c]
-    for cond in step_conds:
+    #step_conds = [c for c in results if not isinstance(sfe_perturb.get_perturb_class(c), sfe_perturb.NoPerturb)]
+    for cond in results:
 
-        step_desc = cond.split("/")[-1]
-        step_obj = sfe_perturb.get_perturb_class(step_desc)(step_desc)
+        perturb_desc = cond.split("/")[-1]
+        pklass = sfe_perturb.get_perturb_class(perturb_desc)
+
+        #only plot perturbations
+        if pklass == sfe_perturb.NoPerturb:
+            continue
+
+        step_obj = pklass(perturb_desc)
 
         r = results[cond]
 
