@@ -5,6 +5,14 @@ set -e
 TDIR=$(mktemp -d)
 
 python scripts/movies/movie-2up-trajectory.py \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/flycube2/Basler_21017221.bag \
+    --uuid 67541d2ccbcc11e3a15010bf48d7699b --idfilt 72 \
+    --show-values rotation_rate,perturb_progress \
+    --arena flycube \
+    --camera Basler_21017221 \
+    --outdir $TDIR
+
+python scripts/movies/movie-2up-trajectory.py \
     --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
     --uuid c9fdedcccafa11e3b9166c626d3a008a --idfilt 4762 \
     --show-values rotation_rate,perturb_progress \
