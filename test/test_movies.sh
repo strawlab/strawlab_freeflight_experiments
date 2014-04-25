@@ -5,12 +5,18 @@ set -e
 TDIR=$(mktemp -d)
 
 python scripts/movies/movie-2up-trajectory.py \
-    --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
+    --uuid c9fdedcccafa11e3b9166c626d3a008a --idfilt 4762 \
+    --show-values rotation_rate,perturb_progress \
+    --outdir $TDIR
+
+python scripts/movies/movie-2up-trajectory.py \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
     --uuid 1d06dfe0a2c711e2b7ca6c626d3a008a --idfilt 1278 --zoom-fly \
     --outdir $TDIR
 
 python scripts/movies/movie-1up.py \
-    --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
     --uuid 1d06dfe0a2c711e2b7ca6c626d3a008a --idfilt 1278 \
     --outdir $TDIR
 
@@ -20,7 +26,7 @@ sleep 5
 
 #post osg file
 python scripts/movies/movie-osgfile-virtualworld.py \
-    --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
     --uuid be130ece9db611e2b8fe6c626d3a008a \
     --movie-file /mnt/strawscience/movies/Flycave/be130ece9db611e2b8fe6c626d3a008a/Basler_21266086/1607.fmf \
     --idfilt 1607 \
@@ -31,7 +37,7 @@ python scripts/movies/movie-osgfile-virtualworld.py \
 
 ##gopro osg file and movie camera
 python scripts/movies/movie-osgfile-virtualworld.py \
-    --calibration /home/strawlab/ros-flycave.electric.boost1.46/flycave/calibration/feb2013/colormoviecamcalib.bag \
+    --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/attic/feb2013/colormoviecamcalib.bag \
     --uuid 39665d18d81011e292be6c626d3a008a \
     --movie-file /mnt/strawscience/movies/Flycave/39665d18d81011e292be6c626d3a008a/Basler_21266086/16.fmf \
     --idfilt 16 \
