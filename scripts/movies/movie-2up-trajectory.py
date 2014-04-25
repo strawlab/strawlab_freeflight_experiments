@@ -168,7 +168,7 @@ def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
                     _canv.text(str(framenumber),m["dw"]-100,m["dh"]-20, color_rgba=(0.5,0.5,0.5,1.0))
 
                 if show_values:
-                    h = 10
+                    h = 15
                     for s in show_values:
                         _canv.text("%s: %+.1f" % (s,dfrow[s]),
                                    m["dw"]-200, h, color_rgba=(0.5,0.5,0.5,1.0))
