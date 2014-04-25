@@ -23,6 +23,7 @@ import analysislib.args
 import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
+import analysislib.arenas as aarenas
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
@@ -55,7 +56,7 @@ if __name__=='__main__':
     aplt.save_args(combine, args)
     aplt.save_results(combine, args)
 
-    arena = aplt.get_arena_from_args(args)
+    arena = aarenas.get_arena_from_args(args)
     (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
 
     TO_PLOT = {"dtheta":{"ylim":(-10,10)},

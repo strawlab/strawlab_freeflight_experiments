@@ -1,5 +1,14 @@
 import numpy as np
 
+def get_arena_from_args(args):
+    if args.arena=='flycave':
+        arena = FlyCaveCylinder(radius=0.5)
+    elif args.arena=='flycube':
+        arena = FlyCube()
+    else:
+        raise ValueError('unknown arena %r'%args.arena)
+    return arena
+
 class ArenaBase(object):
     def get_xtick_locations(self):
         # override to specify tick locations, otherwise, auto-determined

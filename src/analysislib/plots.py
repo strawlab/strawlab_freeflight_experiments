@@ -44,15 +44,6 @@ def _perm_check(args):
 def get_safe_filename(s):
     return s.translate(None, ''.join("\"\\/.+|'"))
 
-def get_arena_from_args(args):
-    if args.arena=='flycave':
-        arena = analysislib.arenas.FlyCaveCylinder(radius=0.5)
-    elif args.arena=='flycube':
-        arena = analysislib.arenas.FlyCube()
-    else:
-        raise ValueError('unknown arena %r'%args.arena)
-    return arena
-
 def show_plots():
     try:
         __IPYTHON__
@@ -181,7 +172,7 @@ def layout_trajectory_plots(ax, arena, in3d):
 def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -235,7 +226,7 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
 def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
     if name is None:
         name = '%s.hist' % combine.fname
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -467,7 +458,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
     if name is None:
         name = '%s.infinity' % combine.fname
 
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
 
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
@@ -503,7 +494,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
 
     _fig = plt.figure(figsize=figsize)
 

@@ -30,6 +30,7 @@ import analysislib.args
 import analysislib.util
 import analysislib.movie
 import analysislib.combine
+import analysislib.arenas
 
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
@@ -60,6 +61,8 @@ def draw_flycube2(ax):
 
 def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
     h5_file = combine.h5_file
+
+    arena = analysislib.arenas.get_arena_from_args(args)
 
     df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
@@ -183,7 +186,7 @@ def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
                 with _canv.get_figure(m["dw"], m["dh"]) as fig:
                     analysislib.movie.plot_xyz(fig, movie.frame_number,
                         xhist, yhist, zhist, x, y, z,
-                        draw_arena_callback=draw_flycube2,
+                        arena
                     )
 
                 if show_framenumber:
