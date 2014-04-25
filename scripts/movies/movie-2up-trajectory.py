@@ -27,6 +27,7 @@ import autodata.files
 
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.args
+import analysislib.util
 import analysislib.movie
 import analysislib.combine
 
@@ -36,9 +37,8 @@ MARGIN = 0
 ZOOM_REGION_WH = 50
 ZOOM_REGION_DISPLAY_WH = 100
 
-def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly):
-    combine = analysislib.combine.CombineH5()
-    combine.add_h5_file(h5_file)
+def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+    h5_file = combine.h5_file
 
     valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
 
@@ -173,7 +173,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir")
+    parser = analysislib.args.get_parser(zfilt='none', rfilt='none')
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
         help='path to fmf file (if not using --uuid)')
@@ -194,23 +194,19 @@ if __name__ == "__main__":
         help='render zoomed region around fly')
 
     args = parser.parse_args()
-
-    if (not args.h5_file) and (not args.uuid):
-        parser.error("Specify a UUID or a H5 file")
+    analysislib.args.check_args(parser, args, max_uuids=1)
 
     if args.uuid is not None:
-        if len(args.uuid) > 1:
-            parser.error("Only one uuid supported for making movies")
 
         uuid = args.uuid[0]
 
-        fm = autodata.files.FileModel(basedir=args.basedir)
-        fm.select_uuid(uuid)
-        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+        suffix = analysislib.util.get_csv_for_args(args)
+        combine = analysislib.util.get_combiner(suffix)
+        combine.add_from_args(args)
     else:
         uuid = ''
-
-        h5_file = args.h5_file
+        combine = analysislib.combine.CombineH5()
+        combine.add_h5_file(args.h5_file)
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
@@ -224,11 +220,12 @@ if __name__ == "__main__":
     if not obj_ids:
         parser.error("You must specify --idfilt or --fmf-file")
 
-    print "h5 fname", h5_file
+    print "h5 fname", combine.h5_file
+
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly)
+            doit(combine, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
 
