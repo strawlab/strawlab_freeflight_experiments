@@ -12,8 +12,6 @@ import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
-                    "uuid", "zfilt", "rfilt", "idfilt","show","reindex","lenfilt",
-                    "zfilt-min","zfilt-max","rfilt-max","outdir","arena","csv-file","h5-file",
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
