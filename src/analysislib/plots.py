@@ -749,6 +749,28 @@ def save_results(combine, args, maxn=20):
 
         json.dump(data, f)
 
+    spanned = combine.get_spanned_results()
+    if spanned:
+        name = combine.get_plot_filename("SPANNED_OBJ_IDS.md")
+        with open(name, 'w') as f:
+            l = "object ids which span multiple conditions"
+            f.write("%s\n"%l)
+            f.write("%s\n\n"%('-'*len(l)))
+
+            f.write("| obj_id | condition | length (frames) |\n")
+            f.write("| --- | --- | --- |\n")
+            for oid,sval in spanned.iteritems():
+                for i,s in enumerate(sval):
+                    #make condition markdown table safe
+                    cond = s[0].replace('|','&#124;')
+                    if i == 0:
+                        #first row
+                        f.write("| %s | %s | %s |\n" % (oid, cond, s[1]))
+                    else:
+                        f.write("|    | %s | %s |\n" % (cond, s[1]))
+
+            f.write("\n")
+
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
 #http://stackoverflow.com/questions/8802918/my-matplotlib-title-gets-cropped
