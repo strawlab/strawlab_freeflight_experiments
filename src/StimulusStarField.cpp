@@ -199,7 +199,7 @@ osg::Vec4 StimulusStarField::get_clear_color() const {
 
 std::vector<std::string> StimulusStarField::get_topic_names() const {
     std::vector<std::string> result;
-    result.push_back("velocity");
+    result.push_back("star_velocity");
     return result;
 }
 
@@ -243,7 +243,7 @@ void StimulusStarField::setVelocity(double x, double y, double z) {
 std::string StimulusStarField::get_message_type(const std::string& topic_name) const {
     std::string result;
 
-    if (topic_name=="velocity") {
+    if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
     } else {
         throw std::runtime_error("unknown topic name");
