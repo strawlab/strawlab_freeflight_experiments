@@ -15,7 +15,7 @@ import autodata.files
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 class ReplayStimulus(object):
-    def __init__(self, colname="", filename="", uuid_oid_csv=None, dt=0.01):
+    def __init__(self, colname="", filename="", uuid_oid_csv=None, dt=0.01, default=None):
         if filename:
             df = pd.read_pickle(filename)
             self._init(colname, df, dt)
@@ -23,10 +23,14 @@ class ReplayStimulus(object):
             uuid,oid,csv = uuid_oid_csv
             df,dt = self.get_df(uuid,oid,csv)
             self._init(colname, df, dt)
+        elif default is not None:
+            self._s = None
+            self._default = default
         else:
             rospy.logwarn("No dataframe nor (uuid,oid,csv) tuple "\
                           "specified. Replay disabled")
             self._s = None
+            self._default = None
 
         self.reset()
 
@@ -61,6 +65,8 @@ class ReplayStimulus(object):
         if self._s is None:
             if default is not None:
                 return default
+            elif self._default is not None:
+                return self._default
             raise ValueError("No replay data loaded and no default specified")
 
         v = np.nan
@@ -82,7 +88,8 @@ if __name__ == "__main__":
         r2 = ReplayStimulus()
 
     r3 = ReplayStimulus()
+    r4 = ReplayStimulus(default=9.9)
 
     for i in range(10):
-        print r1.next(),r2.next(0.0),r3.next(0.0)
+        print r1.next(),r2.next(0.0),r3.next(0.0),r4.next()
 
