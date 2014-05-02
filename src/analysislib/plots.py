@@ -169,7 +169,8 @@ def layout_trajectory_plots(ax, arena, in3d):
     if not in3d:
         ax.yaxis.set_ticks_position('left')
 
-def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
     arena = analysislib.arenas.get_arena_from_args(args)
@@ -179,9 +180,9 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
         axes = set()
         for i,(current_condition,r) in enumerate(results.iteritems()):
             if in3d:
-                ax = fig.add_subplot(fignrows,figncols,1+i,projection="3d")
+                ax = fig.add_subplot(1,figncols,1+i,projection="3d")
             else:
-                ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+                ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
             axes.add( ax )
 
             if not r['count']:
@@ -223,7 +224,8 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
-def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
+def plot_histograms(combine, args, figncols, name=None, colorbar=False):
+    figsize = (5.0*figncols,(2*5.0) + 2)     #2 rows
     if name is None:
         name = '%s.hist' % combine.fname
     arena = analysislib.arenas.get_arena_from_args(args)
@@ -320,14 +322,15 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 
-def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
+def plot_tracking_length(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.track' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(1, figncols,1+i,sharex=ax,sharey=ax)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
@@ -418,14 +421,15 @@ def plot_nsamples(combine, args, name=None):
                 ncol=1 if nconds <= 4 else 2
             )
 
-def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
+def plot_aligned_timeseries(combine, args, figncols, frames_before, valname, dvdt, name=None):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
