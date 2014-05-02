@@ -230,6 +230,7 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
+        axz = None
 
         (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
         x_range = xmax-xmin
@@ -239,6 +240,8 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
         eps = 1e-10
         xbins = np.arange(xmin,xmax+eps,binsize)
         ybins = np.arange(ymin,ymax+eps,binsize)
+        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/20.0)
+        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/20.0)
 
         cmap=plt.get_cmap('jet')
         valmax=0
@@ -255,27 +258,25 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
 
         norm = colors.Normalize(0,valmax)
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(2, figncols,1+i,sharex=ax,sharey=ax)
+            axz = fig.add_subplot(2, figncols,figncols+1+i,sharex=axz,sharey=axz)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
+            #XY
             allx = np.concatenate( [df['x'].values for df in r['df']] )
             ally = np.concatenate( [df['y'].values for df in r['df']] )
-            allz = np.concatenate( [df['z'].values for df in r['df']] )
-
             dur = len(allx)*dt
 
             hdata,xedges,yedges = np.histogram2d( allx, ally,
                                                   bins=[xbins,ybins] )
-
             extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
             im = ax.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
                       origin='lower', cmap=cmap, norm=norm)
 
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
-
             ax.set_aspect('equal')
 
             ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
@@ -287,6 +288,30 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
+
+            #RZ
+            allr = np.concatenate( [df['radius'].values for df in r['df']] )
+            allz = np.concatenate( [df['z'].values for df in r['df']] )
+
+            dur = len(allr)*dt
+
+            hdata,xedges,yedges = np.histogram2d( allr, allz,
+                                                  bins=[rbins,zbins] )
+            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+            im = axz.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
+                      origin='lower', cmap=cmap, norm=norm)
+
+            axz.set_aspect('equal')
+
+            axz.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(axz, 't=%.1fs n=%d' % (dur,r['count']))
+
+            axz.set_ylabel( 'z (m)' )
+            axz.set_xlabel( 'r (m)' )
+
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
+            axz.set_xlim(0,max(xmax,ymax))
+            axz.set_ylim(zmin,zmax)
 
             if colorbar:
                 fig.colorbar(im)
