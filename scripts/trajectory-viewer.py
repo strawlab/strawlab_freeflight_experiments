@@ -22,6 +22,9 @@ if __name__=='__main__':
         "--save", action="store_true", help="save a csv of this trajectory")
     parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
+    parser.add_argument(
+        "--show-extra", help="show these fields too (comma separated list)",
+        default="")
     
     args = parser.parse_args()
 
@@ -39,6 +42,9 @@ if __name__=='__main__':
     combine.add_from_uuid(uuid,suffix,args=args)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
+    for extra in args.show_extra.split(','):
+        plot_axes.append(extra)
+
     ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     results, dt = combine.get_results()
