@@ -519,7 +519,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
@@ -535,6 +535,10 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     _ax.set_ylim(-0.5, 0.5)
     arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
     _linexy,_linexypt = _ax.plot([], [], 'k-', [], [], 'r.')
+    if show_trg:
+        _linetrgpt, = _ax.plot([], [], 'g.')
+    else:
+        _linetrgpt = None
 
     _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
     _linez,_linezpt = _ax.plot([], [], 'k-', [], [], 'r.')
@@ -543,6 +547,8 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     _ax.set_ylabel("z")
 
     _init_axes = [_linexy,_linexypt,_linez,_linezpt]
+    if _linetrgpt is not None:
+        _init_axes.append(_linetrgpt)
     _line_axes = collections.OrderedDict()
     _pt_axes   = collections.OrderedDict()
 
@@ -571,6 +577,8 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     def init():
         _linexy.set_data(_df['x'],_df['y'])
         _linexypt.set_data([], [])
+        if _linetrgpt is not None:
+            _linetrgpt.set_data([], [])
 
         #_linez.set_data(df.index,df['z'])
         #_linezpt.set_data([], [])
@@ -582,19 +590,27 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         return _init_axes
 
     # animation function.  This is called sequentially
-    def animate(i, df, xypt, pt_axes):
+    def animate(i, df, xypt, trgpt, pt_axes):
+        changed = []
         xypt.set_data(df['x'][i], df['y'][i])
+        changed.append(xypt)
+        if trgpt is not None:
+            tx = df['trg_x'][i]
+            if not np.isnan(tx):
+                trgpt.set_data(tx, df['trg_y'][i])
+            changed.append(trgpt)
+
         for p in pt_axes:
             pt_axes[p].set_data(i, df[p][i])
 
-        return [xypt] + pt_axes.values()
+        return changed + pt_axes.values()
 
     anim = animation.FuncAnimation(_fig,
                                animate,
                                frames=_df.index,
                                init_func=init,
                                interval=50, blit=True,
-                               fargs=(_df,_linexypt,_pt_axes),
+                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes),
     )
 
     return anim

@@ -20,6 +20,8 @@ if __name__=='__main__':
         "--animate", action="store_true")
     parser.add_argument(
         "--save", action="store_true", help="save a csv of this trajectory")
+    parser.add_argument(
+        "--show-target", action="store_true", help="show target on path (useful with --animate)")
     
     args = parser.parse_args()
 
@@ -57,6 +59,7 @@ if __name__=='__main__':
                             plot_axes=plot_axes,
                             ylimits=ylimits,
                             title=title,
+                            show_trg=args.show_target and ('trg_x' in df.columns)
                     )
                     anims.append(anim)
                 else:
