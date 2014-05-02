@@ -795,6 +795,21 @@ def autowrap_text(event):
     # Reset the draw event callbacks
     fig.canvas.callbacks.callbacks[event.name] = func_handles
 
+def _dumb_wrap(text, width):
+    """
+    A word-wrap function that preserves existing line breaks
+    and most spaces in the text. Expects that existing line
+    breaks are posix newlines (\n).
+    """
+    return reduce(lambda line, word, width=width: '%s%s%s' %
+                  (line,
+                   ' \n'[(len(line)-line.rfind('\n')-1
+                         + len(word.split('\n',1)[0]
+                              ) >= width)],
+                   word),
+                  text.split(' ')
+                 )
+
 def _do_autowrap_text(textobj, renderer):
     """Wraps the given matplotlib text object so that it exceed the boundaries
     of the axis it is plotted in."""
@@ -836,14 +851,14 @@ def _do_autowrap_text(textobj, renderer):
         #contain negative numbers (i.e. -ve).
         #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
-
         safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
-        #reverse the above transform
-        wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
-    except TypeError:
-        # This appears to be a single word
-        wrapped_text = textobj.get_text()
+    except TypeError, e:
+        wrapped_text = _dumb_wrap(safe_txt, wrap_width)
+
+    #reverse the above transform
+    wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
+
     textobj.set_text(wrapped_text)
 
 def _min_dist_inside(point, rotation, box):
