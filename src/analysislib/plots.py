@@ -31,7 +31,7 @@ SVG_SUFFIX=os.environ.get('SVG_SUFFIX','.svg')
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
-TITLE_FONT_SIZE     = 10
+TITLE_FONT_SIZE     = 9
 
 OUTSIDE_LEGEND = True
 
