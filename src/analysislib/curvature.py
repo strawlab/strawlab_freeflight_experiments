@@ -271,13 +271,8 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,corra_name,corrb_name,ax,title='
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-    print "correlation_options",correlation_options
-
     hkwargs = {}
-    if correlation_options is not None:
-        if (corra_name == "rotation_rate") and (corrb_name == "dtheta"):
-            hkwargs["range"] = [correlation_options.get("rrate_range",[-1.45, 1.45]),
-                                correlation_options.get("dtheta_range",[-10, 10])]
+    hkwargs["range"] = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',None)
 
     try:
         func = ax.hist2d
@@ -356,9 +351,9 @@ def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_na
             )
 
             if hist2d:
-                plot_hist_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options[corra_name])
+                plot_hist_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
             else:
-                plot_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options[corra_name])
+                plot_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
 
             i += 1
 
@@ -438,6 +433,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                 numpoints=1,
                 prop={'size':LEGEND_TEXT_BIG} if len(nens) <= 4 else {'size':LEGEND_TEXT_SML},
             )
+            ax.set_title("%s vs %s" % (corra,corrb))
             ax.set_xlabel("latency, shift (s)")
             ax.set_ylabel("correlation")
 
@@ -460,7 +456,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                         fig.gca(),
                         title=current_condition,
                         note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens[current_condition]),
-                        correlation_options=correlation_options[corra]
+                        correlation_options=correlation_options
                 )
 
                 fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
@@ -484,9 +480,11 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                 #in rotation_rate) because mpl and numpy
                 #histogram functions handle/ignore them fine.
                 all_data = np.concatenate(tmp)
-                n,bins,patches = ax.hist(all_data,
+                clean_data = all_data[~np.isnan(all_data)]
+                n,bins,patches = ax.hist(clean_data,
                                       bins=100,
                                       normed=histogram_options['normed'].get(h,True),
+                                      range=histogram_options['range'].get(h),
                                       histtype='step', alpha=0.75, label=current_condition
                 )
             ax.legend(
