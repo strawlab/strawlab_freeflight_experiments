@@ -33,17 +33,17 @@ def get_combiner(suffix):
     #and put in the dataframe - i.e. not strings.
     if suffix.startswith("perturbation"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate","v_offset_rate","perturb_progress",
+                                "ratio","rotation_rate","v_offset_rate","perturb_progress","trg_x","trg_y","trg_z",
                                 csv_suffix=suffix
         )
     elif suffix.startswith("rotation"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate","v_offset_rate",
+                                "ratio","rotation_rate","v_offset_rate","trg_x","trg_y","trg_z",
                                 csv_suffix=suffix
         )
     elif suffix.startswith("conflict"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate","v_offset_rate",
+                                "ratio","rotation_rate","v_offset_rate","trg_x","trg_y","trg_z",
                                 csv_suffix=suffix
         )
     elif suffix.startswith("confine"):
@@ -53,7 +53,7 @@ def get_combiner(suffix):
         )
     elif suffix.startswith("translation"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "stim_x","stim_y","stim_z",
+                                "stim_x","stim_y","stim_z","trg_x","trg_y","trg_z",
                                 csv_suffix=suffix
         )
     elif not suffix:
