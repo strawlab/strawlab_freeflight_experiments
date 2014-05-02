@@ -53,7 +53,7 @@ def get_combiner(suffix):
         )
     elif suffix.startswith("translation"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "stim_x","stim_y","stim_z","trg_x","trg_y","trg_z",
+                                "ratio","stim_x","stim_y","stim_z","trg_x","trg_y","trg_z",
                                 csv_suffix=suffix
         )
     elif not suffix:
