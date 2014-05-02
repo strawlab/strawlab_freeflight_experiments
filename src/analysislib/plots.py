@@ -305,9 +305,6 @@ def plot_histograms(combine, args, figncols, name=None, colorbar=False):
 
             axz.set_aspect('equal')
 
-            axz.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
-            make_note(axz, 't=%.1fs n=%d' % (dur,r['count']))
-
             axz.set_ylabel( 'z (m)' )
             axz.set_xlabel( 'r (m)' )
 
