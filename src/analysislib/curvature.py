@@ -233,17 +233,20 @@ def calculate_correlation_and_remove_nans(a,b):
 
     return clean_a,clean_b,np.corrcoef(clean_a,clean_b)[0,1]
 
-def plot_rotation_rate_vs_dtheta(rr,dtheta,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
+def plot_rotation_rate_vs_dtheta(corra,corrb,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
     if title:
         ax.set_title(title)
     if note:
         aplt.make_note(ax,note)
-    ax.plot(rr,dtheta,'k.')
+    ax.plot(corra,corrb,'k.')
     if correlation_options is not None:
-        ax.set_ylim(*correlation_options.get("dtheta_range",[-10, 10]))
-        ax.set_xlim(*correlation_options.get("rrate_range",[-1.45, 1.45]))
-    ax.set_xlabel('rotation rate')
-    ax.set_ylabel('dtheta')
+        xlim,ylim = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',(None,None))
+        if xlim is not None:
+            ax.set_xlim(*xlim)
+        if ylim is not None:
+            ax.set_ylim(*ylim)
+    ax.set_xlabel(corra_name)
+    ax.set_ylabel(corrb_name)
 
 def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,correlation_options=None):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
