@@ -15,6 +15,7 @@ import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.legend as mlegend
+import matplotlib.text as mtext
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 
@@ -65,6 +66,10 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
         for artist in ax.get_children():
             if isinstance(artist, mlegend.Legend):
                 bbox_extra_artists.append( artist )
+    for c in fig.get_children():
+        if isinstance(c, matplotlib.text.Text):
+            #suptitle
+            bbox_extra_artists.append( c )
 
     fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
 
