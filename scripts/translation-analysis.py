@@ -39,35 +39,35 @@ if __name__=='__main__':
     print "files saved as", fname
     ncond = combine.get_num_conditions()
 
-#    aplt.save_args(combine, args)
-#    aplt.save_results(combine, args)
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
 
-#    aplt.save_most_loops(combine, args)
+    aplt.save_most_loops(combine, args)
 
-#    aplt.plot_trial_times(combine, args)
+    aplt.plot_trial_times(combine, args)
 
-#    aplt.plot_traces(combine, args,
-#                figncols=ncond,
-#                in3d=False,
-#                show_starts=True,
-#                show_ends=True)
+    aplt.plot_traces(combine, args,
+                figncols=ncond,
+                in3d=False,
+                show_starts=True,
+                show_ends=True)
 
-#    aplt.plot_traces(combine, args,
-#                figncols=ncond,
-#                in3d=True)
+    aplt.plot_traces(combine, args,
+                figncols=ncond,
+                in3d=True)
 
-#    aplt.plot_histograms(combine, args,
-#                figncols=ncond)
+    aplt.plot_histograms(combine, args,
+                figncols=ncond)
 
-#    aplt.plot_nsamples(combine, args)
+    aplt.plot_nsamples(combine, args)
 
-#    if args.plot_tracking_stats and len(args.uuid) == 1:
-#        fplt = autodata.files.FileView(
-#                  autodata.files.FileModel(show_progress=True,filepath=combine.h5_file))
-#        with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
-#            fplt.plot_tracking_data(
-#                        f.add_subplot(1,2,1),
-#                        f.add_subplot(1,2,2))
+    if args.plot_tracking_stats and len(args.uuid) == 1:
+        fplt = autodata.files.FileView(
+                  autodata.files.FileModel(show_progress=True,filepath=combine.h5_file))
+        with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
+            fplt.plot_tracking_data(
+                        f.add_subplot(1,2,1),
+                        f.add_subplot(1,2,2))
 
     #correlation and histogram plots
     correlations = (('stim_x','vx'),)#('stim_z','vz'))
