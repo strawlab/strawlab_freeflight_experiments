@@ -345,6 +345,9 @@ def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_na
         ccefs[shift] = ccef
 
         if shift in latencies_to_plot:
+            if fig is None:
+                continue
+
             ax = fig.add_subplot(gs[i])
             ax.text(0.95, 0.05,
                 "%.3fs, corr=%.2f" % (shift*data_dt, ccef),
@@ -360,6 +363,9 @@ def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_na
                 plot_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
 
             i += 1
+
+    if fig is None:
+        return ccefs
 
     for ax in fig.axes:
         ax.label_outer()
