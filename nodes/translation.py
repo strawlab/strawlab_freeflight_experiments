@@ -28,7 +28,7 @@ from strawlab_freeflight_experiments.topics import *
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 50.0*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -57,12 +57,16 @@ MAX_ROTATION_RATE = 1.5
 #             z_gain"
 #
 CONDITIONS = [
-              "infinity.svg/+3.0/0.1/+2.0",
+              "infinity.svg/+5.0/0.1/+5.0",
+              "infinity.svg/+7.0/0.1/+7.0",
+              "infinity.svg/+10.0/0.1/+10.0",
+              "infinity.svg/+0.0/0.1/+0.0",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set(CONDITIONS[0:3])
+MAX_COOL = 10
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -107,6 +111,8 @@ class Node(object):
 
             self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
             self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
+
+        self.n_cool = 0
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
@@ -362,8 +368,10 @@ class Node(object):
 
         if (self.ratio_total > 2) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
-                self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
-                self.pub_save.publish(old_id)
+                if self.n_cool < MAX_COOL:
+                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+                    self.pub_save.publish(old_id)
+                    self.n_cool += 1
 
         self.update()
 
