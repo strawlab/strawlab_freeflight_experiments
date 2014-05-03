@@ -275,7 +275,8 @@ def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,corra_name,corrb_name,ax,title='
     ax.set_ylabel(corrb_name)
 
     hkwargs = {}
-    hkwargs["range"] = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',None)
+    if correlation_options is not None:
+        hkwargs["range"] = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',None)
 
     try:
         func = ax.hist2d
