@@ -415,8 +415,8 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
                                                     corra_data,corrb_data,corra,corrb,
                                                     dt,
                                                     hist2d=True,
-                                                    latencies=range(0,40,2)+[5,15,40,80],
-                                                    latencies_to_plot=(0,2,5,8,10,15,20,40,80),
+                                                    latencies=correlation_options.get('latencies',range(0,40,2)+[5,15,40,80]),
+                                                    latencies_to_plot=correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)),
                                                     extra_title="\n%s" % current_condition,
                                                     correlation_options=correlation_options
                 )

@@ -72,7 +72,10 @@ if __name__=='__main__':
     #correlation and histogram plots
     correlations = (('stim_x','vx'),)#('stim_z','vz'))
     histograms = ("velocity","dtheta","stim_x","vx")
-    correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]}}
+    correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
+                           "latencies":range(0,400,10),
+                           "latencies_to_plot":(0,10,20,40,80,160,200,300,400),
+    }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True},
                          "range":{"velocity":(0,1),
