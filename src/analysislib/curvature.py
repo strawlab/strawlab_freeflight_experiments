@@ -395,14 +395,19 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         #backwards compatible file extensions
         fsuffix = "" if ((corra == 'rotation_rate') and (corrb == 'dtheta')) else "_%s_%s" % (corra,corrb)
 
-        ccef_sweeps = {}
+        #find conditions with enough data
+        valid_conds = []
         for current_condition in sorted(nens):
+            tmp = flat_data[corra][current_condition]
+            if len(tmp) > 0:
+                valid_conds.append(current_condition)
+
+        ccef_sweeps = {}
+        for current_condition in valid_conds:
             fn = aplt.get_safe_filename(current_condition)
             with aplt.mpl_fig("%s_%s_corr_latency%s" % (fname, fn, fsuffix), args, figsize=(10,8)) as fig:
 
                 tmp = flat_data[corra][current_condition]
-                if len(tmp)==0:
-                    raise NotEnoughDataError
                 corra_data = np.concatenate(tmp)
                 corrb_data = np.concatenate(flat_data[corrb][current_condition])
 
@@ -421,7 +426,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         max_corr_at_latency = {}
         with aplt.mpl_fig("%s_corr_latency%s" % (fname, fsuffix), args, ) as fig:
             ax = fig.gca()
-            for current_condition in sorted(nens):
+            for current_condition in valid_conds:
                 ax.plot(
                     dt*np.array(ccef_sweeps[current_condition].keys()),
                     ccef_sweeps[current_condition].values(),
