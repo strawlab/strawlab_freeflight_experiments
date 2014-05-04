@@ -490,7 +490,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
             for current_condition in sorted(nens):
                 tmp = flat_data[h][current_condition]
                 if len(tmp)==0:
-                    raise NotEnoughDataError
+                    continue
                 #note: it is not necessary to remove NaNs here (such as
                 #in rotation_rate) because mpl and numpy
                 #histogram functions handle/ignore them fine.
