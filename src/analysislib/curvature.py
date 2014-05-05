@@ -233,7 +233,7 @@ def calculate_correlation_and_remove_nans(a,b):
 
     return clean_a,clean_b,np.corrcoef(clean_a,clean_b)[0,1]
 
-def plot_rotation_rate_vs_dtheta(corra,corrb,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
+def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
     if title:
         ax.set_title(title)
     if note:
@@ -248,7 +248,7 @@ def plot_rotation_rate_vs_dtheta(corra,corrb,corra_name,corrb_name,ax,title='',n
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-def plot_hist_rotation_rate_vs_dtheta(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,correlation_options=None):
+def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,correlation_options=None):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -358,9 +358,9 @@ def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_na
             )
 
             if hist2d:
-                plot_hist_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
+                plot_hist_corra_vs_corrb_pooled(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
             else:
-                plot_rotation_rate_vs_dtheta(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
+                plot_scatter_corra_vs_corrb_pooled(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
 
             i += 1
 
@@ -466,7 +466,7 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
 
             fn = aplt.get_safe_filename(current_condition)
             with aplt.mpl_fig("%s_%s" % (fname,fn), args) as fig:
-                plot_hist_rotation_rate_vs_dtheta(
+                plot_hist_corra_vs_corrb_pooled(
                         rrate,dtheta,corra,corrb,
                         fig.gca(),
                         title=current_condition,
