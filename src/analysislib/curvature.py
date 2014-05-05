@@ -506,17 +506,12 @@ def flatten_data(args, combine, flatten_columns):
             if len(df) < MIN_ROTATION_RATE_SAMPLES:
                 continue
 
-            #calc_unwrapped_ratio(df, dt)
-            #goodfly = df['ratiouw'].max() - df['ratiouw'].min()
-            #if goodfly > 0.2:
-            #    df = remove_pre_infinity(df)
-
             try:
                 for h in flatten_columns:
                     flat_data[h][current_condition].append(df[h].values)
                 nens[current_condition] += 1
             except Exception, e:
-                print "ERROR",df,e
+                pass
 
     return flat_data, nens
 
