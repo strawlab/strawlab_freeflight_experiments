@@ -208,31 +208,6 @@ def calc_interpolate_dataframe(df,dt,columns):
             #no such column
             pass
 
-def calculate_correlation_and_remove_nans(a,b):
-    #the remaining nans after the dataframe being filled lie at the start
-    #of individual trials. a and b now contain many many concatinated trials
-    #so remove all data where one partner is nan
-    nans_a, = np.where(np.isnan(a))
-    nans_b, = np.where(np.isnan(b))
-
-    nans_all = np.union1d(nans_a, nans_b)
-
-    clean_a = np.delete(a,nans_all)
-    clean_b = np.delete(b,nans_all)
-
-    if DEBUG:
-        assert len(clean_b) == len(clean_a)
-        assert len(a) == len(b)
-
-        nc = len(a) - len(clean_a)
-        print "CLEANED %.1f%% nans (%d from %d points)" % (
-                                100 * (float(nc) / len(a)), nc, len(a))
-
-        assert np.isnan(clean_a).sum() == 0
-        assert np.isnan(clean_b).sum() == 0
-
-    return clean_a,clean_b,np.corrcoef(clean_a,clean_b)[0,1]
-
 def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
     if title:
         ax.set_title(title)
@@ -285,73 +260,44 @@ def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',
 
     return func(rr,dtheta,bins=nbins,**hkwargs)
 
-def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_name,data_dt,hist2d=False,latencies=None,latencies_to_plot=None,extra_title='',correlation_options=None):
+def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, corrb):
 
-    if latencies is None:
-        latencies = (0,2,5,8,10,15,20,40,80)
-    if latencies_to_plot is None:
-        latencies_to_plot = set(latencies)
+    for i,(_current_condition,r) in enumerate(results.iteritems()):
+        if _current_condition != condition:
+            continue
 
-    ccefs = collections.OrderedDict()
+        all_corra = []
+        all_corrb = []
 
-    i = 0
-    gs = gridspec.GridSpec(3, 3)
+        for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
 
-    for shift in sorted(latencies):
-        if shift == 0:
-            shift_a = corra_data
-            shift_b = corrb_data
-        else:
-            shift_a = corra_data[0:-shift]
-            shift_b = corrb_data[shift:]
-
-        clean_a,clean_b,ccef = calculate_correlation_and_remove_nans(shift_a,shift_b)
-        ccefs[shift] = ccef
-
-        if shift in latencies_to_plot:
-            if fig is None:
+            if len(df) < shift:
                 continue
 
-            ax = fig.add_subplot(gs[i])
-            ax.text(0.95, 0.05,
-                "%.3fs, corr=%.2f" % (shift*data_dt, ccef),
-                verticalalignment='bottom', horizontalalignment='right',
-                transform=ax.transAxes,
-                color='red',
-                fontsize=8,
-            )
+            a = df[corra].shift(shift).values
+            b = df[corrb].values
 
-            if hist2d:
-                plot_hist_corra_vs_corrb_pooled(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
-            else:
-                plot_scatter_corra_vs_corrb_pooled(clean_a,clean_b,corra_name,corrb_name,ax,correlation_options=correlation_options)
+            valid_a = ~np.isnan(a)
+            valid_b = ~np.isnan(b)
+            valid_ab = np.logical_and(valid_a, valid_b)
 
-            i += 1
+            all_corra.append(a[valid_ab])
+            all_corrb.append(b[valid_ab])
 
-    if fig is None:
-        return ccefs
+        nens = len(all_corra)
+        all_corra = np.concatenate(all_corra)
+        all_corrb = np.concatenate(all_corrb)
 
-    for ax in fig.axes:
-        ax.label_outer()
-        if not ax.is_first_col():
-            ax.set_ylabel('')
-        if not ax.is_last_row():
-            ax.set_xlabel('')
+    return all_corra, all_corrb, nens
 
-    NAMES = {"dtheta":r'turn rate ($\mathrm{d}\theta / dt$)',
-             "rotation_rate":r'rotation rate ($\mathrm{rad} s^{-1}$)'}
-
-    fig.subplots_adjust(wspace=0.1,hspace=0.1,top=0.92)
-    fig.suptitle(r'Correlation between %s and %s per latency correction%s' % (
-                        NAMES.get(corra_name,corra_name), NAMES.get(corrb_name,corrb_name), extra_title),
-                 fontsize=12,
-    )
-
-    return ccefs
-
-def plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options):
+def plot_correlation_analysis(args, combine, correlations, correlation_options):
     results,dt = combine.get_results()
     fname = combine.fname
+
+    hist2d = correlation_options.get('hist2d', True)
+    latencies = sorted(correlation_options.get('latencies',range(0,40,2)+[5,15,40,80]))
+    latencies_to_plot = sorted(correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)))
+    plot_errorbars = correlation_options.get('plot_errorbars')
 
     corr_latencies = {}
 
@@ -359,88 +305,119 @@ def plot_correlation_analysis(args, combine, flat_data, nens, correlations, corr
         #backwards compatible file extensions
         fsuffix = "" if ((corra == 'rotation_rate') and (corrb == 'dtheta')) else "_%s_%s" % (corra,corrb)
 
-        #find conditions with enough data
-        valid_conds = []
-        for current_condition in sorted(nens):
-            tmp = flat_data[corra][current_condition]
-            if len(tmp) > 0:
-                valid_conds.append(current_condition)
+        max_latencies_shift = {}
 
-        ccef_sweeps = {}
-        for current_condition in valid_conds:
-            fn = aplt.get_safe_filename(current_condition)
-            with aplt.mpl_fig("%s_%s_corr_latency%s" % (fname, fn, fsuffix), args, figsize=(10,8)) as fig:
-
-                tmp = flat_data[corra][current_condition]
-                corra_data = np.concatenate(tmp)
-                corrb_data = np.concatenate(flat_data[corrb][current_condition])
-
-                ccef_sweeps[current_condition] = plot_correlation_latency_sweep(fig,
-                                                    corra_data,corrb_data,corra,corrb,
-                                                    dt,
-                                                    hist2d=True,
-                                                    latencies=correlation_options.get('latencies',range(0,40,2)+[5,15,40,80]),
-                                                    latencies_to_plot=correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)),
-                                                    extra_title="\n%s" % current_condition,
-                                                    correlation_options=correlation_options
-                )
-
-                fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
-
-        max_corr_at_latency = {}
+        #plot mean correlations against latencies
         with aplt.mpl_fig("%s_corr_latency%s" % (fname, fsuffix), args, ) as fig:
             ax = fig.gca()
-            for current_condition in valid_conds:
-                ax.plot(
-                    dt*np.array(ccef_sweeps[current_condition].keys()),
-                    ccef_sweeps[current_condition].values(),
-                    marker='+',
-                    label=current_condition)
 
-                smax = None
-                cmax = 0
-                for shift,corr in ccef_sweeps[current_condition].items():
-                    if corr > cmax:
-                        smax = shift
-                        cmax = corr
-                if smax is not None:
-                    max_corr_at_latency[current_condition] = (smax,cmax)
+            for i,(_current_condition,r) in enumerate(results.iteritems()):
+                if not r['count']:
+                    continue
+
+                #one series per obj_id
+                series = []
+
+                for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+
+                    if len(df) < min(latencies):
+                        continue
+
+                    #calculate correlation coefficients for all latencies
+                    ccefs = [df[corra].shift(l).corr(df[corrb]) for l in latencies]
+
+                    series.append( pd.Series(ccefs,index=latencies,name=_obj_id) )
+
+                #plot the means for each latency
+                df = pd.concat(series, axis=1)
+                ccef_m = df.mean(axis=1)
+                t = dt*ccef_m.index
+
+                if plot_errorbars:
+                    ccef_s = df.std(axis=1)
+                    ax.errorbar(t, ccef_m.values, yerr=ccef_s.values,
+                            marker='+',
+                            label=_current_condition)
+                else:
+                    ax.plot(t, ccef_m.values,
+                            marker='+',
+                            label=_current_condition)
+
+                #the maximum of the means is the most correlated shifted latency
+                max_latencies_shift[_current_condition] = (latencies[ccef_m.argmax()], ccef_m.max())
 
             ax.legend(
                 loc='upper center' if OUTSIDE_LEGEND else 'upper right',
                 bbox_to_anchor=(0.5, -0.1) if OUTSIDE_LEGEND else None,
                 numpoints=1,
-                prop={'size':LEGEND_TEXT_BIG} if len(nens) <= 4 else {'size':LEGEND_TEXT_SML},
+                prop={'size':LEGEND_TEXT_SML},
             )
             ax.set_title("%s vs %s" % (corra,corrb))
             ax.set_xlabel("latency, shift (s)")
             ax.set_ylabel("correlation")
 
-            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+        #plot the maximally correlated latency
+        for _current_condition,(shift,ccef) in max_latencies_shift.iteritems():
+            all_corra, all_corrb, nens = _shift_pool_and_flatten_correlation_data(
+                                                results,
+                                                _current_condition,
+                                                shift,
+                                                corra, corrb)
 
-        #plot higher resolution flat_data at the maximally correlated latency
-        for current_condition,(shift,ccef) in max_corr_at_latency.items():
-            rrate =  np.concatenate(flat_data[corra][current_condition])
-            dtheta = np.concatenate(flat_data[corrb][current_condition])
-            #adust for latency
-            rrate,dtheta,ccef = calculate_correlation_and_remove_nans(
-                                    rrate[0:-shift] if shift > 0 else rrate,
-                                    dtheta[shift:] if shift > 0 else dtheta
-            )
-
-            fn = aplt.get_safe_filename(current_condition)
-            with aplt.mpl_fig("%s_%s" % (fname,fn), args) as fig:
+            fn = aplt.get_safe_filename(_current_condition)
+            with aplt.mpl_fig("%s_%s_maxcorrelation" % (fname,fn), args) as fig:
                 plot_hist_corra_vs_corrb_pooled(
-                        rrate,dtheta,corra,corrb,
+                        all_corra,all_corrb,corra,corrb,
                         fig.gca(),
-                        title=current_condition,
-                        note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens[current_condition]),
+                        title=_current_condition,
+                        note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens),
                         correlation_options=correlation_options
                 )
 
-                fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+            corr_latencies["%s:%s" % (corra,corrb)] = ccef
 
-        corr_latencies["%s:%s" % (corra,corrb)] = max_corr_at_latency
+        #plot a selection of other latencies (yes, we calculate some data again, meh)
+        for _current_condition in max_latencies_shift:
+
+            fn = aplt.get_safe_filename(_current_condition)
+            with aplt.mpl_fig("%s_%s_corr_latency%s" % (fname, fn, fsuffix), args, figsize=(10,8)) as fig:
+
+                i = 0
+                gs = gridspec.GridSpec(3, len(latencies_to_plot)//3)
+
+                for shift in latencies_to_plot:
+
+                    all_corra, all_corrb, nens = _shift_pool_and_flatten_correlation_data(
+                                                        results,
+                                                        _current_condition,
+                                                        shift,
+                                                        corra, corrb)
+
+                    ax = fig.add_subplot(gs[i])
+                    aplt.make_note(ax,"%.3fs" % (shift*dt),color='white',fontsize=8)
+
+                    if hist2d:
+                        plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,correlation_options=correlation_options)
+                    else:
+                        plot_scatter_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,correlation_options=correlation_options)
+
+                    i += 1
+
+                for ax in fig.axes:
+                    ax.label_outer()
+                    if not ax.is_first_col():
+                        ax.set_ylabel('')
+                    if not ax.is_last_row():
+                        ax.set_xlabel('')
+
+                NAMES = {"dtheta":r'turn rate ($\mathrm{d}\theta / dt$)',
+                         "rotation_rate":r'rotation rate ($\mathrm{rad} s^{-1}$)'}
+
+                fig.subplots_adjust(wspace=0.1,hspace=0.1,top=0.92)
+                fig.suptitle('Correlation between %s and %s per latency correction \n%s' % (
+                                    NAMES.get(corra,corra), NAMES.get(corrb,corrb), _current_condition),
+                             fontsize=12,
+                )
 
     return corr_latencies
 
