@@ -285,42 +285,6 @@ def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',
 
     return func(rr,dtheta,bins=nbins,**hkwargs)
 
-def plot_hist_v_offset_rate_vs_az(vor,az,ax,title='',nbins=100,note='',**outer_kwargs):
-    def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
-        # xrange becomes range after 2to3
-        bin_range = range
-        range = __builtins__["range"]
-        h,xedges,yedges = np.histogram2d(x, y, bins=bins, range=bin_range, normed=False, weights=weights)
-
-        if 'origin' not in kwargs: kwargs['origin']='lower'
-        if 'extent' not in kwargs: kwargs['extent']=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        if 'interpolation' not in kwargs: kwargs['interpolation']='nearest'
-        if 'aspect' not in kwargs: kwargs['aspect']='auto'
-        if cmin is not None: h[h<cmin]=None
-        if cmax is not None: h[h>cmax]=None
-        
-        im = ax.imshow(h.T,**kwargs)
-
-        return h,xedges,yedges,im
-
-
-    if title:
-        ax.set_title(title)
-    if note:
-        aplt.make_note(ax,note,color='white')
-
-    ax.set_xlabel('v offset rate')
-    ax.set_ylabel('az')
-
-    #outer_kwargs["range"] = [[-0.010, -0.001], [-2.0, 2.00]]
-
-    try:
-        func = ax.hist2d
-    except AttributeError:
-        func = hist2d
-
-    return func(vor,az,bins=nbins,**outer_kwargs)
-
 def plot_correlation_latency_sweep(fig,corra_data,corrb_data,corra_name,corrb_name,data_dt,hist2d=False,latencies=None,latencies_to_plot=None,extra_title='',correlation_options=None):
 
     if latencies is None:
