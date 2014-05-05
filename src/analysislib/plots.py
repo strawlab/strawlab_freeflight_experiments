@@ -126,14 +126,14 @@ def plot_trial_times(combine, args, name=None):
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
-def make_note(ax, txt, color='k'):
-    ax.text(0.01, 0.99, #top left
-            txt,
-            fontsize=10,
-            horizontalalignment='left',
-            verticalalignment='top',
-            transform=ax.transAxes,
-            color=color)
+def make_note(ax, txt, color='k', fontsize=10):
+    return ax.text(0.01, 0.99, #top left
+                   txt,
+                   fontsize=fontsize,
+                   horizontalalignment='left',
+                   verticalalignment='top',
+                   transform=ax.transAxes,
+                   color=color)
 
 def layout_trajectory_plots(ax, arena, in3d):
     arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
