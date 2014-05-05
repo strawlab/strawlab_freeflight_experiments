@@ -73,8 +73,8 @@ if __name__=='__main__':
     correlations = (('stim_x','vx'),)#('stim_z','vz'))
     histograms = ("velocity","dtheta","stim_x","vx")
     correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
-                           "latencies":range(0,400,10),
-                           "latencies_to_plot":(0,10,20,40,80,160,200,300,400),
+                           "latencies":range(0,150,5),
+                           "latencies_to_plot":(0,5,10,15,25,50,75,100,125),
     }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True},
@@ -89,12 +89,11 @@ if __name__=='__main__':
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)"},
     }
-    flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
 
-    flat_data,nens = curve.flatten_data(args, combine, flatten_columns)
-
+    flat_data,nens = curve.flatten_data(args, combine, histograms)
     curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
-    curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
+
+    curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
 
     if args.show:
         aplt.show_plots()
