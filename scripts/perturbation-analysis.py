@@ -23,6 +23,7 @@ import analysislib.args
 import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
+import analysislib.arenas as aarenas
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
@@ -43,19 +44,11 @@ if __name__=='__main__':
     print "plots stored in", combine.plotdir
     print "files saved as", fname
     ncond = combine.get_num_conditions()
-    if not args.portrait:
-        figsize = (5*ncond,5)
-        NF_R = 1
-        NF_C = ncond
-    else:
-        figsize = (5*ncond,5)
-        NF_R = ncond
-        NF_C = 1
 
     aplt.save_args(combine, args)
     aplt.save_results(combine, args)
 
-    arena = aplt.get_arena_from_args(args)
+    arena = aarenas.get_arena_from_args(args)
     (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
 
     TO_PLOT = {"dtheta":{"ylim":(-10,10)},
@@ -64,11 +57,17 @@ if __name__=='__main__':
                "rotation_rate":{},
     }
 
-    step_conds = [c for c in results if 'step' in c]
-    for cond in step_conds:
+    #step_conds = [c for c in results if not isinstance(sfe_perturb.get_perturb_class(c), sfe_perturb.NoPerturb)]
+    for cond in results:
 
-        step_desc = cond.split("/")[-1]
-        step_obj = sfe_perturb.get_perturb_class(step_desc)(step_desc)
+        perturb_desc = cond.split("/")[-1]
+        pklass = sfe_perturb.get_perturb_class(perturb_desc)
+
+        #only plot perturbations
+        if pklass == sfe_perturb.NoPerturb:
+            continue
+
+        step_obj = pklass(perturb_desc)
 
         r = results[cond]
 

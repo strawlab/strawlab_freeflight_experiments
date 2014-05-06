@@ -16,14 +16,9 @@ import flyvr.display_client as display_client
 from std_msgs.msg import UInt32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import nodelib.log
-
-pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
-
-STARFIELD_TOPIC = 'velocity'
-POST_TOPIC      = 'model_pose'
+from strawlab_freeflight_experiments.topics import *
 
 
 CONTROL_RATE        = 20.0      #Hz
@@ -77,9 +72,9 @@ class Node(object):
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
 
-        self.starfield_velocity_pub = rospy.Publisher(STARFIELD_TOPIC, Vector3, latch=True, tcp_nodelay=True)
+        self.starfield_velocity_pub = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
         self.starfield_velocity_pub.publish(Vector3())
-        self.starfield_post_pub = rospy.Publisher(POST_TOPIC, Pose, latch=True, tcp_nodelay=True)
+        self.starfield_post_pub = rospy.Publisher(TOPIC_MODEL_POSITION, Pose, latch=True, tcp_nodelay=True)
         self.starfield_post_pub.publish(self.get_hide_post_msg())
         self.lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.lock_object.publish(IMPOSSIBLE_OBJ_ID_ZERO_POSE)

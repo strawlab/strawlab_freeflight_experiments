@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import tables
 import numpy as np
 import scipy.misc

@@ -73,10 +73,6 @@ def get_parser(*only_these_options, **defaults):
         parser.add_argument(
             '--plot-tracking-stats', action='store_true', default=False,
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
-    if not only_these_options or "portrait" in only_these_options:
-        parser.add_argument(
-            '--portrait', action='store_true', default=False,
-            help='arrange subplots in portrait orientation (one col, many rows)')
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,

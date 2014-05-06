@@ -12,8 +12,6 @@ import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
-                    "uuid", "zfilt", "rfilt", "idfilt","show","reindex","lenfilt",
-                    "zfilt-min","zfilt-max","rfilt-max","outdir","arena","csv-file","h5-file",
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
@@ -22,6 +20,11 @@ if __name__=='__main__':
         "--animate", action="store_true")
     parser.add_argument(
         "--save", action="store_true", help="save a csv of this trajectory")
+    parser.add_argument(
+        "--show-target", action="store_true", help="show target on path (useful with --animate)")
+    parser.add_argument(
+        "--show-extra", help="show these fields too (comma separated list)",
+        default="")
     
     args = parser.parse_args()
 
@@ -37,33 +40,49 @@ if __name__=='__main__':
     combine = autil.get_combiner(suffix)
     combine.calc_turn_stats = True
     combine.add_from_uuid(uuid,suffix,args=args)
-    df,dt,_ = combine.get_one_result(obj_id)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
+    for extra in args.show_extra.split(','):
+        plot_axes.append(extra)
+
     ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
-    if args.animate:
-        args.show = True
-        anim = aplt.animate_infinity(
-                combine, args,
-                df,dt,
-                plot_axes=plot_axes,
-                ylimits=ylimits
-        )
-    else:
-        aplt.plot_infinity(
-                combine, args,
-                df,dt,
-                plot_axes=plot_axes,
-                ylimits=ylimits
-        )
+    results, dt = combine.get_results()
 
+    anims = []
+    for i,(current_condition,r) in enumerate(results.iteritems()):
+        for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+            if _obj_id == obj_id:
+
+                name = analysislib.combine.safe_condition_string(current_condition)
+                title = "%s: %s" % (obj_id, current_condition)
+
+                if args.animate:
+                    args.show = True
+                    anim = aplt.animate_infinity(
+                            combine, args,
+                            df,dt,
+                            plot_axes=plot_axes,
+                            ylimits=ylimits,
+                            title=title,
+                            show_trg=args.show_target and ('trg_x' in df.columns)
+                    )
+                    anims.append(anim)
+                else:
+                    aplt.plot_infinity(
+                            combine, args,
+                            df,dt,
+                            name=name,
+                            plot_axes=plot_axes,
+                            ylimits=ylimits,
+                            title=title,
+                    )
+
+                if args.save:
+                    df.to_csv("%s_%s_%s.csv" % (uuid, obj_id, name))
+                    df.save("%s_%s_%s.df" % (uuid, obj_id, name))
 
     if args.show:
         aplt.show_plots()
-
-    if args.save:
-        df.to_csv("%s_%s.csv" % (uuid, obj_id))
-        df.save("%s_%s.df" % (uuid, obj_id))
 
     sys.exit(0)

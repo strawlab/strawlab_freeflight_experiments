@@ -31,7 +31,7 @@ SVG_SUFFIX=os.environ.get('SVG_SUFFIX','.svg')
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
-TITLE_FONT_SIZE     = 10
+TITLE_FONT_SIZE     = 9
 
 OUTSIDE_LEGEND = True
 
@@ -43,15 +43,6 @@ def _perm_check(args):
 
 def get_safe_filename(s):
     return s.translate(None, ''.join("\"\\/.+|'"))
-
-def get_arena_from_args(args):
-    if args.arena=='flycave':
-        arena = analysislib.arenas.FlyCaveCylinder(radius=0.5)
-    elif args.arena=='flycube':
-        arena = analysislib.arenas.FlyCube()
-    else:
-        raise ValueError('unknown arena %r'%args.arena)
-    return arena
 
 def show_plots():
     try:
@@ -178,19 +169,20 @@ def layout_trajectory_plots(ax, arena, in3d):
     if not in3d:
         ax.yaxis.set_ticks_position('left')
 
-def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         axes = set()
         for i,(current_condition,r) in enumerate(results.iteritems()):
             if in3d:
-                ax = fig.add_subplot(fignrows,figncols,1+i,projection="3d")
+                ax = fig.add_subplot(1,figncols,1+i,projection="3d")
             else:
-                ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+                ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
             axes.add( ax )
 
             if not r['count']:
@@ -232,13 +224,15 @@ def plot_traces(combine, args, figsize, fignrows, figncols, in3d, name=None, sho
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
-def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, colorbar=False):
+def plot_histograms(combine, args, figncols, name=None, colorbar=False):
+    figsize = (5.0*figncols,(2*5.0) + 2)     #2 rows
     if name is None:
         name = '%s.hist' % combine.fname
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
+        axz = None
 
         (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
         x_range = xmax-xmin
@@ -248,6 +242,8 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
         eps = 1e-10
         xbins = np.arange(xmin,xmax+eps,binsize)
         ybins = np.arange(ymin,ymax+eps,binsize)
+        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/20.0)
+        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/20.0)
 
         cmap=plt.get_cmap('jet')
         valmax=0
@@ -264,27 +260,25 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
 
         norm = colors.Normalize(0,valmax)
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(2, figncols,1+i,sharex=ax,sharey=ax)
+            axz = fig.add_subplot(2, figncols,figncols+1+i,sharex=axz,sharey=axz)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
                 continue
 
+            #XY
             allx = np.concatenate( [df['x'].values for df in r['df']] )
             ally = np.concatenate( [df['y'].values for df in r['df']] )
-            allz = np.concatenate( [df['z'].values for df in r['df']] )
-
             dur = len(allx)*dt
 
             hdata,xedges,yedges = np.histogram2d( allx, ally,
                                                   bins=[xbins,ybins] )
-
             extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
             im = ax.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
                       origin='lower', cmap=cmap, norm=norm)
 
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
-
             ax.set_aspect('equal')
 
             ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
@@ -297,6 +291,27 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             ax.set_xlim(xmin,xmax)
             ax.set_ylim(ymin,ymax)
 
+            #RZ
+            allr = np.concatenate( [df['radius'].values for df in r['df']] )
+            allz = np.concatenate( [df['z'].values for df in r['df']] )
+
+            dur = len(allr)*dt
+
+            hdata,xedges,yedges = np.histogram2d( allr, allz,
+                                                  bins=[rbins,zbins] )
+            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+            im = axz.imshow(hdata.T/dur, extent=extent, interpolation='nearest',
+                      origin='lower', cmap=cmap, norm=norm)
+
+            axz.set_aspect('equal')
+
+            axz.set_ylabel( 'z (m)' )
+            axz.set_xlabel( 'r (m)' )
+
+            (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
+            axz.set_xlim(0,max(xmax,ymax))
+            axz.set_ylim(zmin,zmax)
+
             if colorbar:
                 fig.colorbar(im)
 
@@ -304,14 +319,15 @@ def plot_histograms(combine, args, figsize, fignrows, figncols, name=None, color
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
 
-def plot_tracking_length(combine, args, figsize, fignrows, figncols, name=None):
+def plot_tracking_length(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.track' % combine.fname
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows, figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(1, figncols,1+i,sharex=ax,sharey=ax)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
@@ -402,14 +418,15 @@ def plot_nsamples(combine, args, name=None):
                 ncol=1 if nconds <= 4 else 2
             )
 
-def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_before, valname, dvdt, name=None):
+def plot_aligned_timeseries(combine, args, figncols, frames_before, valname, dvdt, name=None):
+    figsize = (5.0*figncols,5.0)
     if name is None:
         name = name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
         for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(fignrows,figncols,1+i,sharex=ax,sharey=ax)
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
 
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
@@ -463,16 +480,19 @@ def plot_aligned_timeseries(combine, args, figsize, fignrows, figncols, frames_b
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8)):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8), title=None):
     if name is None:
         name = '%s.infinity' % combine.fname
 
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
 
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
     with mpl_fig(name,args,figsize=figsize) as _fig:
+
+        if title:
+            _fig.suptitle(title, fontsize=12)
 
         _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
         _ax.set_xlim(-0.5, 0.5)
@@ -499,19 +519,26 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8)):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
-    arena = get_arena_from_args(args)
+    arena = analysislib.arenas.get_arena_from_args(args)
 
     _fig = plt.figure(figsize=figsize)
+
+    if title:
+        _fig.suptitle(title, fontsize=12)
 
     _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
     _ax.set_xlim(-0.5, 0.5)
     _ax.set_ylim(-0.5, 0.5)
     arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
     _linexy,_linexypt = _ax.plot([], [], 'k-', [], [], 'r.')
+    if show_trg:
+        _linetrgpt, = _ax.plot([], [], 'g.')
+    else:
+        _linetrgpt = None
 
     _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
     _linez,_linezpt = _ax.plot([], [], 'k-', [], [], 'r.')
@@ -520,6 +547,8 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     _ax.set_ylabel("z")
 
     _init_axes = [_linexy,_linexypt,_linez,_linezpt]
+    if _linetrgpt is not None:
+        _init_axes.append(_linetrgpt)
     _line_axes = collections.OrderedDict()
     _pt_axes   = collections.OrderedDict()
 
@@ -548,6 +577,8 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
     def init():
         _linexy.set_data(_df['x'],_df['y'])
         _linexypt.set_data([], [])
+        if _linetrgpt is not None:
+            _linetrgpt.set_data([], [])
 
         #_linez.set_data(df.index,df['z'])
         #_linezpt.set_data([], [])
@@ -559,19 +590,27 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         return _init_axes
 
     # animation function.  This is called sequentially
-    def animate(i, df, xypt, pt_axes):
+    def animate(i, df, xypt, trgpt, pt_axes):
+        changed = []
         xypt.set_data(df['x'][i], df['y'][i])
+        changed.append(xypt)
+        if trgpt is not None:
+            tx = df['trg_x'][i]
+            if not np.isnan(tx):
+                trgpt.set_data(tx, df['trg_y'][i])
+            changed.append(trgpt)
+
         for p in pt_axes:
             pt_axes[p].set_data(i, df[p][i])
 
-        return [xypt] + pt_axes.values()
+        return changed + pt_axes.values()
 
     anim = animation.FuncAnimation(_fig,
                                animate,
                                frames=_df.index,
                                init_func=init,
                                interval=50, blit=True,
-                               fargs=(_df,_linexypt,_pt_axes),
+                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes),
     )
 
     return anim
@@ -752,6 +791,28 @@ def save_results(combine, args, maxn=20):
 
         json.dump(data, f)
 
+    spanned = combine.get_spanned_results()
+    if spanned:
+        name = combine.get_plot_filename("SPANNED_OBJ_IDS.md")
+        with open(name, 'w') as f:
+            l = "object ids which span multiple conditions"
+            f.write("%s\n"%l)
+            f.write("%s\n\n"%('-'*len(l)))
+
+            f.write("| obj_id | condition | length (frames) |\n")
+            f.write("| --- | --- | --- |\n")
+            for oid,sval in spanned.iteritems():
+                for i,s in enumerate(sval):
+                    #make condition markdown table safe
+                    cond = s[0].replace('|','&#124;')
+                    if i == 0:
+                        #first row
+                        f.write("| %s | %s | %s |\n" % (oid, cond, s[1]))
+                    else:
+                        f.write("|    | %s | %s |\n" % (cond, s[1]))
+
+            f.write("\n")
+
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853
 #http://stackoverflow.com/questions/8802918/my-matplotlib-title-gets-cropped
@@ -775,6 +836,21 @@ def autowrap_text(event):
     fig.canvas.draw()
     # Reset the draw event callbacks
     fig.canvas.callbacks.callbacks[event.name] = func_handles
+
+def _dumb_wrap(text, width):
+    """
+    A word-wrap function that preserves existing line breaks
+    and most spaces in the text. Expects that existing line
+    breaks are posix newlines (\n).
+    """
+    return reduce(lambda line, word, width=width: '%s%s%s' %
+                  (line,
+                   ' \n'[(len(line)-line.rfind('\n')-1
+                         + len(word.split('\n',1)[0]
+                              ) >= width)],
+                   word),
+                  text.split(' ')
+                 )
 
 def _do_autowrap_text(textobj, renderer):
     """Wraps the given matplotlib text object so that it exceed the boundaries
@@ -817,14 +893,14 @@ def _do_autowrap_text(textobj, renderer):
         #contain negative numbers (i.e. -ve).
         #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
-
         safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
-        #reverse the above transform
-        wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
-    except TypeError:
-        # This appears to be a single word
-        wrapped_text = textobj.get_text()
+    except TypeError, e:
+        wrapped_text = _dumb_wrap(safe_txt, wrap_width)
+
+    #reverse the above transform
+    wrapped_text = wrapped_text.replace(" ","/").replace("!","-").replace("%"," ")
+
     textobj.set_text(wrapped_text)
 
 def _min_dist_inside(point, rotation, box):

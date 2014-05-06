@@ -7,4 +7,6 @@ TOPIC_CYL_CENTRE        = "cylinder_centre"
 TOPIC_CYL_RADIUS        = "cylinder_radius"
 TOPIC_CYL_HEIGHT        = "cylinder_height"
 
+TOPIC_STAR_VELOCITY     = "star_velocity"
 
+TOPIC_MODEL_POSITION    = "model_pose"

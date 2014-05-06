@@ -391,7 +391,7 @@ osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
 
 std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
-    result.push_back("velocity");
+    result.push_back("star_velocity");
     result.push_back("model_pose");
     return result;
 }
@@ -404,7 +404,7 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     root = json_loads(json_message.c_str(), 0, &error);
     flyvr_assert(root != NULL);
 
-    if (topic_name=="velocity") {
+    if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
         setVelocity(vel[0],vel[1],vel[2]);
     } else if (topic_name=="model_pose") {
@@ -433,7 +433,7 @@ void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
 std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
 
-    if (topic_name=="velocity") {
+    if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pandas
 import tables
 import numpy as np
@@ -27,8 +28,10 @@ import autodata.files
 
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.args
+import analysislib.util
 import analysislib.movie
 import analysislib.combine
+import analysislib.arenas
 
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
@@ -57,11 +60,17 @@ def draw_flycube2(ax):
              alpha=0.0001,
              markersize=0.0001 )
 
-def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly):
-    combine = analysislib.combine.CombineH5()
-    combine.add_h5_file(h5_file)
+def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+    h5_file = combine.h5_file
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+    arena = analysislib.arenas.get_arena_from_args(args)
+
+    df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+
+    if show_values:
+        valid = df.fillna(method='ffill')
+    else:
+        valid = df
 
     camera = pymvg.CameraModel.load_camera_from_bagfile( open(calibration) )
 
@@ -178,11 +187,18 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
                 with _canv.get_figure(m["dw"], m["dh"]) as fig:
                     analysislib.movie.plot_xyz(fig, movie.frame_number,
                         xhist, yhist, zhist, x, y, z,
-                        draw_arena_callback=draw_flycube2,
+                        arena
                     )
 
                 if show_framenumber:
                     _canv.text(str(framenumber),m["dw"]-100,m["dh"]-20, color_rgba=(0.5,0.5,0.5,1.0))
+
+                if show_values:
+                    h = 15
+                    for s in show_values:
+                        _canv.text("%s: %+.1f" % (s,dfrow[s]),
+                                   m["dw"]-200, h, color_rgba=(0.5,0.5,0.5,1.0))
+                        h += 12
                         
             canv.save()
 
@@ -195,7 +211,7 @@ def doit(h5_file, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumb
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir")
+    parser = analysislib.args.get_parser(zfilt='none', rfilt='none')
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
         help='path to fmf file (if not using --uuid)')
@@ -214,25 +230,24 @@ if __name__ == "__main__":
     parser.add_argument(
         '--zoom-fly', action='store_true',
         help='render zoomed region around fly')
+    parser.add_argument(
+        '--show-values', type=str, default='',
+        help='comma separated list of extra colums to display')
 
     args = parser.parse_args()
-
-    if (not args.h5_file) and (not args.uuid):
-        parser.error("Specify a UUID or a H5 file")
+    analysislib.args.check_args(parser, args, max_uuids=1)
 
     if args.uuid is not None:
-        if len(args.uuid) > 1:
-            parser.error("Only one uuid supported for making movies")
 
         uuid = args.uuid[0]
 
-        fm = autodata.files.FileModel(basedir=args.basedir)
-        fm.select_uuid(uuid)
-        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+        suffix = analysislib.util.get_csv_for_args(args)
+        combine = analysislib.util.get_combiner(suffix)
+        combine.add_from_args(args)
     else:
         uuid = ''
-
-        h5_file = args.h5_file
+        combine = analysislib.combine.CombineH5()
+        combine.add_h5_file(args.h5_file)
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
@@ -246,11 +261,16 @@ if __name__ == "__main__":
     if not obj_ids:
         parser.error("You must specify --idfilt or --fmf-file")
 
-    print "h5 fname", h5_file
+    print "h5 fname", combine.h5_file
+
+    if args.show_values:
+        show_values = args.show_values.split(',')
+    else:
+        show_values = []
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly)
+            doit(combine, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
 

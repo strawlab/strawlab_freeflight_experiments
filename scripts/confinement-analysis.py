@@ -35,14 +35,6 @@ if __name__=='__main__':
     print "files saved as", fname
 
     ncond = combine.get_num_conditions()
-    if not args.portrait:
-        figsize = (5*ncond,5)
-        NF_R = 1
-        NF_C = ncond
-    else:
-        figsize = (5*ncond,5)
-        NF_R = ncond
-        NF_C = 1
 
     aplt.save_args(combine, args)
     aplt.save_results(combine, args)
@@ -50,19 +42,15 @@ if __name__=='__main__':
     aplt.plot_trial_times(combine, args)
 
     aplt.plot_traces(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
+                figncols=ncond,
                 in3d=False)
 
     aplt.plot_traces(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
+                figncols=ncond,
                 in3d=True)
 
     aplt.plot_histograms(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C)
-
+                figncols=ncond)
 
     aplt.plot_nsamples(combine, args)
 

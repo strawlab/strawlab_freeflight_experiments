@@ -5,6 +5,7 @@ import Queue
 import random
 import time
 import cPickle as pickle
+import re
 
 import tables
 import pandas as pd
@@ -35,6 +36,9 @@ from strawlab.constants import DATE_FMT
 #       count:[n_frames,...],
 #   }
 #}
+
+def safe_condition_string(s):
+    return "".join([c for c in s if re.match(r'\w', c)])
 
 class _Combine(object):
 
@@ -193,6 +197,14 @@ class _Combine(object):
         """returns the number of frames that should be recorded for the given seconds"""
         return seconds / self._dt
 
+    def get_spanned_results(self):
+        """
+        returns a dict of object ids whose trajectories span multiple conditions.
+        the values in the dict are a list of 2-tuples
+            (condition,nframes)
+        """
+        return {}
+
     def enable_debug(self):
         self.__debug = True
 
@@ -233,10 +245,14 @@ class _Combine(object):
 
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
+        if obj_id in self.get_spanned_results():
+            raise ValueError("obj_id: %s exists in multiple conditions" % obj_id)
+
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 if _obj_id == obj_id:
                     return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+
         raise ValueError("No such obj_id: %s" % obj_id)
 
     def get_result_columns(self):
@@ -635,6 +651,9 @@ class CombineH5WithCSV(_Combine):
         self._rows = set(rows)
         self._csv_suffix = kwargs.get("csv_suffix")
 
+        #use this for keeping track of results that span multiple conditions
+        self._results_by_condition = {}
+
     def add_from_uuid(self, uuid, csv_suffix=None, frames_before=0, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
@@ -694,6 +713,13 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
 
+    def get_spanned_results(self):
+        spanned = {}
+        for oid,details in self._results_by_condition.iteritems():
+            if len(details) > 1:
+                spanned[oid] = details
+        return spanned
+
     def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
         """Add a single csv and h5 file"""
 
@@ -738,6 +764,7 @@ class CombineH5WithCSV(_Combine):
 
         _ids = Queue.Queue(maxsize=2)
         this_id = IMPOSSIBLE_OBJ_ID
+        this_cond = None
         csv_results = {}
 
         results = self._results
@@ -774,12 +801,14 @@ class CombineH5WithCSV(_Combine):
                     continue
                 if _id == IMPOSSIBLE_OBJ_ID:
                     continue
-                elif _id != this_id:
+                elif (_id != this_id) or (_cond != this_cond):
+
                     try:
                         query_id,query_framenumber,start_time,query_cond = _ids.get(False)
                     except Queue.Empty:
                         #first time
                         this_id = _id
+                        this_cond = _cond
                         csv_results = {k:[] for k in self._rows}
                         query_id = None
                     finally:
@@ -791,14 +820,21 @@ class CombineH5WithCSV(_Combine):
 
                     if (not args.idfilt) or (query_id in args.idfilt):
 
+                        assert this_cond == query_cond
+
                         r = results[query_cond]
 
-                        if frames_before < 0:
-                            query = "obj_id == %d" % query_id
+                        if frames_before != 0:
+                            start_frame = query_framenumber - frames_before
                         else:
-                            query = "(obj_id == %d) & (framenumber >= %d)" % (
+                            start_frame = query_framenumber
+
+                        stop_frame = _framenumber
+
+                        query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
                                         query_id,
-                                        query_framenumber-frames_before)
+                                        start_frame,
+                                        stop_frame)
 
                         valid = trajectories.readWhere(query)
 
@@ -822,7 +858,6 @@ class CombineH5WithCSV(_Combine):
 
                         n_samples = len(validx)
                         df = None
-
                         if n_samples < dur_samples: # must be at least this long
                             self._debug('TRIM:   %d samples for obj_id %d' % (n_samples,query_id))
                             self._skipped[_cond] += 1
@@ -856,8 +891,19 @@ class CombineH5WithCSV(_Combine):
                                 df = None
 
                         if df is not None:
-                            self._debug('SAVE:   %d samples for obj_id %d (%s)' % (
-                                                    n_samples,query_id,_cond))
+
+                            if _cond != this_cond:
+                                self._debug('SPAN:   obj_id %d spans multiple conditions' % (query_id))
+                            span_details = (query_cond, n_samples)
+                            try:
+                                self._results_by_condition[query_id].append( span_details )
+                            except KeyError:
+                                self._results_by_condition[query_id] = [ span_details ]
+
+                            self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
+                                                    n_samples,
+                                                    start_frame,stop_frame,
+                                                    query_id,query_cond))
 
                             first = df.irow(0)
                             r['count'] += 1
@@ -865,6 +911,7 @@ class CombineH5WithCSV(_Combine):
                             r['df'].append( df )
 
                     this_id = _id
+                    this_cond = _cond
                     csv_results = {k:[] for k in self._rows}
 
                 elif _id == this_id:
