@@ -57,8 +57,8 @@ MAX_ROTATION_RATE = 1.5
 #             z_gain"
 #
 CONDITIONS = [
-              "infinity.svg/+5.0/0.1/+5.0",
-              "infinity.svg/+7.0/0.1/+7.0",
+              "infinity.svg/+15.0/0.1/+15.0",
+              "infinity.svg/+20.0/0.1/+20.0",
               "infinity.svg/+10.0/0.1/+10.0",
               "infinity.svg/+0.0/0.1/+0.0",
 ]
