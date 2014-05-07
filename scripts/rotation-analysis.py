@@ -72,7 +72,10 @@ if __name__=='__main__':
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
     histograms = ("velocity","dtheta","rcurve","rotation_rate")
-    correlation_options = {i[0]:{} for i in correlations}
+    correlation_options = {"rotation_rate:dtheta":{"range":[[-1.45,1.45],[-10,10]]},
+                           "latencies":set(range(0,40,2) + [40,80]),
+                           "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
+    }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
                                    "rcurve":True,
@@ -86,18 +89,11 @@ if __name__=='__main__':
                                    "rcurve":"radius of curvature (m)",
                                    "rotation_rate":"rotation rate (rad/s)"},
     }
-    flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
 
-    flat_data,nens = curve.flatten_data(args, combine, flatten_columns)
-    try:
-        curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
-    except curve.NotEnoughDataError:
-        pass
+    flat_data,nens = curve.flatten_data(args, combine, histograms)
+    curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
 
-    try:
-        curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
-    except curve.NotEnoughDataError:
-        pass
+    curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
 
     if args.show:
         aplt.show_plots()
