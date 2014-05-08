@@ -54,13 +54,12 @@ MAX_ROTATION_RATE = 1.5
 #CONDITION =  svg_path(if omitted target = 0,0)/
 #             gain/
 #             advance_threshold(m)/
-#             z_gain"
+#             z_gain/
+#             star_size
 #
 CONDITIONS = [
-              "infinity.svg/+15.0/0.1/+15.0",
-              "infinity.svg/+20.0/0.1/+20.0",
-              "infinity.svg/+10.0/0.1/+10.0",
-              "infinity.svg/+0.0/0.1/+0.0",
+              "infinity.svg/+10.0/0.1/+10.0/5.0",
+              "infinity.svg/+10.0/0.1/+10.0/10.0",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -80,11 +79,13 @@ class Node(object):
             'StimulusStarField')
 
         self.pub_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
+        self.pub_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
 
         self.pub_velocity.publish(0,0,0)
+        self.pub_size.publish(5.0)
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -151,7 +152,7 @@ class Node(object):
 
         self.drop_lock_on()
 
-        svg,p,advance,v_gain = self.condition.split('/')
+        svg,p,advance,v_gain,star_size = self.condition.split('/')
         self.p_const = float(p)
         self.v_gain = float(v_gain)
         self.advance_px = XFORM.m_to_pixel(float(advance))
@@ -163,6 +164,8 @@ class Node(object):
             self.svg_pub.publish(self.svg_fn)
         else:
             self.svg_fn = ''
+
+        self.pub_size.publish(float(star_size))
 
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
 
