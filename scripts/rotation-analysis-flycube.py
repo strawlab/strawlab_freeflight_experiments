@@ -38,15 +38,7 @@ if __name__=='__main__':
     print "plots stored in", combine.plotdir
     print "files saved as", fname
     ncond = combine.get_num_conditions()
-    if not args.portrait:
-        figsize = (5*ncond,5)
-        NF_R = 1
-        NF_C = ncond
-    else:
-        figsize = (5*ncond,5)
-        NF_R = ncond
-        NF_C = 1
-
+    
     aplt.save_args(combine, args)
     aplt.save_results(combine, args)
 
@@ -55,20 +47,17 @@ if __name__=='__main__':
     aplt.plot_trial_times(combine, args)
 
     aplt.plot_traces(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
+                figncols=ncond,
                 in3d=False,
                 show_starts=True,
                 show_ends=True)
 
     aplt.plot_traces(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C,
+                figncols=ncond,
                 in3d=True)
 
     aplt.plot_histograms(combine, args,
-                figsize=figsize,
-                fignrows=NF_R, figncols=NF_C)
+                figncols=ncond)
 
 
     aplt.plot_nsamples(combine, args)
@@ -84,8 +73,10 @@ if __name__=='__main__':
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
     histograms = ("velocity","dtheta","rcurve")
-    correlation_options = {i[0]:{} for i in correlations}
-    correlation_options["rotation_rate"] = {"dtheta_range": (-10, 10), "rrate_range": (-1, 1)}
+    correlation_options = {"rotation_rate:dtheta":{"range":[[1.45,1.45],[-10,10]]},
+                           "latencies":set(range(0,40,2) + [40,80]),
+                           "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
+}
 
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
@@ -97,19 +88,13 @@ if __name__=='__main__':
                                    "dtheta":"turn rate (rad/s)",
                                    "rcurve":"radius of curvature (m)"},
     }
-    flatten_columns = set(list(itertools.chain.from_iterable(correlations)) + list(histograms))
 
-    flat_data,nens = curve.flatten_data(args, combine, flatten_columns)
-    try:
-        curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
-    except curve.NotEnoughDataError:
-        pass
+    
+    flat_data,nens = curve.flatten_data(args, combine, histograms)
+    curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
 
-    try:
-        curve.plot_correlation_analysis(args, combine, flat_data, nens, correlations, correlation_options)
-    except curve.NotEnoughDataError:
-        pass
-
+    curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
+   
     if args.show:
         aplt.show_plots()
 
