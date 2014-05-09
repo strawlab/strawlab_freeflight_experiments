@@ -22,7 +22,10 @@ EXCEPT = set()
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '-t', '--type', required=True,
-    help='analyse only this type', choices=["rotation","confinement","conflict"])
+    help='consider only this experiment type', choices=["rotation","confinement","conflict","perturbation","translation"])
+parser.add_argument(
+    '-a', '--analysis-type',
+    help='run this analysis script', choices=["rotation","confinement","conflict","perturbation","translation"])
 parser.add_argument(
     '-s', '--start', required=True, metavar="2013/03/21",
     help='date from which to rerun analysis scripts')
@@ -35,6 +38,9 @@ parser.add_argument(
     '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
     help='dont reindex h5 file')
 args = parser.parse_args()
+
+if not args.analysis_type:
+    args.analysis_type = args.type
 
 try:
     datetime.datetime.strptime(args.start, "%Y/%m/%d")
@@ -59,13 +65,19 @@ for uuid in todo:
     print uuid,
 
     try:
-        readme = open(autodata.files.FileModel(uuid=uuid).get_output_file("README").fullpath).read()
-    except autodata.files.NoFile, e:
+        filename = os.path.join(
+                        autodata.files.FileModel(uuid=uuid).get_plot_dir(),
+                        '%s-analysis.py' % args.analysis_type,"README")
+        readme = open(filename).read()
+    except (autodata.files.NoFile, IOError):
         readme = ""
 
     try:
-        jsondata = json.loads(open(autodata.files.FileModel(uuid=uuid).get_output_file("data.json").fullpath).read())
-    except autodata.files.NoFile, e:
+        filename = os.path.join(
+                        autodata.files.FileModel(uuid=uuid).get_plot_dir(),
+                        '%s-analysis.py' % args.analysis_type,"data.json")
+        jsondata = json.loads(open(filename).read())
+    except (autodata.files.NoFile, IOError):
         jsondata = None
 
     #if the experiment contains neither json nor readme, use the default args
@@ -82,7 +94,7 @@ for uuid in todo:
         else:
             lenfilt = "1"
         opts = DEFAULT_ARGS % uuid
-        opts =  args.replace(DEFAULT_LENFILT, '--lenfilt %s' % lenfilt)
+        opts = opts.replace(DEFAULT_LENFILT, '--lenfilt %s' % lenfilt)
         where = 'r'
     else:
         raise Exception("Error generating arguments")
@@ -91,11 +103,15 @@ for uuid in todo:
 
     t = time.time()
     try:
-        argslist = ["strawlab_freeflight_experiments", "%s-analysis.py" % args.type]
+        argslist = ["strawlab_freeflight_experiments", "%s-analysis.py" % args.analysis_type]
         for opt in opts.split(' '):
             if opt.strip() == '--reindex':
                 if args.reindex:
                     argslist.append(opt)
+            elif opt.strip() == '--cached':
+                pass
+            elif opt.strip() == '--show':
+                pass
             else:
                 argslist.append(opt)
 
@@ -108,5 +124,5 @@ for uuid in todo:
         dt = time.time() - t
         print "succeeded (%.1fs)" % dt, " ".join(argslist[1:])
     except Exception, e:
-        print "failed", opts, e
+        print "failed", opts
 

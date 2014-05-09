@@ -15,6 +15,7 @@ import matplotlib.colors as colors
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.legend as mlegend
+import matplotlib.text as mtext
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 
@@ -65,6 +66,10 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
         for artist in ax.get_children():
             if isinstance(artist, mlegend.Legend):
                 bbox_extra_artists.append( artist )
+    for c in fig.get_children():
+        if isinstance(c, matplotlib.text.Text):
+            #suptitle
+            bbox_extra_artists.append( c )
 
     fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
 
@@ -121,14 +126,14 @@ def plot_trial_times(combine, args, name=None):
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
-def make_note(ax, txt, color='k'):
-    ax.text(0.01, 0.99, #top left
-            txt,
-            fontsize=10,
-            horizontalalignment='left',
-            verticalalignment='top',
-            transform=ax.transAxes,
-            color=color)
+def make_note(ax, txt, color='k', fontsize=10):
+    return ax.text(0.01, 0.99, #top left
+                   txt,
+                   fontsize=fontsize,
+                   horizontalalignment='left',
+                   verticalalignment='top',
+                   transform=ax.transAxes,
+                   color=color)
 
 def layout_trajectory_plots(ax, arena, in3d):
     arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )

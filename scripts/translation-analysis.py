@@ -28,9 +28,9 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    combine = autil.get_combiner("rotation")
+    combine = autil.get_combiner("translation")
     combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}*.csv", frames_before=0)
+    combine.add_from_args(args, "translation*.csv", frames_before=0)
 
     fname = combine.fname
     results,dt = combine.get_results()
@@ -70,24 +70,24 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-    correlations = (('rotation_rate','dtheta'),)
-    histograms = ("velocity","dtheta","rcurve","rotation_rate")
-    correlation_options = {"rotation_rate:dtheta":{"range":[[-1.45,1.45],[-10,10]]},
-                           "latencies":set(range(0,40,2) + [40,80]),
-                           "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
+    correlations = (('stim_x','vx'),)#('stim_z','vz'))
+    histograms = ("velocity","dtheta","stim_x","vx")
+    correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
+                           "latencies":range(0,150,5),
+                           "latencies_to_plot":(0,5,10,15,25,50,75,100,125),
     }
     histogram_options = {"normed":{"velocity":True,
-                                   "dtheta":True,
-                                   "rcurve":True,
-                                   "rotation_rate":True},
+                                   "dtheta":True},
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
-                                  "rcurve":(0,1),
-                                  "rotation_rate":(-1.55,1.55)},
+                                  "stim_x":(-2,2),
+                                  "stim_y":(-2,2),
+                                  "stim_z":(-2,2),
+                                  "vx":(-1,1),
+                                  "vy":(-1,1),
+                                  "vz":(-1,1)},
                          "xlabel":{"velocity":"velocity (m/s)",
-                                   "dtheta":"turn rate (rad/s)",
-                                   "rcurve":"radius of curvature (m)",
-                                   "rotation_rate":"rotation rate (rad/s)"},
+                                   "dtheta":"turn rate (rad/s)"},
     }
 
     flat_data,nens = curve.flatten_data(args, combine, histograms)
