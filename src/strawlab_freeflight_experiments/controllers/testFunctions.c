@@ -75,7 +75,7 @@ void mexFunction (
 	enableContr[0] = 1.0;
 	
 	// call controller function
-    contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], ekfState.xest, &cp, &projGrState, ekfState.status, (int)enableEKF[0], &cInpState);
+    contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState);
 	
 	// call function calculating the input value
 	calcInput (&cInputp, &cInpState, &projGrState, &cp, omegae);
