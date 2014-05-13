@@ -25,6 +25,49 @@
 
 #include "calculateInput.h"
 
+#if defined(_WIN32)
+
+    #include <Windows.h>
+
+#else
+
+    #include <time.h>
+
+    #define LARGE_INTEGER uint64_t
+
+    void QueryPerformanceFrequency(uint64_t *res) {
+        *res = 1;
+    }
+
+    void QueryPerformanceCounter(uint64_t *res) {
+        uint64_t nsec_count, nsec_per_tick;
+        uint64_t nsec_per_sec = 1000000000;
+        /*
+         * clock_gettime() returns the number of secs. We translate that to number of nanosecs.
+         * clock_getres() returns number of seconds per tick. We translate that to number of nanosecs per tick.
+         * Number of nanosecs divided by number of nanosecs per tick - will give the number of ticks.
+         */
+         struct timespec ts1, ts2;
+
+         if (clock_gettime(CLOCK_MONOTONIC, &ts1) != 0) {
+             printf("clock_gettime() failed\n");
+            *res = 0;
+         }
+
+         nsec_count = ts1.tv_nsec + ts1.tv_sec * nsec_per_sec;
+
+         if (clock_getres(CLOCK_MONOTONIC, &ts2) != 0) {
+             printf("clock_getres() failed\n");
+             *res = 0;
+         }
+
+         nsec_per_tick = ts2.tv_nsec + ts2.tv_sec * nsec_per_sec;
+
+         *res = (nsec_count / nsec_per_tick);
+    }
+
+#endif
+
 
 // Global variables (for convenience, otherwise pointer type work vector would 
 // be necessary to store the data from one call of the S function to the next): 
@@ -247,10 +290,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     int resetDecFct = 0;
         
     // variables for time-measurement
-	unsigned __int64 pf;
+	uint64_t pf;
     double freq_;
-	unsigned __int64 baseTime_;
-	unsigned __int64 val_bef, val_after;
+	uint64_t baseTime_;
+	uint64_t val_bef, val_after;
 	double time_bef, time_after;
     
     if (doTimeMeasurement) {
