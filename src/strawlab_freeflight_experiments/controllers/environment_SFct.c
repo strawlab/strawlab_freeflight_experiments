@@ -269,7 +269,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         }
 	    
         // call controller function
-        contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], ekfState.xest, &cp, &projGrState, ekfState.status, (int)enableEKF[0], &cInpState);
+        contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState);
         
         if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );

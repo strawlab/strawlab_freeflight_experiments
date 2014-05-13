@@ -17,8 +17,7 @@ projGrState_t * contr_new_state() {
     return calloc(1, sizeof(projGrState_t));
 }
 
-void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, double *xest, contrp_t *cp, projGrState_t *projGrState, double *statusEKF, int enableEKF, cInpState_t *cInpState) {
-   
+void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState) { 
     /* arguments: 
      *  Jout: current value of the cost functional, length 1
      *  wout: current input to the auxiliary system describing the evolution
@@ -28,12 +27,9 @@ void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, 
      *            and therefore, after this function is called, does not correspond
      *            any more to the value for which omegae and w were calculated for, length 1
      *  enable: 0: do nothing, 1: normal operation
-     *  xest: estimated states from EKF, length 5
      *  cp: struct containing the parameters for the controller
      *  projGradState: struct containing all the internal variables and status of the controller
-     *  statusEKF: array containing status information of EKF: 
-     *          0: is reset -> reset has been performed if value 1
-     *          1: in normal operation -> normal operation loop has been passed at least once if value 1
+     *  ekfState: EFK info including xest and ekf status
      *  enableEKF: enable flag of EKF, needed to determine whether EKF is in 
      *            idle state or provides regular output (estimated state is valid)
      *            statusEKF[1] cannot be used for that as the first normal run
@@ -46,6 +42,9 @@ void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, 
 	 int i;
 	 double *theta = projGrState->theta; // path parameter
      int timeIndexTheta;
+
+     double *xest = ekfState->xest;
+     double *statusEKF = ekfState->status;
 	 
 	 Jout[0] = -1.0; // default-value
 	 wout[0] = -1.0; // default-value
