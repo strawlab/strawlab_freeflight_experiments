@@ -43,7 +43,7 @@ def get_combiner(suffix):
         )
     elif suffix.startswith("conflict"):
         combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate","v_offset_rate","trg_x","trg_y","trg_z",
+                                "ratio","rotation_rate","v_offset_rate","trg_x","trg_y","trg_z","model_x","model_y",
                                 csv_suffix=suffix
         )
     elif suffix.startswith("confine"):
