@@ -1,10 +1,16 @@
+// on linux M_PI exists if using <C99, otherwise one must define
+// #define _GNU_SOURCE and then use -std=c99 with GCC
+#define _USE_MATH_DEFINES
+
+#include <stdlib.h>  // for calloc
+#include <math.h> // for pi and max-function
 
 #include "ekf_fct_model2.h"
 #include "contr_fct_subopt_MPC_model2.h"
 #include "dec_fct.h"
 #include "calculateInput.h"
 
-#define _USE_MATH_DEFINES // for pi
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 // Nominal parameters of fly
 #define IFZZ 0.306e-12
@@ -12,9 +18,6 @@
 #define V0 0.5
 #define VY 1e-4
 #define VZ 1e-10
-
-#include <stdlib.h>  // for calloc
-#include <math.h> // for pi and max-function
 
 
 void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp) {
@@ -125,7 +128,7 @@ void allocate_memory_controller (projGrState_t *projGrState, contrp_t *cp) {
 	int Nrws_dHdufct = (2*(cp->Nu)+(cp->Nx)*(cp->Nu));
 	int Nrws_intsys = 3*((cp->Nx)+1);
 	int Nrws_intadj = 4*(cp->Nx) + (cp->Nx)*(cp->Nx);
-	int Nrws_int = max(Nrws_intsys,Nrws_intadj);
+	int Nrws_int = MAX(Nrws_intsys,Nrws_intadj);
 
 	projGrState->t = (double *)calloc(cp->Nhor, sizeof(double));
 	projGrState->x = (double *)calloc(Nxh, sizeof(double));
@@ -137,7 +140,7 @@ void allocate_memory_controller (projGrState_t *projGrState, contrp_t *cp) {
 	projGrState->ls = (double *)calloc(Nrws_ls, sizeof(double));
 	projGrState->uls = (double *)calloc(Nuh, sizeof(double));
 	projGrState->J = (double *)calloc(cp->Nhor, sizeof(double));
-	projGrState->rws = (double *)calloc(max(Nrws_dHdufct,Nrws_int) + 10, sizeof(double));
+	projGrState->rws = (double *)calloc(MAX(Nrws_dHdufct,Nrws_int) + 10, sizeof(double));
 	projGrState->theta = (double *)calloc(1, sizeof(double));
 
 }

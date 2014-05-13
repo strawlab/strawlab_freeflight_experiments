@@ -1,5 +1,5 @@
 #include <stdlib.h>  // for calloc
-#include "simstruc.h" // needed for printf to Matlab-console
+#include <stdio.h>
 
 #define _USE_MATH_DEFINES // for pi
 

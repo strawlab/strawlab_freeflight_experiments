@@ -13,7 +13,7 @@
 #include "simstruc.h"
 #include "mex.h"
 #include <math.h>
-#include <Windows.h> // for time-measurement if needed
+#include <inttypes.h>
 
 #include "initFunctions.h"
 

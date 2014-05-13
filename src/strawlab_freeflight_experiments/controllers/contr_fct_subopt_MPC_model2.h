@@ -50,6 +50,7 @@ typedef struct {
 }projGrState_t;
 
 #include "calculateInput.h"
+#include "ekf_fct_model2.h"
 
 void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, double *xest, contrp_t *cp, projGrState_t *projGrState, double *statusEKF, int enableEKF, cInpState_t *cInpState);
 
