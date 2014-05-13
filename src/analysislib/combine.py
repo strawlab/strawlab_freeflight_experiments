@@ -20,6 +20,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 import nodelib.log
 
+import analysislib.fixes
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
@@ -738,8 +739,13 @@ class CombineH5WithCSV(_Combine):
                     self._dt = d['dt']
                     return
 
+        self._fix = analysislib.fixes.load_fixups(csv_file=os.path.basename(self.csv_file),
+                                                   h5_file=os.path.basename(self.h5_file))
+
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
+        if self._fix.active:
+            self._debug("IO:     fixing data %s" % self._fix)
 
         #record_iterator in the csv_file returns all defined cols by default.
         #those specified in csv_rows are float()'d and put into the dataframe
@@ -772,7 +778,10 @@ class CombineH5WithCSV(_Combine):
 
         skipped = self._skipped
 
-        for row in infile.record_iterator():
+        for r in infile.record_iterator():
+
+            row = self._fix.fix_row(r)
+
             try:
 
                 _cond = str(row.condition)
