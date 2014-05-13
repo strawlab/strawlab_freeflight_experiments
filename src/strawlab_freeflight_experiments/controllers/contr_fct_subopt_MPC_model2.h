@@ -52,7 +52,10 @@ typedef struct {
 #include "calculateInput.h"
 #include "ekf_fct_model2.h"
 
-void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, double *xest, contrp_t *cp, projGrState_t *projGrState, double *statusEKF, int enableEKF, cInpState_t *cInpState);
+contrp_t * contr_new_params();
+projGrState_t * contr_new_state();
+
+void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState);
 
 void initProjGradMethod (projGrState_t *projGrState, contrp_t *cp);
 

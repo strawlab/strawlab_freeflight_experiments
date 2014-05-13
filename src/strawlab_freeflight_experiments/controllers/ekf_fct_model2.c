@@ -5,6 +5,14 @@
 
 #include "helpfunctions.h"
 
+ekfp_t * ekf_new_params(void) {
+    return calloc(1, sizeof(ekfp_t));
+}
+
+ekfState_t * ekf_new_state(void) {
+    return calloc(1, sizeof(ekfState_t));
+}
+
 void ekf_fly_model2 (int enable, ekfState_t *ekfState, double omegae, double *sysOut, ekfp_t *ekfp) {
     
     /* arguments: 

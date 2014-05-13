@@ -25,6 +25,10 @@ int decFct (double *xpos, double *ypos, int *id, int arrayLen, int reset,
                 double *enableCntr, double *enableEKF,  
             contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, decfState_t *decfState,  
             projGrState_t *projGrState, ekfState_t *ekfState, double *gammaEstimate);
+
+decfp_t * decfct_new_params(void);
+decfState_t * decfct_new_state(void);
+
 			
 void initDecFct (decfp_t *decfp, decfState_t *decfState);
 
