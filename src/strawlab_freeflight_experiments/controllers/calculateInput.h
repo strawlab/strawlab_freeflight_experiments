@@ -18,6 +18,9 @@ typedef struct {
 
 #include "contr_fct_subopt_MPC_model2.h"
 
+cInputp_t * calcinput_new_params();
+cInpState_t * calcinput_new_state();
+
 void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, projGrState_t *projGrState, contrp_t *cp, double *omegae);
 
 void initCalcInput (cInputp_t *cInputp, cInpState_t *cInpState);

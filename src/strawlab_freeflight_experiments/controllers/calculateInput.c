@@ -4,6 +4,14 @@
 
 #include "helpfunctions.h"
 
+cInputp_t * calcinput_new_params() {
+    return calloc(1, sizeof(cInputp_t));
+}
+
+cInpState_t * calcinput_new_state() {
+    return calloc(1, sizeof(cInpState_t));
+}
+
 void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, projGrState_t *projGrState, contrp_t *cp, double *omegae) {
     /* arguments: 
      *  cInputp: struct holding parameters of this function

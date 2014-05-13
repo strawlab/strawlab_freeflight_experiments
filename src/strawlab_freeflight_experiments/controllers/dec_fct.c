@@ -13,6 +13,14 @@
 #define THRES_DIST 0.3 // threshold distance in m, if a fly is closer than this distance
                        // to the path, then controlling the fly is started
 
+decfp_t * decfct_new_params(void) {
+    return calloc(1, sizeof(decfp_t));
+}
+
+decfState_t * decfct_new_state(void) {
+    return calloc(1, sizeof(decfState_t));
+}
+
 int decFct (double *xpos, double *ypos, int *id, int arrayLen, int reset,
                 double *enableCntr, double *enableEKF,  
             contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, decfState_t *decfState,  

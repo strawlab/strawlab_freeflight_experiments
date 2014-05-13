@@ -29,6 +29,8 @@ typedef struct {
 void ekf_fly_model2 (int enable, ekfState_t *ekfState, double omegae, double *sysOut, ekfp_t *ekfp);
 
 void initEKF (ekfState_t *ekfState, ekfp_t *ekfp);
+ekfp_t * ekf_new_params(void);
+ekfState_t * ekf_new_state(void);
 
 void fcnAsys(double *Asys,double *xplus,double u,double v0, double mf, double Vy, double Ifzz, double Vz, double Ts);
 void syseq(double *fTs,double *xstate,double u,double v0, double mf, double Vy, double Ifzz, double Vz, double Ts);

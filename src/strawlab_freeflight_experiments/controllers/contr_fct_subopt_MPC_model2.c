@@ -9,6 +9,13 @@
 #include "helpfunctions.h"
 #include "sys_cost_fct.h"
 
+contrp_t * contr_new_params() {
+    return calloc(1, sizeof(contrp_t));
+}
+    
+projGrState_t * contr_new_state() {
+    return calloc(1, sizeof(projGrState_t));
+}
 
 void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, double *xest, contrp_t *cp, projGrState_t *projGrState, double *statusEKF, int enableEKF, cInpState_t *cInpState) {
    
