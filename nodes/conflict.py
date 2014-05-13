@@ -183,7 +183,7 @@ class Node(object):
 
         if not model_filename:
             model_filename = '/dev/null'
-            model_x = model_y = model_z = 0
+            model_x = model_y = model_z = np.nan
         else:
             model_filename,model_x,model_y,model_z = model_filename.split('|')
 
@@ -201,8 +201,8 @@ class Node(object):
 
         self.log.model_filename = self.model_filename
         self.log.model_x = self.model_x
-        self.log.model_x = self.model_y
-        self.log.model_x = self.model_z
+        self.log.model_y = self.model_y
+        self.log.model_z = self.model_z
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
