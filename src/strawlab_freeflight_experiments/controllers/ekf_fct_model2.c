@@ -1,5 +1,5 @@
-#include "simstruc.h" // needed for printf to Matlab-console
 #include <math.h>
+#include <stdlib.h>
 
 #include "ekf_fct_model2.h"
 

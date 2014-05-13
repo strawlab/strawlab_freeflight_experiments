@@ -1,5 +1,6 @@
 #include <math.h>
-#include "simstruc.h" // needed for printf to Matlab-console
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "contr_fct_subopt_MPC_model2.h"
 

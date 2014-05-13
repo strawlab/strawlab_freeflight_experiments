@@ -1,4 +1,4 @@
-#include "simstruc.h" // needed for printf to Matlab-console
+#include <stdlib.h>
 
 #include "calculateInput.h"
 

@@ -1,3 +1,5 @@
+#include <math.h>
+
 void MatAdd(double *C, double *A, double *B, int n1, int n2)
 {
     // matrix summation C = A+B
