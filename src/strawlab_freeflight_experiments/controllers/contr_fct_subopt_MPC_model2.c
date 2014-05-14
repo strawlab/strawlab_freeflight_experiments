@@ -500,5 +500,24 @@ void inputproj(double *u, double *t, contrp_t *cp)
     }
 }
 
+const double *get_proj_state(contrp_t *cp, projGrState_t *projGrState, int *n, int *m) {
+    *n = (int)cp->Nx;
+    *m = (int)cp->Nhor;
+    return projGrState->x;
+}
+
+const double *get_proj_costate(contrp_t *cp, projGrState_t *projGrState, int *n, int *m) {
+    *n = cp->Nx;
+    *m = cp->Nhor;
+    return projGrState->xco;
+}
+
+const double *get_proj_input(contrp_t *cp, projGrState_t *projGrState, int *n, int *m) {
+    *n = cp->Nu;
+    *m = cp->Nhor;
+    return projGrState->u;
+}
+
+
 
 

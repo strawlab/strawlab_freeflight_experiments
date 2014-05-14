@@ -35,4 +35,7 @@ ekfState_t * ekf_new_state(void);
 void fcnAsys(double *Asys,double *xplus,double u,double v0, double mf, double Vy, double Ifzz, double Vz, double Ts);
 void syseq(double *fTs,double *xstate,double u,double v0, double mf, double Vy, double Ifzz, double Vz, double Ts);
 
+const double *ekf_get_state_estimate(ekfState_t *ekfState, int *n);
+const double *ekf_get_state_covariance(ekfState_t *ekfState, int *m, int *n);
+
 #endif

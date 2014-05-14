@@ -71,6 +71,10 @@ void dHdufct(double *rhs, double *t, double *x, double *xco, double *u, contrp_t
 
 void inputproj(double *u, double *t, contrp_t *cp);
 
+const double *get_proj_state(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
+const double *get_proj_costate(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
+const double *get_proj_input(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
+
 #endif
 
 
