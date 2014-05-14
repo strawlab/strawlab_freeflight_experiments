@@ -260,6 +260,16 @@ fTs[4] = Ts * Vz * (omegae - ggammad) / Ifzz;
 
 }
 
+const double *ekf_get_state_estimate(ekfState_t *ekfState, int *n) {
+    *n = 5;
+    return ekfState->xest;
+}
+
+const double *ekf_get_state_covariance(ekfState_t *ekfState, int *m, int *n) {
+    *m = *n = 5;
+    return ekfState->Pminus;
+}
+
 
 
 
