@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.ctypeslib
 import os.path
 import ctypes as ct
 import ctypes.util
@@ -76,6 +77,42 @@ class MPC:
         #initialize decision function
         lib.initDecFct (self._decp, self._decs)
 
+        #create some numpy arrays to shadow internal state
+        n = ct.c_int(0)
+        m = ct.c_int(0)
+
+        lib.get_proj_state.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
+        lib.get_proj_state.restype = ct.POINTER(ct.c_double)
+        x = lib.get_proj_state(self._conp, self._prjs, m, n)
+        #trick numpy into making a zero-copy view of a fortran (colum major) 
+        #hunk of matlab owned memory. The reshape dance is needed because as_array
+        #does not support a strides argumemt
+        self._proj_x = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
+        self._proj_x = np.reshape(self._proj_x, (m.value,n.value), order='F')
+
+        lib.get_proj_costate.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
+        lib.get_proj_costate.restype = ct.POINTER(ct.c_double)
+        x = lib.get_proj_costate(self._conp, self._prjs, m, n)
+        self._proj_cox = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
+        self._proj_cox = np.reshape(self._proj_cox, (m.value,n.value), order='F')
+
+        lib.get_proj_input.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
+        lib.get_proj_input.restype = ct.POINTER(ct.c_double)
+        x = lib.get_proj_input(self._conp, self._prjs, m, n)
+        self._proj_u = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
+        self._proj_u = np.reshape(self._proj_u, (m.value,n.value), order='F')
+
+        lib.ekf_get_state_estimate.argtypes = [ct.c_void_p, ct.POINTER(ct.c_int)]
+        lib.ekf_get_state_estimate.restype = ct.POINTER(ct.c_double)
+        x = lib.ekf_get_state_estimate(self._ekfs, n)
+        self._ekf_xest = numpy.ctypeslib.as_array(x, shape=(n.value,1))
+
+        lib.ekf_get_state_covariance.argtypes = [ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
+        lib.ekf_get_state_covariance.restype = ct.POINTER(ct.c_double)
+        x = lib.ekf_get_state_covariance(self._ekfs, m, n)
+        self._ekf_pminus = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
+        self._ekf_pminus = np.reshape(self._ekf_pminus, (m.value,n.value), order='F')
+
     @property
     def ekf_enabled(self):
         return self._CT_ekf_enabled.value
@@ -95,9 +132,14 @@ class MPC:
                      int(self.ekf_enabled),
                      self._cins)
 
-    def run_ekf(self, fly):
-        self._CT_cur_fly_pos[0] = fly.x
-        self._CT_cur_fly_pos[1] = fly.y
+    def run_ekf(self, fly, x=None, y=None):
+        if x is None:
+            x = fly.x
+        if y is None:
+            y = fly.y
+
+        self._CT_cur_fly_pos[0] = x
+        self._CT_cur_fly_pos[1] = y
 
         self._ekffcn(int(self.ekf_enabled), #grr
                      self._ekfs,
