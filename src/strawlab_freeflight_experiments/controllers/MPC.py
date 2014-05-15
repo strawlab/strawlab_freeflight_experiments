@@ -125,6 +125,9 @@ class MPC:
     @property
     def rotation_rate(self):
         return self._CT_omegae.value
+    @property
+    def path_progress(self):
+        return self._CT_thetaout.value
 
     def run_control(self):
         #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState)
