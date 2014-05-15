@@ -7,6 +7,7 @@ import argparse
 import os.path
 
 from profilehooks import timecall
+from rawtime import monotonic_time
 
 import roslib
 import roslib.packages
@@ -49,6 +50,8 @@ PI = np.pi
 TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
+
+TIMES = {k:[] for k in ("ekf_b","input_b","control_b","ekf_a","input_a","control_a")}
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -138,17 +141,25 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    @timecall(stats=1000, immediate=False)
+    @timecall(stats=1000, immediate=True, timer=monotonic_time)
     def do_control(self):
+        TIMES['control_b'].append(monotonic_time())
+        #with self.controllock:
         self.control.run_control()
+        TIMES['control_a'].append(monotonic_time())
 
-    @timecall(stats=1000, immediate=False)
+    @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_update_ekf(self, x,y):
+        TIMES['ekf_b'].append(monotonic_time())
         self.control.run_ekf(None,x,y)
+        TIMES['ekf_a'].append(monotonic_time())
 
-    @timecall(stats=1000, immediate=False)
+    @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_calculate_input(self):
+        TIMES['input_b'].append(monotonic_time())
+        #with self.controllock:
         self.control.run_calculate_input()
+        TIMES['input_a'].append(monotonic_time())
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -187,6 +198,8 @@ class Node(object):
         #rate (2.5ms) and do our own scheduling
         r = rospy.Rate(1000/2.5)
         i = 0
+        t0 = monotonic_time()
+
         while not rospy.is_shutdown():
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
@@ -241,6 +254,7 @@ class Node(object):
             r.sleep()
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
+        return t0, TIMES
 
     def is_in_trigger_volume(self, obj):
         c = np.array( (self.x0,self.y0) )
@@ -375,7 +389,21 @@ def main():
             wait_for_flydra=not args.no_wait,
             use_tmpdir=args.tmpdir,
             continue_existing=args.continue_existing)
-    return node.run()
+    t0, times = node.run()
+
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+
+    ax = plt.figure().gca()
+
+    lbls = sorted(times.keys())
+    colors = cm.rainbow(np.linspace(0, 1, len(lbls)))
+
+    for i,(t,c) in enumerate(zip(lbls,colors)):
+        tt = (np.array(times[t]) - t0) * 1000.0
+        ax.scatter(tt, [i]*len(times[t]), label=t, color=c)
+    ax.legend()
+    plt.show()
 
 if __name__=='__main__':
     main()
