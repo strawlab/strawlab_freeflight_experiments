@@ -52,6 +52,7 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
+CONTROL_IN_PARALLEL = True
 TIMES = {k:[] for k in ("ekf_b","input_b","control_b","ekf_a","input_a","control_a")}
 
 #CONDITION = "cylinder_image/
@@ -142,11 +143,14 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    @timecall(stats=1000, immediate=True, timer=monotonic_time)
+    @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_control(self):
         TIMES['control_b'].append(monotonic_time())
-        #with self.controllock:
-        self.control.run_control()
+        if CONTROL_IN_PARALLEL:
+            self.control.run_control()
+        else:
+            with self.controllock:
+                self.control.run_control()
         TIMES['control_a'].append(monotonic_time())
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
@@ -158,8 +162,11 @@ class Node(object):
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_calculate_input(self):
         TIMES['input_b'].append(monotonic_time())
-        #with self.controllock:
-        self.control.run_calculate_input()
+        if CONTROL_IN_PARALLEL:
+            self.control.run_calculate_input()
+        else:
+            with self.controllock:
+                self.control.run_calculate_input()
         TIMES['input_a'].append(monotonic_time())
 
     def switch_conditions(self,event,force=''):
