@@ -53,7 +53,6 @@ TAU= 2*PI
 MAX_ROTATION_RATE = 1.5
 
 CONTROL_IN_PARALLEL = True
-TIMES = {k:[] for k in ("ekf_b","input_b","control_b","ekf_a","input_a","control_a")}
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -145,29 +144,23 @@ class Node(object):
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_control(self):
-        TIMES['control_b'].append(monotonic_time())
         if CONTROL_IN_PARALLEL:
             self.control.run_control()
         else:
             with self.controllock:
                 self.control.run_control()
-        TIMES['control_a'].append(monotonic_time())
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_update_ekf(self, x,y):
-        TIMES['ekf_b'].append(monotonic_time())
         self.control.run_ekf(None,x,y)
-        TIMES['ekf_a'].append(monotonic_time())
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_calculate_input(self):
-        TIMES['input_b'].append(monotonic_time())
         if CONTROL_IN_PARALLEL:
             self.control.run_calculate_input()
         else:
             with self.controllock:
                 self.control.run_calculate_input()
-        TIMES['input_a'].append(monotonic_time())
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -258,13 +251,9 @@ class Node(object):
                     cthread.start()
                     #FIXME: log more stuff here for martin
 
-                if i > 350:
-                    return t0, TIMES
-
             r.sleep()
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
-        return t0, TIMES
 
     def is_in_trigger_volume(self, obj):
         c = np.array( (self.x0,self.y0) )
@@ -399,21 +388,7 @@ def main():
             wait_for_flydra=not args.no_wait,
             use_tmpdir=args.tmpdir,
             continue_existing=args.continue_existing)
-    t0, times = node.run()
-
-    import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-
-    ax = plt.figure().gca()
-
-    lbls = sorted(times.keys())
-    colors = cm.rainbow(np.linspace(0, 1, len(lbls)))
-
-    for i,(t,c) in enumerate(zip(lbls,colors)):
-        tt = (np.array(times[t]) - t0) * 1000.0
-        ax.scatter(tt, [i]*len(times[t]), label=t, color=c)
-    ax.legend()
-    plt.show()
+    return node.run()
 
 if __name__=='__main__':
     main()
