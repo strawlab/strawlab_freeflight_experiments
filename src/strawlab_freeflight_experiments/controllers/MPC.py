@@ -4,7 +4,7 @@ import os.path
 import ctypes as ct
 import ctypes.util
 
-lib = ct.cdll.LoadLibrary(os.path.abspath("libmpc.so"))
+lib = numpy.ctypeslib.load_library("libmpc", os.path.abspath(__file__))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
 
