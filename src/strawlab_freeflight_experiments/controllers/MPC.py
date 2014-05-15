@@ -208,12 +208,19 @@ if __name__ == "__main__":
              Fly(x=0.05,y=0.05,obj_id=42)]
     flies = {f.obj_id:f for f in flies}
 
+    print "enabled", m.controller_enabled
+
     obj_id = m.should_control(flies.values())
     if obj_id != -1:
+        print "enabled", m.controller_enabled
         f = flies[obj_id]
         m.run_ekf(f)
         m.run_control()
         m.run_calculate_input()
 
     print m.rotation_rate
+
+    m.reset()
+    print "enabled", m.controller_enabled
+
 #    print lib.init_par_cInpF_decF_ekf_subopt_MPC_model2
