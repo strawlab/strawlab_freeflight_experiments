@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import math
 import numpy as np
 import threading
@@ -200,6 +201,8 @@ class Node(object):
         i = 0
         t0 = monotonic_time()
 
+        cthread = None
+
         while not rospy.is_shutdown():
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
@@ -207,49 +210,49 @@ class Node(object):
                 fly_y = self.fly.y
                 fly_z = self.fly.z
 
-            while True:
+            if currently_locked_obj_id is not None:
                 i += 1
-                now = rospy.get_time()
-                if currently_locked_obj_id is not None:
-                    #5ms
-                    if (i % 2) == 0:
-                        with self.controllock:
-                            if self.control.ekf_enabled:
-                                self.do_update_ekf(fly_x, fly_y)
 
-                            #FIXME: log stuff here for martin
+                #5ms
+                if (i % 2) == 0:
+                    if self.control.ekf_enabled:
+                        self.do_update_ekf(fly_x, fly_y)
+                        #FIXME: log stuff here for martin
 
-                    #12.5ms
-                    if (i % 5) == 0:
-                        with self.controllock:
-                            self.do_calculate_input()
+                #12.5ms
+                if (i % 5) == 0:
+                    self.do_calculate_input()
 
-                        #lets do the vertical control here too,
-                        #at the same rate, 80Hz, as old
-                        v_rate = self.get_v_rate(fly_z)
-                        rotation_rate = self.control.rotation_rate
-                        ratio = self.control.path_progress
+                    #lets do the vertical control here too,
+                    #at the same rate, 80Hz, as old
+                    v_rate = self.get_v_rate(fly_z)
+                    rotation_rate = self.control.rotation_rate
+                    ratio = self.control.path_progress
 
-                        self.log.rotation_rate = rotation_rate
-                        self.pub_rotation_velocity.publish(rotation_rate)
-                        self.log.v_offset_rate = v_rate
-                        self.pub_v_offset_rate.publish(v_rate)
-                        self.log.ratio = ratio
+                    self.log.rotation_rate = rotation_rate
+                    self.pub_rotation_velocity.publish(rotation_rate)
+                    self.log.v_offset_rate = v_rate
+                    self.pub_v_offset_rate.publish(v_rate)
+                    self.log.ratio = ratio
 
-                        px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
-                        self.src_pub.publish(px,py,fly_z)
-                        self.ack_pub.publish(True)
+                    px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
+                    self.src_pub.publish(px,py,fly_z)
+                    self.ack_pub.publish(self.control.controller_enabled > 0)
 
-                        #FIXME: log more stuff here for martin
-                        self.log.update()
+                    #FIXME: log more stuff here for martin
+                    self.log.update()
 
-                    #150ms
-                    if (i % 60) == 0:
-                        with self.controllock:
-                            self.do_control()
-                        #FIXME: log more stuff here for martin
+                #150ms
+                if (i % 60) == 0:
+                    if cthread is not None:
+                        cthread.join()
 
-                break
+                    cthread = threading.Thread(target=self.do_control)
+                    cthread.start()
+                    #FIXME: log more stuff here for martin
+
+                if i > 350:
+                    return t0, TIMES
 
             r.sleep()
 
