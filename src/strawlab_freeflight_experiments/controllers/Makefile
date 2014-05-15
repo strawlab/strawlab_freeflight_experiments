@@ -5,6 +5,9 @@ all: libmpc.so
 libmpc.so: $(LIB_SRC)
 	$(CC) -Wall -g -fPIC -shared -o $@ $? -lc -lm
 
+testspeed: testspeed.c $(LIB_SRC)
+	$(CC) -Wall -g -pg -o $@ $? -lc -lm
+
 clean:
-	rm -f *.pyc *.o *.so
+	rm -f *.pyc *.o *.so testspeed
 	rm -rf build
