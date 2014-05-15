@@ -1,12 +1,15 @@
+import os.path
+import collections
+
 import numpy as np
 import numpy.ctypeslib
-import os.path
 import ctypes as ct
 import ctypes.util
 
 lib = numpy.ctypeslib.load_library("libmpc", os.path.abspath(__file__))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
+Fly = collections.namedtuple('Fly', 'x y obj_id')
 
 class MPC:
     def __init__(self):
@@ -192,9 +195,6 @@ class MPC:
 
 
 if __name__ == "__main__":
-    import collections
-
-    Fly = collections.namedtuple('Fly', 'x y obj_id')
 
     m = MPC()
     m.reset()
