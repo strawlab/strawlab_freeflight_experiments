@@ -73,7 +73,7 @@ if __name__=='__main__':
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
     histograms = ("velocity","dtheta","rcurve")
-    correlation_options = {"rotation_rate:dtheta":{"range":[[1.45,1.45],[-10,10]]},
+    correlation_options = {"rotation_rate:dtheta":{"range":[[-0.9,0.9],[-10,10]]},
                            "latencies":set(range(0,40,2) + [40,80]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
 }
