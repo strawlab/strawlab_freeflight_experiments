@@ -73,7 +73,7 @@ COOL_CONDITIONS = set()
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -100,12 +100,14 @@ class Node(object):
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
+        self.log.ratio = 0 #backwards compatibility - see theta for mpc path parameter
 
         #setup the MPC controller
         self.controllock = threading.Lock()
         with self.controllock:
             self.control = MPC.MPC()
             self.control.reset()
+            #rotation_rate = omega
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -149,10 +151,14 @@ class Node(object):
         else:
             with self.controllock:
                 self.control.run_control()
+        self.log.j = self.control._CT_jout.value
+        self.log.w = self.control._CT_wout.value
+        self.log.theta = self.control._CT_thetaout.value
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_update_ekf(self, x,y):
         self.control.run_ekf(None,x,y)
+        #FIXME: log x here for martin
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_calculate_input(self):
@@ -213,11 +219,13 @@ class Node(object):
             if currently_locked_obj_id is not None:
                 i += 1
 
+                self.log.ekf_en = self.control.ekf_enabled
+                self.log.control_en = self.control.control_enabled
+
                 #5ms
                 if (i % 2) == 0:
                     if self.control.ekf_enabled:
                         self.do_update_ekf(fly_x, fly_y)
-                        #FIXME: log stuff here for martin
 
                 #12.5ms
                 if (i % 5) == 0:
@@ -227,20 +235,15 @@ class Node(object):
                     #at the same rate, 80Hz, as old
                     v_rate = self.get_v_rate(fly_z)
                     rotation_rate = self.control.rotation_rate
-                    ratio = self.control.path_progress
 
                     self.log.rotation_rate = rotation_rate
                     self.pub_rotation_velocity.publish(rotation_rate)
                     self.log.v_offset_rate = v_rate
                     self.pub_v_offset_rate.publish(v_rate)
-                    self.log.ratio = ratio
 
                     px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                     self.src_pub.publish(px,py,fly_z)
                     self.ack_pub.publish(self.control.controller_enabled > 0)
-
-                    #FIXME: log more stuff here for martin
-                    self.log.update()
 
                 #150ms
                 if (i % 60) == 0:
@@ -249,7 +252,8 @@ class Node(object):
 
                     cthread = threading.Thread(target=self.do_control)
                     cthread.start()
-                    #FIXME: log more stuff here for martin
+
+                self.log.update()
 
             r.sleep()
 
