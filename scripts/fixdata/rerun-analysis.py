@@ -18,6 +18,8 @@ import strawlab.constants
 DEFAULT_LENFILT = '--lenfilt 1'
 DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
 
+DEFAULT_ARGS = r"""--uuid %s --zfilt trim --zfilt-min 0.05 --zfilt-max 0.38 --rfilt trim --arena %s --reindex --customfilt "df[df['velocity']>0.1]" --customfilt-len 1"""
+
 EXCEPT = set()
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -102,7 +104,7 @@ for uuid in todo:
         jsondata = None
 
     #if the experiment contains neither json nor readme, use the default args
-    if not jsondata and not readme:
+    if True:#not jsondata and not readme:
         opts = DEFAULT_ARGS % (uuid, args.arena)
         where = 'd'
     elif jsondata:
