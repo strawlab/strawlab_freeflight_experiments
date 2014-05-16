@@ -73,7 +73,7 @@ COOL_CONDITIONS = set()
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en","t2_5ms")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -115,6 +115,7 @@ class Node(object):
         with self.trackinglock:
             self.currently_locked_obj_id = None
             self.fly = Vector3()
+            self.flyv = Vector3()
             self.framenumber = 0
             now = rospy.get_time()
             self.first_seen_time = now
@@ -215,12 +216,17 @@ class Node(object):
                 fly_x = self.fly.x
                 fly_y = self.fly.y
                 fly_z = self.fly.z
+                fly_v = math.sqrt( (self.flyv.x ** 2) + (self.flyv.y ** 2) )
+
+            #lost fly position
+            if np.isnan(fly_z):
+                continue
 
             if currently_locked_obj_id is not None:
                 i += 1
 
                 self.log.ekf_en = self.control.ekf_enabled
-                self.log.control_en = self.control.control_enabled
+                self.log.control_en = self.control.controller_enabled
 
                 #5ms
                 if (i % 2) == 0:
@@ -234,12 +240,19 @@ class Node(object):
                     #lets do the vertical control here too,
                     #at the same rate, 80Hz, as old
                     v_rate = self.get_v_rate(fly_z)
-                    rotation_rate = self.control.rotation_rate
-
-                    self.log.rotation_rate = rotation_rate
-                    self.pub_rotation_velocity.publish(rotation_rate)
                     self.log.v_offset_rate = v_rate
                     self.pub_v_offset_rate.publish(v_rate)
+
+                    rotation_rate = self.control.rotation_rate
+                    self.log.rotation_rate = rotation_rate
+
+                    #print rotation_rate, fly_v, fly_z
+
+                    if np.isnan(rotation_rate):
+                        with self.controllock:
+                            self.control.reset()
+                    else:
+                        self.pub_rotation_velocity.publish(rotation_rate)
 
                     px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                     self.src_pub.publish(px,py,fly_z)
@@ -253,6 +266,7 @@ class Node(object):
                     cthread = threading.Thread(target=self.do_control)
                     cthread.start()
 
+                self.log.t2_5ms = i
                 self.log.update()
 
             r.sleep()
@@ -311,6 +325,7 @@ class Node(object):
                         elif obj.obj_id == self.currently_locked_obj_id:
                             self.last_seen_time = now
                             self.fly = obj.position
+                            self.flyv = obj.velocity
                             self.framenumber = packet.framenumber
                             break
                 break
