@@ -646,11 +646,11 @@ class CombineH5WithCSV(_Combine):
     csv_file = ''
     h5_file = ''
 
-    def __init__(self, *csv_rows, **kwargs):
+    def __init__(self, *csv_cols, **kwargs):
         _Combine.__init__(self, **kwargs)
-        rows = ["framenumber"]
-        rows.extend(csv_rows)
-        self._rows = set(rows)
+        cols = ["framenumber"]
+        cols.extend(csv_cols)
+        self._cols = set(cols)
         self._csv_suffix = kwargs.get("csv_suffix")
 
         #use this for keeping track of results that span multiple conditions
@@ -749,7 +749,7 @@ class CombineH5WithCSV(_Combine):
             self._debug("IO:     fixing data %s" % self._fix)
 
         #record_iterator in the csv_file returns all defined cols by default.
-        #those specified in csv_rows are float()'d and put into the dataframe
+        #those specified in csv_cols are float()'d and put into the dataframe
         infile = nodelib.log.CsvLogger(csv_fname, "r")
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
@@ -790,7 +790,7 @@ class CombineH5WithCSV(_Combine):
                 _t = float(row.t_sec) + (float(row.t_nsec) * 1e-9)
                 _framenumber = int(row.framenumber)
 
-                for k in self._rows:
+                for k in self._cols:
                     if k != "framenumber":
                         try:
                             this_row[k] = float(getattr(row,k))
@@ -828,7 +828,7 @@ class CombineH5WithCSV(_Combine):
                         #first time
                         this_id = _id
                         this_cond = _cond
-                        csv_results = {k:[] for k in self._rows}
+                        csv_results = {k:[] for k in self._cols}
                         query_id = None
                     finally:
                         _ids.put((_id,_framenumber,_t,_cond),block=False)
@@ -883,7 +883,7 @@ class CombineH5WithCSV(_Combine):
                         else:
                             dfd = {'x':validx,'y':validy,'z':validz}
 
-                            for k in self._rows:
+                            for k in self._cols:
                                 if k != "framenumber":
                                     dfd[k] = pd.Series(csv_results[k],index=csv_results['framenumber'])
 
@@ -931,7 +931,7 @@ class CombineH5WithCSV(_Combine):
 
                     this_id = _id
                     this_cond = _cond
-                    csv_results = {k:[] for k in self._rows}
+                    csv_results = {k:[] for k in self._cols}
 
                 elif _id == this_id:
                     #sometimes we get duplicate rows. only append if the fn is
@@ -939,8 +939,7 @@ class CombineH5WithCSV(_Combine):
                     fns = csv_results["framenumber"]
                     if (not fns) or (_framenumber > fns[-1]):
                         fns.append(_framenumber)
-
-                        for k in self._rows:
+                        for k in self._cols:
                             if k != "framenumber":
                                 csv_results[k].append(this_row[k])
 
