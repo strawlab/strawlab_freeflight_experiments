@@ -116,7 +116,6 @@ class Node(object):
             self.currently_locked_obj_id = None
             self.fly = Vector3()
             self.flyv = Vector3()
-            self.framenumber = 0
             now = rospy.get_time()
             self.first_seen_time = now
             self.last_seen_time = now
@@ -326,7 +325,7 @@ class Node(object):
                             self.last_seen_time = now
                             self.fly = obj.position
                             self.flyv = obj.velocity
-                            self.framenumber = packet.framenumber
+                            self.log.framenumber = packet.framenumber
                             break
                 break
 
