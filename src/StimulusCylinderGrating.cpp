@@ -16,7 +16,7 @@
 
 #include <OpenThreads/ScopedLock>
 
-#define NUM_GRATINGS 2
+#define NUM_GRATINGS 1
 
 #include <math.h>
 const static double D2R = M_PI/180.0;
@@ -228,8 +228,8 @@ void StimulusCylinderGrating::init_cyl(CylInfo& cyl) {
         new_values.phase_position = 0.0;
         new_values.phase_velocity = 360*D2R;
         new_values.wavelength = 20*D2R;
-        new_values.contrast = 0.5;
-        new_values.orientation = 45*D2R;
+        new_values.contrast = 1.0;
+        new_values.orientation = 0;
 
         if (i==0) {
             phase_position_name="phase_position0";
@@ -237,14 +237,7 @@ void StimulusCylinderGrating::init_cyl(CylInfo& cyl) {
             contrast_name="contrast0";
             orientation_name="orientation0";
         } else {
-            flyvr_assert(i==1);
-            phase_position_name="phase_position1";
-            wavelength_name="wavelength1";
-            contrast_name="contrast1";
-            orientation_name="orientation1";
-            new_values.contrast = 0.05;
-            new_values.orientation = -45*D2R;
-            new_values.phase_velocity = -360*D2R;
+            flyvr_assert(false);
         }
 
         cyl.gratings[i].u_phase_position = new osg::Uniform( osg::Uniform::FLOAT, phase_position_name );

@@ -8,10 +8,10 @@
 
 varying vec3 cyl_pos;
 
-uniform float phase_position0, phase_position1;
-uniform float wavelength0, wavelength1;
-uniform float contrast0, contrast1;
-uniform float orientation0, orientation1;
+uniform float phase_position0;
+uniform float wavelength0;
+uniform float contrast0;
+uniform float orientation0;
 
 void main(void)
 {
@@ -23,14 +23,10 @@ void main(void)
     //  float elevation = (M_PI*0.5)-inclination; // 0 at equator, north pole is +M_PI
 
     float Q0 = cos(orientation0)*azimuth + sin(orientation0)*inclination;
-    float Q1 = cos(orientation1)*azimuth + sin(orientation1)*inclination;
 
     float phase0 = Q0/wavelength0 * M_2PI;
     float value0 = contrast0*0.5*sin( phase0 + phase_position0 );
 
-    float phase1 = Q1/wavelength1 * M_2PI;
-    float value1 = contrast1*0.5*sin( phase1 + phase_position1 );
-
-    float value = value0 + value1 + pedestal;
+    float value = value0 + pedestal;
     gl_FragColor = vec4(value, value, value, 1.0);
 }
