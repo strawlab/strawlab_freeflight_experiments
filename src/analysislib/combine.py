@@ -240,21 +240,22 @@ class _Combine(object):
         """
         return self._results, self._dt
 
-    def get_one_result(self, obj_id):
+    def get_one_result(self, obj_id, condition=None):
         """
         Get the data associated with a single object_id
 
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
-        if obj_id in self.get_spanned_results():
-            raise ValueError("obj_id: %s exists in multiple conditions" % obj_id)
+        if (not condition) and (obj_id in self.get_spanned_results()):
+            raise ValueError("obj_id: %s exists in multiple conditions - please specify which one" % obj_id)
 
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
                 if _obj_id == obj_id:
-                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+                    if (not condition) or (current_condition == condition):
+                        return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
 
-        raise ValueError("No such obj_id: %s" % obj_id)
+        raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
 
     def get_result_columns(self):
         """get the names of the columns in the combined dataframe"""
