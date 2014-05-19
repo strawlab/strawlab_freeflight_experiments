@@ -21,6 +21,7 @@ DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' -
 DEFAULT_ARGS = "--uuid %s --zfilt trim --zfilt-min 0.05 --zfilt-max 0.38 --rfilt trim --arena %s --reindex --customfilt df[df['velocity']>0.1] --customfilt-len 1"
 
 EXCEPT = set()
+ONLY = set()#['d8f0d0289b1711e38ed610bf48d7699b'])
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
@@ -83,6 +84,9 @@ for uuid in todo:
         os.makedirs("LOG")
 
     if uuid in EXCEPT:
+        continue
+
+    if ONLY and (uuid not in ONLY):
         continue
 
     print uuid,
