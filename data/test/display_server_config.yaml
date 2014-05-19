@@ -16,6 +16,8 @@ stimulus_plugins:
   name: StimulusCylinder
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusCylinderAndModel
+- path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusCylinderGrating
 display:
   displayNum: 0
   screenNum: 0
