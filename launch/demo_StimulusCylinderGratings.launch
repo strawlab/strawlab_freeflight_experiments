@@ -1,0 +1,14 @@
+<launch>
+
+  <node name="display_server_demo" pkg="flyvr" type="display_server" args="--mode overview">
+    <rosparam command="load" file="$(find strawlab_tethered_experiments)/stimulus_config/display_server_demo.yaml" />
+    <param name="p2g" type="str" value="$(find flyvr)/config/p2g.exr" />
+    <param name="display/windowDecoration" type="bool" value="true" />
+  </node>
+
+  <node name="stimnode" pkg="strawlab_tethered_experiments" type="closed_loop_plaid.py">
+
+    <remap from="display_server" to="/display_server_demo"/>
+  </node>
+
+</launch>
