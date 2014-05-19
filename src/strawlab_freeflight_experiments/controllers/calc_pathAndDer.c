@@ -17,15 +17,19 @@ void pathAndDer (double *path, double *pathDer, double *pathDerDer, double theta
     
     pathDer[0] = -R*sin(theta);
     pathDer[1] = R*(-pow(sin(theta),2) + pow(cos(theta),2));*/
+    double ct = cos(theta);
+    double cd = cos(delta);
+    double st = sin(theta);
+    double sd = sin(delta);
     
     // ellipse
-    path[0] = xme + a*cos(theta)*cos(delta) - b*sin(theta)*sin(delta);
-    path[1] = yme + a*cos(theta)*sin(delta) + b*sin(theta)*cos(delta);
+    path[0] = xme + a*ct*cd - b*st*sd;
+    path[1] = yme + a*ct*sd + b*st*cd;
     
-    pathDer[0] = -a*sin(theta)*cos(delta) - b*cos(theta)*sin(delta);
-    pathDer[1] = -a*sin(theta)*sin(delta) + b*cos(theta)*cos(delta);
+    pathDer[0] = -a*st*cd - b*ct*sd;
+    pathDer[1] = -a*st*sd + b*ct*cd;
     
-    pathDerDer[0] = -a*cos(theta)*cos(delta) + b*sin(theta)*sin(delta);
-    pathDerDer[1] = -a*cos(theta)*sin(delta) - b*sin(theta)*cos(delta);
+    pathDerDer[0] = -a*ct*cd + b*st*sd;
+    pathDerDer[1] = -a*ct*sd - b*st*cd;
         
 }
