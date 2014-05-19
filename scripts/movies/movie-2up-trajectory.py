@@ -60,12 +60,12 @@ def draw_flycube2(ax):
              alpha=0.0001,
              markersize=0.0001 )
 
-def doit(combine, fmf_fname, obj_id, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+def doit(combine, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
     h5_file = combine.h5_file
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
-    df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+    df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
 
     if show_values:
         valid = df.fillna(method='ffill')
@@ -233,6 +233,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--show-values', type=str, default='',
         help='comma separated list of extra colums to display')
+    parser.add_argument(
+        '--condition', type=str,
+        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
 
     args = parser.parse_args()
     analysislib.args.check_args(parser, args, max_uuids=1)
@@ -270,7 +273,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(combine, fmf_fname, obj_id, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
+            doit(combine, fmf_fname, obj_id, args.condition, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
 

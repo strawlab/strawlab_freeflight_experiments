@@ -84,7 +84,7 @@ STIMULUS_CSV_MAP = {
     "StimulusCylinderAndModel":"conflict.csv",
 }
 
-def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
+def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
     try:
         csvsuffix = STIMULUS_CSV_MAP[stimname]
         if csvsuffix is None:
@@ -97,7 +97,7 @@ def doit(args, fmf_fname, obj_id, tmpdir, outdir, calibration, framenumber, sml,
     except KeyError:
         print "no renderslave for",stimname
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id)
+    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
 
     renderers = {}
     osgslaves = {}
@@ -378,6 +378,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--stimulus', type=str, default='StimulusOSGFile',
         help='flyvr stimulus name')
+    parser.add_argument(
+        '--condition', type=str,
+        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
 
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
@@ -405,7 +408,8 @@ if __name__ == "__main__":
 
     doit(args,
          args.movie_file,
-         obj_id, args.tmpdir,
+         obj_id, args.condition,
+         args.tmpdir,
          outdir, args.calibration, args.framenumber,
          '_sml',
          args.stimulus,

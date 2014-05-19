@@ -4,6 +4,7 @@ geom:
   model: cylinder
   radius: 0.5
 tethered_mode: True
+ignore_missing_stimulus_plugins: True
 stimulus_plugins: 
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusStarFieldAndModel
