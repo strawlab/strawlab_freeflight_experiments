@@ -65,7 +65,7 @@ target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 add_library(StimulusCylinderAndModel SHARED src/StimulusCylinderAndModel.cpp src/json2osg.cpp)
-target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
+target_link_libraries(StimulusCylinderAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
 SET(MY_CUDA_SOURCE_FILES
