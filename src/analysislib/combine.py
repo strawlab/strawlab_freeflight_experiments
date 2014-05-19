@@ -794,11 +794,20 @@ class CombineH5WithCSV(_Combine):
                     if k != "framenumber":
                         try:
                             this_row[k] = float(getattr(row,k))
+                            warn = None
                         except AttributeError:
                             this_row[k] = np.nan
-                            if k not in warnings:
-                                self._warn("WARNING: no such column in csv:%s" % k)
-                                warnings[k] = True
+                            warn = "%s:col" % k, "no such column in csv:%s" % k
+                        except ValueError:
+                            this_row[k] = np.nan
+                            warn = "%s:val" % k, "missing value for column in csv:%s" % k
+
+                        if warn is not None:
+                            warnk,warnv = warn
+                            if warnk not in warnings:
+                                self._warn("WARNING: %s" % warnv)
+                                warnings[warnk] = True
+
 
                 if _cond not in results:
                     results[_cond] = dict(count=0,
