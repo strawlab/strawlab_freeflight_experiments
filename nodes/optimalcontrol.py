@@ -19,7 +19,9 @@ import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose
+
 from ros_flydra.msg import flydra_mainbrain_super_packet
+from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 
 import flyflypath.model
 import flyflypath.transform
@@ -45,7 +47,6 @@ Z_MAXIMUM = 0.95
 GRAY_FN = "gray.png"
 
 TIMEOUT             = 0.5
-IMPOSSIBLE_OBJ_ID   = 0
 
 PI = np.pi
 TAU= 2*PI
@@ -113,7 +114,7 @@ class Node(object):
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
         with self.trackinglock:
-            self.currently_locked_obj_id = None
+            self.currently_locked_obj_id = IMPOSSIBLE_OBJ_ID
             self.fly = Vector3()
             self.flyv = Vector3()
             now = rospy.get_time()
@@ -221,7 +222,7 @@ class Node(object):
             if np.isnan(fly_z):
                 continue
 
-            if currently_locked_obj_id is not None:
+            if currently_locked_obj_id != IMPOSSIBLE_OBJ_ID:
                 i += 1
 
                 self.log.ekf_en = self.control.ekf_enabled
@@ -318,7 +319,7 @@ class Node(object):
             while True:
                 for packet in data.packets:
                     for obj in packet.objects:
-                        if self.currently_locked_obj_id is None:
+                        if self.currently_locked_obj_id == IMPOSSIBLE_OBJ_ID:
                             if self.is_in_trigger_volume(obj):
                                 flies.append( MPC.Fly(obj.position.x, obj.position.y, obj.obj_id) )
                         elif obj.obj_id == self.currently_locked_obj_id:
@@ -332,7 +333,7 @@ class Node(object):
             currently_locked_obj_id = self.currently_locked_obj_id
 
         with self.controllock:
-            if currently_locked_obj_id is not None:
+            if currently_locked_obj_id != IMPOSSIBLE_OBJ_ID:
                 if self.maybe_drop_lock_on(now, self.fly.x, self.fly.y, self.fly.z):
                     self.drop_lock_on()
                     self.control.reset()
@@ -341,9 +342,9 @@ class Node(object):
                 if obj_id != -1:
                     self.lock_on(obj_id, packet.framenumber)
 
-    def update(self):
+    def update_lock_on_off(self):
         self.log.update()
-        self.pub_lock_object.publish( self.log.lock_object )
+        self.pub_lock_object.publish(self.currently_locked_obj_id)
 
     def lock_on(self,obj_id,framenumber):
         rospy.loginfo('locked object %d at frame %d' % (obj_id,framenumber))
@@ -351,14 +352,15 @@ class Node(object):
         self.currently_locked_obj_id = obj_id
         self.last_seen_time = now
         self.first_seen_time = now
+        self.last_check_flying_time = now
+
         self.log.lock_object = obj_id
         self.log.framenumber = framenumber
-        self.last_check_flying_time = now
 
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
-        self.update()
+        self.update_lock_on_off()
 
     def drop_lock_on(self):
         old_id = self.currently_locked_obj_id
@@ -367,16 +369,13 @@ class Node(object):
 
         rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
 
-        self.currently_locked_obj_id = None
+        self.currently_locked_obj_id = IMPOSSIBLE_OBJ_ID
 
         self.log.lock_object = IMPOSSIBLE_OBJ_ID
         self.log.framenumber = 0
-
         self.log.rotation_rate = 0
         self.log.ratio = 0
-
         self.log.cyl_r = 0.5
-
         self.log.cyl_x = 0
         self.log.cyl_y = 0
 
@@ -384,10 +383,9 @@ class Node(object):
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
-
         self.ack_pub.publish(False)
 
-        self.update()
+        self.update_lock_on_off()
 
 def main():
     rospy.init_node("rotation")
