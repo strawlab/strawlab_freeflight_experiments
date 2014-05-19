@@ -12,7 +12,7 @@ void sysfct(double *f,
 	double Vy = cp->cntr_flyparams.Vy;
 	double Vz = cp->cntr_flyparams.Vz;
 	double Ifzz = cp->cntr_flyparams.Ifzz;
-	    
+
 	double xpos    = x[0];
     double ypos    = x[1];
     double gamma   = x[2];
@@ -23,9 +23,12 @@ void sysfct(double *f,
         
     double omegae  = u[0];
     double w       = u[1];
+
+    double sg = sin(gamma);
+    double cg = cos(gamma);
     
-    f[0] = v0*cos(gamma) - vy*sin(gamma); 
-    f[1] = v0*sin(gamma) + vy*cos(gamma);
+    f[0] = v0*cg - vy*sg; 
+    f[1] = v0*sg + vy*cg;
     f[2] = gammad;
     f[3] = -v0*gammad - 1/mf*Vy*vy;
     f[4] = 1/Ifzz*Vz*(omegae - gammad);
@@ -50,6 +53,9 @@ void sysjacx(double *dfdx,
     double gamma   = x[2];
     double vy      = x[3];
 
+    double sg = sin(gamma);
+    double cg = cos(gamma);
+
 	int i; 
 
 	// also elements containing zero must be filled explicitly because
@@ -63,12 +69,12 @@ void sysjacx(double *dfdx,
     // second column: zero
     
     // 3. column:
-    dfdx[12] = -v0*sin(gamma) - vy*cos(gamma);
-    dfdx[13] = v0*cos(gamma) - vy*sin(gamma);
+    dfdx[12] = -v0*sg - vy*cg;
+    dfdx[13] = v0*cg - vy*sg;
 
     // 4. column:
-    dfdx[18] = -sin(gamma);
-    dfdx[19] = cos(gamma);
+    dfdx[18] = -sg;
+    dfdx[19] = cg;
 	dfdx[21] = -Vy/mf;
 
     // 5. column:
