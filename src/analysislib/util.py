@@ -6,10 +6,14 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import autodata.files
 
-def get_csv_for_uuid(uuid):
+def _get_csv_fm_for_uuid(uuid):
     fm = autodata.files.FileModel()
     fm.select_uuid(uuid)
-    name = fm.get_file_model("*.csv").filename
+    return fm.get_file_model("*.csv")
+
+def get_csv_for_uuid(uuid):
+    fm = _get_csv_fm_for_uuid(uuid)
+    name = fm.filename
     csvname = '.'.join(name.rsplit('.',2)[1:])
     return csvname
 
@@ -18,6 +22,27 @@ def get_csv_for_args(args):
         return get_csv_for_uuid(args.uuid[0])
     elif args.csv_file:
         return os.path.basename(args.csv_file)
+    else:
+        raise Exception("uuid or csv file must be provided")
+
+def get_combiner_for_uuid(uuid, fm=None):
+    if fm is None:
+        fm = _get_csv_fm_for_uuid(uuid)
+    with open(fm.fullpath, 'r') as f:
+        for l in f:
+            csv_cols = l.strip().split(',')
+            break
+    suffix = '.'.join(fm.filename.rsplit('.',2)[1:])
+
+    return analysislib.combine.CombineH5WithCSV(*csv_cols, csv_suffix=suffix)
+
+def get_combiner_for_args(uuid):
+    if args.uuid:
+        return get_combiner_for_uuid(args.uuid[0])
+    elif args.csv_file:
+        fm = autodata.files.FileModel()
+        fm.select_file(args.csv_file)
+        return get_combiner_for_uuid(None, fm)
     else:
         raise Exception("uuid or csv file must be provided")
 

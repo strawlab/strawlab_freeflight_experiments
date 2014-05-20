@@ -650,7 +650,11 @@ class CombineH5WithCSV(_Combine):
         _Combine.__init__(self, **kwargs)
         cols = ["framenumber"]
         cols.extend(csv_cols)
-        self._cols = set(cols)
+        #some rows are handled differently
+        #condition, exp_uuid, flydra_data_file are strings,
+        #lock_object, t_sec, t_nsec have to be present
+        self._cols = set(cols) - set(['condition','lock_object','t_sec','t_nsec','exp_uuid','flydra_data_file'])
+
         self._csv_suffix = kwargs.get("csv_suffix")
 
         #use this for keeping track of results that span multiple conditions

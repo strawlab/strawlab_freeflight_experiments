@@ -6,9 +6,43 @@ import unittest
 import collections
 
 import roslib
+import roslib.packages
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.args
+import analysislib.util as autil
+
+class TestCombineUtil(unittest.TestCase):
+
+    def setUp(self):
+        self._uuid = '0'*32
+        ddir = os.path.join(
+                    roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
+                   'test','data'
+        )
+        self._ddir = ddir
+        self._pdir = os.path.join(ddir, 'plots')
+
+        #make autodata look in the tempdir for file
+        os.environ['FLYDRA_AUTODATA_BASEDIR'] = self._ddir
+        os.environ['FLYDRA_AUTODATA_PLOTDIR'] = self._pdir
+
+    def tearDown(self):
+        del os.environ['FLYDRA_AUTODATA_BASEDIR']
+        del os.environ['FLYDRA_AUTODATA_PLOTDIR']
+
+    def test_auto_combine(self):
+        combine = autil.get_combiner_for_uuid(self._uuid)
+        combine.disable_debug()
+        combine.disable_warn()
+        combine.add_from_uuid(self._uuid)
+        cols = set(combine.get_result_columns())
+        self.assertEqual(cols,
+                         set(['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate',
+                              'trg_x', 'trg_y', 'trg_z', 'v_offset_rate', 'x', 'y',
+                              'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az',
+                              'theta', 'dtheta', 'radius', 'omega', 'rcurve']))
+   
 
 class TestCombine(unittest.TestCase):
 
