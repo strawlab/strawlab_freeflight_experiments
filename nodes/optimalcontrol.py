@@ -74,7 +74,7 @@ COOL_CONDITIONS = set()
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en","t2_5ms")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -232,6 +232,10 @@ class Node(object):
                 if (i % 2) == 0:
                     if self.control.ekf_enabled:
                         self.do_update_ekf(fly_x, fly_y)
+
+                        xest = self.control._ekf_xest.flatten()
+                        for _i in range(5):
+                            setattr(self.log, "xest%d"%_i, xest[_i])
 
                 #12.5ms
                 if (i % 5) == 0:
