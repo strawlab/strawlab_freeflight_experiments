@@ -6,6 +6,7 @@ import random
 import time
 import cPickle as pickle
 import re
+import operator
 
 import tables
 import pandas as pd
@@ -256,6 +257,24 @@ class _Combine(object):
                         return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
 
         raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
+
+    def get_obj_ids_sorted_by_length(self):
+        """
+        Get a sorted list of the longest trajectories
+        returns: a dictionary condition:[(obj_id,len),...]
+        """
+        best = {}
+        for i,(current_condition,r) in enumerate(self._results.iteritems()):
+            if not r['count']:
+                continue
+            for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                try:
+                    best[current_condition][obj_id] = len(df)
+                except KeyError:
+                    best[current_condition] = {obj_id:len(df)}
+
+        sorted_best = {c:sorted(best[c].items(), key=operator.itemgetter(1), reverse=True) for c in self.get_conditions()}
+        return sorted_best
 
     def get_result_columns(self):
         """get the names of the columns in the combined dataframe"""
