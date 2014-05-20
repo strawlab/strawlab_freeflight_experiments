@@ -35,11 +35,10 @@ if __name__=='__main__':
 
     uuid = args.uuid[0]
     obj_id = args.idfilt[0]
-    
-    suffix = autil.get_csv_for_uuid(uuid)
-    combine = autil.get_combiner(suffix)
+
+    combine = autil.get_combiner_for_uuid(uuid)
     combine.calc_turn_stats = True
-    combine.add_from_uuid(uuid,suffix,args=args)
+    combine.add_from_uuid(uuid,args=args)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
     for extra in args.show_extra.split(','):
