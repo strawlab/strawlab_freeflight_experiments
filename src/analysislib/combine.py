@@ -667,7 +667,8 @@ class CombineH5WithCSV(_Combine):
 
     def __init__(self, *csv_cols, **kwargs):
         _Combine.__init__(self, **kwargs)
-        cols = ["framenumber"]
+        #framenumber must be present
+        cols = ["framenumber","tnsec","tsec"]
         cols.extend(csv_cols)
         #some rows are handled differently
         #condition, exp_uuid, flydra_data_file are strings,
@@ -813,8 +814,11 @@ class CombineH5WithCSV(_Combine):
                 _t = float(row.t_sec) + (float(row.t_nsec) * 1e-9)
                 _framenumber = int(row.framenumber)
 
+                this_row["tsec"] = _t
+                this_row["tnsec"] = (int(row.t_sec) * int(1e9)) + int(row.t_nsec)
+
                 for k in self._cols:
-                    if k != "framenumber":
+                    if k not in ("framenumber","tnsec","tsec"):
                         try:
                             this_row[k] = float(getattr(row,k))
                             warn = None
