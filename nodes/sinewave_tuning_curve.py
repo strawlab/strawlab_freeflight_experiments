@@ -45,6 +45,8 @@ START_Z         = 0.5
 Z_MINIMUM = 0.00
 Z_MAXIMUM = 0.95
 
+GRAY_FN = "gray.png"
+
 TIMEOUT             = 0.5
 IMPOSSIBLE_OBJ_ID   = 0
 
