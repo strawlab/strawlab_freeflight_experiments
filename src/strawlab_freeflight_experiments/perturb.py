@@ -22,16 +22,35 @@ def get_ratio_ragefuncs(*chunks):
 
     return funcs
 
-def get_perturb_class(perturb_descriptor):
+_perturb_class_indicator_functions = {}
+def register_perturb_class_indicator_function(func,klass):
+    global _perturb_class_indicator_functions
+    _perturb_class_indicator_functions[func] = klass
 
-    try:
-        name = perturb_descriptor.split('|')[0]
-        if name == 'step':
-            return PerturberStep
-        elif name.startswith('chirp'):
-            return PerturberChirp
-    except:
-        pass
+def _orig_step_perturb_indicator(name):
+    if name == 'step':
+        return True
+    return False
+
+def _orig_chirp_perturb_indicator(name):
+    if name.startswith('chirp'):
+        return True
+    return False
+
+def setup_original_perturb_classes():
+    register_perturb_class_indicator_function(_orig_step_perturb_indicator,
+                                              PerturberStep)
+    register_perturb_class_indicator_function(_orig_chirp_perturb_indicator,
+                                              PerturberChirp)
+
+def get_perturb_class(perturb_descriptor):
+    global _perturb_class_indicator_functions
+
+    name = perturb_descriptor.split('|')[0]
+
+    for func,klass in _perturb_class_indicator_functions.iteritems():
+        if func(name):
+            return klass
 
     return NoPerturb
 

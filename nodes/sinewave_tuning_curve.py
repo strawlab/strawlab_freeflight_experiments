@@ -64,12 +64,12 @@ MAX_ROTATION_RATE = 1.5
 #             perturbation_descriptor"
 
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/None",
+#              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/None",
 ]
 
 for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
     CONDITIONS.append(
-        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step|1.0|%s|1.0"%np.deg2rad(lmbda_deg))
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step_grating|1.0|%s|1.0"%np.deg2rad(lmbda_deg))
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
