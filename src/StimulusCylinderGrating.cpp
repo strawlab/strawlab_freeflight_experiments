@@ -162,7 +162,7 @@ std::string StimulusCylinderGrating::get_message_type(const std::string& topic_n
 {
     std::string result;
     if (topic_name=="grating_info") {
-        result = "strawlab_tethered_experiments/CylinderPlaid";
+        result = "strawlab_freeflight_experiments/CylinderGratingInfo";
     } else {
         throw std::runtime_error("unknown topic name");
     }
