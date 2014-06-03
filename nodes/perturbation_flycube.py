@@ -273,8 +273,8 @@ class Node(object):
 
                     if self.condition in COOL_CONDITIONS:
                         #fly is still flying
-                        if abs(fly_z-self.z_target) < 0.1:
-                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+#                        if abs(fly_z-self.z_target) < 0.1:
+#                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
                             self.pub_save.publish(currently_locked_obj_id)
 
                 return rate, self.trg_x,self.trg_y
