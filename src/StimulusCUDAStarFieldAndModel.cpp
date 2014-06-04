@@ -402,7 +402,13 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    flyvr_assert(root != NULL);
+
+    if (root != NULL) {
+        std::ostringstream errstream;
+        errstream << "ERROR: could not load JSON message \"" << json_message << "\" to topic \"" << topic_name << "\".";
+        std::string errmsg = errstream.str();
+        flyvr_assert_msg(false, errmsg.c_str());
+    }
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
