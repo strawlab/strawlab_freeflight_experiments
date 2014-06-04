@@ -23,6 +23,7 @@ import flyflypath.transform
 import nodelib.log
 
 from strawlab_freeflight_experiments.topics import *
+from strawlab_freeflight_experiments import INVALID_VALUE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -183,7 +184,7 @@ class Node(object):
 
         if not model_filename:
             model_filename = '/dev/null'
-            model_x = model_y = model_z = np.nan
+            model_x = model_y = model_z = INVALID_VALUE
         else:
             model_filename,model_x,model_y,model_z = model_filename.split('|')
 
