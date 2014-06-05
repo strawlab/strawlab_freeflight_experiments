@@ -791,7 +791,7 @@ class CombineH5WithCSV(_Combine):
             assert dt == self._dt
             assert tzname == self._tzname
 
-        dur_samples = self.min_num_frames
+        dur_samples = max(1,self.min_num_frames)
 
         _ids = Queue.Queue(maxsize=2)
         this_id = IMPOSSIBLE_OBJ_ID
