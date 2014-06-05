@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sys
+import os.path
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -78,8 +80,9 @@ if __name__=='__main__':
                     )
 
                 if args.save:
-                    df.to_csv("%s_%s_%s.csv" % (uuid, obj_id, name))
-                    df.save("%s_%s_%s.df" % (uuid, obj_id, name))
+                    basedir = args.outdir if args.outdir else combine.plotdir
+                    df.to_csv(os.path.join(basedir,"%s_%s_%s.csv" % (uuid, obj_id, name)))
+                    df.save(os.path.join(basedir,"%s_%s_%s.df" % (uuid, obj_id, name)))
 
     if args.show:
         aplt.show_plots()
