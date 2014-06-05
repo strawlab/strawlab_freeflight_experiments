@@ -36,15 +36,20 @@ def get_combiner_for_uuid(uuid, fm=None):
 
     return analysislib.combine.CombineH5WithCSV(*csv_cols, csv_suffix=suffix)
 
-def get_combiner_for_args(uuid):
+def get_combiner_for_args(args):
     if args.uuid:
         return get_combiner_for_uuid(args.uuid[0])
     elif args.csv_file:
         fm = autodata.files.FileModel()
         fm.select_file(args.csv_file)
-        return get_combiner_for_uuid(None, fm)
+        return get_combiner_for_uuid(None, fm.get_file_model("*.csv"))
     else:
         raise Exception("uuid or csv file must be provided")
+
+def get_combiner_for_csv(csv):
+    fm = autodata.files.FileModel()
+    fm.select_file(csv)
+    return get_combiner_for_uuid(None, fm.get_file_model("*.csv"))
 
 def get_combiner(suffix):
     """
