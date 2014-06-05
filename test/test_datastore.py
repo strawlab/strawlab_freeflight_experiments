@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os.path
+import sys
 import unittest
 
 import roslib
@@ -8,6 +9,8 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.util as autil
 import strawlab.constants
+
+_me_exec = os.path.basename(sys.argv[0])
 
 class TestDataStore(unittest.TestCase):
 
