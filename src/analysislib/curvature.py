@@ -125,6 +125,8 @@ def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurv
 
     d = np.zeros((len(df)))
     d.fill(np.nan)
+    c = np.nan
+
     for i in range(0,len(df)+1,NPTS):
         x = df['x'][i:i+NPTS].values
         y = df['y'][i:i+NPTS].values
