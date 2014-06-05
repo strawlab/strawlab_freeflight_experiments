@@ -292,6 +292,9 @@ def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, c
 
     return all_corra, all_corrb, nens
 
+def _correlate(df, cola, colb, shift=0):
+    return df[cola].shift(shift).corr(df[colb])
+
 def plot_correlation_analysis(args, combine, correlations, correlation_options):
     results,dt = combine.get_results()
     fname = combine.fname
@@ -326,7 +329,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
                         continue
 
                     #calculate correlation coefficients for all latencies
-                    ccefs = [df[corra].shift(l).corr(df[corrb]) for l in latencies]
+                    ccefs = [ _correlate(df,corra,corrb,l) for l in latencies ]
 
                     series.append( pd.Series(ccefs,index=latencies,name=_obj_id) )
 
