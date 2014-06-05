@@ -81,6 +81,8 @@ class TestCombine(unittest.TestCase):
         results,dt = combine.get_results()
 
         combine2 = analysislib.combine.CombineH5()
+        _quiet(combine2)
+
         combine2.add_h5_file(combine.h5_file)
         b = combine2.get_one_result(174)
 
@@ -107,9 +109,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(framenumber0,7792)
         self.assertAlmostEqual(time0, 1374168638.8101971)
 
-
     def test_csv(self):
         combine = analysislib.combine.CombineCSV()
+        _quiet(combine)
+
         combine.add_csv_file(self.RT_CSV)
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
@@ -117,6 +120,8 @@ class TestCombine(unittest.TestCase):
 
     def test_csv_args(self):
         combine = analysislib.combine.CombineCSV()
+        _quiet(combine)
+
         parser,args = analysislib.args.get_default_args(
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
@@ -128,6 +133,8 @@ class TestCombine(unittest.TestCase):
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
+        _quiet(c1)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["34e60d6efddc11e2848064315026cb58"],
                 outdir='/tmp/',
@@ -141,7 +148,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(len(df), 19945)
 
         del c1
+
         c2 = analysislib.combine.CombineCSV()
+        _quiet(c2)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["31b764cafb6c11e299c864315026cb58"],
                 outdir='/tmp/',
@@ -155,7 +165,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(len(df), 17472)
 
         del c2
+
         cc = analysislib.combine.CombineCSV()
+        _quiet(cc)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["34e60d6efddc11e2848064315026cb58","31b764cafb6c11e299c864315026cb58"],
                 outdir='/tmp/',
