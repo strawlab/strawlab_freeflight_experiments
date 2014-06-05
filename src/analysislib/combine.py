@@ -49,8 +49,8 @@ class _Combine(object):
     calc_turn_stats = True
 
     def __init__(self, **kwargs):
-        self.__debug = kwargs.get("debug",True)
-        self.__warn = kwargs.get("warn",True)
+        self._enable_debug = kwargs.get("debug",True)
+        self._enable_warn = kwargs.get("warn",True)
         self._dt = None
         self._lenfilt = None
         self._idfilt = []
@@ -109,11 +109,11 @@ class _Combine(object):
             self.add_custom_filter(args.customfilt, args.customfilt_len)
 
     def _debug(self, m):
-        if self.__debug:
+        if self._enable_debug:
             print m
 
     def _warn(self, m):
-        if self.__warn:
+        if self._enable_warn:
             print m
 
     @property
@@ -208,16 +208,16 @@ class _Combine(object):
         return {}
 
     def enable_debug(self):
-        self.__debug = True
+        self._enable_debug = True
 
     def disable_debug(self):
-        self.__debug = False
+        self._enable_debug = False
 
     def enable_warn(self):
-        self.__warn = True
+        self._enable_warn = True
 
     def disable_warn(self):
-        self.__warn = False
+        self._enable_warn = False
 
 
     def get_results(self):
@@ -774,7 +774,7 @@ class CombineH5WithCSV(_Combine):
 
         #record_iterator in the csv_file returns all defined cols by default.
         #those specified in csv_cols are float()'d and put into the dataframe
-        infile = nodelib.log.CsvLogger(csv_fname, "r")
+        infile = nodelib.log.CsvLogger(csv_fname, "r", warn=self._enable_warn, debug=self._enable_debug)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
 
