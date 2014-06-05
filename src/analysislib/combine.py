@@ -298,6 +298,7 @@ class _CombineFakeInfinity(_Combine):
         _Combine.__init__(self, **kwargs)
         self._nconditions = kwargs.get('nconditions',1)
         self._ntrials = kwargs.get('ntrials', 100)
+        self._ninfinity = kwargs.get('ninfinity', 5)
 
         self._results = {}
         self._dt = 1/100.0
@@ -320,10 +321,10 @@ class _CombineFakeInfinity(_Combine):
             for t in range(self._ntrials):
                 if obj_id == 1:
                     #make sure the first infinity is full and perfect
-                    df = self.get_fake_infinity(5,0,0,0,framenumber,0,0,self._dt)
+                    df = self.get_fake_infinity(self._ninfinity,0,0,0,framenumber,0,0,self._dt)
                 else:
                     df = self.get_fake_infinity(
-                                n_infinity=5,
+                                n_infinity=self._ninfinity,
                                 random_stddev=0.008,
                                 x_offset=0.1 * (random.random() - 0.5),
                                 y_offset=0.1 * (random.random() - 0.5),
