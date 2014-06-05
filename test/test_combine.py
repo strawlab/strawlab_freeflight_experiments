@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import unittest
 import collections
+import tempfile
 
 import roslib
 import roslib.packages
@@ -130,6 +131,20 @@ class TestCombine(unittest.TestCase):
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+    def test_multi(self):
+        tdir = tempfile.mkdtemp()
+        parser,args = analysislib.args.get_default_args(
+                    uuid=["75344a94e4c711e2b4c76c626d3a008a","69d1d022e58a11e29e446c626d3a008a"],
+                    outdir=tdir
+        )
+        combine = autil.get_combiner_for_args(args)
+        _quiet(combine)
+
+        combine.add_from_args(args)
+
+        self.assertEqual(combine.get_num_conditions(), 3)
+        self.assertEqual(combine.get_total_trials(), 1003)
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
