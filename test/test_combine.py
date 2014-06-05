@@ -11,6 +11,12 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.args
 import analysislib.util as autil
+import autodata.files
+
+
+def _quiet(combine):
+    combine.disable_warn()
+    combine.disable_debug()
 
 class TestCombineUtil(unittest.TestCase):
 
@@ -33,15 +39,15 @@ class TestCombineUtil(unittest.TestCase):
 
     def test_auto_combine(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
-        combine.disable_debug()
-        combine.disable_warn()
+        _quiet(combine)
+
         combine.add_from_uuid(self._uuid)
         cols = set(combine.get_result_columns())
         self.assertEqual(cols,
                          set(['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate',
                               'trg_x', 'trg_y', 'trg_z', 'v_offset_rate', 'x', 'y',
                               'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az',
-                              'theta', 'dtheta', 'radius', 'omega', 'rcurve']))
+                              'theta', 'dtheta', 'radius', 'omega', 'rcurve', 'tsec', 'tnsec']))
    
 
 class TestCombine(unittest.TestCase):
@@ -60,11 +66,15 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(framenumber0,framenumber0_2)
 
     def test_combine_h5(self):
-        combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate",
-                                debug=False,
-        )
-        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a", "conflict.csv", frames_before=0)
+        #get the csv file
+        fm = autodata.files.FileModel()
+        fm.select_uuid("f5adba10e8b511e2a28b6c626d3a008a")
+        csv = fm.get_file_model("*.csv").fullpath
+
+        combine = autil.get_combiner_for_csv(csv)
+        _quiet(combine)
+
+        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a")
         a = combine.get_one_result(174)
 
         fname = combine.fname
@@ -76,15 +86,14 @@ class TestCombine(unittest.TestCase):
 
         self._assert_two_equal(a,b)
 
-        combine3 = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate",
-                                debug=False,
-        )
         parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
         )
-        combine3.add_from_args(args, "conflict.csv")
+        combine3 = autil.get_combiner_for_args(args)
+        _quiet(combine3)
+
+        combine3.add_from_args(args)
         c = combine3.get_one_result(174)
 
         self._assert_two_equal(a,c)
