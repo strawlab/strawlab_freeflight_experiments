@@ -22,52 +22,67 @@ class TestScript(unittest.TestCase):
         self._env['WRITE_PKL']='0'
 
     def test_rotation_analysis_flycube(self):
-        ret = subprocess.call(
-                "./rotation-analysis.py --uuid 0b813e6435ac11e3944b10bf48d76973 "\
-                "--zfilt trim --zfilt-max 0.45 --rfilt trim --rfilt-max 0.5 "\
-                "--arena flycube --reindex --outdir %s --idfilt 4200" % self._tdir,
-                shell=True,
-                cwd=self._sdir)
+        with open(os.devnull, "w") as fnull:
+            ret = subprocess.call(
+                    "./rotation-analysis.py --uuid 0b813e6435ac11e3944b10bf48d76973 "\
+                    "--zfilt trim --zfilt-max 0.45 --rfilt trim --rfilt-max 0.5 "\
+                    "--arena flycube --reindex --outdir %s --idfilt 4200" % self._tdir,
+                    shell=True,
+                    stdout=fnull,stderr=fnull,
+                    cwd=self._sdir,
+                    env=self._env)
         self.assertEqual(ret,0)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "20131015_171030.traces.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"rotation-analysis.py","20131015_171030.traces.png")))
 
     def test_rotation_analysis_flycave(self):
-        ret = subprocess.call(
-                "./rotation-analysis.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --reindex "\
-                "--outdir %s --idfilt 9" % self._tdir,
-                shell=True,
-                cwd=self._sdir)
+        with open(os.devnull, "w") as fnull:
+            ret = subprocess.call(
+                    "./rotation-analysis.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
+                    "--zfilt trim --rfilt trim --lenfilt 1 --reindex "\
+                    "--outdir %s --idfilt 9" % self._tdir,
+                    shell=True,
+                    stdout=fnull,stderr=fnull,
+                    cwd=self._sdir,
+                    env=self._env)
         self.assertEqual(ret,0)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "20130512_170802.traces.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "rotation-analysis.py","20130512_170802.traces.png")))
 
     def test_trajectory_viewer(self):
-        ret = subprocess.call(
-                "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 "\
-                "--outdir %s --save" % self._tdir,
-                shell=True,
-                cwd=self._sdir)
+        with open(os.devnull, "w") as fnull:
+            ret = subprocess.call(
+                    "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
+                    "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 "\
+                    "--outdir %s --save" % self._tdir,
+                    shell=True,
+                    stdout=fnull,stderr=fnull,
+                    cwd=self._sdir)
         self.assertEqual(ret,0)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "20130512_170802.infinity.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_checkerboard16pnginfinitysvg0310001020.csv")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"checkerboard16pnginfinitysvg0310001020.png")))
 
     def test_conflict_analysis(self):
-        ret = subprocess.call(
-                "./conflict-analysis.py --uuid 74bb2ece2f6e11e395fa6c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --reindex --outdir %s" % self._tdir,
-                shell=True,
-                cwd=self._sdir)
+        with open(os.devnull, "w") as fnull:
+            ret = subprocess.call(
+                    "./conflict-analysis.py --uuid 74bb2ece2f6e11e395fa6c626d3a008a "\
+                    "--zfilt trim --rfilt trim --lenfilt 1 --reindex --outdir %s" % self._tdir,
+                    shell=True,
+                    stdout=fnull,stderr=fnull,
+                    cwd=self._sdir,
+                    env=self._env)
         self.assertEqual(ret,0)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "20131007_183416.traces.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "conflict-analysis.py","20131007_183416.traces.png")))
 
     def test_confinement_analysis(self):
-        ret = subprocess.call(
-                "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
-                "--zfilt trim --rfilt trim --reindex --outdir %s" % self._tdir,
-                shell=True,
-                cwd=self._sdir)
+        with open(os.devnull, "w") as fnull:
+            ret = subprocess.call(
+                    "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
+                    "--zfilt trim --rfilt trim --reindex --outdir %s" % self._tdir,
+                    shell=True,
+                    stdout=fnull,stderr=fnull,
+                    cwd=self._sdir,
+                    env=self._env)
         self.assertEqual(ret,0)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "20130530_160318.traces.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "confinement-analysis.py","20130530_160318.traces.png")))
 
     def tearDown(self):
         shutil.rmtree(self._tdir)
