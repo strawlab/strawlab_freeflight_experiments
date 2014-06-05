@@ -41,10 +41,12 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "csv-file" in only_these_options:
         parser.add_argument(
             '--csv-file', type=str,
+            default=defaults.get('csv_file',None),
             help='path to *.csv file (if not using --uuid)')
     if not only_these_options or "h5-file" in only_these_options:
         parser.add_argument(
             '--h5-file', type=str,
+            default=defaults.get('h5_file',None),
             help='path to simple_flydra.h5 file (if not using --uuid)')
     if not only_these_options or "show-obj-ids" in only_these_options:
         parser.add_argument(
@@ -112,8 +114,9 @@ def get_parser(*only_these_options, **defaults):
             help='maximum r, metres, (default %(default)s)')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
-            '--lenfilt', type=float, default=1.0,
+            '--lenfilt', type=float,
             required=False,
+            default=defaults.get('lenfilt', 1.0),
             help='filter trajectories shorter than this many seconds (default %(default)s)')
     if not only_these_options or "idfilt" in only_these_options:
         parser.add_argument(
