@@ -304,7 +304,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
     latencies_to_plot = sorted(correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)))
     plot_errorbars = correlation_options.get('plot_errorbars')
 
-    corr_latencies = {}
+    corr_latencies = {k:{} for k in combine.get_conditions()}
 
     for corra,corrb in correlations:
         #backwards compatible file extensions
@@ -379,7 +379,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
                         correlation_options=correlation_options
                 )
 
-            corr_latencies["%s:%s" % (corra,corrb)] = ccef
+            corr_latencies[_current_condition]["%s:%s" % (corra,corrb)] = ccef
 
         #plot a selection of other latencies (yes, we calculate some data again, meh)
         for _current_condition in max_latencies_shift:
