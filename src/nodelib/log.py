@@ -34,6 +34,9 @@ class CsvLogger:
 
         self._use_rostime = use_rostime
 
+        self.last_tsecs = 0
+        self.last_tnsecs = 0
+
         if mode not in ('r','w'):
             raise IOError("mode must be 'r' or 'w'. to continue an existing file set continue_existing=/PATH/TO/FILE")
 
@@ -157,6 +160,9 @@ class CsvLogger:
             float_secs = time.time()
             tsecs = int(float_secs)
             tnsecs = int((float_secs - tsecs) * 1000000000)
+
+        self.last_tsecs = tsecs
+        self.last_tnsecs = tnsecs
 
         vals = [getattr(self,s) for s in self._state]
 
