@@ -371,7 +371,7 @@ class _CombineFakeInfinity(_Combine):
                 framenumber += len(df)
 
     @staticmethod
-    def get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0):
+    def get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0, npts=200):
         def get_noise(d):
             if random_stddev:
                 return (np.random.random(len(d)) - 0.5) * random_stddev
@@ -379,7 +379,7 @@ class _CombineFakeInfinity(_Combine):
                 return np.zeros_like(d)
 
         pi = np.pi
-        leaft = np.linspace(-pi/4.,pi/4., 100)
+        leaft = np.linspace(-pi/4.,pi/4., npts//2)
         leaftrev = (leaft-pi)[::-1] #reverse
 
         theta = np.concatenate( (leaft, leaftrev[1:]) )
@@ -422,8 +422,8 @@ class _CombineFakeInfinity(_Combine):
         return df
 
     @staticmethod
-    def get_fake_infinity(n_infinity, random_stddev, x_offset, y_offset, frame0, nan_pct, latency, dt):
-        df = _CombineFakeInfinity.get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0)
+    def get_fake_infinity(n_infinity, random_stddev, x_offset, y_offset, frame0, nan_pct, latency, dt, npts=200):
+        df = _CombineFakeInfinity.get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0, npts)
 
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
