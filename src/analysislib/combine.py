@@ -48,6 +48,8 @@ class _Combine(object):
     calc_angular_stats = True
     calc_turn_stats = True
 
+    VALID_INDEXES = ('framenumber','none','time')
+
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)
         self._enable_warn = kwargs.get("warn",True)
@@ -63,6 +65,12 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._index = 'framenumber'
+
+    def set_index(self, index):
+        if index not in self.VALID_INDEXES:
+            raise ValueError('index must be one of %s' % ', '.join(self.VALID_INDEXES))
+        self._index = index
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
