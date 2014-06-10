@@ -83,7 +83,7 @@ COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","wavelength")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -236,16 +236,28 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-                rate,state = self.perturber.step(
+                wavelength,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
+                msg = CylinderGratingInfo()
+
+                msg.reset_phase_position = False
                 if state=='starting':
                     self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation (sine-wave grating)
-                    msg = CylinderGratingInfo()
-                    self.pub_grating_info.publish(msg)
+                    msg.reset_phase_position = True
+
+
+                # v = tf/sf = tf*wavelength
+                tf = 1.0 # keep a constant temporal frequency
+                msg.phase_velocity = 2*np.pi*tf
+                msg.wavelength = wavelength
+                msg.contrast = 1.0
+                msg.orientation = 0.0
+
+                self.pub_grating_info.publish(msg)
 
                 if state=='finished':
                     self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
@@ -259,11 +271,11 @@ class Node(object):
                             self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
                             self.pub_save.publish(currently_locked_obj_id)
 
-                return rate, self.trg_x,self.trg_y
+                return np.nan, self.trg_x,self.trg_y, wavelength
 
         #return early if this is a replay experiment
         if self.is_replay_experiment_rotation:
-            return self.replay_rotation.next(), self.trg_x,self.trg_y
+            return self.replay_rotation.next(), self.trg_x,self.trg_y, np.nan
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
@@ -295,7 +307,7 @@ class Node(object):
 
         val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
 
-        return val,self.trg_x,self.trg_y
+        return val,self.trg_x,self.trg_y,np.nan
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -342,7 +354,7 @@ class Node(object):
                         rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
-                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
+                rate,trg_x,trg_y,wavelength = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
                 v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -356,7 +368,11 @@ class Node(object):
                 self.log.perturb_progress = self.perturber.progress
 
                 self.log.rotation_rate = rate
-                self.pub_rotation_velocity.publish(rate)
+                self.log.wavelength = wavelength
+                if np.isnan(rate):
+                    self.pub_rotation_velocity.publish(None)
+                else:
+                    self.pub_rotation_velocity.publish(rate)
 
                 self.log.v_offset_rate = v_rate
                 self.pub_v_offset_rate.publish(v_rate)
