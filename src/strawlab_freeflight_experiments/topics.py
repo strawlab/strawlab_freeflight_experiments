@@ -11,3 +11,5 @@ TOPIC_STAR_VELOCITY     = "star_velocity"
 TOPIC_STAR_SIZE         = "star_size"
 
 TOPIC_MODEL_POSITION    = "model_pose"
+
+TOPIC_CYL_GRATING_INFO  = "grating_info"
