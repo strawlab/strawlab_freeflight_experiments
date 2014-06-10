@@ -64,12 +64,12 @@ MAX_ROTATION_RATE = 1.5
 #             perturbation_descriptor"
 
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/None",
+              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
 ]
 
 for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
     CONDITIONS.append(
-        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step|1.0|%s|1.0"%np.deg2rad(lmbda_deg))
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step_spatial_wavelength|%s|1.0|1.0"%np.deg2rad(lmbda_deg))
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -85,8 +85,8 @@ class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy
-        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger
-        #self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation
+        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
+        #self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation (sine-wave grating)
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -172,9 +172,12 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
-        if perturb_desc=='None':
-            perturb_desc=None
+        try:
+            img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
+        except ValueError:
+            #no perturbation defined
+            perturb_desc = None
+            img,svg,p,rad,advance,v_gain = self.condition.split('/')
 
         self.img_fn = str(img)
         self.p_const = float(p)
@@ -199,7 +202,7 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-
+        
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
 
@@ -230,7 +233,7 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-
+            
                 rate,finished = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
