@@ -247,13 +247,13 @@ class Node(object):
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
             
-                rate,finished = self.perturber.step(
+                rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
-                if finished:
+                if state=='finished':
                     self.drop_lock_on(blacklist=True)
 
                     rospy.loginfo('perturbation finished')

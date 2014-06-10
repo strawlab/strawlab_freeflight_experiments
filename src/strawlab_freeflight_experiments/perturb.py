@@ -97,7 +97,7 @@ class NoPerturb(Perturber):
     def __repr__(self):
         return "<NoPerturb>"
     def step(self, *args):
-        return 0,False
+        return 0,'ongoing'
     def get_perturb_vs_time(self, t0, t1):
         return [],[]
     def get_time_limits(self):
@@ -134,7 +134,13 @@ class PerturberStep(Perturber):
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
-        return self.value, finished
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self.value, state
 
     def get_perturb_vs_time(self, t0, t1):
         t = []
@@ -208,7 +214,13 @@ class PerturberChirp(Perturber):
         self.progress = framenumber - self._frame0
         dt = now - self.now
         finished = dt >= (0.99*self.duration)
-        return self._f(dt), finished
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self._f(dt), state
 
     def get_perturb_vs_time(self, t0, t1):
         t = np.linspace(t0,t1,num=2000)
