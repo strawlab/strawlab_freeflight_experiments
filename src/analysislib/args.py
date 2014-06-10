@@ -128,6 +128,10 @@ def get_parser(*only_these_options, **defaults):
             help='minimum length of remaining (seconds) after applying custom filter. '\
                  'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
                  'operations')
+    if not only_these_options or "frames-before" in only_these_options:
+        parser.add_argument(
+            '--frames-before', type=int, default=0,
+            help='number of frames added at the beginning of the trajectory before the trial actually starts')
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str, default='flycave',

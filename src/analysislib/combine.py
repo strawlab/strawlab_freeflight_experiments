@@ -656,7 +656,7 @@ class CombineH5WithCSV(_Combine):
         #use this for keeping track of results that span multiple conditions
         self._results_by_condition = {}
 
-    def add_from_uuid(self, uuid, csv_suffix=None, frames_before=0, **kwargs):
+    def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
         """
@@ -679,9 +679,9 @@ class CombineH5WithCSV(_Combine):
         if not self.plotdir:
             self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-        self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
+        self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-    def add_from_args(self, args, csv_suffix=None, frames_before=0):
+    def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
         """
@@ -705,7 +705,7 @@ class CombineH5WithCSV(_Combine):
                 if self.plotdir is None:
                     self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-                self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
+                self.add_csv_and_h5_file(csv_file, h5_file, args)
 
         else:
             csv_file = args.csv_file
@@ -713,7 +713,7 @@ class CombineH5WithCSV(_Combine):
 
             self.plotdir = args.outdir if args.outdir else os.getcwd()
 
-            self.add_csv_and_h5_file(csv_file, h5_file, args, frames_before)
+            self.add_csv_and_h5_file(csv_file, h5_file, args)
 
     def get_spanned_results(self):
         spanned = {}
@@ -722,7 +722,7 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args, frames_before=0):
+    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
         warnings = {}
@@ -834,8 +834,8 @@ class CombineH5WithCSV(_Combine):
 
                         r = results[query_cond]
 
-                        if frames_before != 0:
-                            start_frame = query_framenumber - frames_before
+                        if args.frames_before != 0:
+                            start_frame = query_framenumber - args.frames_before
                         else:
                             start_frame = query_framenumber
 
