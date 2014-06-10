@@ -142,15 +142,10 @@ void StimulusCylinderGrating::receive_json_message(const std::string& topic_name
 
     if (topic_name=="grating_info") {
         GratingParams new_values;
-        json_t *data_json;
 
-        data_json = json_object_get(root, "grating0");
-        new_values = parse_grating_info(data_json);
+        new_values = parse_grating_info(root);
         set_grating_info(0,new_values);
 
-        data_json = json_object_get(root, "grating1");
-        new_values = parse_grating_info(data_json);
-        set_grating_info(1,new_values);
     } else {
         throw std::runtime_error("unknown topic name");
     }
