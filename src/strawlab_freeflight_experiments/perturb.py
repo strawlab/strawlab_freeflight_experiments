@@ -30,6 +30,8 @@ def get_perturb_class(perturb_descriptor):
         name = name_parts[0]
         if name == 'step':
             return PerturberStep
+        elif name == 'stepn':
+            return PerturberStepN
         elif name == 'chirp':
             return PerturberChirp
     except:
@@ -169,6 +171,78 @@ class PerturberStep(Perturber):
 
     def get_value_limits(self):
         return min(self.value,0),max(self.value,0)
+
+class PerturberStepN(Perturber):
+
+    DEFAULT_DESC = "stepn_TYPE_OF_STEP|1|0.7|3|0.4"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'stepn_TYPE_OF_STEP'|n_args|value0...valuen-1|duration|ratio_min|a|b|c|d|e|f
+
+        TYPE_OF_STEP is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+
+        n_args is the number of arguments
+
+        value0, value1, ... are the values
+
+        duration is the duration of the step.
+
+        ratio_min is the minimum amount of the path the target must have flown
+
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        parts = descriptor.split('|')
+        name,n_args=parts[:2]
+        n_args = int(n_args)
+        values = parts[2:2+n_args]
+        duration,ratio_min,chunks = parts[2+n_args], parts[2+n_args+1], parts[2+n_args+2:]
+        chunks = '|'.join(chunks)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what_is_stepped = '_'.join(name_parts[1:])
+        if me != 'stepn':
+            raise Exception("Incorrect PerturberStepN configuration")
+        self.values = map(float,values)
+
+        Perturber.__init__(self, chunks, ratio_min, duration)
+
+    def __repr__(self):
+        return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what_is_stepped, self.values, self.duration)
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        self.progress = framenumber - self._frame0
+        finished = (now - self.now) >= (0.99*self.duration)
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self.values, state
+
+    def get_perturb_vs_time(self, t0, t1, n):
+        t = []
+        v = []
+        if t0 < 0:
+            t.extend( np.linspace(t0,0,num=50) )
+            v.extend( np.zeros(50) )
+
+        t.extend( np.linspace(0,min(self.duration,t1),num=50) )
+        v.extend( np.ones(50)*self.values[n] )
+
+        if t1 > self.duration:
+            t.extend( np.linspace(self.duration,t1,num=50) )
+            v.extend( np.zeros(50) )
+
+        return t,v
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self,n):
+        return min(self.values[N],0),max(self.values[N],0)
 
 class PerturberChirp(Perturber):
 
