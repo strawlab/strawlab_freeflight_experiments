@@ -174,7 +174,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_TYPE_OF_STEP|1|0.7|3|0.4"
+    DEFAULT_DESC = "stepn_TYPE_OF_STEP|2|0.7|0.5|3|0.4"
 
     def __init__(self, descriptor):
         """
@@ -242,7 +242,24 @@ class PerturberStepN(Perturber):
         return 0,self.duration
 
     def get_value_limits(self,n):
-        return min(self.values[N],0),max(self.values[N],0)
+        return min(self.values[n],0),max(self.values[n],0)
+
+    def plot(self, ax, t_extra=1, **plot_kwargs):
+        t0,t1 = self.get_time_limits()
+        t0 -= t_extra; t1 += t_extra
+
+        v1 = v0 = np.nan
+        for i in range(len(self.values)):
+            t,v = self.get_perturb_vs_time(t0,t1,i)
+            _v0,_v1 = self.get_value_limits(i)
+
+            plot_kwargs['label'] = str(i)
+            ax.plot(t,v, **plot_kwargs)
+
+            v0 = np.nanmax([v0, _v0])
+            v1 = np.nanmax([v1, _v1])
+
+        ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
 
 class PerturberChirp(Perturber):
 
@@ -317,7 +334,7 @@ class PerturberChirp(Perturber):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb)
+    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
 
     DEBUG = True
 
