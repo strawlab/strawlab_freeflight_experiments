@@ -64,12 +64,16 @@ MAX_ROTATION_RATE = 1.5
 #             perturbation_descriptor"
 
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
 ]
 
 for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
+    duration=3.0
+    nloops_required=1.0
     CONDITIONS.append(
-        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step_spatial_wavelength|%s|1.0|1.0"%np.deg2rad(lmbda_deg))
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step_spatial_wavelength|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),duration,nloops_required))
+
+# condition with no perturbation
+CONDITIONS.append(  "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20" )
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -86,7 +90,6 @@ class Node(object):
 
         self._pub_stim_mode = display_client.DisplayServerProxy
         self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
-        #self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation (sine-wave grating)
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -233,14 +236,19 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
-                rate,finished = self.perturber.step(
+                rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
-                if finished:
+                if state=='starting':
+                    self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation (sine-wave grating)
+                    msg = CylinderGratingInfo()
+                    self.pub_grating_info.publish(msg)
+
+                if state=='finished':
+                    self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
                     self.drop_lock_on(blacklist=True)
 
                     rospy.loginfo('perturbation finished')
@@ -453,6 +461,7 @@ class Node(object):
             if blacklist:
                 self.blacklist[old_id] = True
 
+        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
