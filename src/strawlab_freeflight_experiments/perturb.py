@@ -26,9 +26,11 @@ def get_perturb_class(perturb_descriptor):
 
     try:
         name = perturb_descriptor.split('|')[0]
+        name_parts = name.split('_')
+        name = name_parts[0]
         if name == 'step':
             return PerturberStep
-        elif name.startswith('chirp'):
+        elif name == 'chirp':
             return PerturberChirp
     except:
         pass
@@ -107,12 +109,14 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
-    DEFAULT_DESC = "step|0.7|3|0.4"
+    DEFAULT_DESC = "step_TYPE_OF_STEP|0.7|3|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'step'|value|duration|ratio_min|a|b|c|d|e|f
+        'step_TYPE_OF_STEP'|value|duration|ratio_min|a|b|c|d|e|f
+
+        TYPE_OF_STEP is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
         duration is the duration of the step.
 
@@ -120,8 +124,10 @@ class PerturberStep(Perturber):
 
         a,b c,d e,f are pairs or ranges in the ratio
         """
-        
-        me,value,duration,ratio_min,chunks = descriptor.split('|', 4)
+        name,value,duration,ratio_min,chunks = descriptor.split('|', 4)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what_is_stepped = '_'.join(name_parts[1:])
         if me != 'step':
             raise Exception("Incorrect PerturberStep configuration")
         self.value = float(value)
@@ -129,7 +135,7 @@ class PerturberStep(Perturber):
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
-        return "<PerturberStep val=%.1f dur=%.1fs>" % (self.value, self.duration)
+        return "<PerturberStep what=%r val=%.1f dur=%.1fs>" % (self.what_is_stepped, self.value, self.duration)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
