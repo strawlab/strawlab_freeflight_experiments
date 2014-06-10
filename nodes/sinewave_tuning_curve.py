@@ -205,7 +205,7 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-        
+
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
 
