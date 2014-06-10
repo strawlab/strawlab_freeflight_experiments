@@ -68,9 +68,10 @@ CONDITIONS = [
 
 for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
     duration=3.0
-    nloops_required=1.0
+    ratio_min=1.0
+    tf_hz=1.0
     CONDITIONS.append(
-        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step_spatial_wavelength|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),duration,nloops_required))
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/stepn_wavelength_tf|2|%s|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),tf_hz,duration,ratio_min))
 
 # condition with no perturbation
 CONDITIONS.append(  "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20" )
@@ -236,9 +237,10 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-                wavelength,state = self.perturber.step(
+                values,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
+                wavelength,tf_hz = values
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
@@ -250,9 +252,7 @@ class Node(object):
                     msg.reset_phase_position = True
 
 
-                # v = tf/sf = tf*wavelength
-                tf = 1.0 # keep a constant temporal frequency
-                msg.phase_velocity = 2*np.pi*tf
+                msg.phase_velocity = 2*np.pi*tf_hz
                 msg.wavelength = wavelength
                 msg.contrast = 1.0
                 msg.orientation = 0.0
