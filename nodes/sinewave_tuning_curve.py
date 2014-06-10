@@ -53,9 +53,7 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
-#CONDITION = "pre_tf_hertz/
-#             pre_wavelength_radians/
-#             pre_contrast/
+#CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
@@ -64,12 +62,12 @@ MAX_ROTATION_RATE = 1.5
 #             perturbation_descriptor"
 
 CONDITIONS = [
-              "1.0/1.0/1.0/infinity.svg/+0.3/+10.0/0.1/0.20/None",
+              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/None",
 ]
 
 for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
     CONDITIONS.append(
-        "1.0/1.0/1.0/infinity.svg/+0.3/+10.0/0.1/0.20/step|1.0|%s|1.0"%np.deg2rad(lmbda_deg))
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/step|1.0|%s|1.0"%np.deg2rad(lmbda_deg))
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -84,13 +82,25 @@ class Logger(nodelib.log.CsvLogger):
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
-        self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusCylinderGrating')
+        self._pub_stim_mode = display_client.DisplayServerProxy
+        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger
+        #self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation
 
+        self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
+        self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_value = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_rate = rospy.Publisher(TOPIC_CYL_V_OFFSET_RATE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_image = rospy.Publisher(TOPIC_CYL_IMAGE, String, latch=True, tcp_nodelay=True)
+        self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
+        self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
+        self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
         self.pub_grating_info = rospy.Publisher(TOPIC_CYL_GRATING_INFO, CylinderGratingInfo, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
+
+        self.pub_rotation.publish(0)
+        self.pub_v_offset_value.publish(0)
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -138,6 +148,7 @@ class Node(object):
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
+
     @property
     def is_perturbation_experiment(self):
         return not isinstance(self.perturber, sfe_perturb.NoPerturb)
@@ -159,7 +170,7 @@ class Node(object):
 
         self.drop_lock_on()
 
-        pre_tf_herz,pre_wavelength_radians,pre_contrast,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
+        img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
         if perturb_desc=='None':
             perturb_desc=None
 
@@ -183,6 +194,9 @@ class Node(object):
             self.svg_pub.publish(self.svg_fn)
 
             self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
+
+        #HACK
+        self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
 
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
@@ -214,7 +228,7 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
+
                 rate,finished = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
