@@ -30,7 +30,7 @@ class TestCombine(unittest.TestCase):
                                 "ratio","rotation_rate",
                                 debug=False,
         )
-        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a", "conflict.csv", frames_before=0)
+        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a", "conflict.csv")
         a = combine.get_one_result(174)
 
         fname = combine.fname

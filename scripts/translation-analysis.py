@@ -30,7 +30,7 @@ if __name__=='__main__':
 
     combine = autil.get_combiner("translation")
     combine.calc_turn_stats = True
-    combine.add_from_args(args, "translation*.csv", frames_before=0)
+    combine.add_from_args(args, "translation*.csv")
 
     fname = combine.fname
     results,dt = combine.get_results()

@@ -423,10 +423,10 @@ def plot_nsamples(combine, args, name=None):
                 ncol=1 if nconds <= 4 else 2
             )
 
-def plot_aligned_timeseries(combine, args, figncols, frames_before, valname, dvdt, name=None):
+def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
     figsize = (5.0*figncols,5.0)
     if name is None:
-        name = name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
+        name = '%s.%s%s' % (combine.fname,'d' if dvdt else '',valname)
     results,dt = combine.get_results()
     with mpl_fig(name,args,figsize=figsize) as fig:
         ax = None
@@ -460,7 +460,7 @@ def plot_aligned_timeseries(combine, args, figncols, frames_before, valname, dvd
 
                 series["%d"%obj_id] = pandas.Series(val,ts)
 
-            ax.set_xlim(-frames_before,100*max(6,args.lenfilt*2))
+            ax.set_xlim(-args.frames_before,100*max(6,args.lenfilt*2))
             if dvdt:
                 ax.set_ylim(-0.0005,0.0005)
             else:
