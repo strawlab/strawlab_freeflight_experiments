@@ -95,6 +95,7 @@ class NoPerturb(Perturber):
     DEFAULT_DESC = "noperturb"
 
     progress = -1
+    what = None
 
     def __init__(self, *args):
         Perturber.__init__(self, '', 0, 0)
@@ -111,14 +112,14 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
-    DEFAULT_DESC = "step_TYPE_OF_STEP|0.7|3|0.4"
+    DEFAULT_DESC = "step_WHAT|0.7|3|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'step_TYPE_OF_STEP'|value|duration|ratio_min|a|b|c|d|e|f
+        'step_WHAT'|value|duration|ratio_min|a|b|c|d|e|f
 
-        TYPE_OF_STEP is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
         duration is the duration of the step.
 
@@ -129,7 +130,7 @@ class PerturberStep(Perturber):
         name,value,duration,ratio_min,chunks = descriptor.split('|', 4)
         name_parts = name.split('_')
         me = name_parts[0]
-        self.what_is_stepped = '_'.join(name_parts[1:])
+        self.what = '_'.join(name_parts[1:])
         if me != 'step':
             raise Exception("Incorrect PerturberStep configuration")
         self.value = float(value)
@@ -137,7 +138,7 @@ class PerturberStep(Perturber):
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
-        return "<PerturberStep what=%r val=%.1f dur=%.1fs>" % (self.what_is_stepped, self.value, self.duration)
+        return "<PerturberStep what=%s val=%.1f dur=%.1fs>" % (self.what, self.value, self.duration)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
@@ -174,14 +175,14 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_TYPE_OF_STEP|2|0.7|0.5|3|0.4"
+    DEFAULT_DESC = "stepn_WHAT|2|0.7|0.5|3|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'stepn_TYPE_OF_STEP'|n_args|value0...valuen-1|duration|ratio_min|a|b|c|d|e|f
+        'stepn_WHAT'|n_args|value0...valuen-1|duration|ratio_min|a|b|c|d|e|f
 
-        TYPE_OF_STEP is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
         n_args is the number of arguments
 
@@ -201,7 +202,7 @@ class PerturberStepN(Perturber):
         chunks = '|'.join(chunks)
         name_parts = name.split('_')
         me = name_parts[0]
-        self.what_is_stepped = '_'.join(name_parts[1:])
+        self.what = '_'.join(name_parts[1:])
         if me != 'stepn':
             raise Exception("Incorrect PerturberStepN configuration")
         self.values = map(float,values)
@@ -209,7 +210,7 @@ class PerturberStepN(Perturber):
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
-        return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what_is_stepped, self.values, self.duration)
+        return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what, self.values, self.duration)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
@@ -263,12 +264,12 @@ class PerturberStepN(Perturber):
 
 class PerturberChirp(Perturber):
 
-    DEFAULT_DESC = "chirp_linear|1.0|3|1.0|5.0|0.4"
+    DEFAULT_DESC = "chirp_WHAT|linear|1.0|3|1.0|5.0|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'linear'|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+        'linear'|method|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
 
         duration is the duration of the step.
 
@@ -276,12 +277,13 @@ class PerturberChirp(Perturber):
 
         a,b c,d e,f are pairs or ranges in the ratio
         """
-        print descriptor
-        ctype,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 6)
-        if not ctype.startswith('chirp'):
-            raise Exception("Incorrect PerturberChirp configuration")
-
-        self.method = ctype.replace('chirp_','')
+        name,method,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 7)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        if me != 'chirp':
+            raise Exception("Incorrect PerturberChirp configuration %s" % descriptor)
+        self.what = '_'.join(name_parts[1:])
+        self.method = str(method)
         self.value = float(value)
         self.t1 = float(t1)
         self.f0 = float(f0)
@@ -305,7 +307,7 @@ class PerturberChirp(Perturber):
         Perturber.__init__(self, chunks, ratio_min, self.t1)
 
     def __repr__(self):
-        return "<PerturberChirp %s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method, self.value, self.duration,self.f0,self.f1)
+        return "<PerturberChirp %s what=%s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method,self.what,self.value,self.duration,self.f0,self.f1)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
