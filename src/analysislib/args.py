@@ -130,7 +130,7 @@ def get_parser(*only_these_options, **defaults):
                  'operations')
     if not only_these_options or "frames-before" in only_these_options:
         parser.add_argument(
-            '--frames-before', type=int, default=0,
+            '--frames-before', type=int, default=defaults.get('frames_before',0),
             help='number of frames added at the beginning of the trajectory before the trial actually starts')
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
