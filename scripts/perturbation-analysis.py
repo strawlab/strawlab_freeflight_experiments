@@ -28,7 +28,7 @@ import analysislib.arenas as aarenas
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser()
+    parser = analysislib.args.get_parser(frames_before=10)
 
     args = parser.parse_args()
 
@@ -36,7 +36,7 @@ if __name__=='__main__':
 
     combine = autil.get_combiner("perturbation")
     combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}.csv", frames_before=10)
+    combine.add_from_args(args, "{rotation,perturbation}.csv")
 
     fname = combine.fname
     results,dt = combine.get_results()

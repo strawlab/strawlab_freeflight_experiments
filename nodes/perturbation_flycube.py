@@ -93,8 +93,8 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 #
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step|0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step|-0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step_rotation_rate|0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step_rotation_rate|-0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
@@ -260,13 +260,13 @@ class Node(object):
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
             
-                rate,finished = self.perturber.step(
+                rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
-                if finished:
+                if state=='finished':
                     self.drop_lock_on(blacklist=True)
 
                     rospy.loginfo('perturbation finished')

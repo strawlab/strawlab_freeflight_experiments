@@ -217,7 +217,6 @@ if __name__=='__main__':
     aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                frames_before=frames_before,
                 valname="radius",
                 dvdt=True,
                 name='%s.drad' % fname)
@@ -225,7 +224,6 @@ if __name__=='__main__':
     aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                frames_before=frames_before,
                 valname="radius",
                 dvdt=False,
                 name='%s.rad' % fname)
@@ -233,7 +231,6 @@ if __name__=='__main__':
     aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                frames_before=frames_before,
                 valname="x",
                 dvdt=False,
                 name='%s.x' % fname)
@@ -241,7 +238,6 @@ if __name__=='__main__':
     aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                frames_before=frames_before,
                 valname="y",
                 dvdt=False,
                 name='%s.y' % fname)
@@ -249,7 +245,6 @@ if __name__=='__main__':
     aplt.plot_aligned_timeseries(combine, args,
                 figsize=figsize,
                 fignrows=NF_R, figncols=NF_C,
-                frames_before=frames_before,
                 valname="z",
                 dvdt=False,
                 name='%s.z' % fname)

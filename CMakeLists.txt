@@ -104,3 +104,7 @@ ELSE(OSG_COMPUTE_FOUND)
     ${FLYVR_INCLUDE_PATH}
   )
 ENDIF(OSG_COMPUTE_FOUND)
+
+include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+rosbuild_init()
+rosbuild_genmsg()

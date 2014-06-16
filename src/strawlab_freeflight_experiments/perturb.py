@@ -26,9 +26,13 @@ def get_perturb_class(perturb_descriptor):
 
     try:
         name = perturb_descriptor.split('|')[0]
+        name_parts = name.split('_')
+        name = name_parts[0]
         if name == 'step':
             return PerturberStep
-        elif name.startswith('chirp'):
+        elif name == 'stepn':
+            return PerturberStepN
+        elif name == 'chirp':
             return PerturberChirp
     except:
         pass
@@ -81,6 +85,8 @@ class Perturber:
         t0 -= t_extra; t1 += t_extra
 
         t,v = self.get_perturb_vs_time(t0,t1)
+
+        plot_kwargs['label'] = self.what
         ax.plot(t,v, **plot_kwargs)
 
         v0,v1 = self.get_value_limits()
@@ -91,13 +97,14 @@ class NoPerturb(Perturber):
     DEFAULT_DESC = "noperturb"
 
     progress = -1
+    what = None
 
     def __init__(self, *args):
         Perturber.__init__(self, '', 0, 0)
     def __repr__(self):
         return "<NoPerturb>"
     def step(self, *args):
-        return 0,False
+        return 0,'ongoing'
     def get_perturb_vs_time(self, t0, t1):
         return [],[]
     def get_time_limits(self):
@@ -107,12 +114,14 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
-    DEFAULT_DESC = "step|0.7|3|0.4"
+    DEFAULT_DESC = "step_WHAT|0.7|3|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'step'|value|duration|ratio_min|a|b|c|d|e|f
+        'step_WHAT'|value|duration|ratio_min|a|b|c|d|e|f
+
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
         duration is the duration of the step.
 
@@ -120,8 +129,10 @@ class PerturberStep(Perturber):
 
         a,b c,d e,f are pairs or ranges in the ratio
         """
-        
-        me,value,duration,ratio_min,chunks = descriptor.split('|', 4)
+        name,value,duration,ratio_min,chunks = descriptor.split('|', 4)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what = '_'.join(name_parts[1:])
         if me != 'step':
             raise Exception("Incorrect PerturberStep configuration")
         self.value = float(value)
@@ -129,12 +140,18 @@ class PerturberStep(Perturber):
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
-        return "<PerturberStep val=%.1f dur=%.1fs>" % (self.value, self.duration)
+        return "<PerturberStep what=%s val=%.1f dur=%.1fs>" % (self.what, self.value, self.duration)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
-        return self.value, finished
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self.value, state
 
     def get_perturb_vs_time(self, t0, t1):
         t = []
@@ -158,14 +175,20 @@ class PerturberStep(Perturber):
     def get_value_limits(self):
         return min(self.value,0),max(self.value,0)
 
-class PerturberChirp(Perturber):
+class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "chirp_linear|1.0|3|1.0|5.0|0.4"
+    DEFAULT_DESC = "stepn_WHAT|2|0.7|0.5|3|0.4"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'linear'|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+        'stepn_WHAT'|n_args|value0...valuen-1|duration|ratio_min|a|b|c|d|e|f
+
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+
+        n_args is the number of arguments
+
+        value0, value1, ... are the values
 
         duration is the duration of the step.
 
@@ -173,12 +196,96 @@ class PerturberChirp(Perturber):
 
         a,b c,d e,f are pairs or ranges in the ratio
         """
-        print descriptor
-        ctype,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 6)
-        if not ctype.startswith('chirp'):
-            raise Exception("Incorrect PerturberChirp configuration")
+        parts = descriptor.split('|')
+        name,n_args=parts[:2]
+        n_args = int(n_args)
+        values = parts[2:2+n_args]
+        duration,ratio_min,chunks = parts[2+n_args], parts[2+n_args+1], parts[2+n_args+2:]
+        chunks = '|'.join(chunks)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what = '_'.join(name_parts[1:])
+        if me != 'stepn':
+            raise Exception("Incorrect PerturberStepN configuration")
+        self.values = map(float,values)
 
-        self.method = ctype.replace('chirp_','')
+        Perturber.__init__(self, chunks, ratio_min, duration)
+
+    def __repr__(self):
+        return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what, self.values, self.duration)
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        self.progress = framenumber - self._frame0
+        finished = (now - self.now) >= (0.99*self.duration)
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self.values, state
+
+    def get_perturb_vs_time(self, t0, t1, n):
+        t = []
+        v = []
+        if t0 < 0:
+            t.extend( np.linspace(t0,0,num=50) )
+            v.extend( np.zeros(50) )
+
+        t.extend( np.linspace(0,min(self.duration,t1),num=50) )
+        v.extend( np.ones(50)*self.values[n] )
+
+        if t1 > self.duration:
+            t.extend( np.linspace(self.duration,t1,num=50) )
+            v.extend( np.zeros(50) )
+
+        return t,v
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self,n):
+        return min(self.values[n],0),max(self.values[n],0)
+
+    def plot(self, ax, t_extra=1, **plot_kwargs):
+        t0,t1 = self.get_time_limits()
+        t0 -= t_extra; t1 += t_extra
+
+        v1 = v0 = np.nan
+        for i in range(len(self.values)):
+            t,v = self.get_perturb_vs_time(t0,t1,i)
+            _v0,_v1 = self.get_value_limits(i)
+
+            plot_kwargs['label'] = "%s %s" % (self.what, i)
+            ax.plot(t,v, **plot_kwargs)
+
+            v0 = np.nanmax([v0, _v0])
+            v1 = np.nanmax([v1, _v1])
+
+        ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
+
+class PerturberChirp(Perturber):
+
+    DEFAULT_DESC = "chirp_WHAT|linear|1.0|3|1.0|5.0|0.4"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'linear'|method|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+
+        duration is the duration of the step.
+
+        ratio_min is the minimum amount of the path the target must have flown
+
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        name,method,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 7)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        if me != 'chirp':
+            raise Exception("Incorrect PerturberChirp configuration %s" % descriptor)
+        self.what = '_'.join(name_parts[1:])
+        self.method = str(method)
         self.value = float(value)
         self.t1 = float(t1)
         self.f0 = float(f0)
@@ -202,13 +309,19 @@ class PerturberChirp(Perturber):
         Perturber.__init__(self, chunks, ratio_min, self.t1)
 
     def __repr__(self):
-        return "<PerturberChirp %s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method, self.value, self.duration,self.f0,self.f1)
+        return "<PerturberChirp %s what=%s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method,self.what,self.value,self.duration,self.f0,self.f1)
 
     def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         dt = now - self.now
         finished = dt >= (0.99*self.duration)
-        return self._f(dt), finished
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self._f(dt), state
 
     def get_perturb_vs_time(self, t0, t1):
         t = np.linspace(t0,t1,num=2000)
@@ -225,7 +338,7 @@ class PerturberChirp(Perturber):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb)
+    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
 
     DEBUG = True
 
@@ -234,18 +347,19 @@ if __name__ == "__main__":
 #    for c in chunks:
 #        for f in funcs:
 #            print c+0.01,f,f(c+0.01)
-
-    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
-    print desc
-    klass = get_perturb_class(desc)
-    print klass
-    obj = klass(desc)
-    print obj
+#
+#    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
+#    print desc
+#    klass = get_perturb_class(desc)
+#    print klass
+#    obj = klass(desc)
+#    print obj
 
     for p in PERTURBERS:
         obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
         f = plt.figure(repr(obj))
         ax = f.add_subplot(1,1,1)
         obj.plot(ax)
+        ax.legend()
 
     plt.show()

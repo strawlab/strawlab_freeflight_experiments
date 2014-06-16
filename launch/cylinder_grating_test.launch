@@ -1,0 +1,25 @@
+<launch>
+  <!-- Spawn the display server. -->
+  <node name="ds_replay" pkg="flyvr" type="display_server" args="--mode=virtual_world --throttle">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <!-- And show another display_server to see the cubemap -->
+  <node name="ds_replay2" pkg="flyvr" type="display_server" args="--mode=cubemap --throttle">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <!-- Set the stimulus mode. -->
+  <node name="stimulus" pkg="strawlab_freeflight_experiments" type="sinewave_tuning_curve.py" args="--no-wait">
+  </node>
+
+  <!-- Set the camera position. -->
+  <node name="camera_position" pkg="rostopic" type="rostopic" args="pub --once -f $(find strawlab_freeflight_experiments)/data/test/camera_position.yaml /ds_replay/trackball_manipulator_state  flyvr/TrackballManipulatorState">
+  </node>
+
+  <node name="guijoystick" pkg="flycave" type="guijoystick"/>
+  <node name="flydra2ros" pkg="ros_flydra" type="flydra2ros"/>
+  <node name="followpath_monitor" pkg="strawlab_freeflight_experiments" type="followpath_monitor.py">
+  </node>
+
+</launch>

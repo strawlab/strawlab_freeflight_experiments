@@ -15,6 +15,7 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
+from strawlab_freeflight_experiments.msg import CylinderGratingInfo
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
@@ -54,15 +55,6 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
-REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                            colname="rotation_rate")
-REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                     colname="v_offset_rate")
-
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
@@ -70,21 +62,19 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 #             advance_threshold(m)/
 #             z_gain,
 #             perturbation_descriptor"
-#
-# if you set nan for either gain then you get a replay experiment on the
-# corresponding bias term
-#
+
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
-#              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
+
+for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
+    duration=3.0
+    ratio_min=1.0
+    tf_hz=1.0
+    CONDITIONS.append(
+        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/stepn_wavelength_tf|2|%s|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),tf_hz,duration,ratio_min))
+
+# condition with no perturbation
+CONDITIONS.append(  "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20" )
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -94,13 +84,13 @@ COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","wavelength")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
-        self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusCylinder')
+        self._pub_stim_mode = display_client.DisplayServerProxy
+        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -110,6 +100,7 @@ class Node(object):
         self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
+        self.pub_grating_info = rospy.Publisher(TOPIC_CYL_GRATING_INFO, CylinderGratingInfo, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
@@ -140,8 +131,8 @@ class Node(object):
 
             self.ratio_total = 0
 
-            self.replay_rotation = sfe_replay.ReplayStimulus(**REPLAY_ARGS_ROTATION)
-            self.replay_z = sfe_replay.ReplayStimulus(**REPLAY_ARGS_Z)
+            self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
+            self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
 
             self.blacklist = {}
 
@@ -215,7 +206,7 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-        
+
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
 
@@ -246,14 +237,30 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
-                rate,state = self.perturber.step(
+                values,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
+                wavelength,tf_hz = values
 
                 print 'perturbation progress: %s' % self.perturber.progress
 
+                msg = CylinderGratingInfo()
+
+                msg.reset_phase_position = False
+                if state=='starting':
+                    self._pub_stim_mode.set_stimulus_mode('StimulusCylinderGrating') # perturbation (sine-wave grating)
+                    msg.reset_phase_position = True
+
+
+                msg.phase_velocity = 2*np.pi*tf_hz
+                msg.wavelength = wavelength
+                msg.contrast = 1.0
+                msg.orientation = 0.0
+
+                self.pub_grating_info.publish(msg)
+
                 if state=='finished':
+                    self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
                     self.drop_lock_on(blacklist=True)
 
                     rospy.loginfo('perturbation finished')
@@ -264,11 +271,11 @@ class Node(object):
                             self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
                             self.pub_save.publish(currently_locked_obj_id)
 
-                return rate, self.trg_x,self.trg_y
+                return np.nan, self.trg_x,self.trg_y, wavelength
 
         #return early if this is a replay experiment
         if self.is_replay_experiment_rotation:
-            return self.replay_rotation.next(), self.trg_x,self.trg_y
+            return self.replay_rotation.next(), self.trg_x,self.trg_y, np.nan
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
@@ -300,7 +307,7 @@ class Node(object):
 
         val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
 
-        return val,self.trg_x,self.trg_y
+        return val,self.trg_x,self.trg_y,np.nan
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -347,7 +354,7 @@ class Node(object):
                         rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
-                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
+                rate,trg_x,trg_y,wavelength = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
                 v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -361,7 +368,11 @@ class Node(object):
                 self.log.perturb_progress = self.perturber.progress
 
                 self.log.rotation_rate = rate
-                self.pub_rotation_velocity.publish(rate)
+                self.log.wavelength = wavelength
+                if np.isnan(rate):
+                    self.pub_rotation_velocity.publish(None)
+                else:
+                    self.pub_rotation_velocity.publish(rate)
 
                 self.log.v_offset_rate = v_rate
                 self.pub_v_offset_rate.publish(v_rate)
@@ -466,6 +477,7 @@ class Node(object):
             if blacklist:
                 self.blacklist[old_id] = True
 
+        self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
@@ -479,7 +491,7 @@ class Node(object):
         self.update()
 
 def main():
-    rospy.init_node("perturbation")
+    rospy.init_node("sinewave_tuning_curve")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
