@@ -85,6 +85,8 @@ class Perturber:
         t0 -= t_extra; t1 += t_extra
 
         t,v = self.get_perturb_vs_time(t0,t1)
+
+        plot_kwargs['label'] = self.what
         ax.plot(t,v, **plot_kwargs)
 
         v0,v1 = self.get_value_limits()
@@ -254,7 +256,7 @@ class PerturberStepN(Perturber):
             t,v = self.get_perturb_vs_time(t0,t1,i)
             _v0,_v1 = self.get_value_limits(i)
 
-            plot_kwargs['label'] = str(i)
+            plot_kwargs['label'] = "%s %s" % (self.what, i)
             ax.plot(t,v, **plot_kwargs)
 
             v0 = np.nanmax([v0, _v0])
@@ -345,18 +347,19 @@ if __name__ == "__main__":
 #    for c in chunks:
 #        for f in funcs:
 #            print c+0.01,f,f(c+0.01)
-
-    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
-    print desc
-    klass = get_perturb_class(desc)
-    print klass
-    obj = klass(desc)
-    print obj
+#
+#    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
+#    print desc
+#    klass = get_perturb_class(desc)
+#    print klass
+#    obj = klass(desc)
+#    print obj
 
     for p in PERTURBERS:
         obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
         f = plt.figure(repr(obj))
         ax = f.add_subplot(1,1,1)
         obj.plot(ax)
+        ax.legend()
 
     plt.show()
