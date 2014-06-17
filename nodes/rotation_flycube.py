@@ -68,7 +68,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1
+MAX_ROTATION_RATE = 3
 
 REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
                                               "data","replay_experiments",
@@ -101,7 +101,7 @@ CONDITIONS = [
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set( (CONDITIONS[0], CONDITIONS[2]) )
+COOL_CONDITIONS = set()
 
 XFORM = flyflypath.transform.SVGTransform()
 

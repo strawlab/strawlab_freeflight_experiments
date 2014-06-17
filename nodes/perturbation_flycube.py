@@ -69,7 +69,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 3
 
 REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
                                               "data","replay_experiments",
@@ -92,17 +92,17 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step_rotation_rate|0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/step_rotation_rate|-0.7|2|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity05.svg/+0.0/-10.0/0.1/0.00",
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
+              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set( CONDITIONS )
+COOL_CONDITIONS = set()
 
 XFORM = flyflypath.transform.SVGTransform()
 
