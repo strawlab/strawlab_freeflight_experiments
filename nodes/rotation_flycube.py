@@ -140,6 +140,8 @@ class Node(object):
             self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
             self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
 
+            self.blacklist = {}
+
         #start criteria for experiment
         self.x0 = self.y0 = 0
         #target (for moving points)
@@ -344,12 +346,11 @@ class Node(object):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def is_in_trigger_volume(self,pos):
-#        c = np.array( (self.x0,self.y0) )
-#        p = np.array( (pos.x, pos.y) )
-#        dist = np.sqrt(np.sum((c-p)**2))
-#        if (dist < START_RADIUS) and (abs(pos.z-self.z_target) < START_ZDIST):
-#            return True
+    def should_lock_on(self, obj):
+        if obj.obj_id in self.blacklist:
+            return False
+
+        pos = obj.position
         if ((pos.x>X_MIN) and (pos.x<X_MAX) and (pos.y>Y_MIN) and (pos.y<Y_MAX) and (pos.z>Z_MIN) and (pos.z<Z_MAX)):
              return True
         return False
@@ -365,7 +366,7 @@ class Node(object):
                         self.flyv = obj.velocity
                         self.framenumber = packet.framenumber
                 else:
-                    if self.is_in_trigger_volume(obj.position):
+                    if self.should_lock_on(obj):
                         self.lock_on(obj,packet.framenumber)
 
     def update(self):
@@ -402,7 +403,7 @@ class Node(object):
 
         self.update()
 
-    def drop_lock_on(self):
+    def drop_lock_on(self, blacklist=False):
         with self.trackinglock:
             old_id = self.currently_locked_obj_id
             now = rospy.get_time()
