@@ -5,9 +5,7 @@ import scipy.interpolate as interp
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
-DEBUG = False
-
-def get_ratio_ragefuncs(*chunks):
+def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
         raise Exception("Chunks must be pairs of ratio ranges")
 
@@ -17,13 +15,14 @@ def get_ratio_ragefuncs(*chunks):
         #lambda
         funcs.append( lambda _ratio, _ca=ca, _cb=cb: ((_ratio >= _ca) and (_ratio < _cb)) )
 
-        if DEBUG:
+        if kwargs.get('debug'):
             print "chunk range >=",ca, "<", cb
 
     return funcs
 
-def get_perturb_class(perturb_descriptor):
+def get_perturb_class(perturb_descriptor, debug=False):
 
+    err = ''
     try:
         name = perturb_descriptor.split('|')[0]
         name_parts = name.split('_')
@@ -34,8 +33,12 @@ def get_perturb_class(perturb_descriptor):
             return PerturberStepN
         elif name == 'chirp':
             return PerturberChirp
-    except:
-        pass
+    except Exception, e:
+        import traceback
+        err = '\n' + traceback.format_exc()
+
+    if debug:
+        print "NO PERTURBER FOUND\n\t%s%s" % (perturb_descriptor, err)
 
     return NoPerturb
 
@@ -337,29 +340,28 @@ class PerturberChirp(Perturber):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import argparse
 
-    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('condition', nargs='?', default=None)
+    args = parser.parse_args()
 
-    DEBUG = True
-
-#    chunks = 0.43,0.6,0.93,1.0,0.0,0.1
-#    funcs = get_ratio_ragefuncs(*chunks)
-#    for c in chunks:
-#        for f in funcs:
-#            print c+0.01,f,f(c+0.01)
-#
-#    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
-#    print desc
-#    klass = get_perturb_class(desc)
-#    print klass
-#    obj = klass(desc)
-#    print obj
-
-    for p in PERTURBERS:
-        obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+    if args.condition:
+        condition = args.condition.rsplit('/',1)[-1]
+        obj = get_perturb_class(condition, debug=True)(condition)
         f = plt.figure(repr(obj))
         ax = f.add_subplot(1,1,1)
         obj.plot(ax)
         ax.legend()
+    else:
+
+        PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
+
+        for p in PERTURBERS:
+            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+            f = plt.figure(repr(obj))
+            ax = f.add_subplot(1,1,1)
+            obj.plot(ax)
+            ax.legend()
 
     plt.show()
