@@ -178,7 +178,6 @@ class Node(object):
         self.log.condition = self.condition
 
         self.drop_lock_on()
-        rospy.loginfo('SWITCH: switch conditions')
 
         img,svg,p,rad,advance,v_gain,z_target = self.condition.split('/')
         self.img_fn = str(img)
@@ -199,21 +198,22 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-        
+
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
 
-    def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
+    def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         if self.svg_fn and (not self.is_replay_experiment_rotation):
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
                 if segment.length < self.advance_px:
-                    self.log.ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
+                    new_ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
                     self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
                     self.ratio_total += ADVANCE_RATIO
+                    self.log.ratio = new_ratio
         else:
             self.trg_x = self.trg_y = 0.0
 
@@ -272,7 +272,7 @@ class Node(object):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                # check if fly is in an acceptable z range after a give interval after lock_on
+                # check if fly is in an acceptable z range after a given interval after lock_on
                 if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM)):
                     self.drop_lock_on()
                     if (fly_z > Z_MAXIMUM):
@@ -311,10 +311,10 @@ class Node(object):
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
-                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
+                        rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
-                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
+                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
                 v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -409,7 +409,7 @@ class Node(object):
             now = rospy.get_time()
             dt = now - self.first_seen_time
 
-            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s (tracked for %.1f, %.1f loops)' % (old_id, dt, self.ratio_total))
 
             self.currently_locked_obj_id = None
 
@@ -424,12 +424,15 @@ class Node(object):
             self.log.cyl_x = 0
             self.log.cyl_y = 0
 
+            if blacklist:
+                self.blacklist[old_id] = True
+
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
-        if (self.ratio_total > 2) and (old_id is not None):
+        if (self.ratio_total > 3) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)
