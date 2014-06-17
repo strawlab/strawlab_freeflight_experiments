@@ -35,9 +35,6 @@ ADVANCE_RATIO       = 1/100.0
 FLY_DIST_CHECK_TIME = 0.2       # time interval in seconds to check fly movement
 FLY_DIST_MIN_DIST   = 0.0005    # minimum distance fly must move in above interval to not be ignored
 
-#START_RADIUS    = 1.12      # radius of trigger volume centered around self.x/y
-#START_ZDIST     = 0.12      # +/- height of trigger volume centered around z_target
-
 # start volume defined as cube
 X_MIN = -0.30
 X_MAX =  0.30
@@ -70,15 +67,6 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 3
 
-REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                            colname="rotation_rate")
-REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                     colname="v_offset_rate")
-
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
@@ -86,10 +74,7 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 #             advance_threshold(m)/
 #             z_gain,
 #             z_target"
-#
-# if you set nan for either gain then you get a replay experiment on the
-# corresponding bias term
-#
+
 CONDITIONS = [
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.2/0.22",  
               #"checkerboard16.png/ellipse1.svg/+0.2/-10.0/0.1/0.2/0.22",
@@ -152,8 +137,8 @@ class Node(object):
 
             self.ratio_total = 0
 
-            self.replay_rotation = sfe_replay.ReplayStimulus(**REPLAY_ARGS_ROTATION)
-            self.replay_z = sfe_replay.ReplayStimulus(**REPLAY_ARGS_Z)
+            self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
+            self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
