@@ -49,6 +49,18 @@ class FlyCaveCylinder(ArenaBase):
     def get_ztick_locations(self):
         return [self.height/2.0,self.height]
 
+class FishBowl(ArenaBase):
+    def __init__(self,radius=0.35,height=0.08):
+        self.radius = radius
+        self.height = height
+    def plot_mpl_line_2d(self,ax,*args,**kwargs):
+        rad = self.radius
+        theta = np.linspace(0, 2*np.pi, 100)
+        return ax.plot( rad*np.cos(theta), rad*np.sin(theta), *args, **kwargs)
+    def get_bounds(self):
+        ''' returns (xmin, xmax, ymin, ymax)'''
+        return (-self.radius, self.radius, -self.radius, self.radius, 0, -self.height)
+
 class FlyCube(ArenaBase):
     def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
         self.xdim=xdim
