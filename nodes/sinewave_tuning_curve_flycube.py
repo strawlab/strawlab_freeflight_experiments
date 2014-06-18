@@ -80,7 +80,7 @@ MAX_ROTATION_RATE = 3
 CONDITIONS = [
 ]
 
-for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
+for lmbda_deg in [12.25,90.0]:#22.5,45.0,90.0,180.0]:
     duration=3.0
     ratio_min=1.0
     tf_hz=1.0
