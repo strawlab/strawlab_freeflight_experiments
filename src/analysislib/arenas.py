@@ -5,6 +5,8 @@ def get_arena_from_args(args):
         arena = FlyCaveCylinder(radius=0.5)
     elif args.arena=='flycube':
         arena = FlyCube()
+    elif args.arena=='fishbowl':
+        arena = analysislib.arenas.FishBowl()
     else:
         raise ValueError('unknown arena %r'%args.arena)
     return arena
