@@ -39,7 +39,9 @@ OUTSIDE_LEGEND = True
 def _perm_check(args):
     if not strawlab.constants.set_permissions():
         if not args.ignore_permission_errors:
-            raise Exception("Could not change process permissions (see --ignore-permission-errors)")
+            raise Exception("Could not change process permissions "
+                            "(see --ignore-permission-errors). Hint: "
+                            "prefix your call with 'sg strawlabnfs '.")
         print "WARNING: could not set process permissions"
 
 def get_safe_filename(s):
