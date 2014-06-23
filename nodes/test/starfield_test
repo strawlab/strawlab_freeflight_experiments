@@ -27,9 +27,9 @@ class Node(object):
             msg.x = 0
             msg.y = 0
             msg.z = np.sin(2*np.pi*t)
-            self.pub_star_velocity.publish(msg)
+            #self.pub_star_velocity.publish(msg)
 
-            msg = Float32(np.sin(0.1*2*np.pi*t))
+            msg = Float32(np.sin(0.01*2*np.pi*t))
             self.pub_rot_rate.publish( msg )
 
             r.sleep()
