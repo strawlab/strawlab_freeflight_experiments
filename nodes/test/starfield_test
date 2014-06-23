@@ -6,14 +6,17 @@ import sys
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import Float32
 
 import flyvr.display_client as display_client
-from strawlab_freeflight_experiments.topics import TOPIC_STAR_VELOCITY
+from strawlab_freeflight_experiments.topics import TOPIC_STAR_VELOCITY, \
+     TOPIC_CYL_ROTATION_RATE
 
 class Node(object):
     def __init__(self):
         rospy.init_node("starfield_test")
         self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3)
+        self.pub_rot_rate = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32)
 
     def run(self):
         r = rospy.Rate(200) # 200hz
@@ -25,6 +28,10 @@ class Node(object):
             msg.y = 0
             msg.z = np.sin(2*np.pi*t)
             self.pub_star_velocity.publish(msg)
+
+            msg = Float32(np.sin(0.1*2*np.pi*t))
+            self.pub_rot_rate.publish( msg )
+
             r.sleep()
 
 def main():
