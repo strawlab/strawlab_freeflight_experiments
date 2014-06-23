@@ -7,6 +7,8 @@ tethered_mode: True
 ignore_missing_stimulus_plugins: True
 stimulus_plugins: 
 - path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusStarField
+- path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusStarFieldAndModel
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusCUDAStarFieldAndModel
