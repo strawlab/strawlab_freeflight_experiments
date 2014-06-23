@@ -5,8 +5,11 @@
 #include "json2osg.hpp"
 
 #include "Poco/ClassLibrary.h"
+#include "Poco/SharedMemory.h"
+#include "Poco/NamedMutex.h"
 
 #include <iostream>
+#include <string.h>
 
 #include <osg/Point>
 #include <osg/PointSprite>
@@ -37,6 +40,11 @@
 #include <osgDB/FileUtils>
 
 #include <jansson.h>
+
+typedef struct
+{
+    float angular_position;
+} StimulusStarFieldSharedStateType;
 
 // -----------------------------------------------------------
 //
@@ -115,28 +123,55 @@ public:
     std::vector<std::string> get_topic_names() const;
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
     std::string get_message_type(const std::string& topic_name) const;
+    void update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation );
 
 private:
-    osg::ref_ptr<osg::Group> _group;
+    osg::ref_ptr<osg::PositionAttitudeTransform> _group;
     osg::Vec3 _starfield_velocity;
     osg::ref_ptr<ConstantShooter> _shooter;
     osg::ref_ptr<osgParticle::Placer> _placer;
     osg::ref_ptr<VelocityOperator> _vel_operator;
     osg::ref_ptr<osgParticle::ParticleSystem> _ps;
 
+    double                              _t0;
+    double                              _angular_position;
+    double                              _angular_velocity;
+    bool                                _angular_position_mode;
+
+    bool                                _slave;
+    Poco::SharedMemory                  _mem;
+    Poco::NamedMutex                    _memlock;
+
+
     void set_star_velocity(float x, float y, float z);
     void set_star_size(float v);
+    void set_cylinder_rotation_rate(float rate);
 };
 
-StimulusStarField::StimulusStarField() {
+StimulusStarField::StimulusStarField() :
+    _t0(-1),
+    _angular_position(0),
+    _angular_velocity(0),
+    _angular_position_mode(true),
+    _mem("StimulusStarField", sizeof(StimulusStarFieldSharedStateType),
+         Poco::SharedMemory::AccessMode(Poco::SharedMemory::AM_WRITE | Poco::SharedMemory::AM_READ)),
+    _memlock("StimulusStarField")
+{
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
 
-    _group = new osg::Group;
+    _group = new osg::PositionAttitudeTransform;
 }
 
 void StimulusStarField::post_init(bool slave) {
+
+    _slave = slave;
+    if (!_slave) {
+        Poco::NamedMutex::ScopedLock lock(_memlock);
+        memset (_mem.begin(),0,sizeof(StimulusStarFieldSharedStateType));
+    }
+
     // this is based on the OSG example osgparticleshader.cpp
 
     _ps = new osgParticle::ParticleSystem;
@@ -180,6 +215,7 @@ void StimulusStarField::post_init(bool slave) {
 
     set_star_velocity( 0.0, 0.0, 0.0);
     set_star_size( 5.0 );
+
 }
 
 void StimulusStarField::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
@@ -207,6 +243,7 @@ std::vector<std::string> StimulusStarField::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("star_velocity");
     result.push_back("star_size");
+    result.push_back("cylinder_rotation_rate");
     return result;
 }
 
@@ -219,6 +256,11 @@ void StimulusStarField::set_star_velocity(float x, float y, float z) {
 void StimulusStarField::set_star_size(float v) {
     osg::StateSet* stateset = _ps->getOrCreateStateSet();
     stateset->setAttribute( new osg::Point(v) );
+}
+
+void StimulusStarField::set_cylinder_rotation_rate(float rate) {
+    _angular_position_mode = false;
+    _angular_velocity = rate;
 }
 
 void StimulusStarField::receive_json_message(const std::string& topic_name,
@@ -235,6 +277,8 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
         set_star_velocity(vel[0],vel[1],vel[2]);
     } else if (topic_name=="star_size") {
         set_star_size(parse_float(root));
+    } else if (topic_name=="cylinder_rotation_rate") {
+        set_cylinder_rotation_rate(parse_float(root));
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -249,10 +293,38 @@ std::string StimulusStarField::get_message_type(const std::string& topic_name) c
         result = "geometry_msgs/Vector3";
     } else if (topic_name=="star_size") {
         result = "std_msgs/Float32";
+    } else if (topic_name=="cylinder_rotation_rate") {
+        result = "std_msgs/Float32";
     } else {
         throw std::runtime_error("unknown topic name");
     }
     return result;
+}
+
+void StimulusStarField::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation )
+{
+  Poco::NamedMutex::ScopedLock lock(_memlock);
+  StimulusStarFieldSharedStateType *shared;
+  shared = reinterpret_cast<StimulusStarFieldSharedStateType*>(_mem.begin());
+
+  if (!_slave) {
+    if (_t0 < 0) {
+        _t0 = time;
+        return;
+    }
+    float dt = time - _t0;
+    _t0 = time;
+
+    if (_angular_position_mode) {
+        shared->angular_position = _angular_position;
+    } else {
+        shared->angular_position = shared->angular_position + (_angular_velocity * dt);
+    }
+  }
+
+  osg::Quat quat = osg::Quat(shared->angular_position, osg::Vec3(0,0,1));
+  _group->setAttitude(quat);
+
 }
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
