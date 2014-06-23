@@ -132,6 +132,8 @@ StimulusStarField::StimulusStarField() {
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
+
+    _group = new osg::Group;
 }
 
 void StimulusStarField::post_init(bool slave) {
@@ -164,7 +166,7 @@ void StimulusStarField::post_init(bool slave) {
 
     osg::ref_ptr<osgParticle::ParticleSystemUpdater> updater = new osgParticle::ParticleSystemUpdater;
 
-    osg::ref_ptr<osg::Group> root = new osg::Group;
+    osg::ref_ptr<osg::Group> root = _group;
     root->addChild( parent.get() );
     root->addChild( updater.get() );
 
@@ -174,7 +176,6 @@ void StimulusStarField::post_init(bool slave) {
     geode->addDrawable( _ps.get() );
     root->addChild( geode.get() );
 
-    _group = root;
     _group->setName("StimulusStarField._group");
 
     set_star_velocity( 0.0, 0.0, 0.0);
