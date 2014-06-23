@@ -148,7 +148,6 @@ void StimulusStarField::post_init(bool slave) {
     _ps->setDefaultAttributesUsingShaders( textureFile, false, 0 );
 
     osg::StateSet* stateset = _ps->getOrCreateStateSet();
-    stateset->setAttribute( new osg::Point(5.0f) ); // pointSize
     stateset->setTextureAttributeAndModes( 0, new osg::PointSprite, osg::StateAttribute::ON );
 
     osg::ref_ptr<osgParticle::ModularEmitter> emitter = new osgParticle::ModularEmitter;
