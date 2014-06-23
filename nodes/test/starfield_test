@@ -8,11 +8,12 @@ import rospy
 from geometry_msgs.msg import Vector3
 
 import flyvr.display_client as display_client
+from strawlab_freeflight_experiments.topics import TOPIC_STAR_VELOCITY
 
 class Node(object):
     def __init__(self):
         rospy.init_node("starfield_test")
-        self.pub = rospy.Publisher('velocity', Vector3)
+        self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3)
 
     def run(self):
         r = rospy.Rate(200) # 200hz
@@ -23,7 +24,7 @@ class Node(object):
             msg.x = 0
             msg.y = 0
             msg.z = np.sin(2*np.pi*t)
-            self.pub.publish(msg)
+            self.pub_star_velocity.publish(msg)
             r.sleep()
 
 def main():
