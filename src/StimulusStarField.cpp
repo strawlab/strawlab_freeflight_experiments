@@ -230,8 +230,8 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
     flyvr_assert(root != NULL);
 
     if (topic_name=="star_velocity") {
-        osg::Vec3 position = parse_vec3(root);
-        set_star_velocity(position.x(),position.y(),position.z());
+        osg::Vec3 vel = parse_vec3(root);
+        set_star_velocity(vel[0],vel[1],vel[2]);
     } else if (topic_name=="star_size") {
         set_star_size(parse_float(root));
     } else {
