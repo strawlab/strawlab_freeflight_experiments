@@ -19,6 +19,9 @@ if __name__=='__main__':
                     lenfilt=0,
     )
     parser.add_argument(
+        '--index', default='framenumber',
+        help='the index of the returned dataframe (framenumber, none, time+NN)')
+    parser.add_argument(
         "--animate", action="store_true")
     parser.add_argument(
         "--save", action="store_true", help="save a csv of this trajectory")
@@ -38,9 +41,9 @@ if __name__=='__main__':
     uuid = args.uuid[0]
     obj_id = args.idfilt[0]
 
-    combine = autil.get_combiner_for_uuid(uuid)
-    combine.calc_turn_stats = True
-    combine.add_from_uuid(uuid,args=args)
+    combine = autil.get_combiner_for_args(args)
+    combine.set_index(args.index)
+    combine.add_from_args(args)
 
     plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
     for extra in args.show_extra.split(','):
