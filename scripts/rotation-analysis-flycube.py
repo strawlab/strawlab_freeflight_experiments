@@ -30,7 +30,7 @@ if __name__=='__main__':
 
     combine = autil.get_combiner("rotation")
     combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}.csv")
+    combine.add_from_args(args, "*.csv")
 
     fname = combine.fname
     results,dt = combine.get_results()
