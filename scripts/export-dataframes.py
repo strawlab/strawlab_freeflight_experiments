@@ -24,6 +24,7 @@ def _write_df(dest, df, index):
         kwargs['index_label'] = 'time'
 
     df.to_csv(dest+'.csv',**kwargs)
+    df.to_pickle(dest+'.df')
     scipy.io.savemat(dest+'.mat', df.to_dict('list'))
 
     print "wrote", dest
