@@ -497,39 +497,4 @@ def flatten_data(args, combine, flatten_columns):
 
     return flat_data, nens
 
-if __name__ == "__main__":
-    import analysislib.util as autil
-
-    #combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-    #combine.add_test_infinities()
-    #df,dt,_ = combine.get_one_result(1)
-
-    #GOOD DATA FOR SID
-    #df,dt = autil.get_one_trajectory("9b97392ebb1611e2a7e46c626d3a008a", 9)
-
-    #conflict
-    #df,dt = autil.get_one_trajectory("0aba1bb0ebc711e2a2706c626d3a008a", 422, "conflict.csv")
-
-    df,dt = autil.get_one_trajectory("14ab4982ff7711e2aa636c626d3a008a", 689, "rotation.csv")
-
-    if 1:
-        anim = animate_plots(df,dt,
-            plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
-        )
-#        #needs new mpl
-#        writer = animation.FileMovieWriter()
-#        anim.save("foob",writer=writer)
-
-    else:
-        plot_infinity(df,dt,
-            plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
-        )
-
-
-    #df.plot(subplots=True)
-
-    show_plots()
-
 
