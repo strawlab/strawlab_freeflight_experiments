@@ -3,6 +3,7 @@ import sys
 import os.path
 
 import scipy.io
+import numpy as np
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -41,7 +42,13 @@ if __name__=='__main__':
     parser.add_argument(
         '--index', default='framenumber',
         help='the index of the returned dataframe (framenumber, none, time+NN)')
-
+    parser.add_argument(
+        '--split-column',
+        help='split the dataframe into two output files at the occurance of '\
+             '--split-where in the given column')
+    parser.add_argument(
+        '--split-where', type=float, default=None,
+        help='split on the first occurance of this value')
 
     args = parser.parse_args()
 
@@ -60,7 +67,17 @@ if __name__=='__main__':
             df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
             dest = os.path.join(odir,'%d' % obj_id)
 
-            _write_df(dest, df, args.index)
+            if args.split_column and (args.split_where is not None):
+                #find the start of the perturbation (where perturb_progress == 0)
+                z = np.where(df[args.split_column].values == args.split_where)
+                if len(z[0]):
+                    fidx = z[0][0]
+                    bdf = df.iloc[:fidx]
+                    _write_df(dest+"_before", bdf, args.index)
+                    adf = df.iloc[fidx:]
+                    _write_df(dest+"_after", adf, args.index)
+            else:
+                _write_df(dest, df, args.index)
 
             if n >= args.n_longest:
                 break
