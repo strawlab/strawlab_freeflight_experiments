@@ -88,7 +88,7 @@ for lmbda_deg in [12.25,90.0]:#22.5,45.0,90.0,180.0]:
         "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/stepn_wavelength_tf|2|%s|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),tf_hz,duration,ratio_min))
 
 # condition with no perturbation
-CONDITIONS.append(  "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20" )
+CONDITIONS.append(  "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20" )
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
