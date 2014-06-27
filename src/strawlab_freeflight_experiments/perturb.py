@@ -49,6 +49,9 @@ class Perturber:
         self.ratio_min = float(ratio_min)
         self.reset()
 
+    def completed_perturbation(self, t):
+        return t >= (0.98*self.duration)
+
     def reset(self):
         self.progress = -1
         self.now = None
