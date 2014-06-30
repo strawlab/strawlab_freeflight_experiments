@@ -5,6 +5,7 @@ import operator
 import numpy as np
 import pandas as pd
 import itertools
+import time
 
 if not os.environ.get('DISPLAY'):
     print "DISPLAY NOT SET: USING AGG BACKEND"
@@ -93,6 +94,7 @@ if __name__=='__main__':
                 #create a new one
                 if obj_id in dfs:
                     obj_id = int(time.time()*1e6)
+                    print "WARNING: obj_id temporarily reasigned for analysis"
                 df['obj_id'] = obj_id
 
                 t = time0 + (np.arange(0,len(df),dtype=float) * dt)
