@@ -15,19 +15,19 @@ import autodata.files
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 class ReplayStimulus(object):
-    def __init__(self, colname="", filename="", uuid_oid_csv=None, dt=0.01, default=None):
+    def __init__(self, colname="", filename="", uuid_oid=None, dt=0.01, default=None):
         if filename:
             df = pd.read_pickle(filename)
             self._init(colname, df, dt)
-        elif uuid_oid_csv:
-            uuid,oid,csv = uuid_oid_csv
-            df,dt = self.get_df(uuid,oid,csv)
+        elif uuid_oid:
+            uuid,oid = uuid_oid
+            df,dt = self.get_df(uuid,oid)
             self._init(colname, df, dt)
         elif default is not None:
             self._s = None
             self._default = default
         else:
-            rospy.logwarn("No dataframe nor (uuid,oid,csv) tuple "\
+            rospy.logwarn("No dataframe nor (uuid,oid) tuple "\
                           "specified. Replay disabled")
             self._s = None
             self._default = None
@@ -41,7 +41,7 @@ class ReplayStimulus(object):
         self._dt = dt
 
     @staticmethod
-    def get_df(uuid,oid,csv):
+    def get_df(uuid,oid):
         _,args = analysislib.args.get_default_args(
             zfilt='trim',
             rfilt='trim',
@@ -50,10 +50,10 @@ class ReplayStimulus(object):
             outdir=os.getcwd(),
             zfilt_max=0.85)
 
-        combine = analysislib.util.get_combiner(csv)
+        combine = analysislib.util.get_combiner_for_uuid(uuid)
         combine.disable_debug()
         combine.disable_warn()
-        combine.add_from_uuid(uuid, args=args)
+        combine.add_from_uuid(uuid)
         df,dt,_ = combine.get_one_result(oid)
 
         return df,dt
@@ -82,7 +82,7 @@ if __name__ == "__main__":
                         colname="rotation_rate")
 
     try:
-        r2 = ReplayStimulus(uuid_oid_csv=("9b97392ebb1611e2a7e46c626d3a008a",9,"rotation.csv"),
+        r2 = ReplayStimulus(uuid_oid=("9b97392ebb1611e2a7e46c626d3a008a",9),
                             colname="rotation_rate")
     except autodata.files.NoFile:
         r2 = ReplayStimulus()

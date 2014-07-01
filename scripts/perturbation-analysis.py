@@ -189,9 +189,8 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    combine = autil.get_combiner("perturbation")
-    combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}.csv", frames_before=10)
+    combine = autil.get_combiner_for_args(args)
+    combine.add_from_args(args, frames_before=10)
 
     fname = combine.fname
     results,dt = combine.get_results()

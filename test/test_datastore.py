@@ -26,7 +26,7 @@ class TestDataStore(unittest.TestCase):
         os.environ['FLYDRA_AUTODATA_BASEDIR'] = ddir
         os.environ['FLYDRA_AUTODATA_PLOTDIR'] = self.pdir
 
-        self.combine = autil.get_combiner("rotation.csv")
+        self.combine = autil.get_combiner_for_uuid(self.uuid)
         self.combine.add_from_uuid(self.uuid)
 
     def testLoad(self):
@@ -36,7 +36,7 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(len(df), 1908)
 
     def testSingleLoad(self):
-        df,dt = autil.get_one_trajectory(self.uuid, 5, "rotation.csv")
+        df,dt = autil.get_one_trajectory(self.uuid, 5)
         self.assertEqual(len(df), 1908)
 
     def testFilenames(self):
