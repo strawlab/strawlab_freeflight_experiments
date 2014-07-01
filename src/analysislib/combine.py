@@ -1207,13 +1207,26 @@ class CombineH5WithCSV(_Combine):
                             #modify in place
                             df.loc[_ix,col] = fixed[col]
 
-                #FIXME: I think this should be the first non-nan condition row
-                first = df.irow(0)
+                #the start time and the start framenumber are defined by the experiment,
+                #so they come from the csv (fdf)
+                first = fdf.irow(0)
 
                 start_time = float(first['t_sec'] + (first['t_nsec'] * 1e-9))
+                start_framenumber = int(first['framenumber'])
+                #i could get this from the merged dataframe, but this is easier...
+                #also, the >= is needed to make valid['x'][0] not crash
+                #because for some reason sometimes we have a framenumber
+                #in the csv (which means it must be tracked) but not the simple
+                #flydra file....?
+                #
+                #maybe there is an off-by-one hiding elsewhere
+                query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_framenumber)
+                valid = trajectories.readWhere(query)
+                start_x = valid['x'][0]
+                start_y = valid['y'][0]
 
                 r['count'] += 1
-                r['start_obj_ids'].append( (first['x'], first['y'], oid, first['framenumber'], start_time) )
+                r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
 
         h5.close()
