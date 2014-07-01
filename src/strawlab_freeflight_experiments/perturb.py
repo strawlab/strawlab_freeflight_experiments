@@ -1,9 +1,13 @@
 import numpy as np
+import scipy.signal
 import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
 
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+
+
 
 def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
@@ -45,6 +49,8 @@ def get_perturb_class(perturb_descriptor, debug=False):
 class Perturber:
 
     DEFAULT_CHUNK_DESC = "0|1"
+
+    is_single_valued = True
 
     def __init__(self, chunk_str, ratio_min, duration):
         if chunk_str:
@@ -122,7 +128,7 @@ class NoPerturb(Perturber):
         return "<NoPerturb>"
     def step(self, *args):
         return 0,'ongoing'
-    def get_perturb_vs_time(self, t0, t1):
+    def get_perturb_vs_time(self, t0, t1, fs=100):
         return [],[]
     def get_time_limits(self):
         return 0,0
@@ -170,19 +176,22 @@ class PerturberStep(Perturber):
             state='ongoing'
         return self.value, state
 
-    def get_perturb_vs_time(self, t0, t1):
+    def get_perturb_vs_time(self, t0, t1, fs=100):
         t = []
         v = []
         if t0 < 0:
-            t.extend( np.linspace(t0,0,num=50) )
-            v.extend( np.zeros(50) )
+            num = int(abs(t0)*fs)
+            t.extend( np.linspace(t0,0,num=num) )
+            v.extend( np.zeros(num) )
 
-        t.extend( np.linspace(0,min(self.duration,t1),num=50) )
-        v.extend( np.ones(50)*self.value )
+        num = int(self.duration*fs)
+        t.extend( np.linspace(0,min(self.duration,t1),num=num) )
+        v.extend( np.ones(num)*self.value )
 
         if t1 > self.duration:
-            t.extend( np.linspace(self.duration,t1,num=50) )
-            v.extend( np.zeros(50) )
+            num = int(t1*fs)
+            t.extend( np.linspace(self.duration,t1,num=num) )
+            v.extend( np.zeros(num) )
 
         return t,v
 
@@ -194,7 +203,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_WHAT|2|0.7|0.5|3|0.4"
+    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|0.7|0.5|3|0.4"
 
     def __init__(self, descriptor):
         """
@@ -229,6 +238,8 @@ class PerturberStepN(Perturber):
             raise Exception("Incorrect PerturberStepN configuration")
         self.values = map(float,values)
 
+        self.is_single_valued = len(self.values) == 1
+
         Perturber.__init__(self, chunks, ratio_min, duration)
 
     def __repr__(self):
@@ -245,7 +256,7 @@ class PerturberStepN(Perturber):
             state='ongoing'
         return self.values, state
 
-    def get_perturb_vs_time(self, t0, t1, n):
+    def get_perturb_vs_time(self, t0, t1, n=0, fs=100):
         t = []
         v = []
         if t0 < 0:
@@ -264,7 +275,7 @@ class PerturberStepN(Perturber):
     def get_time_limits(self):
         return 0,self.duration
 
-    def get_value_limits(self,n):
+    def get_value_limits(self, n=0):
         return min(self.values[n],0),max(self.values[n],0)
 
     def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
@@ -275,6 +286,7 @@ class PerturberStepN(Perturber):
 
         v1 = v0 = np.nan
         for i in range(len(self.values)):
+
             t,v = self.get_perturb_vs_time(t0,t1,i)
             _v0,_v1 = self.get_value_limits(i)
 
@@ -322,6 +334,7 @@ class PerturberChirp(Perturber):
                                   f0=self.f0,
                                   f1=self.f1,
                                   t1=self.t1,
+                                  phi=90,
                                   method=self.method) * self.value
 
         #we can call this at slightly different times.
@@ -348,8 +361,9 @@ class PerturberChirp(Perturber):
             state='ongoing'
         return self._f(dt), state
 
-    def get_perturb_vs_time(self, t0, t1):
-        t = np.linspace(t0,t1,num=2000)
+    def get_perturb_vs_time(self, t0, t1, fs=100):
+        num = int((t1-t0)*fs)
+        t = np.linspace(t0,t1,num=num)
         v = self._f(t)
         return t,v
 
@@ -359,6 +373,85 @@ class PerturberChirp(Perturber):
     def get_value_limits(self):
         return -self.value,self.value
 
+class PerturberTone(PerturberChirp):
+
+    DEFAULT_DESC = "tone|1.0|3|0|5"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'tone'|magnitude|duration|phase_offset|freq|ratio_min|a|b|c|d|e|f
+        """
+        print descriptor
+        ctype,value,t1,po,f0,ratio_min,chunks = descriptor.split('|', 6)
+        if not ctype.startswith('tone'):
+            raise Exception("Incorrect PerturberTone configuration")
+
+        self.value = float(value)
+        self.t1 = float(t1)
+        self.f0 = float(f0)
+        self.po = float(po)
+
+        #oversample by 10 times the framerate (100)
+        self._t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
+        self._w = np.sin(self._t)
+#        self._w = waveforms.chirp(self._t,
+#                                  f0=self.f0,
+#                                  f1=self.f1,
+#                                  t1=self.t1,
+#                                  phi=90,
+#                                  method=self.method) * self.value
+
+        #we can call this at slightly different times.
+        self._f = interp.interp1d(self._t, self._w,
+                                  kind='linear',
+                                  copy=False,
+                                  bounds_error=False,
+                                  fill_value=0.0)
+
+
+def plot_spectum(ax, obj, fs=100, maxfreq=12):
+#    from spectrum.periodogram import Periodogram
+#        p1 = Periodogram(x, fs)
+#        p1.run()
+#        p1.plot(ax)
+    if not obj.is_single_valued:
+        #can't do this for stepN without a better Perturber.plot API
+        return
+
+    _,x = obj.get_perturb_vs_time(0,obj.duration, fs)
+    if len(x):
+        ax.psd(x,Fs=fs)
+        ax.set_ylabel('PSD (dB/Hz)')
+        ax.set_yscale('symlog')
+        ax.set_xlim(0,maxfreq)
+
+def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
+    """
+    Plots a Single-Sided Amplitude Spectrum of y(t)
+    """
+    if not obj.is_single_valued:
+        return
+
+    _,y = obj.get_perturb_vs_time(0,obj.duration, fs)
+    if not len(y):
+        return
+
+    n = len(y) # length of the signal
+    k = np.arange(n)
+    T = n/fs
+    frq = k/T # two sides frequency range
+    frq = frq[range(n/2)] # one side frequency range
+
+    Y = scipy.fft(y)/n # fft computing and normalization
+    Y = Y[range(n/2)]
+
+    ax.plot(frq,abs(Y),'ro') # plotting the spectrum
+    ax.set_xlabel('Frequency')
+    ax.set_ylabel('|Y(freq)|')
+    ax.set_xlim(0,maxfreq)
+
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -376,14 +469,17 @@ if __name__ == "__main__":
         obj.plot(ax)
         ax.legend()
     else:
-
-        PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
-
         for p in PERTURBERS:
             obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
-            f = plt.figure(repr(obj))
-            ax = f.add_subplot(1,1,1)
-            obj.plot(ax)
-            ax.legend()
+            f = plt.figure(repr(obj), figsize=(8,8))
+            ax = plt.subplot2grid((2,2),(0,0), colspan=2)
+            obj.plot(ax, t_extra=0)
+            ax.set_title(str(obj))
+            ax.set_xlabel('t (s)')
+            ax.set_ylabel('wide-field motion')
+            ax = plt.subplot2grid((2,2),(1,0))
+            plot_spectum(ax, obj)
+            ax = plt.subplot2grid((2,2),(1,1))
+            plot_amp_spectrum(ax, obj)
 
     plt.show()
