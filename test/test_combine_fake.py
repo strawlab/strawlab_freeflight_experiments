@@ -238,7 +238,7 @@ class TestCombineFake2(unittest.TestCase):
             cn.calc_linear_stats = False
             cn.set_index(index)
 
-            cn.add_csv_and_h5_file(csv_fname, h5_fname, args, frames_before=0)
+            cn.add_csv_and_h5_file(csv_fname, h5_fname, args)
             dfn,dt,(x0,y0,obj_id,framenumber0,time0) = cn.get_one_result(1)
 
             self.assertEqual(obj_id,1)

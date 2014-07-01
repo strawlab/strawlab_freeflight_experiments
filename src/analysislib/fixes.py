@@ -69,12 +69,12 @@ class _DictOrAttr(object):
 
     def __getattr__(self, n):
         if n in self.COLS:
-            return self._fix()
+            return self._fix(n)
         return getattr(self._r, n)
 
     def __getitem__(self, k):
         if k in self.COLS:
-            return self._fix()
+            return self._fix(k)
         return self._r[k]
 
 
@@ -82,7 +82,7 @@ class _FixConflictCsvRowModelPosition(_DictOrAttr):
 
     COLS = ('model_x','model_y','model_z')
 
-    def _fix(self):
+    def _fix(self, n):
         try:
             cond = _get_cond(self._r)
             mx,my,mz = cond.split('.osg|')[-1].split('|')
@@ -100,7 +100,7 @@ class _FixPerturbationConditionName(_DictOrAttr):
 
     COLS = ('condition',)
 
-    def _fix(self):
+    def _fix(self, n):
         c = _get_cond(self._r)
         if c:
             if 'chirp_linear|' in c:
