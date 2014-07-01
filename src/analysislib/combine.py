@@ -493,7 +493,7 @@ class CombineCSV(_Combine):
         self._idfilt = args.idfilt
         self._maybe_add_tfilt(args)
 
-        if args.uuid is not None:
+        if args.uuid:
             if len(args.uuid) > 1:
                 self.plotdir = args.outdir
 
@@ -601,7 +601,7 @@ class CombineH5(_Combine):
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
 
-        if args.uuid is not None:
+        if args.uuid:
             uuid = args.uuid[0]
             fm = autodata.files.FileModel(basedir=args.basedir)
             fm.select_uuid(uuid)
@@ -728,7 +728,7 @@ class CombineH5WithCSV(_Combine):
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
 
-        if args.uuid is not None:
+        if args.uuid:
             if len(args.uuid) > 1:
                 self.plotdir = args.outdir
 

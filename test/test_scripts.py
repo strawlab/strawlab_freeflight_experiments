@@ -5,6 +5,8 @@ import subprocess
 import unittest
 import shutil
 
+import roslib.packages
+
 class TestScript(unittest.TestCase):
 
     def setUp(self):
@@ -95,6 +97,25 @@ class TestScript(unittest.TestCase):
         stdout,stderr = proc.communicate()
         self.assertEqual(proc.returncode,0,stderr)
         self.assertTrue(os.path.isfile(os.path.join(self._tdir, "perturbation-analysis.py","COMPLETED_PERTURBATIONS.md")))
+
+    def test_csv_h5(self):
+        ddir = os.path.join(
+                    roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
+                   'test','data','0'*32
+        )
+        proc = subprocess.Popen(
+                "./rotation-analysis.py --csv-file %s --h5-file %s "\
+                "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % (
+                    os.path.join(ddir,'20131004_161631.rotation.csv'),
+                    os.path.join(ddir,'20131004_161625.simple_flydra.h5'),
+                    self._tdir),
+                shell=True,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                cwd=self._sdir,
+                env=self._env)
+        stdout,stderr = proc.communicate()
+        self.assertEqual(proc.returncode,0,stderr)
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "rotation-analysis.py","data.json")))
 
     def tearDown(self):
         shutil.rmtree(self._tdir)
