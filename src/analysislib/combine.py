@@ -1174,6 +1174,8 @@ class CombineH5WithCSV(_Combine):
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
                                 axis=1,join='outer')
+                    #restore a framenumber column for API compatibility
+                    df['framenumber'] = df.index.values
                 elif (self._index == 'none') or (self._index.startswith('time')):
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by framenumber
