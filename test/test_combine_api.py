@@ -46,7 +46,7 @@ class TestCombineAPI(unittest.TestCase):
         combine = self._get_combine()
 
         self.assertEqual(combine.get_num_conditions(), 1)
-        self.assertEqual(combine.get_total_trials(), 4)
+        self.assertEqual(combine.get_total_trials(), 5)
    
 
 if __name__=='__main__':

@@ -48,7 +48,9 @@ class TestCombineUtil(unittest.TestCase):
                          set(['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate',
                               'trg_x', 'trg_y', 'trg_z', 'v_offset_rate', 'x', 'y',
                               'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az',
-                              'theta', 'dtheta', 'radius', 'omega', 'rcurve', 'tsec', 'tnsec']))
+                              'theta', 'dtheta', 'radius', 'omega', 'rcurve',
+                              't_nsec','framenumber','tns','t_sec','exp_uuid',
+                              'flydra_data_file','lock_object','condition']))
    
 
 class TestCombine(unittest.TestCase):
@@ -144,7 +146,7 @@ class TestCombine(unittest.TestCase):
         combine.add_from_args(args)
 
         self.assertEqual(combine.get_num_conditions(), 3)
-        self.assertEqual(combine.get_total_trials(), 1003)
+        self.assertEqual(combine.get_total_trials(), 1005)
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
