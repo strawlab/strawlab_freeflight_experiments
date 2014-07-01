@@ -35,6 +35,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
     for cond in results:
 
         perturb_desc = cond.split("/")[-1]
+
         pklass = sfe_perturb.get_perturb_class(perturb_desc)
 
         #only plot perturbations
@@ -174,7 +175,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
 
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser(frames_before=10)
+    parser = analysislib.args.get_parser(frames_before=0)
 
     args = parser.parse_args()
 
