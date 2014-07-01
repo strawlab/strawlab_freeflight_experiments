@@ -86,7 +86,7 @@ class TestScript(unittest.TestCase):
 
     def test_perturbation_analysis(self):
         proc = subprocess.Popen(
-                "./perturbation-analysis.py --uuid 401be1eee81a11e3bf926c626d3a008a "\
+                "./perturbation-analysis.py --uuid 2a8386e0dd1911e3bd786c626d3a008a "\
                 "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
