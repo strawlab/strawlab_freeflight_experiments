@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os.path
+import sys
 import unittest
 
 import roslib
@@ -8,6 +9,8 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.util as autil
 import strawlab.constants
+
+_me_exec = os.path.basename(sys.argv[0])
 
 class TestDataStore(unittest.TestCase):
 
@@ -23,28 +26,30 @@ class TestDataStore(unittest.TestCase):
         os.environ['FLYDRA_AUTODATA_BASEDIR'] = ddir
         os.environ['FLYDRA_AUTODATA_PLOTDIR'] = self.pdir
 
-        self.combine = autil.get_combiner("rotation.csv")
+        self.combine = autil.get_combiner_for_uuid(self.uuid)
+        self.combine.disable_debug()
+        self.combine.disable_warn()
         self.combine.add_from_uuid(self.uuid)
 
     def testLoad(self):
         n = self.combine.get_total_trials()
-        self.assertEqual(n, 4)
+        self.assertEqual(n, 5)
         df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(5)
-        self.assertEqual(len(df), 1908)
+        self.assertEqual(len(df), 1337)
 
     def testSingleLoad(self):
-        df,dt = autil.get_one_trajectory(self.uuid, 5, "rotation.csv")
-        self.assertEqual(len(df), 1908)
+        df,dt = autil.get_one_trajectory(self.uuid, 5, disable_debug=True, disable_warn=True)
+        self.assertEqual(len(df), 1337)
 
     def testFilenames(self):
         readme = self.combine.get_plot_filename("README")
-        self.assertEqual(readme, os.path.join(self.pdir,self.uuid,'README'))
+        self.assertEqual(readme, os.path.join(self.pdir,self.uuid,_me_exec,'README'))
 
         fname = self.combine.fname
-        self.assertEqual(fname, os.path.join(self.pdir,self.uuid,"20131004_161631"))
+        self.assertEqual(fname, os.path.join(self.pdir,self.uuid,_me_exec,"20131004_161631"))
 
         plotdir = self.combine.plotdir
-        self.assertEqual(plotdir, os.path.join(self.pdir,self.uuid))
+        self.assertEqual(plotdir, os.path.join(self.pdir,self.uuid,_me_exec))
 
     def tearDown(self):
         del os.environ['FLYDRA_AUTODATA_BASEDIR']

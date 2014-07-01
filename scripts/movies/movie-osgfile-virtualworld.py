@@ -23,6 +23,7 @@ roslib.load_manifest('camera_model')
 import camera_model
 
 roslib.load_manifest('strawlab_freeflight_experiments')
+import autodata.files
 import analysislib.args
 import analysislib.movie
 import analysislib.combine
@@ -79,23 +80,13 @@ STIMULUS_CLASS_MAP = {
     "StimulusCylinderAndModel":StimulusCylinderAndModel
 }
 
-STIMULUS_CSV_MAP = {
-    "StimulusOSGFile":None,
-    "StimulusCylinderAndModel":"conflict.csv",
-}
-
 def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
     try:
-        csvsuffix = STIMULUS_CSV_MAP[stimname]
-        if csvsuffix is None:
-            raise TypeError
-        combine = analysislib.util.get_combiner(csvsuffix)
-        combine.add_from_args(args, csvsuffix)
-    except TypeError:
+        combine = analysislib.util.get_combiner_for_args(args)
+        combine.add_from_args(args)
+    except autodata.files.NoFile:
         combine = analysislib.combine.CombineH5()
         combine.add_from_args(args)
-    except KeyError:
-        print "no renderslave for",stimname
 
     valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
 
@@ -385,26 +376,19 @@ if __name__ == "__main__":
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
 
-    if (not args.h5_file) and (not args.uuid):
-        parser.error("Specify a UUID or an H5 file")
+    analysislib.args.check_args(parser, args, max_uuids=1)
+
+    if len(args.idfilt) != 1:
+        parser.error("You must specify --idfilt with a single obj_id")
+
+    obj_id = args.idfilt[0]
 
     if args.uuid is not None:
-        if len(args.uuid) > 1:
-            parser.error("Only one uuid supported for making movies")
         uuid = args.uuid[0]
     else:
         uuid = ''
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
-
-    try:
-        assert len(args.idfilt) == 1
-        obj_id = args.idfilt[0]
-    except:
-        obj_id = None
-
-    if obj_id is None:
-        parser.error("You must specify --idfilt with a single obj_id")
 
     doit(args,
          args.movie_file,

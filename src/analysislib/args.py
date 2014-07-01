@@ -37,14 +37,16 @@ def get_parser(*only_these_options, **defaults):
 
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     if not only_these_options or "csv-file" in only_these_options:
         parser.add_argument(
             '--csv-file', type=str,
+            default=defaults.get('csv_file',None),
             help='path to *.csv file (if not using --uuid)')
     if not only_these_options or "h5-file" in only_these_options:
         parser.add_argument(
             '--h5-file', type=str,
+            default=defaults.get('h5_file',None),
             help='path to simple_flydra.h5 file (if not using --uuid)')
     if not only_these_options or "show-obj-ids" in only_these_options:
         parser.add_argument(
@@ -82,11 +84,11 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
             '--zfilt-min', type=float, default=0.10,
-            help='minimum z, metres (default %(default)s)')
+            help='minimum z, metres')
     if not only_these_options or "zfilt-max" in only_these_options:
         parser.add_argument(
             '--zfilt-max', type=float, default=0.90,
-            help='maximum z, metres (default %(default)s)')
+            help='maximum z, metres')
     if not only_these_options or "uuid" in only_these_options:
         parser.add_argument(
             '--uuid', type=str, nargs='*', default=None,
@@ -109,12 +111,13 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
             '--rfilt-max', type=float, default=0.42,
-            help='maximum r, metres, (default %(default)s)')
+            help='maximum r, metres,')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
-            '--lenfilt', type=float, default=1.0,
+            '--lenfilt', type=float,
             required=False,
-            help='filter trajectories shorter than this many seconds (default %(default)s)')
+            default=defaults.get('lenfilt', 1.0),
+            help='filter trajectories shorter than this many seconds')
     if not only_these_options or "idfilt" in only_these_options:
         parser.add_argument(
             '--idfilt', type=int, default=[], nargs='*',

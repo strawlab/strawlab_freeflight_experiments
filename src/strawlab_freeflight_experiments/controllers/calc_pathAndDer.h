@@ -1,0 +1,1 @@
+void pathAndDer (double *path, double *pathDer, double *pathDerDer, double theta, double a, double b, double delta, double xme, double yme);

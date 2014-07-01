@@ -6,6 +6,7 @@ import random
 import time
 import cPickle as pickle
 import re
+import operator
 
 import tables
 import pandas as pd
@@ -48,8 +49,8 @@ class _Combine(object):
     calc_turn_stats = True
 
     def __init__(self, **kwargs):
-        self.__debug = kwargs.get("debug",True)
-        self.__warn = kwargs.get("warn",True)
+        self._enable_debug = kwargs.get("debug",True)
+        self._enable_warn = kwargs.get("warn",True)
         self._dt = None
         self._lenfilt = None
         self._idfilt = []
@@ -62,6 +63,13 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._index = 'framenumber'
+
+    def set_index(self, index):
+        VALID_INDEXES = ('framenumber','none')
+        if (index not in VALID_INDEXES) and (not index.startswith('time')):
+            raise ValueError('index must be one of %s,time+NN (where NN is a pandas resample specifier)' % ', '.join(VALID_INDEXES))
+        self._index = index
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -108,11 +116,11 @@ class _Combine(object):
             self.add_custom_filter(args.customfilt, args.customfilt_len)
 
     def _debug(self, m):
-        if self.__debug:
+        if self._enable_debug:
             print m
 
     def _warn(self, m):
-        if self.__warn:
+        if self._enable_warn:
             print m
 
     @property
@@ -207,16 +215,16 @@ class _Combine(object):
         return {}
 
     def enable_debug(self):
-        self.__debug = True
+        self._enable_debug = True
 
     def disable_debug(self):
-        self.__debug = False
+        self._enable_debug = False
 
     def enable_warn(self):
-        self.__warn = True
+        self._enable_warn = True
 
     def disable_warn(self):
-        self.__warn = False
+        self._enable_warn = False
 
 
     def get_results(self):
@@ -257,6 +265,24 @@ class _Combine(object):
 
         raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
 
+    def get_obj_ids_sorted_by_length(self):
+        """
+        Get a sorted list of the longest trajectories
+        returns: a dictionary condition:[(obj_id,len),...]
+        """
+        best = {}
+        for i,(current_condition,r) in enumerate(self._results.iteritems()):
+            if not r['count']:
+                continue
+            for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                try:
+                    best[current_condition][obj_id] = len(df)
+                except KeyError:
+                    best[current_condition] = {obj_id:len(df)}
+
+        sorted_best = {c:sorted(best[c].items(), key=operator.itemgetter(1), reverse=True) for c in self.get_conditions()}
+        return sorted_best
+
     def get_result_columns(self):
         """get the names of the columns in the combined dataframe"""
         for current_condition,r in self._results.iteritems():
@@ -279,6 +305,7 @@ class _CombineFakeInfinity(_Combine):
         _Combine.__init__(self, **kwargs)
         self._nconditions = kwargs.get('nconditions',1)
         self._ntrials = kwargs.get('ntrials', 100)
+        self._ninfinity = kwargs.get('ninfinity', 5)
 
         self._results = {}
         self._dt = 1/100.0
@@ -301,10 +328,10 @@ class _CombineFakeInfinity(_Combine):
             for t in range(self._ntrials):
                 if obj_id == 1:
                     #make sure the first infinity is full and perfect
-                    df = self.get_fake_infinity(5,0,0,0,framenumber,0,0,self._dt)
+                    df = self.get_fake_infinity(self._ninfinity,0,0,0,framenumber,0,0,self._dt)
                 else:
                     df = self.get_fake_infinity(
-                                n_infinity=5,
+                                n_infinity=self._ninfinity,
                                 random_stddev=0.008,
                                 x_offset=0.1 * (random.random() - 0.5),
                                 y_offset=0.1 * (random.random() - 0.5),
@@ -351,7 +378,7 @@ class _CombineFakeInfinity(_Combine):
                 framenumber += len(df)
 
     @staticmethod
-    def get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0):
+    def get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0, npts=200):
         def get_noise(d):
             if random_stddev:
                 return (np.random.random(len(d)) - 0.5) * random_stddev
@@ -359,7 +386,7 @@ class _CombineFakeInfinity(_Combine):
                 return np.zeros_like(d)
 
         pi = np.pi
-        leaft = np.linspace(-pi/4.,pi/4., 100)
+        leaft = np.linspace(-pi/4.,pi/4., npts//2)
         leaftrev = (leaft-pi)[::-1] #reverse
 
         theta = np.concatenate( (leaft, leaftrev[1:]) )
@@ -402,8 +429,8 @@ class _CombineFakeInfinity(_Combine):
         return df
 
     @staticmethod
-    def get_fake_infinity(n_infinity, random_stddev, x_offset, y_offset, frame0, nan_pct, latency, dt):
-        df = _CombineFakeInfinity.get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0)
+    def get_fake_infinity(n_infinity, random_stddev, x_offset, y_offset, frame0, nan_pct, latency, dt, npts=200):
+        df = _CombineFakeInfinity.get_fake_infinity_trajectory(n_infinity, random_stddev, x_offset, y_offset, frame0, npts)
 
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
@@ -646,15 +673,25 @@ class CombineH5WithCSV(_Combine):
     csv_file = ''
     h5_file = ''
 
-    def __init__(self, *csv_rows, **kwargs):
+    def __init__(self, *csv_cols, **kwargs):
         _Combine.__init__(self, **kwargs)
-        rows = ["framenumber"]
-        rows.extend(csv_rows)
-        self._rows = set(rows)
+        #framenumber must be present
+        cols = ["framenumber","tnsec","tsec"]
+        cols.extend(csv_cols)
+        #some rows are handled differently
+        #condition, exp_uuid, flydra_data_file are strings,
+        #lock_object, t_sec, t_nsec have to be present
+        self._cols = set(cols) - set(['condition','lock_object','t_sec','t_nsec','exp_uuid','flydra_data_file'])
+
         self._csv_suffix = kwargs.get("csv_suffix")
 
         #use this for keeping track of results that span multiple conditions
         self._results_by_condition = {}
+
+        if os.environ.get('FLYDRA_OLD_COMBINE'):
+            self.add_csv_and_h5_file = self.add_csv_and_h5_file_old
+        else:
+            self.add_csv_and_h5_file = self.add_csv_and_h5_file_new
 
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
@@ -722,7 +759,7 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
+    def add_csv_and_h5_file_old(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
         warnings = {}
@@ -749,8 +786,8 @@ class CombineH5WithCSV(_Combine):
             self._debug("IO:     fixing data %s" % self._fix)
 
         #record_iterator in the csv_file returns all defined cols by default.
-        #those specified in csv_rows are float()'d and put into the dataframe
-        infile = nodelib.log.CsvLogger(csv_fname, "r")
+        #those specified in csv_cols are float()'d and put into the dataframe
+        infile = nodelib.log.CsvLogger(csv_fname, "r", warn=self._enable_warn, debug=self._enable_debug)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
 
@@ -767,7 +804,7 @@ class CombineH5WithCSV(_Combine):
             assert dt == self._dt
             assert tzname == self._tzname
 
-        dur_samples = self.min_num_frames
+        dur_samples = max(1,self.min_num_frames)
 
         _ids = Queue.Queue(maxsize=2)
         this_id = IMPOSSIBLE_OBJ_ID
@@ -790,15 +827,27 @@ class CombineH5WithCSV(_Combine):
                 _t = float(row.t_sec) + (float(row.t_nsec) * 1e-9)
                 _framenumber = int(row.framenumber)
 
-                for k in self._rows:
-                    if k != "framenumber":
+                this_row["tsec"] = _t
+                this_row["tnsec"] = (int(row.t_sec) * int(1e9)) + int(row.t_nsec)
+
+                for k in self._cols:
+                    if k not in ("framenumber","tnsec","tsec"):
                         try:
                             this_row[k] = float(getattr(row,k))
+                            warn = None
                         except AttributeError:
                             this_row[k] = np.nan
-                            if k not in warnings:
-                                self._warn("WARNING: no such column in csv:%s" % k)
-                                warnings[k] = True
+                            warn = "%s:col" % k, "no such column in csv:%s" % k
+                        except ValueError:
+                            this_row[k] = np.nan
+                            warn = "%s:val" % k, "missing value for column in csv:%s" % k
+
+                        if warn is not None:
+                            warnk,warnv = warn
+                            if warnk not in warnings:
+                                self._warn("WARNING: %s" % warnv)
+                                warnings[warnk] = True
+
 
                 if _cond not in results:
                     results[_cond] = dict(count=0,
@@ -819,7 +868,7 @@ class CombineH5WithCSV(_Combine):
                         #first time
                         this_id = _id
                         this_cond = _cond
-                        csv_results = {k:[] for k in self._rows}
+                        csv_results = {k:[] for k in self._cols}
                         query_id = None
                     finally:
                         _ids.put((_id,_framenumber,_t,_cond),block=False)
@@ -874,7 +923,7 @@ class CombineH5WithCSV(_Combine):
                         else:
                             dfd = {'x':validx,'y':validy,'z':validz}
 
-                            for k in self._rows:
+                            for k in self._cols:
                                 if k != "framenumber":
                                     dfd[k] = pd.Series(csv_results[k],index=csv_results['framenumber'])
 
@@ -922,7 +971,7 @@ class CombineH5WithCSV(_Combine):
 
                     this_id = _id
                     this_cond = _cond
-                    csv_results = {k:[] for k in self._rows}
+                    csv_results = {k:[] for k in self._cols}
 
                 elif _id == this_id:
                     #sometimes we get duplicate rows. only append if the fn is
@@ -930,8 +979,7 @@ class CombineH5WithCSV(_Combine):
                     fns = csv_results["framenumber"]
                     if (not fns) or (_framenumber > fns[-1]):
                         fns.append(_framenumber)
-
-                        for k in self._rows:
+                        for k in self._cols:
                             if k != "framenumber":
                                 csv_results[k].append(this_row[k])
 
@@ -943,5 +991,229 @@ class CombineH5WithCSV(_Combine):
 
         h5.close()
 
+    def add_csv_and_h5_file_new(self, csv_fname, h5_file, args):
+        """Add a single csv and h5 file"""
 
+        warnings = {}
+
+        self.csv_file = csv_fname
+        self.h5_file = h5_file
+
+        if args.cached:
+            name = self.get_plot_filename("data.pkl")
+            self._debug("IO:     reading %s" % name)
+            if os.path.isfile(name):
+                with open(name,'r+b') as f:
+                    d = pickle.load(f)
+                    self._results = d['results']
+                    self._dt = d['dt']
+                    return
+
+        self._fix = analysislib.fixes.load_fixups(csv_file=os.path.basename(self.csv_file),
+                                                   h5_file=os.path.basename(self.h5_file))
+
+        self._debug("IO:     reading %s" % csv_fname)
+        self._debug("IO:     reading %s" % h5_file)
+        if self._fix.active:
+            self._debug("IO:     fixing data %s" % self._fix)
+
+        #open the csv file as a dataframe
+        csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
+
+        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
+        trajectories = self._get_trajectories(h5)
+        dt = 1.0/trajectories.attrs['frames_per_second']
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
+
+        if self._dt is None:
+            self._dt = dt
+            self._lenfilt = args.lenfilt
+            self._tzname = tzname
+        else:
+            assert dt == self._dt
+            assert tzname == self._tzname
+
+        #minimum length of 2 to prevent later errors calculating derivitives
+        dur_samples = max(2,self.min_num_frames)
+
+        results = self._results
+        skipped = self._skipped
+
+        for (oid,cond),odf in csv.groupby(('lock_object','condition')):
+            if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+                continue
+
+            if args.idfilt and (oid not in args.idfilt):
+                continue
+
+            if self._fix.active:
+                cond = self._fix.fix_condition(cond)
+
+            if cond not in results:
+                results[cond] = dict(count=0,
+                                      start_obj_ids=[],
+                                      df=[])
+                skipped[cond] = 0
+
+            r = results[cond]
+
+            #the csv may be written at a faster rate than the framerate,
+            #causing there to be multiple rows with the same framenumber.
+            #find the last index for all unique framenumbers for this trial
+            fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
+            trial_framenumbers = fdf['framenumber'].values
+
+            #get the comparible range of data from flydra
+            if args.frames_before != 0:
+                start_frame = trial_framenumbers[0] - args.frames_before
+            else:
+                start_frame = trial_framenumbers[0]
+
+            stop_frame = trial_framenumbers[-1]
+
+            query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
+                            oid,
+                            start_frame,
+                            stop_frame)
+
+            valid = trajectories.readWhere(query)
+
+            #filter the trajectories based on Z value
+            valid_z_cond = analysislib.filters.filter_z(
+                                        args.zfilt,
+                                        valid['z'],
+                                        args.zfilt_min, args.zfilt_max)
+            #filter based on radius
+            valid_r_cond = analysislib.filters.filter_radius(
+                                        args.rfilt,
+                                        valid['x'],valid['y'],
+                                        args.rfilt_max)
+
+            valid_cond = valid_z_cond & valid_r_cond
+
+            validframenumber = valid['framenumber'][valid_cond]
+
+            n_samples = len(validframenumber)
+            if n_samples < dur_samples:
+                self._debug('TRIM:   %d samples for obj_id %d' % (n_samples,oid))
+                self._skipped[cond] += 1
+                continue
+
+            traj_start_frame = valid['framenumber'][0]
+            traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
+
+            flydra_series = []
+            for a in 'xyz':
+                avalid = valid[a][valid_cond]
+                flydra_series.append( pd.Series(avalid,name=a,index=validframenumber) )
+
+            #we can now create a dataframe that has the flydra data, and the
+            #original index of the csv dataframe
+            framenumber_series = pd.Series(validframenumber,name='framenumber',index=validframenumber)
+            flydra_series.append(framenumber_series)
+
+            #make a ns since epoch column
+            tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
+            tns = ((validframenumber - traj_start_frame) * self._dt * 1e9) + tns0
+            tns_series = pd.Series(tns,name='tns',index=validframenumber,dtype=np.uint64)
+            flydra_series.append(tns_series)
+
+            df = pd.concat(flydra_series,axis=1)
+
+            try:
+                dt = self._dt
+                if self.calc_linear_stats:
+                    acurve.calc_velocities(df, dt)
+                    acurve.calc_accelerations(df, dt)
+                if self.calc_angular_stats:
+                    acurve.calc_angular_velocities(df, dt)
+                if self.calc_turn_stats:
+                    acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
+
+                if self._custom_filter is not None:
+                    df = eval(self._custom_filter)
+                    n_samples = len(df)
+                    if n_samples < self.custom_filter_min_num_frames:
+                        self._debug('FILTER: %d for obj_id %d' % (n_samples,query_id))
+                        self._skipped[_cond] += 1
+                        df = None
+            except Exception, e:
+                self._skipped[cond] += 1
+                self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid,n_samples,e))
+                continue
+
+            start_time = float(csv.head(1)['t_sec'] + (csv.head(1)['t_nsec'] * 1e-9))
+            if not self._maybe_apply_tfilt_should_save(start_time):
+                df = None
+
+            n_samples = len(df)
+            if df is not None:
+                span_details = (cond, n_samples)
+                try:
+                    self._results_by_condition[oid].append( span_details )
+                except KeyError:
+                    self._results_by_condition[oid] = [ span_details ]
+
+                #add a tns colum
+                csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
+
+                self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
+                                        n_samples,
+                                        start_frame,stop_frame,
+                                        oid,cond))
+
+                if self._index == 'framenumber':
+                    #if the csv has been written at a faster rate than the
+                    #flydra data then fdf contains the last estimate in the
+                    #csv for that framenumber (because drop_duplicates take_last=True)
+                    #removes the extra rows and make a new framenumber index
+                    #unique.
+                    #
+                    #an outer join allows the tracking data to have started
+                    #before the csv (frames_before)
+                    join_type = 'outer' if args.frames_before else 'inner'
+                    df = pd.concat((
+                                fdf.set_index('framenumber'),df),
+                                axis=1,join=join_type)
+                elif (self._index == 'none') or (self._index.startswith('time')):
+                    #in this case we want to keep all the rows (outer)
+                    #but the two dataframes should remain sorted by framenumber
+                    df = pd.merge(
+                                odf,df,
+                                on='framenumber',
+                                left_index=False,right_index=False,
+                                how='outer',sort=True)
+
+                    #in the time case we want to set a datetime index and optionally resample
+                    if self._index.startswith('time'):
+                        try:
+                            _,resamplespec = self._index.split('+')
+                        except ValueError:
+                            resamplespec = None
+
+                        df['datetime'] = df['tns'].values.astype('datetime64[ns]')
+                        #any invalid (NaT) rows break resampling
+                        df = df.dropna(subset=['datetime'])
+                        df = df.set_index('datetime')
+
+                        if resamplespec is not None:
+                            df = df.resample(resamplespec, fill_method='pad')
+
+                if self._fix.should_fix_rows:
+                    for _ix, row in df.iterrows():
+                        fixed = self._fix.fix_row(row)
+                        for col in self._fix.should_fix_rows:
+                            #modify in place
+                            df.loc[_ix,col] = fixed[col]
+
+                #FIXME: I think this should be the first non-nan condition row
+                first = df.irow(0)
+
+                start_time = float(first['t_sec'] + (first['t_nsec'] * 1e-9))
+
+                r['count'] += 1
+                r['start_obj_ids'].append( (first['x'], first['y'], oid, first['framenumber'], start_time) )
+                r['df'].append( df )
+
+        h5.close()
 

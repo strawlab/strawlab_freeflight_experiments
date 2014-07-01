@@ -19,7 +19,7 @@ class CsvLogger:
     FLY_STATE =     ("condition","lock_object","framenumber")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
-    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False):
+    def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False, warn=True, debug=True):
 
         if directory is None:
             directory = self.DEFAULT_DIRECTORY
@@ -29,8 +29,13 @@ class CsvLogger:
         self._wlock = threading.Lock()
         self._flydra_data_file = ''
         self._exp_uuid = ''
+        self._enable_warn = warn
+        self._enable_debug = debug
 
         self._use_rostime = use_rostime
+
+        self.last_tsecs = 0
+        self.last_tnsecs = 0
 
         if mode not in ('r','w'):
             raise IOError("mode must be 'r' or 'w'. to continue an existing file set continue_existing=/PATH/TO/FILE")
@@ -62,7 +67,7 @@ class CsvLogger:
                 state = list(self.STATE)
 
             if not state:
-                rospy.logwarn("you have not defined any additional state to save in the CSV file")
+                self._warn("you have not defined any additional state to save in the CSV file")
 
             self._state = []
             for s in state:
@@ -83,16 +88,16 @@ class CsvLogger:
                 setattr(self, s, None)
 
         if mode == 'r':
-            rospy.loginfo("reading %s" % self._fname)
+            self._debug("reading %s" % self._fname, to_ros=False)
         elif mode == 'w':
-            rospy.loginfo("writing %s" % self._fname)
+            self._debug("writing %s" % self._fname)
             if self._fname.startswith(tempfile.gettempdir()):
-                rospy.logwarn("SAVING DATA TO TEMPORARY DIRECTORY - ARE YOU SURE")
+                self._warn("SAVING DATA TO TEMPORARY DIRECTORY - ARE YOU SURE")
             self._fd = open(self._fname,mode='w')
             self._fd.write(",".join(self._state))
             self._fd.write(",t_sec,t_nsec,flydra_data_file,exp_uuid\n")
         elif mode == 'a':
-            rospy.loginfo("continuing %s" % self._fname)
+            self._debug("continuing %s" % self._fname)
             self._fd = open(self._fname,mode='a')
 
         if mode in ('w','a'):
@@ -104,7 +109,7 @@ class CsvLogger:
                              self._on_experiment_uuid)
 
             if wait:
-                rospy.loginfo("waiting for flydra_mainbrain/data_file")
+                self._debug("waiting for flydra_mainbrain/data_file")
                 t0 = t1 = rospy.get_time()
                 while (t1 - t0) < 5.0: #seconds
                     rospy.sleep(0.1)
@@ -115,6 +120,20 @@ class CsvLogger:
                     self.close()
                     os.remove(self._fname)
                     raise NoDataError
+
+    def _warn(self, m, to_ros=True):
+        if self._enable_warn:
+            if to_ros:
+                rospy.logwarn(m)
+            else:
+                print m
+
+    def _debug(self, m, to_ros=True):
+        if self._enable_debug:
+            if to_ros:
+                rospy.loginfo(m)
+            else:
+                print m
 
     def _on_flydra_mainbrain_start_saving(self, msg):
         self._flydra_data_file = msg.data
@@ -142,10 +161,13 @@ class CsvLogger:
             tsecs = int(float_secs)
             tnsecs = int((float_secs - tsecs) * 1000000000)
 
+        self.last_tsecs = tsecs
+        self.last_tnsecs = tnsecs
+
         vals = [getattr(self,s) for s in self._state]
 
         if check and None in vals:
-            rospy.logwarn("no state to save")
+            self._warn("no state to save")
 
         self._fd.write(",".join(map(str,vals)))
         self._fd.write(",%d,%d,%s,%s\n" % (tsecs,tnsecs,self._flydra_data_file,self._exp_uuid))
@@ -172,7 +194,7 @@ class CsvLogger:
                 try:
                     yield klass(*row)
                 except TypeError, e:
-                    print("\ninvalid row: %r\n%s" % (row,e))
+                    self._warn("\ninvalid row: %r\n%s" % (row,e), to_ros=False)
                     continue
 
     def write_record(self, obj):
