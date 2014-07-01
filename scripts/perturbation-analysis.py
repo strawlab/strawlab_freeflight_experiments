@@ -159,8 +159,10 @@ def plot_perturbation_traces(combine, args, perturbation_options):
         f.write("%s\n"%l)
         f.write("%s\n\n"%('-'*len(l)))
 
-        f.write("| condition | obj_id | perturb_length | trajectory_length \n")
+        f.write("| condition | obj_id | perturb_length | trajectory_length |\n")
         f.write("| --- | --- | --- | --- |\n")
+
+        i = None
         for cond in sorted(completed_perturbations.keys()):
             #make condition markdown table safe
             scond = cond.replace('|','&#124;')
@@ -170,6 +172,10 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                     f.write("| %s | %s | %.1f | %.1f |\n" % (scond, oid, pl, tl))
                 else:
                     f.write("|    | %s | %.1f | %.1f |\n" % (oid, pl, tl))
+
+        if i is None:
+            #empty tables are not valid markdown...
+            f.write("| n/a | n/a | n/a | n/a |\n")
 
         f.write("\n")
 
