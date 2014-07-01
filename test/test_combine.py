@@ -19,7 +19,7 @@ def _quiet(combine):
     combine.disable_warn()
     combine.disable_debug()
 
-class TestCombineUtil(unittest.TestCase):
+class TestCombineData(unittest.TestCase):
 
     def setUp(self):
         self._uuid = '0'*32
@@ -51,6 +51,36 @@ class TestCombineUtil(unittest.TestCase):
                               'theta', 'dtheta', 'radius', 'omega', 'rcurve',
                               't_nsec','framenumber','tns','t_sec','exp_uuid',
                               'flydra_data_file','lock_object','condition']))
+
+    def _get_comb(self):
+        try:
+            combine = autil.get_combiner_for_uuid(self._uuid)
+        except AttributeError:
+            combine = autil.get_combiner("rotation.csv") #back compat for testing old branch pre merge
+        combine.disable_warn()
+        combine.disable_debug()
+        combine.add_from_uuid(self._uuid)
+        return combine
+
+    def _get_fn(self, df):
+        try:
+            return df['framenumber'].values
+        except KeyError:
+            return df.index.values
+
+    def test_date(self):
+        combine = self._get_comb()
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        self.assertAlmostEqual(time0, 1380896219.427156, 3)
+
+    def test_range(self):
+        combine = self._get_comb()
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+
+        fn = self._get_fn(df)
+
+        self.assertEqual(fn[0], 3843)
+        self.assertEqual(fn[-1], 5750)
    
 
 class TestCombine(unittest.TestCase):
