@@ -181,7 +181,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
 
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser(frames_before=0)
+    parser = analysislib.args.get_parser(frames_before=10)
 
     args = parser.parse_args()
 
