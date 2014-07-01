@@ -80,8 +80,8 @@ class TestCombineData(unittest.TestCase):
         fn = self._get_fn(df)
 
         self.assertEqual(fn[0], 3843)
-        self.assertEqual(fn[-1], 5750)
-   
+        self.assertEqual(framenumber0, 3843)
+        self.assertEqual(fn[-1], 5777)
 
 class TestCombine(unittest.TestCase):
 

@@ -1171,10 +1171,9 @@ class CombineH5WithCSV(_Combine):
                     #
                     #an outer join allows the tracking data to have started
                     #before the csv (frames_before)
-                    join_type = 'outer' if args.frames_before else 'inner'
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
-                                axis=1,join=join_type)
+                                axis=1,join='outer')
                 elif (self._index == 'none') or (self._index.startswith('time')):
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by framenumber
