@@ -71,7 +71,15 @@ def get_one_trajectory(uuid, obj_id, **kwargs):
     returns a dataframe for the given experiment uuid and
     object_id
     """
+
     combine = get_combiner_for_uuid(uuid)
+    if "disable_debug" in kwargs:
+        disable_debug = kwargs.pop('disable_debug')
+        if disable_debug:
+            combine.disable_debug()
+        disable_warn = kwargs.pop('disable_warn')
+        if disable_warn:
+            combine.disable_warn()
     combine.add_from_uuid(uuid,**kwargs)
     df,dt,_ = combine.get_one_result(obj_id)
     return df,dt
