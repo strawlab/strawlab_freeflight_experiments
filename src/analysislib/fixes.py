@@ -1,4 +1,5 @@
 import datetime
+import os.path
 
 import numpy as np
 
@@ -115,6 +116,8 @@ def load_fixups(**kwargs):
 
     if csv_file or h5_file:
 
+        csv_file = os.path.basename(csv_file)
+        h5_file = os.path.basename(h5_file)
         cdt = get_autodata_filename_datetime(csv_file)
         hdt = get_autodata_filename_datetime(h5_file)
 

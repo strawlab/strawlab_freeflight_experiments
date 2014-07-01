@@ -777,8 +777,8 @@ class CombineH5WithCSV(_Combine):
                     self._dt = d['dt']
                     return
 
-        self._fix = analysislib.fixes.load_fixups(csv_file=os.path.basename(self.csv_file),
-                                                   h5_file=os.path.basename(self.h5_file))
+        self._fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
+                                                  h5_file=self.h5_file)
 
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
@@ -1009,8 +1009,8 @@ class CombineH5WithCSV(_Combine):
                     self._dt = d['dt']
                     return
 
-        self._fix = analysislib.fixes.load_fixups(csv_file=os.path.basename(self.csv_file),
-                                                   h5_file=os.path.basename(self.h5_file))
+        self._fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
+                                                  h5_file=self.h5_file)
 
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
