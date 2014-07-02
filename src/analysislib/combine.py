@@ -14,6 +14,8 @@ import numpy as np
 import pytz
 import datetime
 import calendar
+from flydata.strawlab.metadata import FreeflightExperimentMetadata
+from flydata.strawlab.trajectories import FreeflightTrajectory
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -716,7 +718,7 @@ class CombineH5WithCSV(_Combine):
         if not self.plotdir:
             self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-        self.add_csv_and_h5_file(csv_file, h5_file, args)
+        self.add_csv_and_h5_file(csv_file, h5_file, uuid, args)
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
@@ -742,7 +744,7 @@ class CombineH5WithCSV(_Combine):
                 if self.plotdir is None:
                     self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-                self.add_csv_and_h5_file(csv_file, h5_file, args)
+                self.add_csv_and_h5_file(csv_file, h5_file, args, uuid=uuid)
 
         else:
             csv_file = args.csv_file
@@ -991,7 +993,7 @@ class CombineH5WithCSV(_Combine):
 
         h5.close()
 
-    def add_csv_and_h5_file_new(self, csv_fname, h5_file, args):
+    def add_csv_and_h5_file_new(self, csv_fname, h5_file, args, uuid=None):
         """Add a single csv and h5 file"""
 
         self.csv_file = csv_fname
@@ -1036,6 +1038,16 @@ class CombineH5WithCSV(_Combine):
 
         results = self._results
         skipped = self._skipped
+
+        # Container for "FreeflightTrajectory"
+        trajs = []
+        # Metadata
+        if uuid is not None:
+            metadata = FreeflightExperimentMetadata(uuid=uuid)
+        else:
+            metadata = None  # FIXME: We need a "unknown metadata" object,
+                             # which we could use also if we fail to fetch MD
+                             # Also we might want to remove the constraint that we need to know the UUID
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
@@ -1232,6 +1244,11 @@ class CombineH5WithCSV(_Combine):
                 r['count'] += 1
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
+
+                # Let's instantiate a trajectory too
+                trajs.append(FreeflightTrajectory(metadata, oid, start_framenumber, start_time, cond, df, dt=dt))
+
+        self.trajs = trajs  # FIXME: initialize in init is better
 
         h5.close()
 
