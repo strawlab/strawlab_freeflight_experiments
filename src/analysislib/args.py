@@ -50,11 +50,13 @@ def get_parser(*only_these_options, **defaults):
             help='path to simple_flydra.h5 file (if not using --uuid)')
     if not only_these_options or "show-obj-ids" in only_these_options:
         parser.add_argument(
-            '--show-obj-ids', action='store_true', default=False,
+            '--show-obj-ids', action='store_true',
+            default=defaults.get('show_obj_ids', False),
             help='show obj_ids on plots where appropriate')
     if not only_these_options or "reindex" in only_these_options:
         parser.add_argument(
-            '--reindex', action='store_true', default=False,
+            '--reindex', action='store_true',
+            default=defaults.get('reindex', False),
             help='reindex simple_flydra h5 file')
     if not only_these_options or "show" in only_these_options:
         parser.add_argument(
@@ -69,11 +71,12 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "ignore-permission-errors" in only_these_options:
         parser.add_argument(
             '--ignore-permission-errors', action='store_true',
-            default=False,
+            default=defaults.get('ignore_permission_errors', False),
             help='ignore permission errors (warning, plots might not be readable by others)')
     if not only_these_options or "no-trackingstats" in only_these_options:
         parser.add_argument(
-            '--plot-tracking-stats', action='store_true', default=False,
+            '--plot-tracking-stats', action='store_true',
+            default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
@@ -83,24 +86,29 @@ def get_parser(*only_these_options, **defaults):
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
-            '--zfilt-min', type=float, default=0.10,
+            '--zfilt-min', type=float,
+            default=defaults.get('zfilt_min', 0.10),
             help='minimum z, metres')
     if not only_these_options or "zfilt-max" in only_these_options:
         parser.add_argument(
-            '--zfilt-max', type=float, default=0.90,
+            '--zfilt-max', type=float,
+            default=defaults.get('zfilt_max', 0.90),
             help='maximum z, metres')
     if not only_these_options or "uuid" in only_these_options:
         parser.add_argument(
-            '--uuid', type=str, nargs='*', default=None,
+            '--uuid', type=str, nargs='*',
+            default=defaults.get('uuid', None),
             help='get the appropriate csv and h5 file for this UUID (multiple may be specified)')
     if not only_these_options or "basedir" in only_these_options:
         parser.add_argument(
-            '--basedir', type=str, default=None,
+            '--basedir', type=str,
+            default=defaults.get('basedir', None),
             help='base directory in which data files can be found by UUID'
         )
     if not only_these_options or "outdir" in only_these_options:
         parser.add_argument(
-            '--outdir', type=str, default=None,
+            '--outdir', type=str,
+            default=defaults.get('outdir', None),
             help='directory to save plots')
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
@@ -110,7 +118,8 @@ def get_parser(*only_these_options, **defaults):
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
-            '--rfilt-max', type=float, default=0.42,
+            '--rfilt-max', type=float,
+            default=defaults.get('rfilt_max', 0.42),
             help='maximum r, metres,')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
@@ -120,33 +129,40 @@ def get_parser(*only_these_options, **defaults):
             help='filter trajectories shorter than this many seconds')
     if not only_these_options or "idfilt" in only_these_options:
         parser.add_argument(
-            '--idfilt', type=int, default=[], nargs='*',
+            '--idfilt', type=int, nargs='*',
+            default=defaults.get('idfilt', []),
             help='only show these obj_ids')
     if not only_these_options or "customfilt" in only_these_options:
         parser.add_argument(
-            '--customfilt', type=str, default=None,
+            '--customfilt', type=str,
+            default=defaults.get('customfilt', None),
             help='string to eval against a dataframe')
         parser.add_argument(
-            '--customfilt-len', type=int, default=None,
+            '--customfilt-len', type=int,
+            default=defaults.get('customfilt_len', None),
             help='minimum length of remaining (seconds) after applying custom filter. '\
                  'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
                  'operations')
     if not only_these_options or "frames-before" in only_these_options:
         parser.add_argument(
-            '--frames-before', type=int, default=defaults.get('frames_before',0),
+            '--frames-before', type=int,
+            default=defaults.get('frames_before',0),
             help='number of frames added at the beginning of the trajectory before the trial actually starts')
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
-            '--arena', type=str, default='flycave',
+            '--arena', type=str,
+            default=defaults.get('arena', 'flycave'),
             help='name of arena type')
     if not only_these_options or "tfilt" in only_these_options:
         parser.add_argument(
             '--tfilt-before', type=str,
+            default=defaults.get('tfilt_before', None),
             help='keep only trajectories before this time (%s). '\
                  'note: in local time (i.e. the times in the start_time plot)'\
                   % DATE_FMT.replace("%","%%"))
         parser.add_argument(
             '--tfilt-after', type=str,
+            default=defaults.get('tfilt_after', None),
             help='keep only trajectories after this time (%s). '\
                  'note: in local time (i.e. the times in the start_time plot)'\
                  % DATE_FMT.replace("%","%%"))
