@@ -994,8 +994,6 @@ class CombineH5WithCSV(_Combine):
     def add_csv_and_h5_file_new(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
-        warnings = {}
-
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
