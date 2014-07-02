@@ -46,7 +46,7 @@ def _perm_check(args):
         print "WARNING: could not set process permissions"
 
 def get_safe_filename(s):
-    return s.translate(None, ''.join("\"\\/.+|'"))
+    return s.translate(None, ''.join("\"\\/.+|'<>[]="))
 
 def show_plots():
     try:
