@@ -48,13 +48,14 @@ def get_perturb_class(perturb_descriptor, debug=False):
 
 class Perturber:
 
+    DEFAULT_RATIO_MIN = "0.4"
     DEFAULT_CHUNK_DESC = "0|1"
 
     is_single_valued = True
 
-    def __init__(self, chunk_str, ratio_min, duration):
-        if chunk_str:
-            self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunk_str.split('|')) )
+    def __init__(self, chunks, ratio_min, duration):
+        if chunks:
+            self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
         else:
             self.in_ratio_funcs = []
 
