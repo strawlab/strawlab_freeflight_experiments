@@ -16,7 +16,6 @@ import autodata.files
 
 
 def _quiet(combine):
-    combine.disable_warn()
     combine.disable_debug()
 
 class TestCombineData(unittest.TestCase):
