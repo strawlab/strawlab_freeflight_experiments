@@ -138,7 +138,7 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
-    DEFAULT_DESC = "step_WHAT|0.7|3|0.4"
+    DEFAULT_DESC = "step_WHAT|0.7|3"
 
     def __init__(self, descriptor):
         """
@@ -204,7 +204,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|0.7|0.5|3|0.4"
+    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|0.7|0.5|3"
 
     def __init__(self, descriptor):
         """
@@ -475,7 +475,7 @@ if __name__ == "__main__":
         ax.legend()
     else:
         for p in PERTURBERS:
-            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
             f = plt.figure(repr(obj), figsize=(8,8))
             ax = plt.subplot2grid((2,2),(0,0), colspan=2)
             obj.plot(ax, t_extra=0)
