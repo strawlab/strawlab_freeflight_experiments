@@ -1009,13 +1009,13 @@ class CombineH5WithCSV(_Combine):
                     self._dt = d['dt']
                     return
 
-        self._fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
-                                                  h5_file=self.h5_file)
+        fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
+                                            h5_file=self.h5_file)
 
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
-        if self._fix.active:
-            self._debug("IO:     fixing data %s" % self._fix)
+        if fix.active:
+            self._debug("IO:     fixing data %s" % fix)
 
         #open the csv file as a dataframe
         csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
@@ -1046,8 +1046,8 @@ class CombineH5WithCSV(_Combine):
             if args.idfilt and (oid not in args.idfilt):
                 continue
 
-            if self._fix.active:
-                cond = self._fix.fix_condition(cond)
+            if fix.active:
+                cond = fix.fix_condition(cond)
 
             if cond not in results:
                 results[cond] = dict(count=0,
@@ -1137,8 +1137,8 @@ class CombineH5WithCSV(_Combine):
                     df = eval(self._custom_filter)
                     n_samples = len(df)
                     if n_samples < self.custom_filter_min_num_frames:
-                        self._debug('FILTER: %d for obj_id %d' % (n_samples,query_id))
-                        self._skipped[_cond] += 1
+                        self._debug('FILTER: %d for obj_id %d' % (n_samples,oid))
+                        self._skipped[cond] += 1
                         df = None
             except Exception, e:
                 self._skipped[cond] += 1
@@ -1203,10 +1203,10 @@ class CombineH5WithCSV(_Combine):
                         if resamplespec is not None:
                             df = df.resample(resamplespec, fill_method='pad')
 
-                if self._fix.should_fix_rows:
+                if fix.should_fix_rows:
                     for _ix, row in df.iterrows():
-                        fixed = self._fix.fix_row(row)
-                        for col in self._fix.should_fix_rows:
+                        fixed = fix.fix_row(row)
+                        for col in fix.should_fix_rows:
                             #modify in place
                             try:
                                 df.loc[_ix,col] = fixed[col]
