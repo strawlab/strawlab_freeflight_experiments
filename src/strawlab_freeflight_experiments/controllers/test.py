@@ -27,7 +27,7 @@ result = {
     'x':m._proj_x
 }
 
-test = scipy.io.loadmat('data.mat')
+test = scipy.io.loadmat('test/data.mat')
 
 for k in result:
     print k,
