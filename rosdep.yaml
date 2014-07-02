@@ -4,3 +4,5 @@ python-pandas:
   ubuntu: python-pandas
 python-nose:
   ubuntu: python-nose
+python-flydra:
+  ubuntu: python-flydra
