@@ -456,27 +456,36 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('condition', nargs='?', default=None)
+    parser.add_argument('--save', action='store_true')
+    parser.add_argument('--save-svg', action='store_true')
     args = parser.parse_args()
+
+    def _plot(f,obj):
+        ax = plt.subplot2grid((2,2),(0,0), colspan=2)
+        obj.plot(ax, t_extra=0.5)
+        ax.set_title(str(obj))
+        ax.set_xlabel('t (s)')
+        ax.set_ylabel('wide-field motion')
+        ax = plt.subplot2grid((2,2),(1,0))
+        plot_spectum(ax, obj)
+        ax = plt.subplot2grid((2,2),(1,1))
+        plot_amp_spectrum(ax, obj)
+
+        fn = analysislib.plots.get_safe_filename(str(obj)).replace(' ','_')
+        if args.save:
+            f.savefig(fn+".png",bbox_inches='tight')
+        if args.save_svg:
+            f.savefig(fn+".svg",bbox_inches='tight')
 
     if args.condition:
         condition = args.condition.rsplit('/',1)[-1]
         obj = get_perturb_class(condition, debug=True)(condition)
-        f = plt.figure(repr(obj))
-        ax = f.add_subplot(1,1,1)
-        obj.plot(ax)
-        ax.legend()
+        f = plt.figure(repr(obj), figsize=(8,8))
+        _plot(f,obj)
     else:
         for p in PERTURBERS:
             obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
             f = plt.figure(repr(obj), figsize=(8,8))
-            ax = plt.subplot2grid((2,2),(0,0), colspan=2)
-            obj.plot(ax, t_extra=0.5)
-            ax.set_title(str(obj))
-            ax.set_xlabel('t (s)')
-            ax.set_ylabel('wide-field motion')
-            ax = plt.subplot2grid((2,2),(1,0))
-            plot_spectum(ax, obj)
-            ax = plt.subplot2grid((2,2),(1,1))
-            plot_amp_spectrum(ax, obj)
+            _plot(f,obj)
 
     plt.show()
