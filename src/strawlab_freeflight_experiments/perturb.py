@@ -3,11 +3,9 @@ import scipy.signal
 import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
 
-
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
-
-
+import strawlab_freeflight_experiments.frequency as sfe_frequency
 
 def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
@@ -416,19 +414,13 @@ class PerturberTone(_PerturberInterpolation):
 
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
-#    from spectrum.periodogram import Periodogram
-#        p1 = Periodogram(x, fs)
-#        p1.run()
-#        p1.plot(ax)
     if not obj.is_single_valued:
         #can't do this for stepN without a better Perturber.plot API
         return
 
-    _,x = obj.get_perturb_vs_time(0,obj.duration, fs)
-    if len(x):
-        ax.psd(x,Fs=fs)
-        ax.set_ylabel('PSD (dB/Hz)')
-        ax.set_yscale('symlog')
+    _,y = obj.get_perturb_vs_time(0,obj.duration, fs)
+    if len(y):
+        sfe_frequency.plot_spectrum(ax,y,fs)
         ax.set_xlim(0,maxfreq)
 
 def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
@@ -442,18 +434,7 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     if not len(y):
         return
 
-    n = len(y) # length of the signal
-    k = np.arange(n)
-    T = n/fs
-    frq = k/T # two sides frequency range
-    frq = frq[range(n/2)] # one side frequency range
-
-    Y = scipy.fft(y)/n # fft computing and normalization
-    Y = Y[range(n/2)]
-
-    ax.plot(frq,abs(Y),'ro') # plotting the spectrum
-    ax.set_xlabel('Frequency')
-    ax.set_ylabel('|Y(freq)|')
+    sfe_frequency.plot_amp_spectrum(ax,y,fs)
     ax.set_xlim(0,maxfreq)
 
 PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone)
