@@ -136,7 +136,7 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
-    DEFAULT_DESC = "step_WHAT|0.7|3"
+    DEFAULT_DESC = "step_WHAT|1.8|3"
 
     def __init__(self, descriptor):
         """
@@ -144,6 +144,8 @@ class PerturberStep(Perturber):
         'step_WHAT'|value|duration|ratio_min|a|b|c|d|e|f
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+
+        value is the magnitude of the step
 
         duration is the duration of the step.
 
@@ -202,7 +204,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|0.7|0.5|3"
+    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|1.8|0.9|3"
 
     def __init__(self, descriptor):
         """
@@ -213,7 +215,7 @@ class PerturberStepN(Perturber):
 
         n_args is the number of arguments
 
-        value0, value1, ... are the values
+        value0, value1, ... are the magnitudes
 
         duration is the duration of the step.
 
@@ -345,17 +347,18 @@ class _PerturberInterpolation(Perturber):
 
 class PerturberChirp(_PerturberInterpolation):
 
-    DEFAULT_DESC = "chirp_WHAT|linear|1.0|3|1.0|5.0"
+    DEFAULT_DESC = "chirp_WHAT|linear|1.8|3|1.0|5.0"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'linear'|method|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+        chirp_WHAT|method|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
 
-        duration is the duration of the step.
-
+        method is 'linear','quadratic','logarithmic'
+        magnitude is the amplitude of the signal
+        duration is its duration
+        f0 and f1 are the frequency limites the signal changes between
         ratio_min is the minimum amount of the path the target must have flown
-
         a,b c,d e,f are pairs or ranges in the ratio
         """
         name,method,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 7)
@@ -386,12 +389,20 @@ class PerturberChirp(_PerturberInterpolation):
 
 class PerturberTone(_PerturberInterpolation):
 
-    DEFAULT_DESC = "tone_WHAT|1.0|3|0|3"
+    DEFAULT_DESC = "tone_WHAT|1.8|3|0|3"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'tone'|magnitude|duration|phase_offset|freq|ratio_min|a|b|c|d|e|f
+        tone_WHAT|magnitude|duration|phase_offset|freq|ratio_min|a|b|c|d|e|f
+
+        magnitude is the amplitude of the signal
+        duration is its duration
+        phase_offset
+        freq is the tone frequency
+        ratio_min is the minimum amount of the path the target must have flown
+        a,b c,d e,f are pairs or ranges in the ratio
+
         """
         name,value,t1,po,f0,ratio_min,chunks = descriptor.split('|', 6)
         name_parts = name.split('_')
