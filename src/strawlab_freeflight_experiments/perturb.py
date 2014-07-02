@@ -474,7 +474,7 @@ if __name__ == "__main__":
             obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
             f = plt.figure(repr(obj), figsize=(8,8))
             ax = plt.subplot2grid((2,2),(0,0), colspan=2)
-            obj.plot(ax, t_extra=0)
+            obj.plot(ax, t_extra=0.5)
             ax.set_title(str(obj))
             ax.set_xlabel('t (s)')
             ax.set_ylabel('wide-field motion')
