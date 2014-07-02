@@ -75,6 +75,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                 df['talign'] = t - t[fidx]
 
                 tmax = df['talign'].max()
+                print cond,obj_id,tmax
                 if step_obj.completed_perturbation(tmax):
                     completed_perturbations[cond].append((obj_id,tmax,tmax-df['talign'].min()))
 

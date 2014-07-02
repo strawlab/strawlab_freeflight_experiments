@@ -1061,6 +1061,9 @@ class CombineH5WithCSV(_Combine):
             #causing there to be multiple rows with the same framenumber.
             #find the last index for all unique framenumbers for this trial
             fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
+            #for later joins, and because its logical, framenumber must be
+            #an integer
+            fdf['framenumber'] = fdf['framenumber'].astype(int)
             trial_framenumbers = fdf['framenumber'].values
 
             #get the comparible range of data from flydra
@@ -1205,7 +1208,10 @@ class CombineH5WithCSV(_Combine):
                         fixed = self._fix.fix_row(row)
                         for col in self._fix.should_fix_rows:
                             #modify in place
-                            df.loc[_ix,col] = fixed[col]
+                            try:
+                                df.loc[_ix,col] = fixed[col]
+                            except IndexError, e:
+                                self._warn("ERROR: could not apply fixup to obj_id %s (col %s)" % (oid,col))
 
                 #the start time and the start framenumber are defined by the experiment,
                 #so they come from the csv (fdf)
