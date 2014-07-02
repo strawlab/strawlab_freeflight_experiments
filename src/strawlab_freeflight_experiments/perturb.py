@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.random
 import scipy.signal
 import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
@@ -6,6 +7,7 @@ import scipy.interpolate as interp
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import strawlab_freeflight_experiments.frequency as sfe_frequency
+import analysislib.plots
 
 def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
@@ -423,6 +425,50 @@ class PerturberTone(_PerturberInterpolation):
     def __repr__(self):
         return "<PerturberTone what=%s val=%.1f dur=%.1fs f=%.1f p=%.1f>" % (self.what,self.value,self.duration,self.f0,self.po)
 
+class PerturberMultiTone(_PerturberInterpolation):
+
+    DEFAULT_DESC = "multitone_WHAT|rudinshapiro|1.8|3|1|5|"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        multitone_WHAT|type|magnitude|duration|tone0|Ntones|seed|ratio_min|a|b|c|d|e|f
+
+        seed is the random seen (can be omitted)
+        ratio_min is the minimum amount of the path the target must have flown
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        name,method,value,t1,tone0,Ntones,seed,ratio_min,chunks = descriptor.split('|', 8)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        if me != 'multitone':
+            raise Exception("Incorrect PerturberMultiTone configuration")
+        self.what = '_'.join(name_parts[1:])
+        self.method = str(method)
+        self.value = float(value)
+        self.t1 = float(t1)
+        self.tone0 = int(tone0)
+        self.Ntones = int(Ntones)
+        self.seed = str(seed) if seed else None
+
+        #oversample by 10 times the framerate (100)
+        fs = 10*100
+        #find next greatest power of 2 for better fft results in the phase generation
+        #step
+        ns = 2**(fs-1).bit_length()
+        t = np.linspace(0, self.t1, ns)
+        w = sfe_frequency.get_multitone(int(self.Ntones*self.t1), #FIXME???
+                                        self.tone0,
+                                        self.method,
+                                        numpy.random.RandomState(self.seed),
+                                        ns,
+                                        self.value)
+
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
+
+    def __repr__(self):
+        return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.what,self.method,self.value,self.duration,self.tone0,self.Ntones)
+
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
@@ -448,7 +494,7 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     sfe_frequency.plot_amp_spectrum(ax,y,fs)
     ax.set_xlim(0,maxfreq)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone)
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
