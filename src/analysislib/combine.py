@@ -1,6 +1,5 @@
 import os.path
 import sys
-import argparse
 import Queue
 import random
 import time
@@ -25,10 +24,9 @@ import nodelib.log
 
 import analysislib.fixes
 import analysislib.filters
-import analysislib.combine
 import analysislib.args
 import analysislib.curvature as acurve
-import analysislib.plots as aplt
+
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT
@@ -1248,7 +1246,7 @@ class CombineH5WithCSV(_Combine):
                 # Let's instantiate a trajectory too
                 trajs.append(FreeflightTrajectory(metadata, oid, start_framenumber, start_time, cond, df, dt=dt))
 
-        self.trajs = trajs  # FIXME: initialize in init is better
+        self.trajs = trajs  # FIXME: initialize in init is better practice
 
         h5.close()
 
