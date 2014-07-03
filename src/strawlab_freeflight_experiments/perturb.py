@@ -5,9 +5,7 @@ import scipy.interpolate as interp
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
-DEBUG = False
-
-def get_ratio_ragefuncs(*chunks):
+def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
         raise Exception("Chunks must be pairs of ratio ranges")
 
@@ -17,13 +15,14 @@ def get_ratio_ragefuncs(*chunks):
         #lambda
         funcs.append( lambda _ratio, _ca=ca, _cb=cb: ((_ratio >= _ca) and (_ratio < _cb)) )
 
-        if DEBUG:
+        if kwargs.get('debug'):
             print "chunk range >=",ca, "<", cb
 
     return funcs
 
-def get_perturb_class(perturb_descriptor):
+def get_perturb_class(perturb_descriptor, debug=False):
 
+    err = ''
     try:
         name = perturb_descriptor.split('|')[0]
         name_parts = name.split('_')
@@ -34,8 +33,12 @@ def get_perturb_class(perturb_descriptor):
             return PerturberStepN
         elif name == 'chirp':
             return PerturberChirp
-    except:
-        pass
+    except Exception, e:
+        import traceback
+        err = '\n' + traceback.format_exc()
+
+    if debug:
+        print "NO PERTURBER FOUND\n\t%s%s" % (perturb_descriptor, err)
 
     return NoPerturb
 
@@ -52,6 +55,9 @@ class Perturber:
         self.duration = float(duration)
         self.ratio_min = float(ratio_min)
         self.reset()
+
+    def completed_perturbation(self, t):
+        return t >= (0.98*self.duration)
 
     def reset(self):
         self.progress = -1
@@ -80,7 +86,15 @@ class Perturber:
 
         return False
 
-    def plot(self, ax, t_extra=1, **plot_kwargs):
+    def _plot_ylabel(self, ax, ylabel, **plot_kwargs):
+        if ylabel:
+            color = plot_kwargs.get('color','k')
+            ax.set_ylabel(ylabel, color=color, fontsize=8)
+            for tl in ax.get_yticklabels():
+                tl.set_color(color)
+
+
+    def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
         t0,t1 = self.get_time_limits()
         t0 -= t_extra; t1 += t_extra
 
@@ -91,6 +105,9 @@ class Perturber:
 
         v0,v1 = self.get_value_limits()
         ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
+
+        plot_kwargs['color'] = 'b'
+        self._plot_ylabel(ax, ylabel, **plot_kwargs)
 
 class NoPerturb(Perturber):
 
@@ -204,7 +221,10 @@ class PerturberStepN(Perturber):
         chunks = '|'.join(chunks)
         name_parts = name.split('_')
         me = name_parts[0]
-        self.what = '_'.join(name_parts[1:])
+
+        self.what_parts = name_parts[1:]
+        self.what = '_'.join(self.what_parts)
+
         if me != 'stepn':
             raise Exception("Incorrect PerturberStepN configuration")
         self.values = map(float,values)
@@ -247,7 +267,9 @@ class PerturberStepN(Perturber):
     def get_value_limits(self,n):
         return min(self.values[n],0),max(self.values[n],0)
 
-    def plot(self, ax, t_extra=1, **plot_kwargs):
+    def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
+        #unlike step and chirp, show a legend to distinguish the
+        #series and don't bother with making the ylabel a different color
         t0,t1 = self.get_time_limits()
         t0 -= t_extra; t1 += t_extra
 
@@ -256,13 +278,16 @@ class PerturberStepN(Perturber):
             t,v = self.get_perturb_vs_time(t0,t1,i)
             _v0,_v1 = self.get_value_limits(i)
 
-            plot_kwargs['label'] = "%s %s" % (self.what, i)
+            plot_kwargs['label'] = self.what_parts[i]
             ax.plot(t,v, **plot_kwargs)
 
             v0 = np.nanmax([v0, _v0])
             v1 = np.nanmax([v1, _v1])
 
         ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
+        ax.legend(prop={'size':8})
+
+        self._plot_ylabel(ax, ylabel, **plot_kwargs)
 
 class PerturberChirp(Perturber):
 
@@ -337,29 +362,28 @@ class PerturberChirp(Perturber):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import argparse
 
-    PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('condition', nargs='?', default=None)
+    args = parser.parse_args()
 
-    DEBUG = True
-
-#    chunks = 0.43,0.6,0.93,1.0,0.0,0.1
-#    funcs = get_ratio_ragefuncs(*chunks)
-#    for c in chunks:
-#        for f in funcs:
-#            print c+0.01,f,f(c+0.01)
-#
-#    desc = "step|0.7|3|0.4|0.43|0.6|0.93|1.0|0.0|0.1"
-#    print desc
-#    klass = get_perturb_class(desc)
-#    print klass
-#    obj = klass(desc)
-#    print obj
-
-    for p in PERTURBERS:
-        obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+    if args.condition:
+        condition = args.condition.rsplit('/',1)[-1]
+        obj = get_perturb_class(condition, debug=True)(condition)
         f = plt.figure(repr(obj))
         ax = f.add_subplot(1,1,1)
         obj.plot(ax)
         ax.legend()
+    else:
+
+        PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
+
+        for p in PERTURBERS:
+            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
+            f = plt.figure(repr(obj))
+            ax = f.add_subplot(1,1,1)
+            obj.plot(ax)
+            ax.legend()
 
     plt.show()

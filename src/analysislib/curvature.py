@@ -125,6 +125,8 @@ def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurv
 
     d = np.zeros((len(df)))
     d.fill(np.nan)
+    c = np.nan
+
     for i in range(0,len(df)+1,NPTS):
         x = df['x'][i:i+NPTS].values
         y = df['y'][i:i+NPTS].values
@@ -290,6 +292,9 @@ def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, c
 
     return all_corra, all_corrb, nens
 
+def _correlate(df, cola, colb, shift=0):
+    return df[cola].shift(shift).corr(df[colb])
+
 def plot_correlation_analysis(args, combine, correlations, correlation_options):
     results,dt = combine.get_results()
     fname = combine.fname
@@ -299,7 +304,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
     latencies_to_plot = sorted(correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)))
     plot_errorbars = correlation_options.get('plot_errorbars')
 
-    corr_latencies = {}
+    corr_latencies = {k:{} for k in combine.get_conditions()}
 
     for corra,corrb in correlations:
         #backwards compatible file extensions
@@ -324,7 +329,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
                         continue
 
                     #calculate correlation coefficients for all latencies
-                    ccefs = [df[corra].shift(l).corr(df[corrb]) for l in latencies]
+                    ccefs = [ _correlate(df,corra,corrb,l) for l in latencies ]
 
                     series.append( pd.Series(ccefs,index=latencies,name=_obj_id) )
 
@@ -374,7 +379,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
                         correlation_options=correlation_options
                 )
 
-            corr_latencies["%s:%s" % (corra,corrb)] = ccef
+            corr_latencies[_current_condition]["%s:%s" % (corra,corrb)] = ccef
 
         #plot a selection of other latencies (yes, we calculate some data again, meh)
         for _current_condition in max_latencies_shift:
@@ -491,40 +496,5 @@ def flatten_data(args, combine, flatten_columns):
                 pass
 
     return flat_data, nens
-
-if __name__ == "__main__":
-    import analysislib.util as autil
-
-    #combine = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-    #combine.add_test_infinities()
-    #df,dt,_ = combine.get_one_result(1)
-
-    #GOOD DATA FOR SID
-    #df,dt = autil.get_one_trajectory("9b97392ebb1611e2a7e46c626d3a008a", 9)
-
-    #conflict
-    #df,dt = autil.get_one_trajectory("0aba1bb0ebc711e2a2706c626d3a008a", 422, "conflict.csv")
-
-    df,dt = autil.get_one_trajectory("14ab4982ff7711e2aa636c626d3a008a", 689, "rotation.csv")
-
-    if 1:
-        anim = animate_plots(df,dt,
-            plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
-        )
-#        #needs new mpl
-#        writer = animation.FileMovieWriter()
-#        anim.save("foob",writer=writer)
-
-    else:
-        plot_infinity(df,dt,
-            plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio"],
-            ylimits={"omega":(-2,2),"dtheta":(-10,10),"rcurve":(0,1)},
-        )
-
-
-    #df.plot(subplots=True)
-
-    show_plots()
 
 

@@ -197,38 +197,6 @@ class Node(object):
 
         return self.p_const*dx,self.p_const*dy,self.trg_x,self.trg_y
 
-#        dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
-#        vel  = np.array((fly_vx, fly_vy))
-
-#        speed = np.linalg.norm(vel)
-
-#        dposn = dpos / np.linalg.norm(dpos)
-#        eps = 1e-20
-#        if speed > eps:
-#            veln = vel / speed
-
-#            vel_angle = np.arctan2( veln[1], veln[0] )
-#            desired_angle = np.arctan2( dposn[1], dposn[0] )
-
-#            error_angle_unwrapped = desired_angle - vel_angle
-
-#            error_angle = (error_angle_unwrapped + PI) % TAU - PI
-
-#            velocity_gate = max( speed*20.0, 1.0) # linear ramp to 1.0
-#            val = velocity_gate*error_angle*self.p_const
-
-#            #print '--------'
-#            #print 'vel_angle',vel_angle
-#            #print 'desired_angle', desired_angle
-#            #print 'error_angle',error_angle
-#            #print
-#        else:
-#            val = 0.0
-
-#        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
-
-        return val,self.trg_x,self.trg_y
-
     def run(self):
         rospy.loginfo('running stimulus')
         r = rospy.Rate(CONTROL_RATE)
