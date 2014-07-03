@@ -8,6 +8,7 @@ import datetime
 
 from pandas import DataFrame
 import h5py
+import time
 import numpy as np
 import pytz
 
@@ -91,7 +92,7 @@ class FreeflightTrajectory(object):
 
     def start_time(self):
         """Returns the unix timestamp (UTC) for the first measurement of the trajectory (when tracking started)."""
-        return self._start_time()
+        return self._start_time
 
     def start_asdatetime(self, tzinfo=pytz.timezone('Europe/Vienna')):
         """Returns the start time as a python timestamp for the specified time-zone."""
@@ -101,11 +102,17 @@ class FreeflightTrajectory(object):
         """Returns the start time as a string in ISO 8601 format."""
         return self.start_asdatetime(tzinfo=tzinfo).isoformat()
 
-    def series(self, copy=False):
+    def series(self, columns=None, copy=False):
         """Returns a pandas dataframe with the series data for the trajectory.
         If copy is True, a deepcopy of the dataframe is returned.
         """
-        return self._series.copy() if copy else self._series
+        if columns is None:
+            return self._series.copy() if copy else self._series
+        else:
+            df = self.series(copy=copy)
+            columns = [coord for coord in columns if coord in df.columns]
+            return df[columns]
+            # TODO: implement laziness, _series should not be assumed a pandas dataframe
 
     def df(self, copy=False):
         """An alias to series()."""
@@ -116,9 +123,7 @@ class FreeflightTrajectory(object):
         This returns the x, y and z columns from the series() dataframe (if present).
         Everything else there would have been computed from x,y,z and possibly stimulus data.
         """
-        df = self.series(copy=copy)
-        columns = [coord for coord in ('x', 'y', 'z') if coord in df.columns]
-        return df[columns]
+        return self.series(copy=copy, columns=('x', 'y', 'z'))
 
     @staticmethod
     def to_npz(npz, trajs):
@@ -153,34 +158,31 @@ class FreeflightTrajectory(object):
             trajs.append(FreeflightTrajectory(md, oid, start, cond, series, dt=dt))
         return trajs
 
-    @staticmethod
-    def to_h5(h5file, trajs, overwrite=False):
-        ensure_dir(op.dirname(h5file))
-        with h5py.File(h5file, 'w' if overwrite else 'a') as h5:
-            h5['mds'] = [traj.md() for traj in trajs]
-            h5['oids'] = [traj.oid() for traj in trajs]
-            h5['conditions'] = [traj.condition() for traj in trajs]
-            h5['starts'] = [traj.start() for traj in trajs]
-            h5['dts'] = [traj.dt() for traj in trajs]
-            h5['columns'] = [traj.series().columns for traj in trajs]
-            for i, traj in enumerate(trajs):
-                h5['%d' % i] = traj.series().values
+    def to_h5(self, h5, save_experiment_metadata=True, save_trajectory_metadata=True, save_series=True):
 
-    @staticmethod
-    def from_h5(h5file):
-        # FIXME: Testme
-        import h5py
-        with h5py.File(h5file, 'r') as h5:
-            trajs = []
-            for i, (md, oid, cond, start, dt, columns) in enumerate(izip(h5['mds'],
-                                                                         h5['oids'],
-                                                                         h5['conditions'],
-                                                                         h5['starts'],
-                                                                         h5['dts'],
-                                                                         h5['columns'])):
-                series = DataFrame(h5[str(oid)][:], columns=columns)
-                trajs.append(FreeflightTrajectory(md, oid, start, cond, series, dt=dt))
-            return trajs
+        # Save experiment metadata
+        exp_group = h5.require_group('uuid=%s' % self.uuid())
+        if save_experiment_metadata:
+            attrs = exp_group.attrs
+            for k, v in self.md().flatten():
+                attrs[k] = v
+
+        # Save trajectory metadata
+        traj_group = exp_group.require_group('oid=%d#frame=%d' % (self.oid(), self.start_frame()))
+        if save_trajectory_metadata:
+            attrs = traj_group.attrs
+            attrs['condition'] = self.condition()
+            attrs['start_time'] = self.start_time()
+            # TODO: asses using a nominal attr for condition; a possible implementation would resort toh5py.SoftLink
+
+        # Save the series
+        if save_series:
+            series_group = traj_group.require_group('series')
+            series = self.series()
+            for column in series.columns:
+                series_group[column] = series[column]
+        # TODO: API for lazy access, do not assume pandas dataframe as the representation (or use a lazy dataset)
+        # TODO: implement index saving, using softlinks when needed
 
     @staticmethod
     def to_pandas(trajs, flatten=True):
@@ -203,17 +205,87 @@ class FreeflightTrajectory(object):
         raise NotImplementedError()
 
 
+if __name__ == '__main__':
 
-#############################
-# Other stuff for trajectories...
-# self.stimulus = None       # Measurements directly related to the stimulus
-#                            # We could infer this from column types, condition string...
-#                            # But that is anyway a parameter of the analysis...
-# We should also keep track on how the following were computed...
-# But somewhere on a "data-analysis" level
-# self.time_features = None  # The features derived from the (coords, stimulus) pairs (e.g. dtheta)
-# self.summary_feats = None  # Summarizing features by collapsing time-series to 1D.
-#                            # e.g. "mean dtheta" or "dtheta vs rotation rate correlation"
-#
-# We need to keep track on the preprocessing steps taken to arrive to a concrete trajectory...
-#############################
+    # N.B. /tmp is a ramdisk
+
+    import pandas as pd
+
+    md = FreeflightExperimentMetadata(uuid='FAKE_UUID_HERE_AND_THERE',
+                                      dictionary=dict(
+                                          uuid='FAKE_UUID_HERE_AND_THERE',
+                                          user='rudolph',
+                                          hidden=False,
+                                          tags=('wait', 'caliphora', 'final_paper_experiment'),
+                                          title='rotation',
+                                          description='some more games on place',
+                                          genotype='VT37804-TNTE',
+                                          age=4,
+                                          arena='flycave',
+                                          num_flies=20,
+                                          start_secs=7777777777,
+                                          start_nsecs=10,
+                                          stop_secs=8777777777,
+                                          stop_nsecs=10,
+                                      ))
+
+    start = time.time()
+    trajs = []
+    for oid in xrange(10000):
+        rng = np.random.RandomState(0)
+
+        df = pd.DataFrame()
+        numobs = 1000
+        df['x'] = rng.uniform(size=numobs)
+        df['y'] = rng.uniform(size=numobs)
+        df['z'] = rng.uniform(size=numobs)
+        df['rotation_rate'] = rng.uniform(size=numobs)
+        df['dtheta'] = rng.uniform(size=numobs)
+
+        traj = FreeflightTrajectory(md, oid, 100, 7777777887, condition='cool|1|2.5|blah.osg|23', series=df, dt=0.1)
+
+        trajs.append(traj)
+
+    print 'Generation took: %.2f' % (time.time() - start)
+
+    start = time.time()
+    with h5py.File('/tmp/test.h5') as h5:
+        trajs[0].to_h5(h5)
+        for traj in trajs[1:]:
+            traj.to_h5(h5, save_experiment_metadata=False, save_trajectory_metadata=False)
+    print 'Write took: %.2f' % (time.time() - start)
+
+    start = time.time()
+    with h5py.File('/tmp/test.h5', 'r') as h5:
+        exp_group = h5[u'uuid=FAKE_UUID_HERE_AND_THERE']
+        traj_ids = exp_group.keys()
+        for traj_id in traj_ids:
+            traj_group = exp_group[traj_id]
+            series_group = traj_group['series']
+            df = DataFrame({series_id: series_group[series_id].value for series_id in series_group})
+    print 'Reading from non-contiguous series took: %.2f' % (time.time() - start)
+
+    # Naive contiguous
+    X = np.random.uniform(size=(10000, 5000))
+    start = time.time()
+    with h5py.File('/tmp/test-fastest.h5') as h5:
+        h5['X'] = X
+    print 'Write contiguous: %.2f' % (time.time() - start)
+
+    start = time.time()
+    with h5py.File('/tmp/test-fastest.h5') as h5:
+        X = h5['X'].value
+        print X.shape
+    print 'Read contiguous: %.2f' % (time.time() - start)
+
+
+#### Slow as hell
+# Generation took: 14.15
+# Write took: 17.36
+# Reading from non-contiguous series took: 18.90
+# Write contiguous: 0.14
+# (10000, 5000)
+# Read contiguous: 0.09
+#### /Slow as hell
+# For not trading with flexibility, we will need to compactify...
+####
