@@ -1149,8 +1149,8 @@ class CombineH5WithCSV(_Combine):
             if not self._maybe_apply_tfilt_should_save(start_time):
                 df = None
 
-            n_samples = len(df)
             if df is not None:
+                n_samples = len(df)
                 span_details = (cond, n_samples)
                 try:
                     self._results_by_condition[oid].append( span_details )
