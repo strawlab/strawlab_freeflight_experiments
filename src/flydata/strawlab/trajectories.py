@@ -173,7 +173,7 @@ class FreeflightTrajectory(object):
             attrs = traj_group.attrs
             attrs['condition'] = self.condition()
             attrs['start_time'] = self.start_time()
-            # TODO: asses using a nominal attr for condition; a possible implementation would resort toh5py.SoftLink
+            # TODO: assess using a nominal attr for condition; a possible implementation would resort toh5py.SoftLink
 
         # Save the series
         if save_series:
@@ -265,7 +265,7 @@ if __name__ == '__main__':
             df = DataFrame({series_id: series_group[series_id].value for series_id in series_group})
     print 'Reading from non-contiguous series took: %.2f' % (time.time() - start)
 
-    # Naive contiguous
+    # Naive contiguous - upper bound of speed
     X = np.random.uniform(size=(10000, 5000))
     start = time.time()
     with h5py.File('/tmp/test-fastest.h5') as h5:
@@ -277,6 +277,7 @@ if __name__ == '__main__':
         X = h5['X'].value
         print X.shape
     print 'Read contiguous: %.2f' % (time.time() - start)
+
 
 
 #### Slow as hell
