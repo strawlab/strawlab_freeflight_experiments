@@ -1,13 +1,14 @@
 # coding=utf-8
-"""A tale of series filtering, problems with breaking data contracts,
-data quantity, feature generation and real data processing.
+"""A tale of series filtering, curses and blessings with breaking data contracts,
+data quantity, feature generation and real univariate data processing for data exploration
+and discriminative analysis.
 """
 import pandas as pd
 import numpy as np
 from flydata.strawlab import FreeflightExperiment
 
 
-# Let's imagine we get the following velocity series for a fly
+# Let's imagine we get the following (absolute) velocity series for a fly
 FLY_35_VELOCITIES = np.array([0.15, 0.12, 0.11, 0.11, 0.11, 0.12, 0.12,  # Flying
                               0.10, 0.09, 0.08, 0.07, 0.07, 0.08, 0.09,  # Walking / unreliable tracking
                               0.12, 0.11, 0.13, 0.16, 0.16, 0.18, 0.12,  # Flying
