@@ -271,7 +271,7 @@ class PerturberStepN(Perturber):
     def get_time_limits(self):
         return 0,self.duration
 
-    def get_value_limits(self,n):
+    def get_value_limits(self, n=0):
         return min(self.values[n],0),max(self.values[n],0)
 
     def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
