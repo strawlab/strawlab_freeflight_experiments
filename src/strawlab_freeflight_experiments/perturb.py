@@ -329,6 +329,7 @@ class PerturberChirp(Perturber):
                                   f0=self.f0,
                                   f1=self.f1,
                                   t1=self.t1,
+                                  phi=90,
                                   method=self.method) * self.value
 
         #we can call this at slightly different times.
