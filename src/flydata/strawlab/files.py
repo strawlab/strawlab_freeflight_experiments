@@ -320,9 +320,11 @@ class FreeflightAnalysisFiles(Configurable):
         return sorted(self._cached_json_data()['conditions'])
 
     def trajs(self, conditions=None):
-        """Returns an iterator of tuples (x0, y0, oid, framenumber0, time0, df) for the given conditions.
+        """Returns an iterator of tuples (condition, x0, y0, oid, framenumber0, time0, condition, df)
+        for the given conditions.
 
         Here:
+          - condition is the condition string
           - x0, y0 are the coordinates of the first tracked position
             (that is, df['x'][0] and df['y'][0])
           - oid is the object id of the trajectory
@@ -346,6 +348,7 @@ class FreeflightAnalysisFiles(Configurable):
             conditions = [conditions]
         starts = []
         dfs = []
+        iconditions = []
         for condition in conditions:
             if condition not in self.conditions():
                 raise Exception('Condition %s not found in data from %s.'
@@ -353,13 +356,14 @@ class FreeflightAnalysisFiles(Configurable):
                                 (condition, self._analysis_dir, '\n\t'.join(self.conditions())))
             starts.append(self._cached_data()['results'][condition]['start_obj_ids'])
             dfs.append(self._cached_data()['results'][condition]['df'])
+            iconditions.extend([condition] * len(starts[-1]))
             if len(starts[-1]) != len(dfs[-1]):
                 raise Exception('Inconsistency reading data from %s, condition %s.'
                                 'There should be the same number of "starts" and "dataframes"' %
                                 (self._analysis_dir, condition))
-        return ((x0, y0, obj_id, framenumber0, time0, df) for
-                (x0, y0, obj_id, framenumber0, time0), df in
-                izip(chain(*starts), chain(*dfs)))  # generators are kinda useless when all is in mem already
+        return ((condition, x0, y0, obj_id, framenumber0, time0, df) for
+                condition, (x0, y0, obj_id, framenumber0, time0), df in
+                izip(iconditions, chain(*starts), chain(*dfs)))  # generators are useless when all is in mem already
 
     def mirror_to(self,
                   dest_dir,
@@ -384,6 +388,11 @@ class FreeflightAnalysisFiles(Configurable):
         # It should return condition-oid
         # This is bogus if we do not remove oid-ambiguities
         return [oid for _, _, oid, _, _, df in self.trajs() if df[variables].isnull().sum() > 0]
+
+    @staticmethod
+    def from_uuid(uuid, filter_id=None):
+        return FreeflightAnalysisFiles(
+            _one_combined_data_dir(op.join(_analysis_byuuid_path(STRAWLAB_DATA_ROOT), uuid), filter_id))
 
 
 if __name__ == '__main__':

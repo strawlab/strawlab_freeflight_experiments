@@ -3,9 +3,15 @@
 data quantity, feature generation and real univariate data processing for data exploration
 and discriminative analysis.
 """
+from collections import defaultdict
+from itertools import chain
+from operator import itemgetter
+
 import pandas as pd
 import numpy as np
-from flydata.strawlab import FreeflightExperiment
+
+# from flydata.strawlab import FreeflightExperiment
+from flydata.strawlab.experiments import load_freeflight_experiments, trajectories_from_experiments
 
 
 # Let's imagine we get the following (absolute) velocity series for a fly
@@ -65,50 +71,88 @@ def correlation(stimulus, response):
 
 # What would be the real correlation between velocity and estimulus then?
 # If we have a lot of observations we can measure it...
-def generate_a_lot_of_velocities(how_many=1000000,
+def generate_a_lot_of_velocities(how_many=100000,
                                  cant_be_flying_proportion=0.1,
                                  random_seed=0):
     # Deterministic randomness
     rng = np.random.RandomState(random_seed)
-    return np.concatenate((
+    velocities = np.concatenate((
         rng.uniform(low=FLY_FLYING_MIN_VELOCITY, high=1, size=int(how_many * (1 - cant_be_flying_proportion))),
         rng.uniform(low=0, high=FLY_FLYING_MIN_VELOCITY, size=int(how_many * cant_be_flying_proportion))
     ))
+    rng.shuffle(velocities)
+    return velocities
 # ...but of course that depends on how much non-flying we observe...
 for cant_be_flying_proportion in (0, 0.1, 0.2, 0.5, 0.8):
     a_lot_of_velocities = generate_a_lot_of_velocities(cant_be_flying_proportion=cant_be_flying_proportion)
     generated_percentage_of_cant_be_flying_observations = \
         100. * np.sum(when_fly_is_not_flying(a_lot_of_velocities)) / len(a_lot_of_velocities)
-    assert abs(100 * cant_be_flying_proportion - generated_percentage_of_cant_be_flying_observations) < 1E-4
+    assert abs(100 * cant_be_flying_proportion - generated_percentage_of_cant_be_flying_observations) < 1E-2
     print '"Real" correlation (at %s%% of "cannot be flying" observations): %.2f' % (
         str(int(generated_percentage_of_cant_be_flying_observations)).rjust(2),
         correlation(a_lot_of_velocities, stimulus_from_velocities(a_lot_of_velocities)))
 
 
-# We are actually only interested in the correlation while the fly is flying (0.91)
-# Because we know that anything below the threshold is not a flying observation,
-# we can clean
-
 # Now imagine we have the observed velocities and rotation_rates in a pandas DataFrame
-# This is how we actually have that information when first read from the strawlab repository
+# This is how we actually represent that information when first read from the strawlab repository
 df = pd.DataFrame(data=np.array((FLY_35_VELOCITIES, stimulus_from_velocities(FLY_35_VELOCITIES))).T,
                   columns=('velocity', 'rotation_rate'))
 
+a_lot_of_velocities = generate_a_lot_of_velocities(cant_be_flying_proportion=0.2)
+df = pd.DataFrame(data=np.array((a_lot_of_velocities, stimulus_from_velocities(a_lot_of_velocities))).T,
+                  columns=('velocity', 'rotation_rate'))
 
-def customfilter_holes():
 
-    # One liners for command line customfilt...
+# We are actually only interested in the correlation while the fly is flying (0.91)
+# Because we know that anything below the threshold is not a flying observation,
+# we can clean any trajectory of walking flies. We can do it at least using three
+# principled ways:
 
-    # With our usual
-    with_holes = df[df['velocity'] > 0.1]
-    print 'We have kept %d observations, with several holes' % len(with_holes)
-    print 'Linear correlation: %.2f' % np.corrcoef(with_holes['velocity'], with_holes['rotation_rate'])[0, 1]
+#
+# 1- Get rid of silences, pool all the data into one single "trajectory with holes"
+#
+with_holes = df[df['velocity'] > FLY_FLYING_MIN_VELOCITY]
+print 'We have kept %d observations, with several holes' % len(with_holes)
+print '\tLinear correlation: %.2f' % correlation(with_holes['velocity'], with_holes['rotation_rate'])
 
-    trimmed = df.iloc[:(np.where(df['velocity']<=0.1)[0].tolist()+[len(df)])[0]]
-    print 'We have kept %d observations by trimming, so no holes' % len(trimmed)
-    print 'Linear correlation: %.2f' % np.corrcoef(trimmed['velocity'], trimmed['rotation_rate'])[0, 1]
 
-    # More data usually means better estimates...
+#
+# 2- Trim (remove all observations after the first observation that is too slow for being flying)
+#
+# Horrible one-liner for customfilt
+trimmed = df.iloc[:(np.where(df['velocity'] <= FLY_FLYING_MIN_VELOCITY)[0].tolist() + [len(df)])[0]]
+print 'We have kept %d observations by trimming, no holes and less data' % len(trimmed)
+print '\tLinear correlation: %.2f' % correlation(trimmed['velocity'], trimmed['rotation_rate'])
+
+#
+# 3- Splitting the trajectory in subtrajectories of flying intervals (copy from Etienne's properly tested function)
+#    https://github.com/pydata/pandas/issues/5494
+#    Sorry no one-liner yet, quite advance example...
+#
+
+# df['cant_be_flying'] = when_fly_is_not_flying(df['velocity'])
+# segment_limits = np.where((df['cant_be_flying'] != df['cant_be_flying'].shift()))[0].tolist()
+# flying_dfs = [df.iloc[start:end] for start, end in zip(segment_limits, segment_limits[1:] + [len(df)])]
+# flying_dfs = filter(lambda x: not x['cant_be_flying'].iloc[0], flying_dfs)
+# # Compute correlations in all flying groups
+# correlations = [correlation(df['velocity'], df['rotation_rate']) for df in flying_dfs if len(df) > 1]
+# print 'We have kept %d observations in %d groups by group splitting' % (
+#     np.sum([len(df) for df in flying_dfs]),
+#     len(flying_dfs)
+# )
+# print '\tMean linear correlation: %.2f +/- %.2f' % (np.mean(correlations), np.std(correlations))
+
+#
+# But with our FLY35 we actually have less data... then the nature of the noise and what we do really matters
+#
+
+#
+# More data usually means better estimates...
+# But careful... we need to filter out bad intervals (in this case intervals with a small number of observations)
+# Let's play casino (go get a coffee):
+#
+for random_seed in xrange(1000):
+    pass
 
 
 # So now, how does this affect Katja PDF trajectories?
@@ -146,12 +190,129 @@ INTERESTING_CONDITIONS = (
 )
 
 
-# First we get all trajectories from the strawlab infrastructure, maybe caching them localy
-trajs = [FreeflightExperiment(uuid).trajs(conditions=INTERESTING_CONDITIONS)
-         for uuid in PDF_GAL4xKP041]
+# First we get all trajectories from the strawlab infrastructure, maybe caching them locally
+# We can do that with the combine or the higher level flydata API
+# There should be not much different between the two...
+print 'Loading experiments metadata...'
+experiments = load_freeflight_experiments(chain(PDF_GAL4xKP041, PDF_GAL4xCS, KP041xCS),
+                                          lazy=True,
+                                          with_conditions=INTERESTING_CONDITIONS)
+
+# Indeed some of these trajectories might have holes...
+# Holes might indicate walking flies (their original intent)
+# Or just slow flying (inidicating a poor choice of threshold or a too simplistic filter)
+print 'This is the customfilt-related options for these experiments (and the full data ID)'
+for exp in experiments:
+    print exp.uuid(), exp.sfff().filtering_customfilt_options(), exp.sfff().configuration().id()
+
+# Let's from now on just work with FreeflightTrajectory objects
+print 'Loading trajectories...'
+trajs = trajectories_from_experiments(experiments, with_conditions=INTERESTING_CONDITIONS)
+print 'We have %d trajectories' % len(trajs)
 
 
-# Then we can count how many trajectories are affected
+# Quick and dirty treatment of missing values in all the DF (to account for missing in stimulus measurements)
+def treat_nans(df):
+    df.fillna(method='ffill', inplace=True)
+    df.fillna(method='bfill', inplace=True)
+
+for traj in trajs:
+    treat_nans(traj.df())
+
+assert 0 == np.sum(~np.isfinite(trajs[0].df()['rotation_rate']))
+
+# import matplotlib.pyplot as plt
+# plt.hist([len(traj.df()) for traj in trajs], bins=50)
+# plt.show()
+
+# Group according to length
+# length_dict = defaultdict(list)
+# for traj in trajs:
+#     length_dict[len(traj.df())].append(traj)
+# groups = sorted(length_dict.items(), key=lambda (count, trajs): len(trajs))[::-1]
+# for length, trajs in groups:
+#     print length, len(trajs)
+# exit(33)
+#
+
+# Because indexes are kept until now, we can count how many trajectories are affected...
+# An important detail: these indices are all of sorted-int type
+#                      otherwise we would need to account for datetime indices and pass or infer "dt" (exercise)
+def has_holes(traj):
+    observations_distances = traj.df().index.values[1:] - traj.df().index.values[0:-1]
+    return not all(1 == observations_distances)
+
+
+def total_holes_sizes(traj):
+    observations_distances = traj.df().index.values[1:] - traj.df().index.values[0:-1]
+    return np.sum(observations_distances[observations_distances > 1])
+
+
+def trim_after_the_fact(traj):
+    df = traj.df()
+    observations_distances = traj.df().index.values[1:] - traj.df().index.values[0:-1]
+    trim_to = (np.where(observations_distances > 1)[0]).tolist() + [len(df)]
+    if trim_to[0] == 6:
+        print traj.genotype()
+    return df.iloc[:trim_to[0]]
+
+
+trajs_with_holes = [traj for traj in trajs if has_holes(traj)]
+print 'There are %d trajectories with holes in the PDF dataset' % len(trajs_with_holes)
+print '\tThe average length of these trajectories is %.1f +/- %.1f frames' % (
+    np.mean([len(traj.df()) for traj in trajs_with_holes]),
+    np.std([len(traj.df()) for traj in trajs_with_holes]))
+print '\tThe average length of the holes is %.1f +/- %.1f frames' % (
+    np.mean([total_holes_sizes(traj) for traj in trajs_with_holes]),
+    np.std([total_holes_sizes(traj) for traj in trajs_with_holes]))
+
+
+# How would trimming affect the plain correlation computed
+# Usually we compute the correlation between the turn rate of the fly (dtheta)
+# and the turn rate of the stimulus (rotation_rate)
+dfs_with_holes = [traj.df() for traj in trajs_with_holes]
+correlations_with_holes = np.array([correlation(df['dtheta'], df['rotation_rate']) for df in dfs_with_holes])
+                                   # Could use pandas to do the job, as in the webapp
+correlations_with_holes = correlations_with_holes[np.isfinite(correlations_with_holes)]
+dfs_trimmed = [trim_after_the_fact(traj) for traj in trajs_with_holes]
+dfs_trimmed = [df for df in dfs_trimmed if len(df) > 5]  # trim sometimes just trims too much
+correlations_trimmed = np.array([correlation(df['dtheta'], df['rotation_rate']) for df in dfs_trimmed])
+correlations_trimmed = correlations_trimmed[np.isfinite(correlations_trimmed)]
+print 'Mean correlation with holes: %.2f +/- %.2f' % \
+      (np.mean(correlations_with_holes), np.std(correlations_with_holes))
+print 'Mean correlation after trimming: %.2f +/- %.2f' % \
+      (np.mean(correlations_trimmed), np.std(correlations_trimmed))
+
+# What about if we split the time series and keep the contiguous segments?...
+
+
+#
+# So it appears that it is best to keep the data with holes (under the principle that more data gives better estimates)
+# The problem comes when computing the correlation at a certain lag.
+# Then holes are really problematic...
+#
+
+def correlation_at_lag(stimulus, response, lag=0):
+    response = response.values[lag:]
+    stimulus = stimulus.values[:len(response)]
+    # print lag, len(response), len(stimulus)  # Weird, there is a bug somewhere
+    return correlation(stimulus, response)
+
+all_dfs = [traj.df() for traj in trajs]
+dfs_trimmed = [trim_after_the_fact(traj) for traj in trajs]
+dfs_trimmed = [df for df in dfs_trimmed if len(df) > 5]  # trim sometimes just trims too much
+for lag in (0, 10, 20, 40, 80):
+    # correlations_with_holes = np.array([correlation_at_lag(df['rotation_rate'], df['dtheta'], lag=lag)
+    #                                     for df in all_dfs])
+    correlations_trimmed = np.array([correlation_at_lag(df['rotation_rate'], df['dtheta'], lag=lag)
+                                     for df in dfs_trimmed])
+    # correlations_with_holes = correlations_with_holes[np.isfinite(correlations_with_holes)]
+    correlations_trimmed = correlations_trimmed[np.isfinite(correlations_trimmed)]
+    print 'Lag %g' % lag
+    # print '\tMean correlation with holes: %.2f +/- %.2f' % \
+    #       (np.mean(correlations_with_holes), np.std(correlations_with_holes))
+    print '\tMean correlation after trimming: %.2f +/- %.2f' % \
+          (np.mean(correlations_trimmed), np.std(correlations_trimmed))
 
 # Single-variate discriminative analysis
 
