@@ -46,6 +46,8 @@ class Perturber:
 
     DEFAULT_CHUNK_DESC = "0|1"
 
+    is_single_valued = True
+
     def __init__(self, chunk_str, ratio_min, duration):
         if chunk_str:
             self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunk_str.split('|')) )
@@ -228,6 +230,8 @@ class PerturberStepN(Perturber):
         if me != 'stepn':
             raise Exception("Incorrect PerturberStepN configuration")
         self.values = map(float,values)
+
+        self.is_single_valued = len(self.values) == 1
 
         Perturber.__init__(self, chunks, ratio_min, duration)
 
