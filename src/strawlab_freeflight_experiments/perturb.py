@@ -199,7 +199,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
-    DEFAULT_DESC = "stepn_WHAT|2|0.7|0.5|3|0.4"
+    DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|0.7|0.5|3|0.4"
 
     def __init__(self, descriptor):
         """
