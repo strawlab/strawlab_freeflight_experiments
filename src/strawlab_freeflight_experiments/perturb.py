@@ -301,9 +301,52 @@ class PerturberStepN(Perturber):
 
         self._plot_ylabel(ax, ylabel, **plot_kwargs)
 
-class PerturberChirp(Perturber):
+class _PerturberInterpolation(Perturber):
+    """
+    Base class for perturbation experiments that consist of a waveform against
+    time, and an interp1d object so they can be evaluated at any-ish
+    frequency
+    """
 
-    DEFAULT_DESC = "chirp_WHAT|linear|1.0|3|1.0|5.0|0.4"
+    def __init__(self, t, w, chunks, ratio_min, duration):
+        Perturber.__init__(self, chunks, ratio_min, self.t1)
+        self._t = t
+        self._w = w
+
+        #we can call this at slightly different times.
+        self._f = interp.interp1d(self._t, self._w,
+                                  kind='linear',
+                                  copy=False,
+                                  bounds_error=False,
+                                  fill_value=0.0)
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        self.progress = framenumber - self._frame0
+        dt = now - self.now
+        finished = dt >= (0.99*self.duration)
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+        return self._f(dt), state
+
+    def get_perturb_vs_time(self, t0, t1, fs=100):
+        num = int((t1-t0)*fs)
+        t = np.linspace(t0,t1,num=num)
+        v = self._f(t)
+        return t,v
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self):
+        return -self.value,self.value
+
+class PerturberChirp(_PerturberInterpolation):
+
+    DEFAULT_DESC = "chirp_WHAT|linear|1.0|3|1.0|5.0"
 
     def __init__(self, descriptor):
         """
@@ -329,49 +372,47 @@ class PerturberChirp(Perturber):
         self.f1 = float(f1)
 
         #oversample by 10 times the framerate (100)
-        self._t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
-        self._w = waveforms.chirp(self._t,
-                                  f0=self.f0,
-                                  f1=self.f1,
-                                  t1=self.t1,
-                                  phi=90,
-                                  method=self.method) * self.value
+        t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
+        w = waveforms.chirp(t,
+                           f0=self.f0,
+                           f1=self.f1,
+                           t1=self.t1,
+                           phi=90,
+                           method=self.method) * self.value
 
-        #we can call this at slightly different times.
-        self._f = interp.interp1d(self._t, self._w,
-                                  kind='linear',
-                                  copy=False,
-                                  bounds_error=False,
-                                  fill_value=0.0)
-
-        Perturber.__init__(self, chunks, ratio_min, self.t1)
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
 
     def __repr__(self):
         return "<PerturberChirp %s what=%s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method,self.what,self.value,self.duration,self.f0,self.f1)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
-        self.progress = framenumber - self._frame0
-        dt = now - self.now
-        finished = dt >= (0.99*self.duration)
-        if framenumber==self._frame0:
-            state='starting'
-        elif finished:
-            state='finished'
-        else:
-            state='ongoing'
-        return self._f(dt), state
+class PerturberTone(_PerturberInterpolation):
 
-    def get_perturb_vs_time(self, t0, t1, fs=100):
-        num = int((t1-t0)*fs)
-        t = np.linspace(t0,t1,num=num)
-        v = self._f(t)
-        return t,v
+    DEFAULT_DESC = "tone_WHAT|1.0|3|0|3"
 
-    def get_time_limits(self):
-        return 0,self.duration
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'tone'|magnitude|duration|phase_offset|freq|ratio_min|a|b|c|d|e|f
+        """
+        name,value,t1,po,f0,ratio_min,chunks = descriptor.split('|', 6)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        if me != 'tone':
+            raise Exception("Incorrect PerturberTone configuration")
+        self.what = '_'.join(name_parts[1:])
+        self.value = float(value)
+        self.t1 = float(t1)
+        self.f0 = float(f0)
+        self.po = float(po)
 
-    def get_value_limits(self):
-        return -self.value,self.value
+        t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
+        w = abs(self.value) * np.sin((t*self.f0*2*np.pi) + np.deg2rad(self.po))
+
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
+
+    def __repr__(self):
+        return "<PerturberTone what=%s val=%.1f dur=%.1fs f=%.1f p=%.1f>" % (self.what,self.value,self.duration,self.f0,self.po)
+
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
 #    from spectrum.periodogram import Periodogram
@@ -414,7 +455,7 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     ax.set_ylabel('|Y(freq)|')
     ax.set_xlim(0,maxfreq)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
