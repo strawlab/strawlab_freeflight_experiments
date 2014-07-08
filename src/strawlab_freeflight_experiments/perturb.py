@@ -473,14 +473,17 @@ if __name__ == "__main__":
         obj.plot(ax)
         ax.legend()
     else:
-
-        PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
-
         for p in PERTURBERS:
             obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_CHUNK_DESC)
-            f = plt.figure(repr(obj))
-            ax = f.add_subplot(1,1,1)
-            obj.plot(ax)
-            ax.legend()
+            f = plt.figure(repr(obj), figsize=(8,8))
+            ax = plt.subplot2grid((2,2),(0,0), colspan=2)
+            obj.plot(ax, t_extra=0)
+            ax.set_title(str(obj))
+            ax.set_xlabel('t (s)')
+            ax.set_ylabel('wide-field motion')
+            ax = plt.subplot2grid((2,2),(1,0))
+            plot_spectum(ax, obj)
+            ax = plt.subplot2grid((2,2),(1,1))
+            plot_amp_spectrum(ax, obj)
 
     plt.show()
