@@ -124,7 +124,7 @@ class NoPerturb(Perturber):
         return "<NoPerturb>"
     def step(self, *args):
         return 0,'ongoing'
-    def get_perturb_vs_time(self, t0, t1):
+    def get_perturb_vs_time(self, t0, t1, fs=100):
         return [],[]
     def get_time_limits(self):
         return 0,0
@@ -172,19 +172,22 @@ class PerturberStep(Perturber):
             state='ongoing'
         return self.value, state
 
-    def get_perturb_vs_time(self, t0, t1):
+    def get_perturb_vs_time(self, t0, t1, fs=100):
         t = []
         v = []
         if t0 < 0:
-            t.extend( np.linspace(t0,0,num=50) )
-            v.extend( np.zeros(50) )
+            num = int(abs(t0)*fs)
+            t.extend( np.linspace(t0,0,num=num) )
+            v.extend( np.zeros(num) )
 
-        t.extend( np.linspace(0,min(self.duration,t1),num=50) )
-        v.extend( np.ones(50)*self.value )
+        num = int(self.duration*fs)
+        t.extend( np.linspace(0,min(self.duration,t1),num=num) )
+        v.extend( np.ones(num)*self.value )
 
         if t1 > self.duration:
-            t.extend( np.linspace(self.duration,t1,num=50) )
-            v.extend( np.zeros(50) )
+            num = int(t1*fs)
+            t.extend( np.linspace(self.duration,t1,num=num) )
+            v.extend( np.zeros(num) )
 
         return t,v
 
@@ -249,7 +252,7 @@ class PerturberStepN(Perturber):
             state='ongoing'
         return self.values, state
 
-    def get_perturb_vs_time(self, t0, t1, n):
+    def get_perturb_vs_time(self, t0, t1, n=0, fs=100):
         t = []
         v = []
         if t0 < 0:
@@ -352,8 +355,9 @@ class PerturberChirp(Perturber):
             state='ongoing'
         return self._f(dt), state
 
-    def get_perturb_vs_time(self, t0, t1):
-        t = np.linspace(t0,t1,num=2000)
+    def get_perturb_vs_time(self, t0, t1, fs=100):
+        num = int((t1-t0)*fs)
+        t = np.linspace(t0,t1,num=num)
         v = self._f(t)
         return t,v
 
