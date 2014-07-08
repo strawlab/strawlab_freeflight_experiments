@@ -1,9 +1,13 @@
 import numpy as np
+import scipy.signal
 import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
 
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+
+
 
 def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
@@ -282,6 +286,7 @@ class PerturberStepN(Perturber):
 
         v1 = v0 = np.nan
         for i in range(len(self.values)):
+
             t,v = self.get_perturb_vs_time(t0,t1,i)
             _v0,_v1 = self.get_value_limits(i)
 
@@ -368,6 +373,48 @@ class PerturberChirp(Perturber):
     def get_value_limits(self):
         return -self.value,self.value
 
+def plot_spectum(ax, obj, fs=100, maxfreq=12):
+#    from spectrum.periodogram import Periodogram
+#        p1 = Periodogram(x, fs)
+#        p1.run()
+#        p1.plot(ax)
+    if not obj.is_single_valued:
+        #can't do this for stepN without a better Perturber.plot API
+        return
+
+    _,x = obj.get_perturb_vs_time(0,obj.duration, fs)
+    if len(x):
+        ax.psd(x,Fs=fs)
+        ax.set_ylabel('PSD (dB/Hz)')
+        ax.set_yscale('symlog')
+        ax.set_xlim(0,maxfreq)
+
+def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
+    """
+    Plots a Single-Sided Amplitude Spectrum of y(t)
+    """
+    if not obj.is_single_valued:
+        return
+
+    _,y = obj.get_perturb_vs_time(0,obj.duration, fs)
+    if not len(y):
+        return
+
+    n = len(y) # length of the signal
+    k = np.arange(n)
+    T = n/fs
+    frq = k/T # two sides frequency range
+    frq = frq[range(n/2)] # one side frequency range
+
+    Y = scipy.fft(y)/n # fft computing and normalization
+    Y = Y[range(n/2)]
+
+    ax.plot(frq,abs(Y),'ro') # plotting the spectrum
+    ax.set_xlabel('Frequency')
+    ax.set_ylabel('|Y(freq)|')
+    ax.set_xlim(0,maxfreq)
+
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
