@@ -50,5 +50,11 @@ class TestCombineFake(unittest.TestCase):
         self.assertTrue(FIXED_COND in conds)
         self.assertFalse(BROKEN_COND in conds)
 
+    def test_fix_combine(self):
+        UUID = '401be1eee81a11e3bf926c626d3a008a'
+        combine = analysislib.util.get_combiner_for_uuid(UUID)
+        combine.disable_debug()
+        combine.add_from_uuid(UUID)
+
 if __name__=='__main__':
     unittest.main()
