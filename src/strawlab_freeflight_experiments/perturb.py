@@ -37,6 +37,10 @@ def get_perturb_class(perturb_descriptor, debug=False):
             return PerturberStepN
         elif name == 'chirp':
             return PerturberChirp
+        elif name == 'multitone':
+            return  PerturberMultiTone
+        elif name == 'tone':
+            return PerturberTone
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
