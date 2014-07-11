@@ -64,6 +64,7 @@ class _Combine(object):
         self._tfilt = None
         self._plotdir = None
         self._index = 'framenumber'
+        self._warn_cache = {}
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -122,6 +123,12 @@ class _Combine(object):
     def _warn(self, m):
         if self._enable_warn:
             print m
+
+    def _warn_once(self, m):
+        if m not in self._warn_cache:
+            self._warn(m)
+            self._warn_cache[m] = 0
+        self._warn_cache[m] += 1
 
     @property
     def plotdir(self):
