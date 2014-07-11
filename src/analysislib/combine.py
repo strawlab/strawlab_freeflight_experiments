@@ -1214,6 +1214,9 @@ class CombineH5WithCSV(_Combine):
                     for _ix, row in df.iterrows():
                         fixed = fix.fix_row(row)
                         for col in fix.should_fix_rows:
+                            if col not in df.columns:
+                                self._warn_once("ERROR: col %s missing from dataframe (are you resampling?)" % col)
+                                continue
                             #modify in place
                             try:
                                 df.loc[_ix,col] = fixed[col]
