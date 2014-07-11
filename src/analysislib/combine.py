@@ -64,6 +64,7 @@ class _Combine(object):
         self._tfilt = None
         self._plotdir = None
         self._index = 'framenumber'
+        self._warn_cache = {}
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -122,6 +123,12 @@ class _Combine(object):
     def _warn(self, m):
         if self._enable_warn:
             print m
+
+    def _warn_once(self, m):
+        if m not in self._warn_cache:
+            self._warn(m)
+            self._warn_cache[m] = 0
+        self._warn_cache[m] += 1
 
     @property
     def plotdir(self):
@@ -1207,11 +1214,14 @@ class CombineH5WithCSV(_Combine):
                     for _ix, row in df.iterrows():
                         fixed = fix.fix_row(row)
                         for col in fix.should_fix_rows:
+                            if col not in df.columns:
+                                self._warn_once("ERROR: column '%s' missing from dataframe (are you resampling?)" % col)
+                                continue
                             #modify in place
                             try:
                                 df.loc[_ix,col] = fixed[col]
                             except IndexError, e:
-                                self._warn("ERROR: could not apply fixup to obj_id %s (col %s)" % (oid,col))
+                                self._warn("ERROR: could not apply fixup to obj_id %s (column '%s')" % (oid,col))
 
                 #the start time and the start framenumber are defined by the experiment,
                 #so they come from the csv (fdf)
