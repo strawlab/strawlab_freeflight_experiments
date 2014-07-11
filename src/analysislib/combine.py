@@ -1215,13 +1215,13 @@ class CombineH5WithCSV(_Combine):
                         fixed = fix.fix_row(row)
                         for col in fix.should_fix_rows:
                             if col not in df.columns:
-                                self._warn_once("ERROR: col %s missing from dataframe (are you resampling?)" % col)
+                                self._warn_once("ERROR: column '%s' missing from dataframe (are you resampling?)" % col)
                                 continue
                             #modify in place
                             try:
                                 df.loc[_ix,col] = fixed[col]
                             except IndexError, e:
-                                self._warn("ERROR: could not apply fixup to obj_id %s (col %s)" % (oid,col))
+                                self._warn("ERROR: could not apply fixup to obj_id %s (column '%s')" % (oid,col))
 
                 #the start time and the start framenumber are defined by the experiment,
                 #so they come from the csv (fdf)
