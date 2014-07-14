@@ -77,10 +77,10 @@ MAX_ROTATION_RATE = 3
 #             perturbation_descriptor"
 
 CONDITIONS = [
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
+              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",              
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|0.7|2|1|5|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
-              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 
