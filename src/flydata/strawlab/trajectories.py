@@ -71,10 +71,22 @@ class FreeflightTrajectory(object):
         return self._start_frame
 
     def id(self):
-        """Return (uuid, oid, framenumber0).
+        """Returns (uuid, oid, framenumber0).
         This is the unique identifier for a trajectory in the whole freeflight infrastructure.
         """
         return self.uuid(), self.oid(), self.start_frame()
+
+    def id_string(self, verbose=True):
+        """Returns the  trajectory id as a string.
+        One of the two:
+          'uuid=blah#oid=bleh#start=blih' (if verbose is True)
+          'uuid#oid#start' (if verbose is False)
+        This is the unique identifier for a trajectory in the whole freeflight infrastructure.
+
+        """
+        if verbose:
+            return 'uuid=%s#oid=%d#start=%d' % self.id()
+        return '#'.join(map(str, self.id()))
 
     def genotype(self):
         """Returns the genotype string."""
@@ -124,6 +136,37 @@ class FreeflightTrajectory(object):
         Everything else there would have been computed from x,y,z and possibly stimulus data.
         """
         return self.series(copy=copy, columns=('x', 'y', 'z'))
+
+    def apply_transform_inplace(self, **kwargs):
+        """Applies single-attribute transformations to this trajectory.
+
+        This method endulges responsible API users with a way to break immutability by "official ways".
+
+        Parameters
+        ----------
+        kwargs: pairs attribute_name -> transform
+            - Each attribute name should correspond to the name of an attribute in the trajectory
+              (otherwise an exception is raised)
+            - transform is a function that takes a trajectory and returns a single value;
+              such value substitutes the attribute's previous value
+
+        Examples
+        --------
+        If "traj" is a trajectory, then this call will redefine the "dt" and "condition" attributes:
+          traj.apply_transform_inplace(
+              dt=lambda traj: traj.dt() * 10,
+              condition=lambda traj: traj.condition() + '-NORMALIZED_CONDITION'
+          )
+        """
+        for key, fix in kwargs.iteritems():
+            attr = '_%s' % key
+            if not attr in self.__slots__:
+                raise Exception('The key %s is not known to our trajectory (sorry, we are kinda unflexible ATM)' % key)
+            setattr(self, attr, fix(self))  # Awful
+
+    #####################
+    # Persistence and I/O
+    #####################
 
     @staticmethod
     def to_npz(npz, trajs):

@@ -182,6 +182,34 @@ class FreeflightExperimentMetadata(object):
         return self.stop_secs() + self.stop_nsecs() * 1E-9
 
     ######
+    # Official mutability
+    ######
+
+    def apply_transform_inplace(self, **kwargs):
+        """Applies single-attribute transformations to this metadata.
+
+        This method endulges responsible API users with a way to break immutability by "official ways".
+
+        Parameters
+        ----------
+        kwargs: pairs attribute_name -> transform
+            - Each attribute name should correspond to the name of an attribute in the metadata
+              (if it does not exist, a new attribute is created)
+            - transform is a function that takes a metadata object and returns a single value;
+              such value substitutes the attribute's previous value
+
+        Examples
+        --------
+        If "md" is a metadata object, then this call will redefine the "genotype" and "stop_secs" attributes:
+          md.apply_transform_inplace(
+              genotype=lambda md: md.genotype() + '-normalized_genotype',
+              stops_secs=lambda md: 10000000
+          )
+        """
+        for key, fix in kwargs.iteritems():
+            self._metadata[key] = fix(self)  # Awfully overcomplex
+
+    ######
     # Retrieval and persistence
     ######
 

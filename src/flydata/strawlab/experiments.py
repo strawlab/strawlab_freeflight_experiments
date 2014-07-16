@@ -12,7 +12,11 @@ from flydata.strawlab.trajectories import FreeflightTrajectory
 
 class FreeflightExperiment(object):
 
-    def __init__(self, uuid, do_cache=False):
+    def __init__(self,
+                 uuid,
+                 do_cache=False,
+                 md_transformers=None,
+                 traj_transformers=None):
         """Freeflight experiment data aggregation (from DB + files) and local caching.
 
         The main goal of this class is to serve FreeflightTrajectories. Each of these trajectories
@@ -28,6 +32,7 @@ class FreeflightExperiment(object):
 
         self._uuid = uuid
         self._md = FreeflightExperimentMetadata(uuid=self._uuid)
+        self._md.apply_transform_inplace(**md_transformers)
 
         # ATM we only extract trajectories from analysis pickle files. There the data is:
         #   - nicely postprocessed by the combine machinery
@@ -37,6 +42,7 @@ class FreeflightExperiment(object):
 
         # Cache trajectories
         self._trajs_in_memory = None
+        self._traj_transformers = traj_transformers
         if do_cache:
             self.trajectories()
 
@@ -61,12 +67,18 @@ class FreeflightExperiment(object):
             self._trajs_in_memory = [FreeflightTrajectory(self.md(), oid, framenumber0, time0, condition, df)
                                      for condition, x0, y0, oid, framenumber0, time0, df in
                                      self.sfff(filter_id=filter_id).trajs(conditions=conditions)]  # N.B. missing dt
+            if self._traj_transformers is not None:
+                for traj in self._trajs_in_memory:
+                    traj.apply_transform_inplace(**self._traj_transformers)
         return self._trajs_in_memory
 
 
 def load_freeflight_experiments(uuids,
                                 project_root=None,
-                                lazy=True, n_jobs=cpu_count(),
+                                lazy=True,
+                                n_jobs=cpu_count(),
+                                md_transforms=None,
+                                traj_transforms=None,  # This is a harsh API...
                                 with_conditions=None):
     """Loads all the experiment into memory, possibly caching to local disk on the way.
 
@@ -93,7 +105,10 @@ def load_freeflight_experiments(uuids,
     A FreeflightExperimentAggregator list with the loaded and kept experiments
     """
     experiments = Parallel(n_jobs=n_jobs)(delayed(FreeflightExperiment)
-                                          (uuid=uuid, do_cache=lazy)  # project_root=project_root
+                                          (uuid=uuid,
+                                           do_cache=lazy,
+                                           md_transformers=md_transforms,
+                                           traj_transformers=traj_transforms)  # project_root=project_root
                                           for uuid in uuids)
     # Get rid of experiments without the requested conditions
     if with_conditions is not None:
@@ -127,10 +142,14 @@ def trajectories_from_experiments(experiments,
 def load_freeflight_trajectories(uuids,
                                  project_root=None,
                                  n_jobs=cpu_count(),
+                                 md_transforms=None,
+                                 traj_transforms=None,
                                  with_conditions=None):
     experiments = load_freeflight_experiments(uuids,
                                               project_root=project_root,
                                               lazy=True,
                                               n_jobs=n_jobs,
-                                              with_conditions=with_conditions)
+                                              with_conditions=with_conditions,
+                                              md_transforms=md_transforms,
+                                              traj_transforms=traj_transforms)
     return trajectories_from_experiments(experiments, with_conditions=with_conditions)
