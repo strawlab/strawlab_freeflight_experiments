@@ -3,6 +3,7 @@
 N.B. this is a thin version of that in sandbox; it will be better to reconstruct that functionality from scratch
 """
 from itertools import chain
+import os.path as op
 
 from joblib import Parallel, delayed, cpu_count
 from flydata.strawlab.files import FreeflightAnalysisFiles
@@ -10,11 +11,18 @@ from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
 
 
+class _TrajectoriesCacher(object):
+    def __init__(self, root):
+        super(_TrajectoriesCacher, self).__init__()
+        self.root = root
+
+
 class FreeflightExperiment(object):
 
     def __init__(self,
                  uuid,
-                 do_cache=False,
+                 lazy=True,
+                 cache_root_dir=None,
                  md_transformers=None,
                  traj_transformers=None):
         """Freeflight experiment data aggregation (from DB + files) and local caching.
@@ -30,9 +38,16 @@ class FreeflightExperiment(object):
 
         super(FreeflightExperiment, self).__init__()
 
+        # Manage caching
+        self.cache_root = cache_root_dir
+
         self._uuid = uuid
-        self._md = FreeflightExperimentMetadata(uuid=self._uuid)
+
+        # Experiment metadata
+        self._md = FreeflightExperimentMetadata(uuid=self._uuid, json_file_or_dir=self.cache_root)
         self._md.apply_transform_inplace(**md_transformers)
+        if self.cache_root is not None:
+            self._md.to_json_file()
 
         # ATM we only extract trajectories from analysis pickle files. There the data is:
         #   - nicely postprocessed by the combine machinery
@@ -43,7 +58,7 @@ class FreeflightExperiment(object):
         # Cache trajectories
         self._trajs_in_memory = None
         self._traj_transformers = traj_transformers
-        if do_cache:
+        if not lazy:
             self.trajectories()
 
     def uuid(self):
@@ -56,7 +71,7 @@ class FreeflightExperiment(object):
         return len(self.trajectories())
 
     def conditions(self):
-        return sorted(set(traj.condition() for traj in self.trajectories()))
+        return sorted(set(traj.condition() for traj in self.trajectories()))  # Arguably, should be read from metadata
 
     def sfff(self, filter_id=None):
         return FreeflightAnalysisFiles.from_uuid(self.uuid(), filter_id=filter_id)
@@ -106,7 +121,7 @@ def load_freeflight_experiments(uuids,
     """
     experiments = Parallel(n_jobs=n_jobs)(delayed(FreeflightExperiment)
                                           (uuid=uuid,
-                                           do_cache=lazy,
+                                           lazy=lazy,
                                            md_transformers=md_transforms,
                                            traj_transformers=traj_transforms)  # project_root=project_root
                                           for uuid in uuids)

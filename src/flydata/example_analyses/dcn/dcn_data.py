@@ -1,6 +1,9 @@
 # coding=utf-8
 """Experiment ID, string condition manipulation and genotype condition manipulation from the DCN experiments."""
 from itertools import chain
+from flydata.strawlab.experiments import FreeflightExperiment
+from flydata.strawlab.metadata import FreeflightExperimentMetadata
+from flydata.strawlab.trajectories import FreeflightTrajectory
 
 #################
 # UUIDS
@@ -75,7 +78,7 @@ DCN_UUIDs = list(chain(
 
 # A condition with closed-loop rotation and a post in a corner
 CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
-ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/'  # FIXME: normalize
+ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 
 
 ##### Workaround for the following problem:
@@ -89,16 +92,18 @@ ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/'  # F
 #####
 
 
-def normalize_condition_name(condition):
+def normalize_condition_string(condition):
     """Workaround for trailing bars in condition names.
     These two should be regarded as the same condition:
     >>> cond1 = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
     >>> cond2 = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/'
-    >>> cond1 == normalize_condition_name(cond1)
+    >>> cond1 == normalize_condition_string(cond1)
     True
-    >>> cond1 == normalize_condition_name(cond2)
+    >>> cond1 == normalize_condition_string(cond2)
     True
     """
+    if isinstance(condition, FreeflightTrajectory):
+        condition = condition.condition()
     return condition[:-1] if condition.endswith('/') else condition
 
 
@@ -112,6 +117,8 @@ def unnormalize_condition_name(condition, known_conditions):
     >>> cond2 == unnormalize_condition_name(cond1, conditions)
     True
     """
+    if isinstance(condition, FreeflightTrajectory):
+        condition = condition.condition()
     return condition + '/' if condition + '/' in known_conditions else condition
 
 ##### -End of workaround
@@ -296,16 +303,64 @@ def is_optic_tubercle_only_impaired(genotype):
 
 def normalize_genotype_string(genotype):
     """Normalizes the genotype strings so that flies with the same genotype get the same string."""
+    if isinstance(genotype, FreeflightExperimentMetadata):
+        genotype = genotype.genotype()
     if is_ato(genotype) and is_tnte(genotype):
-        return 'ATO_TNT'
+        return 'ATOxTNTE'
     if is_ato(genotype) and not is_tnte(genotype):
-        return 'ATO_TNTin'
+        return 'ATOxTNTin'
     if is_vt37804(genotype) and is_tnte(genotype):
-        return 'VT37804_TNTE'
+        return 'VT37804xTNTE'
     if is_vt37804(genotype) and not is_tnte(genotype):
-        return 'VT37804_TNTin'
+        return 'VT37804xTNTin'
     if is_ultimate(genotype) and is_tnte(genotype):
-        return 'Ultimate_TNTE'
+        return 'ULTIMATExTNTE'
     if is_ultimate(genotype) and not is_tnte(genotype):
-        return 'Ultimate_TNTin'
+        return 'ULTIMATExTNTin'
     raise Exception('Unknown genotype for %s' % genotype)
+
+
+#################
+# Data loading and normalization
+#################
+
+def load_lisa_dcn_experiments(uuids):
+    """Loads an experiment, normalizing the condition and genotype strings."""
+    if isinstance(uuids, basestring):
+        uuids = [uuids]
+    return [FreeflightExperiment(uuid=uuid,
+                                 md_transformers={'genotype': normalize_genotype_string},
+                                 traj_transformers={'condition': normalize_condition_string})
+            for uuid in uuids]
+
+
+if __name__ == '__main__':
+
+    from time import time
+    import os.path as op
+    start = time()
+    print 'Loading experiments...'
+    experiments = load_lisa_dcn_experiments(DCN_UUIDs)
+    # experiments = load_lisa_dcn_experiments('ae8425d4084911e4aafb6c626d3a008a')    # This has some spurious data
+    #                                                                                # in the data-frame:
+    #                                                                                #    - uuid, condition...
+    #                                                                                # Very slow on numpy serialization
+    #                                                                                # Complete impedance with HDF5
+    # experiments = load_lisa_dcn_experiments('ad0377f0f95d11e38cd26c626d3a008a')  # Similar size but all numeric
+                                                                                   # Faster...
+    print 'There are %d experiments' % len(experiments)
+    conditions = set()
+    for exp in experiments:
+        print 'experiment=%s, genotype=%s' % (exp.uuid(), exp.md().genotype())
+        print 'Loading trajectories...'
+        trajs_cache = '/home/santi/%s.h5' % exp.uuid()
+        if not op.isfile(trajs_cache):
+            trajs = exp.trajectories()
+            FreeflightTrajectory.to_h5(trajs_cache, trajs)
+        else:
+            trajs = FreeflightTrajectory.from_h5(trajs_cache, md=exp.md())
+        print 'There are %d conditions' % len(set(t.condition() for t in trajs))
+        conditions.update(t.condition() for t in trajs)
+        print '-' * 40
+    print 'Total number of conditions: %d' % len(conditions)
+    print 'Loading all data took %.2f seconds' % (time() - start)

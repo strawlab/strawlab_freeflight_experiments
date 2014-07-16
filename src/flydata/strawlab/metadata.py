@@ -267,7 +267,7 @@ class FreeflightExperimentMetadata(object):
             self._populate_from_db()
         elif not op.isfile(self.json_path()):  # The cache is not there yet, db query + create cache json
             self._populate_from_db()
-            self.to_json()
+            self.to_json_file()
         else:                                   # Populate from an already existent cache
             with open(self.json_path()) as reader:
                 my_dict = json.load(reader)
@@ -301,15 +301,16 @@ class FreeflightExperimentMetadata(object):
                 raise Exception('The json string (from %s) does not seem to have any uuid field' % json_file_or_dir)
         return cls(uuid=uuid, json_file_or_dir=json_file_or_dir)
 
-    def to_json(self, json_path=None):
+    def to_json_file(self, json_path=None, overwrite=False):
         if json_path is None:
             json_path = self.json_path()
         if json_path is not None:
-            with open(json_path, 'w') as writer:
-                writer.write(self.to_json_string())
+            if overwrite or not op.isfile(json_path):
+                with open(json_path, 'w') as writer:
+                    writer.write(self.to_json_string())
 
     @classmethod
-    def from_json(cls, json_file):
+    def from_json_file(cls, json_file):
         with open(json_file) as reader:
             return cls.from_json_string(reader.read(), json_file_or_dir=json_file)
 

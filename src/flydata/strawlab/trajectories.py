@@ -37,7 +37,7 @@ class FreeflightTrajectory(object):
     series: dataframe
         a pandas dataframe with the time series data of the possitions and possibly
         other derived or stimulus series
-    dt: float
+    dt: float, default 0.01 (100Hz)
         the sampling period in seconds
     """
 
@@ -118,6 +118,8 @@ class FreeflightTrajectory(object):
         """Returns a pandas dataframe with the series data for the trajectory.
         If copy is True, a deepcopy of the dataframe is returned.
         """
+        if callable(self._series):
+            self._series = self._series()  # Lame laziness, forces to load everything in memory
         if columns is None:
             return self._series.copy() if copy else self._series
         else:
@@ -169,39 +171,180 @@ class FreeflightTrajectory(object):
     #####################
 
     @staticmethod
-    def to_npz(npz, trajs):
+    def to_npz(npz,
+               trajs,
+               compress_mds=True,
+               compress_conditions=True,
+               compress_columns=False,
+               compress_dt=False,
+               save_index=False):
+        if compress_dt:
+            raise NotImplementedError('Compressing dt (assume single value) not implemented at the moment')
+        if compress_columns:
+            raise NotImplementedError('Compressing columns not implemented at the moment')
+        if save_index is True:
+            raise NotImplementedError('Pandas Index saving not implemented at the moment')
         # This is quite fast, but not really standard / interoperable (and might fail because of zip file limits)
+        # Of course, no memcache - each trajectory series would need to be on its own file
         ensure_dir(op.dirname(npz))
+        # Metadatas
+        mds = trajs[0].md().to_json_string() if compress_mds else [traj.md().to_json_string() for traj in trajs]
+        # Conditions
+        conditions = [traj.condition() for traj in trajs]
+        present_conditions = sorted(set(conditions))
+        if compress_conditions:
+            conditions_dict = {condition: i for i, condition in enumerate(present_conditions)}
+            conditions = [conditions_dict[condition] for condition in conditions]
         np.savez(npz,
-                 mds=[traj.md().to_json_string() for traj in trajs],
+                 num_trajs=len(trajs),
+                 mds=mds,
                  oids=[traj.oid() for traj in trajs],
                  start_frames=[traj.start_frame() for traj in trajs],
-                 start_times=[traj.start_times() for traj in trajs],
-                 conditions=[traj.condition() for traj in trajs],
+                 start_times=[traj.start_time() for traj in trajs],
+                 present_conditions=present_conditions,
+                 conditions=conditions,
                  dts=[traj.dt() for traj in trajs],
-                 columns=[traj.series().columns for traj in trajs],
-                 **{'%d' % i: traj.series() for i, traj in enumerate(trajs)})
-            # FIXME: if all (mds, columns, conditions, dts) are the same, then save only one...
-            #        would lead to a simple relational schema
-            # FIXME: save md as a named tuple, instead of our own class
-            # FIXME: save index of DF if it is timedate (although we should be able to reconstruct it)
+                 columns=[map(str, traj.series().columns) for traj in trajs],
+                 **{'%d' % i: traj.series().values for i, traj in enumerate(trajs)})
+            # We are rolling our own simple relational schema...
+            # FIXME: save index of DF if it is timedate
+            #        (although we should be able to reconstruct it if no holes are present, check...)
 
     @staticmethod
-    def from_npz(npz):
+    def from_npz(npz,
+                 md=None,
+                 traj_ids=None,
+                 lazy_series=False):
+        if traj_ids is not None:
+            raise NotImplementedError('Cannot read individual trajectories at the moment')
+            # easy to implement, but requires index
+        if lazy_series is True:
+            raise NotImplementedError('Cannot apply lazy loading of series at the moment')
         loader = np.load(npz)
         trajs = []
-        for i, (md, oid, cond, start, dt, columns) in enumerate(izip(loader['mds'],
-                                                                     loader['oids'],
-                                                                     loader['conditions'],
-                                                                     loader['starts'],
-                                                                     loader['dts'],
-                                                                     loader['columns'])):
-            md = FreeflightExperimentMetadata.from_json_string(md)  # Buggy, probably
-            series = DataFrame(loader[str(i)], columns=columns)
-            trajs.append(FreeflightTrajectory(md, oid, start, cond, series, dt=dt))
+        num_trajs = loader['num_trajs'].item()
+        # Metadata
+        if isinstance(md, FreeflightExperimentMetadata):
+            mds = [md] * num_trajs
+        elif md is None:
+            mds = loader['mds']
+            if mds.ndim == 0:
+                mds = [FreeflightExperimentMetadata.from_json_string(mds.item())] * num_trajs
+            elif len(mds) != num_trajs:
+                raise Exception('There is something wrong assigning metadata to each ')
+        else:
+            raise Exception('md must be either None or a single FreeflightExperimentMetadata object')
+        # Conditions
+        conditions = loader['conditions']
+        if not isinstance(conditions.dtype, basestring):
+            present_conditions = loader['present_conditions']
+            conditions = [present_conditions[i] for i in conditions]
+        # Read all trajectories
+        for i, (md, oid, cond, start_frame, start_time, dt, columns) in enumerate(izip(mds,
+                                                                                       loader['oids'],
+                                                                                       conditions,
+                                                                                       loader['start_frames'],
+                                                                                       loader['start_times'],
+                                                                                       loader['dts'],
+                                                                                       loader['columns'])):
+            series = DataFrame(loader['%d' % i], columns=columns)
+            trajs.append(FreeflightTrajectory(md, oid, start_frame, start_time, cond, series, dt=dt))
         return trajs
 
-    def to_h5(self, h5, save_experiment_metadata=True, save_trajectory_metadata=True, save_series=True):
+    @staticmethod
+    def to_h5(h5,
+              trajs,
+              root_group='/',
+              compress_mds=True,
+              compress_conditions=True,
+              compress_columns=False,
+              compress_dt=False,
+              save_index=False):
+        if compress_dt:
+            raise NotImplementedError('Compressing dt (assume single value) not implemented at the moment')
+        if compress_columns:
+            raise NotImplementedError('Compressing columns not implemented at the moment')
+        if save_index is True:
+            raise NotImplementedError('Pandas Index saving not implemented at the moment')
+        # This is quite fast, but not really standard / interoperable (and might fail because of zip file limits)
+        # Of course, no memcache - each trajectory series would need to be on its own file
+        ensure_dir(op.dirname(h5))
+        # Metadatas
+        mds = trajs[0].md().to_json_string() if compress_mds else [traj.md().to_json_string() for traj in trajs]
+        # Conditions
+        conditions = [str(traj.condition()) for traj in trajs]  # h5py (hdf5) does not support unicode
+        present_conditions = sorted(set(conditions))
+        if compress_conditions:
+            conditions_dict = {condition: i for i, condition in enumerate(present_conditions)}
+            conditions = [conditions_dict[condition] for condition in conditions]
+        def save_in_h5(h5, **kwargs):
+            for k, v in kwargs.iteritems():
+                h5[k] = v
+        def remove_non_numeric_columns(df):
+            return df._get_numeric_data()  # We are all adults here
+        with h5py.File(h5, 'w-') as h5:
+            group = h5[root_group]
+            save_in_h5(group,
+                       num_trajs=len(trajs),  # Should better be an attribute of the dataset
+                       mds=mds,
+                       oids=[traj.oid() for traj in trajs],
+                       start_frames=[traj.start_frame() for traj in trajs],
+                       start_times=[traj.start_time() for traj in trajs],
+                       present_conditions=present_conditions,
+                       conditions=conditions,
+                       dts=[traj.dt() for traj in trajs],
+                       columns=[map(str, remove_non_numeric_columns(traj.series()).columns) for traj in trajs],
+                       **{'%d' % i: remove_non_numeric_columns(traj.series()) for i, traj in enumerate(trajs)})
+            # TODO: make explicit that we remove non-numeric columns and do it only once
+            #       also, it is necessary just because we are dealing with some legacy pickles
+            # TODO: we could just use pandas and save that many datasets with attributes
+            # TODO: we could just make attributes everything but the series
+            # We are rolling our own simple relational schema...
+            # FIXME: save index of DF if it is timedate
+            #        (although we should be able to reconstruct it if no holes are present, check...)
+
+    @staticmethod
+    def from_h5(h5,
+                md=None,
+                traj_ids=None,
+                lazy_series=False):
+        if traj_ids is not None:
+            raise NotImplementedError('Cannot read individual trajectories at the moment')
+            # easy to implement, but requires index
+        if lazy_series is True:
+            raise NotImplementedError('Cannot apply lazy loading of series at the moment')
+        with h5py.File(h5, 'r') as loader:
+            trajs = []
+            num_trajs = loader['num_trajs'][()]
+            # Metadata
+            if isinstance(md, FreeflightExperimentMetadata):
+                mds = [md] * num_trajs
+            elif md is None:
+                mds = loader['mds'][:]
+                if mds.ndim == 0:
+                    mds = [FreeflightExperimentMetadata.from_json_string(mds.item())] * num_trajs
+                elif len(mds) != num_trajs:
+                    raise Exception('There is something wrong assigning metadata to each ')
+            else:
+                raise Exception('md must be either None or a single FreeflightExperimentMetadata object')
+            # Conditions
+            conditions = loader['conditions'][:]
+            if not isinstance(conditions.dtype, basestring):
+                present_conditions = loader['present_conditions'][:]
+                conditions = [present_conditions[i] for i in conditions]
+            # Read all trajectories
+            for i, (md, oid, cond, start_frame, start_time, dt, columns) in enumerate(izip(mds,
+                                                                                           loader['oids'],
+                                                                                           conditions,
+                                                                                           loader['start_frames'],
+                                                                                           loader['start_times'],
+                                                                                           loader['dts'],
+                                                                                           loader['columns'])):
+                series = DataFrame(data=loader['%d' % i][:], columns=columns)
+                trajs.append(FreeflightTrajectory(md, oid, start_frame, start_time, cond, series, dt=dt))
+            return trajs
+
+    def to_h5_identifiable(self, h5, save_experiment_metadata=True, save_trajectory_metadata=True, save_series=True):
 
         # Save experiment metadata
         exp_group = h5.require_group('uuid=%s' % self.uuid())
