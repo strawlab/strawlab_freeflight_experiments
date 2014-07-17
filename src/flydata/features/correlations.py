@@ -7,7 +7,8 @@ from pandas import DataFrame
 
 
 def correlatepd(df, stimulus_name, response_name, lag=0):
-    return df[response_name].shift(lag).corr(df[stimulus_name])
+    return df[stimulus_name].shift(lag).corr(df[response_name])
+
 
 def stimuli_reaction_correlation(stimulus, response, min_num_measurements=2, latency=0):
     """
@@ -47,19 +48,24 @@ def stimuli_reaction_correlation(stimulus, response, min_num_measurements=2, lat
 
 class LaggedCorrelation(Configurable):
 
-    def __init__(self, lag=0, stimulus='dtheta', response='rotation_rate', inplace=True):
+    def __init__(self, lag=0, stimulus='rotation_rate', response='dtheta'):
         super(LaggedCorrelation, self).__init__()
         self.lag = lag
         self.stimulus = stimulus
         self.response = response
-        self._inplace = inplace
 
-    def x(self, x):
+    def fnames(self):
+        return [self.configuration().id()]
+
+    def compute_one(self, x):
         if isinstance(x, FreeflightTrajectory):
             x = x.series()
         if not isinstance(x, DataFrame):
             raise Exception('We are expecting a pandas Data')
         return correlatepd(x, self.stimulus, self.response, lag=self.lag)
+
+    def compute(self, X):
+        return np.array([self.compute_one(x) for x in X])
 
 
 def rolling_correlation(df, response='dtheta', stimulus='rotation_rate', window=40, min_periods=None):

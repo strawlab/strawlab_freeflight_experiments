@@ -325,42 +325,20 @@ def normalize_genotype_string(genotype):
 #################
 
 def load_lisa_dcn_experiments(uuids):
-    """Loads an experiment, normalizing the condition and genotype strings."""
+    """Loads FreeflightExperiment objects for the DCN experiments, normalizing the condition and genotype strings.
+
+    Parameters
+    ----------
+    uuids: string or list of strings
+        The UUIDs we want to load
+
+    Returns
+    -------
+    A list of FreeflightExperiment objects for the uuids
+    """
     if isinstance(uuids, basestring):
         uuids = [uuids]
     return [FreeflightExperiment(uuid=uuid,
                                  md_transformers={'genotype': normalize_genotype_string},
                                  traj_transformers={'condition': normalize_condition_string})
             for uuid in uuids]
-
-
-if __name__ == '__main__':
-
-    from time import time
-    import os.path as op
-    start = time()
-    print 'Loading experiments...'
-    experiments = load_lisa_dcn_experiments(DCN_UUIDs)
-    # experiments = load_lisa_dcn_experiments('ae8425d4084911e4aafb6c626d3a008a')    # This has some spurious data
-    #                                                                                # in the data-frame:
-    #                                                                                #    - uuid, condition...
-    #                                                                                # Very slow on numpy serialization
-    #                                                                                # Complete impedance with HDF5
-    # experiments = load_lisa_dcn_experiments('ad0377f0f95d11e38cd26c626d3a008a')  # Similar size but all numeric
-                                                                                   # Faster...
-    print 'There are %d experiments' % len(experiments)
-    conditions = set()
-    for exp in experiments:
-        print 'experiment=%s, genotype=%s' % (exp.uuid(), exp.md().genotype())
-        print 'Loading trajectories...'
-        trajs_cache = '/home/santi/%s.h5' % exp.uuid()
-        if not op.isfile(trajs_cache):
-            trajs = exp.trajectories()
-            FreeflightTrajectory.to_h5(trajs_cache, trajs)
-        else:
-            trajs = FreeflightTrajectory.from_h5(trajs_cache, md=exp.md())
-        print 'There are %d conditions' % len(set(t.condition() for t in trajs))
-        conditions.update(t.condition() for t in trajs)
-        print '-' * 40
-    print 'Total number of conditions: %d' % len(conditions)
-    print 'Loading all data took %.2f seconds' % (time() - start)

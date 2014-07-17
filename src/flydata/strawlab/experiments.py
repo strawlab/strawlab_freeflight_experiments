@@ -45,7 +45,8 @@ class FreeflightExperiment(object):
 
         # Experiment metadata
         self._md = FreeflightExperimentMetadata(uuid=self._uuid, json_file_or_dir=self.cache_root)
-        self._md.apply_transform_inplace(**md_transformers)
+        if md_transformers is not None:
+            self._md.apply_transform_inplace(**md_transformers)
         if self.cache_root is not None:
             self._md.to_json_file()
 

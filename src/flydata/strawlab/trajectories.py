@@ -8,7 +8,6 @@ import datetime
 
 from pandas import DataFrame
 import h5py
-import time
 import numpy as np
 import pytz
 
@@ -167,6 +166,17 @@ class FreeflightTrajectory(object):
             setattr(self, attr, fix(self))  # Awful
 
     #####################
+    #
+    # Deep equality test.
+    # Even if we actually only need __eq__, thios got me busy reading about Custom rich comparisons support
+    #   - http://legacy.python.org/dev/peps/pep-0207/
+    #   - http://regebro.wordpress.com/2010/12/13/python-implementing-rich-comparison-the-correct-way/
+    #   - http://www.voidspace.org.uk/python/articles/comparison.shtml
+    #
+    #####################
+
+
+    #####################
     # Persistence and I/O
     #####################
 
@@ -195,6 +205,8 @@ class FreeflightTrajectory(object):
         if compress_conditions:
             conditions_dict = {condition: i for i, condition in enumerate(present_conditions)}
             conditions = [conditions_dict[condition] for condition in conditions]
+        def remove_non_numeric_columns(df):
+            return df._get_numeric_data()  # We are all adults here
         np.savez(npz,
                  num_trajs=len(trajs),
                  mds=mds,
@@ -204,8 +216,8 @@ class FreeflightTrajectory(object):
                  present_conditions=present_conditions,
                  conditions=conditions,
                  dts=[traj.dt() for traj in trajs],
-                 columns=[map(str, traj.series().columns) for traj in trajs],
-                 **{'%d' % i: traj.series().values for i, traj in enumerate(trajs)})
+                 columns=[map(str, remove_non_numeric_columns(traj.series()).columns) for traj in trajs],
+                 **{'%d' % i: remove_non_numeric_columns(traj.series()).values for i, traj in enumerate(trajs)})
             # We are rolling our own simple relational schema...
             # FIXME: save index of DF if it is timedate
             #        (although we should be able to reconstruct it if no holes are present, check...)
@@ -389,90 +401,3 @@ class FreeflightTrajectory(object):
     @staticmethod
     def from_pandas(df, flattened=True):
         raise NotImplementedError()
-
-
-if __name__ == '__main__':
-
-    # N.B. /tmp is a ramdisk
-
-    import pandas as pd
-
-    md = FreeflightExperimentMetadata(uuid='FAKE_UUID_HERE_AND_THERE',
-                                      dictionary=dict(
-                                          uuid='FAKE_UUID_HERE_AND_THERE',
-                                          user='rudolph',
-                                          hidden=False,
-                                          tags=('wait', 'caliphora', 'final_paper_experiment'),
-                                          title='rotation',
-                                          description='some more games on place',
-                                          genotype='VT37804-TNTE',
-                                          age=4,
-                                          arena='flycave',
-                                          num_flies=20,
-                                          start_secs=7777777777,
-                                          start_nsecs=10,
-                                          stop_secs=8777777777,
-                                          stop_nsecs=10,
-                                      ))
-
-    start = time.time()
-    trajs = []
-    for oid in xrange(10000):
-        rng = np.random.RandomState(0)
-
-        df = pd.DataFrame()
-        numobs = 1000
-        df['x'] = rng.uniform(size=numobs)
-        df['y'] = rng.uniform(size=numobs)
-        df['z'] = rng.uniform(size=numobs)
-        df['rotation_rate'] = rng.uniform(size=numobs)
-        df['dtheta'] = rng.uniform(size=numobs)
-
-        traj = FreeflightTrajectory(md, oid, 100, 7777777887, condition='cool|1|2.5|blah.osg|23', series=df, dt=0.1)
-
-        trajs.append(traj)
-
-    print 'Generation took: %.2f' % (time.time() - start)
-
-    start = time.time()
-    with h5py.File('/tmp/test.h5') as h5:
-        trajs[0].to_h5(h5)
-        for traj in trajs[1:]:
-            traj.to_h5(h5, save_experiment_metadata=False, save_trajectory_metadata=False)
-    print 'Write took: %.2f' % (time.time() - start)
-
-    start = time.time()
-    with h5py.File('/tmp/test.h5', 'r') as h5:
-        exp_group = h5[u'uuid=FAKE_UUID_HERE_AND_THERE']
-        traj_ids = exp_group.keys()
-        for traj_id in traj_ids:
-            traj_group = exp_group[traj_id]
-            series_group = traj_group['series']
-            df = DataFrame({series_id: series_group[series_id].value for series_id in series_group})
-    print 'Reading from non-contiguous series took: %.2f' % (time.time() - start)
-
-    # Naive contiguous - upper bound of speed
-    X = np.random.uniform(size=(10000, 5000))
-    start = time.time()
-    with h5py.File('/tmp/test-fastest.h5') as h5:
-        h5['X'] = X
-    print 'Write contiguous: %.2f' % (time.time() - start)
-
-    start = time.time()
-    with h5py.File('/tmp/test-fastest.h5') as h5:
-        X = h5['X'].value
-        print X.shape
-    print 'Read contiguous: %.2f' % (time.time() - start)
-
-
-
-#### Slow as hell
-# Generation took: 14.15
-# Write took: 17.36
-# Reading from non-contiguous series took: 18.90
-# Write contiguous: 0.14
-# (10000, 5000)
-# Read contiguous: 0.09
-#### /Slow as hell
-# For not trading with flexibility, we will need to compactify...
-####

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from flydata.strawlab.experiments import load_freeflight_trajectories
-from flydata.example_analyses.dcn.dcn_data import ROTATION_CONDITION
+from flydata.example_analyses.dcn.dcn_data import ROTATION_CONDITION, load_lisa_dcn_experiments
 
 
 if __name__ == '__main__':
@@ -37,6 +37,12 @@ if __name__ == '__main__':
     #
     def correlatepd(df, stimulus_name, response_name, shift=0):
         return df[response_name].shift(shift).corr(df[stimulus_name])
+
+    def _correlate(df, cola, colb, shift=0):
+        # cola = rr
+        # bolb = dtheta
+        return df[cola].shift(shift).corr(df[colb])
+
 
     # This is how you do the same thing in numpy, simple-minded
     # (no taking care of minimum number of observations, missings...)
@@ -69,8 +75,8 @@ if __name__ == '__main__':
             raise Exception('The stimuli and reaction have not the same number of measurements (%d != %d)' %
                             (len(stimulus), len(response)))
         if latency:  # TODO Look at lag transformation in RAMP
-            stimulus = stimulus[0:-latency]
             response = response[latency:]
+            stimulus = stimulus[:len(response)]
         # Missing values
         s_nan = np.isnan(stimulus)
         r_nan = np.isnan(response)
@@ -89,8 +95,8 @@ if __name__ == '__main__':
         df.fillna(method='bfill', inplace=True)
 
     # Let's compute 'lagged' correlations in different ways
-    UUIDS = ('4f47591af62e11e39f586c626d3a008a',)
-    # UUIDS = ('6ddf495e5dcd11e385a06c626d3a008a',)
+    # UUIDS = ('4f47591af62e11e39f586c626d3a008a',)
+    UUIDS = ('6ddf495e5dcd11e385a06c626d3a008a',)
     # ATO_TNTin
     # ('44c804fc60ed11e3946c6c626d3a008a',)
     # ('6ddf495e5dcd11e385a06c626d3a008a',)
@@ -106,8 +112,8 @@ if __name__ == '__main__':
 
         start = time()
         print 'Loading trajectories...'
-        trajs = load_freeflight_trajectories(uuids=UUIDS,
-                                             with_conditions=(ROTATION_CONDITION,))
+        trajs = [traj for traj in load_lisa_dcn_experiments(uuids=UUIDS)[0].trajs()
+                 if traj.condition() == ROTATION_CONDITION]
         print '\tThere are %d trajectories (loaded in %.2f seconds)' % (len(trajs), time() - start)
 
         correlations_at_lag = defaultdict(list)  # Store the features
@@ -154,17 +160,17 @@ if __name__ == '__main__':
                second_half.mean(), features[col].std())
 
     # Let's do a plot ala analysis-web-server...
-    pd1 = [features['corrpd_dtheta_rr_lag=%d' % lag].mean(axis=1) for lag in LAGS]
-    pd2 = [features['corrpd_rr_dtheta_lag=%d' % lag].mean(axis=1) for lag in LAGS]
+    pd1 = [features['corrpd_rr_dtheta_lag=%d' % lag].mean(axis=1) for lag in LAGS]
+    # pd2 = [features['corrpd_rr_dtheta_lag=%d' % lag].mean(axis=1) for lag in LAGS]
     fd1 = [features['corrfd_dtheta_rr_lag=%d' % lag].mean(axis=1) for lag in LAGS]
-    fd2 = [features['corrfd_rr_dtheta_lag=%d' % lag].mean(axis=1) for lag in LAGS]
+    # fd2 = [features['corrfd_rr_dtheta_lag=%d' % lag].mean(axis=1) for lag in LAGS]
 
-    plt.plot(LAGS, np.array([pd1, pd2, fd1, fd2]).T)
-    plt.legend(('pr-fs-pd',   # correlate present-response with future-stimulus, via pandas
-                'ps-fr-pd',   # correlate present-stimulus with future-response, via pandas
-                'pr-fs-fd',   # correlate present-response with future-stimulus, via flydata
-                'ps-fr-fd'),  # correlate present-stimulus with future-response, via flydata
-               loc='best')
+    plt.plot(LAGS, np.array([fd1]).T)  # pd2, fd1,
+    # plt.legend(('pr-fs-pd',   # correlate present-response with future-stimulus, via pandas
+    #             'ps-fr-pd',   # correlate present-stimulus with future-response, via pandas
+    #             'pr-fs-fd',   # correlate present-response with future-stimulus, via flydata
+    #             'ps-fr-fd'),  # correlate present-stimulus with future-response, via flydata
+    #            loc='best')
     plt.xlabel('lag (frames)')
     plt.ylabel('Pearson correlation')
     plt.title('dtheta vs rotation-rate vs dtheta')
