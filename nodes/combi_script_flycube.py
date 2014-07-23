@@ -93,13 +93,13 @@ COOL_CONDITIONS = set()
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","model_x","model_y","model_z","model_filename")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusCylinder')
+            'StimulusCylinderAndModel')
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -109,6 +109,9 @@ class Node(object):
         self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
+
+        self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
+        self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
@@ -185,10 +188,10 @@ class Node(object):
         self.drop_lock_on()
 
         try:
-            img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
+            img,svg,p,rad,advance,v_gain,perturb_or_post_desc = self.condition.split('/')
         except ValueError:
             #no perturbation defined
-            perturb_desc = None
+            perturb_or_post_desc = None
             img,svg,p,rad,advance,v_gain = self.condition.split('/')
 
         self.img_fn = str(img)
@@ -200,8 +203,8 @@ class Node(object):
 
         self.log.cyl_r = self.rad_locked
 
-        #default to no perturb
-        self.perturber = sfe_perturb.NoPerturb()
+        #HACK
+        self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
 
         self.svg_fn = ''
         ssvg = str(svg)
@@ -210,10 +213,37 @@ class Node(object):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
+        #default to no perturb
+        self.perturber = sfe_perturb.NoPerturb()
+
+        #default to no conflict
+        model_filename = '/dev/null'
+        model_x = model_y = model_z = INVALID_VALUE
+
+        #try and get details of the conflict post
+        if ".osg" in perturb_or_post_desc:
+            model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
+        #and the perturber
+        elif perturb_or_post_desc is not None:
             self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
 
-        #HACK
-        self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
+        #set the model in all cases
+        self.model_filename = str(model_filename)
+        self.model_x = float(model_x)
+        self.model_y = float(model_y)
+        self.model_z = float(model_z)
+
+        msg = Pose()
+        msg.position.x = self.model_x
+        msg.position.y = self.model_y
+        msg.position.z = self.model_z
+        msg.orientation.w = 1.0
+        self.pub_model_centre.publish(msg)
+
+        self.log.model_filename = self.model_filename
+        self.log.model_x = self.model_x
+        self.log.model_y = self.model_y
+        self.log.model_z = self.model_z
 
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
