@@ -1,6 +1,6 @@
 import numpy as np
 
-SHRINK_FACTOR = 1.0
+SHRINK_FACTOR = 0.3
 
 N = 100
 pi = np.pi
@@ -41,7 +41,7 @@ if 1:
 
         print "wrote", filename
 
-if 0:
+if 1:
     import matplotlib.pyplot as plt
 
     ax1=plt.subplot(2,1,1,polar=True)
