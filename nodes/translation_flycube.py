@@ -68,9 +68,9 @@ TAU= 2*PI
 MAX_ROTATION_RATE = 3
 
 #CONDITION =  svg_path(if omitted target = 0,0)/
-#             gain/
-#             advance_threshold(m)/
-#             z_gain/
+#             gain/ ..."force" to direct fly on the svg_path (speed of the stars passing)
+#             advance_threshold(m)/ ...determins the point on the svg_path where the fly should go. a low value sets it close to the fly, a high value sets it farther away
+#             z_gain/ ..."force" to direct fly to the target z level (param below z_target) @john: could we include it here?
 #             star_size
 #
 CONDITIONS = [

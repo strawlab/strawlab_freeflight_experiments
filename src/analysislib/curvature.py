@@ -295,7 +295,7 @@ def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, c
 def _correlate(df, cola, colb, shift=0):
     return df[cola].shift(shift).corr(df[colb])
 
-def plot_correlation_analysis(args, combine, correlations, correlation_options):
+def plot_correlation_analysis(args, combine, correlations, correlation_options, conditions=None):
     results,dt = combine.get_results()
     fname = combine.fname
 
@@ -317,6 +317,8 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options):
             ax = fig.gca()
 
             for i,(_current_condition,r) in enumerate(results.iteritems()):
+                if conditions is not None and _current_condition not in conditions:
+                    continue
                 if not r['count']:
                     continue
 
