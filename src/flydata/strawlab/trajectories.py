@@ -27,10 +27,17 @@ class FreeflightTrajectory(object):
         (uuid, genotype, experimental setup, researcher...)
     oid: int
         the object-id associated to this trajectory within the scope of the experiment
+        this comes from flydra world, where a trajectory can span several trials
+        together with start_frame, this is a unique identifier of a trial within the experiment
     start_frame: int
-        the frame number of the first measurement of a trajectory
+        the frame number of the first measurement of the trial
+        together with oid, this is a unique identifier of a trial within the experiment
+    frames_before: int, default 0
+        how many frames in the time series data correspond to measurements before the tracking start
+        * TODO: get rid of this, make it instead a different dataframe *
     start_time: int
-        unix timestamp (UTC) for the first measurement of the trajectory (i.e. when tracking started)
+        unix timestamp (UTC) for the first measurement of the trial
+        (will correspond to when tracking started only if frames_before is zero)
     condition: string
         the string identifying the stimulus
     series: dataframe

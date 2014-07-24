@@ -1,9 +1,15 @@
 # coding=utf-8
 import pandas as pd
 import numpy as np
+from flydata.features.common import FeatureExtractor
 from flydata.strawlab.trajectories import FreeflightTrajectory
 from oscail.common.config import Configurable
 from pandas import DataFrame
+
+
+##################################
+# (lagged) Pearson correlations
+##################################
 
 
 def correlatepd(df, stimulus_name, response_name, lag=0):
@@ -46,7 +52,7 @@ def stimuli_reaction_correlation(stimulus, response, min_num_measurements=2, lat
     return correlation
 
 
-class LaggedCorrelation(Configurable):
+class LaggedCorrelation(FeatureExtractor):
 
     def __init__(self, lag=0, stimulus='rotation_rate', response='dtheta'):
         super(LaggedCorrelation, self).__init__()
@@ -54,19 +60,13 @@ class LaggedCorrelation(Configurable):
         self.stimulus = stimulus
         self.response = response
 
-    def fnames(self):
-        return [self.configuration().id()]
+    def _compute_from_df(self, df):
+        return correlatepd(df, self.stimulus, self.response, lag=self.lag)
 
-    def compute_one(self, x):
-        if isinstance(x, FreeflightTrajectory):
-            x = x.series()
-        if not isinstance(x, DataFrame):
-            raise Exception('We are expecting a pandas Data')
-        return correlatepd(x, self.stimulus, self.response, lag=self.lag)
 
-    def compute(self, X):
-        return np.array([self.compute_one(x) for x in X])
-
+##################################
+# Rolling-window correlations
+##################################
 
 def rolling_correlation(df, response='dtheta', stimulus='rotation_rate', window=40, min_periods=None):
     """Computes the (dimensionless) rolling correlation of a response-measure series with an stimulus-measure series.

@@ -325,12 +325,13 @@ class FreeflightAnalysisFiles(Configurable):
 
         Here:
           - condition is the condition string
-          - x0, y0 are the coordinates of the first tracked position
-            (that is, df['x'][0] and df['y'][0])
+          - x0, y0 are the coordinates of the first tracked position during the trial
+            they might not correspond to the beginning of the df if frames_before is > 0
           - oid is the object id of the trajectory
-            (warning it might not be unique after last John's postprocessing changes)
-          - framenumber0 is the starting frame number
-          - time0 is the timestamp of the first measurement
+            together with framenumber0 is a unique identifier for the trial
+            there can be several combinations of (oid, framenumber0) for the same oid
+          - framenumber0 is the starting frame number of the *trial*
+          - time0 is the timestamp of the first measurement of the *trial*
           - df is a pandas dataframe containing the time series
             (x, y, z, and possibly stimulus and derived quantities series)
             It can be 0-based-indexed (starting from zero) or timestamp-indexed.

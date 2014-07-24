@@ -1,33 +1,14 @@
 # coding=utf-8
 from itertools import chain
-from pandas.util.testing import DataFrame
-from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_experiments, ATO_TNTE, ATO_TNTin
-from flydata.features.correlations import LaggedCorrelation
-from flydata.strawlab.trajectories import FreeflightTrajectory
-from oscail.common.config import Configurable
 import os.path as op
-import numpy as np
+
 import pandas as pd
+
+from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_experiments, ATO_TNTE, ATO_TNTin
+from flydata.features.common import Length
+from flydata.features.correlations import LaggedCorrelation
+
 # Let's compute some features, put them in a matrix, get the "target", build a model, do NHST...
-
-
-class Length(Configurable):
-    def __init__(self, column='x'):
-        super(Length, self).__init__()
-        self.column = column
-
-    def fnames(self):
-        return [self.configuration().id()]
-
-    def compute_one(self, x):
-        if isinstance(x, FreeflightTrajectory):
-            x = x.series()
-        if not isinstance(x, DataFrame):
-            raise Exception('We are expecting a pandas Data')
-        return len(x[self.column])
-
-    def compute(self, X):
-        return np.array(map(self.compute_one, X))
 
 
 if __name__ == '__main__':
