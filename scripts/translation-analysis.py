@@ -69,22 +69,22 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-    correlations = (('stim_x','vx'),)#('stim_z','vz'))
-    histograms = ("velocity","dtheta","stim_x","vx")
+    correlations = (('stim_x','vx'),('stim_y','vy'))
+    histograms = ("velocity","dtheta","stim_x","stim_y","stim_z","vx","vy","vz")
     correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
                            "latencies":range(0,150,5),
                            "latencies_to_plot":(0,5,10,15,25,50,75,100,125),
     }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True},
-                         "range":{"velocity":(0,1),
+                         "range":{"velocity":(0,0.3),
                                   "dtheta":(-20,20),
                                   "stim_x":(-2,2),
                                   "stim_y":(-2,2),
                                   "stim_z":(-2,2),
-                                  "vx":(-1,1),
-                                  "vy":(-1,1),
-                                  "vz":(-1,1)},
+                                  "vx":(-0.3,0.3),
+                                  "vy":(-0.3,0.3),
+                                  "vz":(-0.3,0.3)},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)"},
     }
