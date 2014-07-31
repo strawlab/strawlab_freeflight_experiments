@@ -2,9 +2,6 @@
 import pandas as pd
 import numpy as np
 from flydata.features.common import FeatureExtractor
-from flydata.strawlab.trajectories import FreeflightTrajectory
-from oscail.common.config import Configurable
-from pandas import DataFrame
 
 
 ##################################
@@ -62,6 +59,7 @@ class LaggedCorrelation(FeatureExtractor):
 
     def _compute_from_df(self, df):
         return correlatepd(df, self.stimulus, self.response, lag=self.lag)
+
 
 
 ##################################
