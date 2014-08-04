@@ -1,6 +1,8 @@
 # coding=utf-8
 """Experiment ID, string condition manipulation and genotype condition manipulation from the DCN experiments."""
 from itertools import chain
+from subprocess import check_call
+from joblib import cpu_count, Parallel, delayed
 from flydata.strawlab.experiments import FreeflightExperiment
 from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
@@ -321,7 +323,55 @@ def normalize_genotype_string(genotype):
 
 
 #################
-# Data loading and normalization
+# Initial data combination and filtering
+#################
+
+def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost1.46/'
+                                            'strawlab_freeflight_experiments/'
+                                            'scripts/'
+                                            'conflict-analysis.py',
+                            uuids=DCN_UUIDs,
+                            arenas='flycave',
+                            zfilt_min=0.1,
+                            zfilt_max=0.9,
+                            rfilt_max=0.42,
+                            lenfilt=1,
+                            outdir=None,
+                            run=False,
+                            n_jobs=None):
+    """Generate commands to combine&analyse scripts, optionally running them."""
+    # FIXME: handle overwrite by deleting, if not handled by
+    commands = []
+    if isinstance(uuids, basestring):
+        uuids = [uuids]
+    if isinstance(arenas, basestring):
+        arenas = [arenas] * len(uuids)
+    if len(arenas) != len(uuids):
+        raise Exception('There should be the same number of arenas as of uuids (%d != %d)' %
+                        (len(arenas), len(uuids)))
+    for arena, uuid in zip(arenas, uuids):
+        commands.append('%s ' % analysis_script +
+                        '--uuid %s ' % uuid +
+                        '--arena %s' % arena +
+                        '--zfilt trim '
+                        '--zfilt-max %g ' % zfilt_max +
+                        '--zfilt-min %g ' % zfilt_min +
+                        '--rfilt trim '
+                        '--rfilt-max %g ' % rfilt_max +
+                        '--lenfilt %g ' % lenfilt +
+                        ('--outdir %s ' % outdir if outdir is not None else ''))
+
+    print 'Commands:\n%s' % '\n'.join(commands)
+
+    if run:
+        if n_jobs is None:
+            n_jobs = cpu_count()
+        print 'Running...'
+        Parallel(n_jobs=n_jobs)(delayed(check_call)(cl, shell=True) for cl in commands)
+
+
+#################
+# Data loading and strings normalization
 #################
 
 def load_lisa_dcn_experiments(uuids):
@@ -342,3 +392,14 @@ def load_lisa_dcn_experiments(uuids):
                                  md_transformers={'genotype': normalize_genotype_string},
                                  traj_transformers={'condition': normalize_condition_string})
             for uuid in uuids]
+
+
+def load_lisa_dcn_trajectories(uuids):
+    experiments = load_lisa_dcn_experiments(uuids)
+    return list(chain(*[exp.trajectories() for exp in experiments]))
+
+if __name__ == '__main__':
+    import argh
+    parser = argh.ArghParser()
+    parser.add_commands([recombine_csv_with_hdf5()])
+    parser.dispatch()
