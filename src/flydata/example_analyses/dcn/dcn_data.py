@@ -401,5 +401,7 @@ def load_lisa_dcn_trajectories(uuids):
 if __name__ == '__main__':
     import argh
     parser = argh.ArghParser()
-    parser.add_commands([recombine_csv_with_hdf5()])
+    parser.add_commands([
+        recombine_csv_with_hdf5
+    ])
     parser.dispatch()
