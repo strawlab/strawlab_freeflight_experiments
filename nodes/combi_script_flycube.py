@@ -25,11 +25,12 @@ import strawlab_freeflight_experiments.replay as sfe_replay
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 from strawlab_freeflight_experiments.topics import *
+from strawlab_freeflight_experiments import INVALID_VALUE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 0.5*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -77,12 +78,12 @@ MAX_ROTATION_RATE = 3
 #             perturbation_descriptor"
                             
 CONDITIONS = [
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/posts3.osg|-0.1|0.1|0.0",
               "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",             
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
-#             "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
-#             "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
+#              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 ]
 
 START_CONDITION = CONDITIONS[0]
@@ -187,6 +188,15 @@ class Node(object):
 
         self.drop_lock_on()
 
+
+        #default to no perturb
+        self.perturber = sfe_perturb.NoPerturb()
+       
+        #default to no conflict
+        model_filename = '/dev/null'
+        model_x = model_y = model_z = INVALID_VALUE
+
+
         try:
             img,svg,p,rad,advance,v_gain,perturb_or_post_desc = self.condition.split('/')
         except ValueError:
@@ -213,19 +223,16 @@ class Node(object):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-        #default to no perturb
-        self.perturber = sfe_perturb.NoPerturb()
-
-        #default to no conflict
-        model_filename = '/dev/null'
-        model_x = model_y = model_z = INVALID_VALUE
 
         #try and get details of the conflict post
         if ".osg" in perturb_or_post_desc:
             model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
         #and the perturber
         elif perturb_or_post_desc is not None:
-            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
+            self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc)
+
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        rospy.loginfo('perturbation: %r' % self.perturber)
 
         #set the model in all cases
         self.model_filename = str(model_filename)
@@ -245,8 +252,7 @@ class Node(object):
         self.log.model_y = self.model_y
         self.log.model_z = self.model_z
 
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
-        rospy.loginfo('perturbation: %r' % self.perturber)
+
 
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
