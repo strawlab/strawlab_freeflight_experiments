@@ -53,6 +53,9 @@ public:
         if( !_ptcls.valid() )
             return;
 
+        if( !_fs.valid() )
+            return;
+
         if( !_timer.valid() )
         {
             _timer = new osgCuda::Timer;
