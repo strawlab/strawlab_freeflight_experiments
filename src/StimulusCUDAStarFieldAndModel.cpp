@@ -92,10 +92,6 @@ public:
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
-    bool isFirstFrame() {
-        return _firstFrame;
-    }
-
 private:
     osg::ref_ptr<osgCuda::Timer>        _timer;
     double                              _lastTime;
@@ -204,15 +200,11 @@ public:
          dynamic_cast<particleDataType*> (node->getUserData() );
       if(particleData)
       {
-          //particleData->updateTurretRotation();
-          //particleData->updateGunElevation();
           if( osgCompute::GLMemory::getContext() == NULL || osgCompute::GLMemory::getContext()->getState() == NULL ) {
               return;
           }
 
-          if ( !particleData->_move->isFirstFrame() ) {
-              particleData->_move->setFrameStamp( nv->getFrameStamp() );
-          }
+          particleData->_move->setFrameStamp( nv->getFrameStamp() );
 
           particleData->_emit->launch();
           particleData->_move->launch();
