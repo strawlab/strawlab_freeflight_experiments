@@ -403,7 +403,7 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
     root = json_loads(json_message.c_str(), 0, &error);
 
-    if (root != NULL) {
+    if (root == NULL) {
         std::ostringstream errstream;
         errstream << "ERROR: could not load JSON message \"" << json_message << "\" to topic \"" << topic_name << "\".";
         std::string errmsg = errstream.str();
