@@ -67,18 +67,19 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 3
 
-#CONDITION =  svg_path(if omitted target = 0,0)/
-#             gain/ ..."force" to direct fly on the svg_path (speed of the stars passing)
-#             advance_threshold(m)/ ...determins the point on the svg_path where the fly should go. a low value sets it close to the fly, a high value sets it farther away
-#             z_gain/ ..."force" to direct fly to the target z level (param below z_target) @john: could we include it here?
+#CONDITIONS = svg_path (if omitted target = 0,0)
+#             gain (speed which "forces" the fly to follow the svg_path)
+#             advance_threshold (m) (minimal distance between the fly and the point on the svg_path where the fly should go)
+#             z_gain (speed which "forces" the fly to reach the z_target altitude
 #             star_size
-#
+#             z_target
+
 CONDITIONS = [
-              "infinity.svg/+5.0/0.1/+5.0/10.0",
-              "infinity.svg/+5.0/0.1/+5.0/20.0",
-              "infinity.svg/+5.0/0.1/+5.0/30.0",
-              "infinity.svg/+5.0/0.1/+5.0/40.0",
+              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.22",
+              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.15",
+              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.10",
 ]
+
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
@@ -172,11 +173,11 @@ class Node(object):
 
         self.drop_lock_on()
 
-        svg,p,advance,v_gain,star_size = self.condition.split('/')
+        svg,p,advance,v_gain,star_size,z_target = self.condition.split('/')
         self.p_const = float(p)
         self.v_gain = float(v_gain)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
+        self.z_target = float(z_target)
 
         if str(svg):
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
