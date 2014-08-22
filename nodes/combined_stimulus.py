@@ -83,7 +83,7 @@ CONDITIONS = [
               "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.1|-0.1|0.0",
     #          "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/post3.osg|-0.0|0.0|0.2",
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.20/",             
-              "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.20/",
+              "gray.png/infinity07.svg/+0.3/-10.combined_stimulus.py0/0.1/0.20/",
 #              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
 #              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 ]
@@ -526,7 +526,7 @@ class Node(object):
         self.update()
 
 def main():
-    rospy.init_node("perturbation")
+    rospy.init_node("combined_stimulus")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
