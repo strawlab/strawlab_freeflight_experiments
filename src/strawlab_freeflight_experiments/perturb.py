@@ -471,7 +471,7 @@ class PerturberMultiTone(_PerturberInterpolation):
         _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
 
     def __repr__(self):
-        return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.what,self.method,self.value,self.duration,self.tone0,self.Ntones)
+        return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
 
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
@@ -515,7 +515,7 @@ if __name__ == "__main__":
         obj.plot(ax, t_extra=0.5)
         ax.set_title(str(obj))
         ax.set_xlabel('t (s)')
-        ax.set_ylabel('wide-field motion')
+        ax.set_ylabel(str(obj.what))
         ax = plt.subplot2grid((2,2),(1,0))
         plot_spectum(ax, obj)
         ax = plt.subplot2grid((2,2),(1,1))
