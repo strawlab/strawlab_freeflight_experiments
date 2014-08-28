@@ -28,7 +28,7 @@ from strawlab_freeflight_experiments.topics import *
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 15*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 10*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0   #### ????? ####
 
@@ -41,7 +41,7 @@ X_MAX =  0.15
 Y_MIN = -0.15
 Y_MAX =  0.15
 Z_MIN =  -0.10
-Z_MAX =  0.03
+Z_MAX =  0.01
 
 
 

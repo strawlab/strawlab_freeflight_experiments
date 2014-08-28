@@ -78,7 +78,7 @@ if __name__=='__main__':
     }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True},
-                         "range":{"velocity":(0,0.3),
+                         "range":{"velocity":(0,0.15),
                                   "dtheta":(-20,20),
                                   "stim_x":(-2,2),
                                   "stim_y":(-2,2),

@@ -40,8 +40,8 @@ START_ZDIST     = 0.08
 START_Z         = 0.0
 
 # z range for fly tracking (dropped outside)
-Z_MINIMUM = -0.9
-Z_MAXIMUM = 0.95
+Z_MINIMUM = -0.10
+Z_MAXIMUM = 0.01
 
 GRAY_FN = "gray.png"
 
@@ -73,9 +73,11 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.4/-10.0/0.05/0.50",
-              "checkerboard16.png/infinity05.svg/+0.4/-10.0/0.1/0.50",
-              "checkerboard16.png/infinity05.svg/+0.0/-10.0/0.05/0.00",
+              "checkerboard16.png/infinity03.svg/+0.4/-10.0/0.05/0.50",
+              "checkerboard16.png/infinity03.svg/+0.6/-10.0/0.05/0.50",
+                "checkerboard16.png/infinity03.svg/+0.6/+10.0/0.05/0.50",
+                "checkerboard16.png/infinity03.svg/+0.6/-5.0/0.05/0.50",
+              "checkerboard16.png/infinity03.svg/+0.0/-10.0/0.05/0.00",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
