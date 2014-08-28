@@ -32,16 +32,16 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 5.0
-FLY_DIST_MIN_DIST   = 0.2
+FLY_DIST_CHECK_TIME = 1
+FLY_DIST_MIN_DIST   = 0.001
 
-START_RADIUS    = 0.35
-START_ZDIST     = 0.4
-START_Z         = 0.5
+START_RADIUS    = 0.2
+START_ZDIST     = 0.08
+START_Z         = 0.0
 
 # z range for fly tracking (dropped outside)
-Z_MINIMUM = 0.00
-Z_MAXIMUM = 0.95
+Z_MINIMUM = -0.10
+Z_MAXIMUM = 0.01
 
 GRAY_FN = "gray.png"
 
@@ -73,14 +73,14 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
-              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/+0.2/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/-10.0/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/-5.0/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/-2.0/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/-1.0/0.1/0.20",
+#              "checkerboard16.png/infinity03.svg/+0.3/-0.5/0.1/0.20",
+              "checkerboard16.png/infinity03.svg/+0.3/-10.0/0.05/0.00",
+              "gray.png/infinity03.svg/+0.3/-10.0/0.1/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
