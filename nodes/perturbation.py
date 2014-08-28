@@ -29,7 +29,7 @@ from strawlab_freeflight_experiments.topics import *
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 10    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -75,15 +75,16 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
-#              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+              #"checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
+              	"checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+ 		#"checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		# "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		# "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		# "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		# "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		#"checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+		# "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
+		"gray.png/infinity.svg/+0.3/-10.0/0.1/0.20"
 ]
 
 START_CONDITION = CONDITIONS[0]
