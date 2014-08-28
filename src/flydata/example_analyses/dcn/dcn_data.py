@@ -341,6 +341,7 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
                             n_jobs=None):
     """Generate commands to combine&analyse scripts, optionally running them."""
     # FIXME: handle overwrite by deleting, if not handled by
+    import os.path as op
     commands = []
     if isinstance(uuids, basestring):
         uuids = [uuids]
@@ -350,16 +351,18 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
         raise Exception('There should be the same number of arenas as of uuids (%d != %d)' %
                         (len(arenas), len(uuids)))
     for arena, uuid in zip(arenas, uuids):
+        outdir_uuid = '' if outdir is None else op.join(outdir, uuid)
         commands.append('%s ' % analysis_script +
                         '--uuid %s ' % uuid +
-                        '--arena %s' % arena +
+                        '--arena %s ' % arena +
                         '--zfilt trim '
                         '--zfilt-max %g ' % zfilt_max +
                         '--zfilt-min %g ' % zfilt_min +
                         '--rfilt trim '
                         '--rfilt-max %g ' % rfilt_max +
                         '--lenfilt %g ' % lenfilt +
-                        ('--outdir %s ' % outdir if outdir is not None else ''))
+                        '--outdir %s ' % outdir_uuid +
+                        '&>~/combine-%s.log' % uuid)
 
     print 'Commands:\n%s' % '\n'.join(commands)
 
@@ -368,6 +371,10 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
             n_jobs = cpu_count()
         print 'Running...'
         Parallel(n_jobs=n_jobs)(delayed(check_call)(cl, shell=True) for cl in commands)
+
+# recombine_csv_with_hdf5(analysis_script='/home/santi/Proyectos/imp/'
+#                                         'software/strawlab_freeflight_experiments/scripts/conflict-analysis.py',
+#                         outdir='/mnt/strawscience/santi/dcn-freeflight/00-recombined')
 
 
 #################
