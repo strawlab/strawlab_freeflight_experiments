@@ -1,6 +1,6 @@
 import numpy as np
 
-SHRINK_FACTOR = 0.3
+SHRINK_FACTOR = 0.4
 
 N = 100
 pi = np.pi
