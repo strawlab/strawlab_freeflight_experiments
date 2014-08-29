@@ -6,6 +6,8 @@
 
 #include "calculateInput.h"
 
+#include "calc_pathAndDer.h"
+
 #include "helpfunctions.h"
 #include "sys_cost_fct.h"
 
@@ -17,7 +19,7 @@ projGrState_t * contr_new_state() {
     return calloc(1, sizeof(projGrState_t));
 }
 
-void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState) { 
+void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint) { 
     /* arguments: 
      *  Jout: current value of the cost functional, length 1
      *  wout: current input to the auxiliary system describing the evolution
@@ -35,6 +37,11 @@ void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, 
      *            statusEKF[1] cannot be used for that as the first normal run
      *            of the EKF occurs possibly after this function is called the first time
 	 *  cInpState: struct holding several status information of the function calculating the input value
+	 *  targetPoint: array holding the x- and y-coordinates of the point on the desired path to which the 
+	 * 			  MPC wants to steer the system, in fact it is the point on the desired path corresponding 
+	 *            to the first value of the path parameter in the optimization horizon, this 
+	 *            value is always assigned and returned, whether or not the controller is actually 
+	 *            enabled, length 2
      */
 	 
 	 double vnext[2];
@@ -46,10 +53,16 @@ void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, 
      double *xest = ekfState->xest;
      double *statusEKF = ekfState->status;
 	 
+	 double pathDerDummy[2], pathDerDerDummy[2];
+	 
 	 Jout[0] = -1.0; // default-value
 	 wout[0] = -1.0; // default-value
      thetaout[0] = 0.0; // default-value
     
+	// theta[0] gives the first value (initial value) of the path parameter in the optimization horizon
+	// -> calculate coordinates of the desired path according to that value
+	pathAndDer (targetPoint, pathDerDummy, pathDerDerDummy, theta[0], cp->a, cp->b, cp->delta, cp->xme, cp->yme);
+	
    	
 	if ((enable >= 1) && (projGrState->status[0] > 0.5) && (statusEKF[0] > 0.5) && (enableEKF >= 1)) {
 		// controller has already been resetted at least once and currently it is enabled
@@ -65,6 +78,11 @@ void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, 
         xt[5] = theta[0];
 
         perform_gradStep (vnext, Jout, cp, projGrState, xt);
+		
+		// Copy input trajectory
+		for (i=0;i<(cp->Nu)*(cp->Nhor);i++) {
+			projGrState->finalInput[i] = projGrState->u[i];
+		}
 
         // Tell function which calculates the values of the input that a 
         // new input trajectory has been calculated
@@ -129,6 +147,11 @@ void initProjGradMethod (projGrState_t *projGrState, contrp_t *cp) {
     for (i=0;i<=cp->Nhor-1;i++)
 	for (j=0;j<=(cp->Nu-1);j++)
 	    projGrState->u[j+i*cp->Nu] = cp->u0[j+i*(cp->Nu)];
+		
+	// final input trajectory
+	for (i=0;i<(cp->Nu)*(cp->Nhor);i++) {
+		projGrState->finalInput[i] = 0.0;
+	}
 		
 	(projGrState->theta)[0] = cp->theta0;
     
@@ -518,6 +541,8 @@ const double *get_proj_input(contrp_t *cp, projGrState_t *projGrState, int *n, i
     return projGrState->u;
 }
 
-
-
+const double *get_path(contrp_t *cp, int *num) {
+    *num = cp->NdesPath;
+    return cp->desiredPath;
+}
 
