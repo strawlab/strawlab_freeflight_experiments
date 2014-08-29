@@ -448,6 +448,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                                       bins=100,
                                       normed=histogram_options['normed'].get(h,True),
                                       range=histogram_options['range'].get(h),
+                                      log=histogram_options.get('ylogscale',{h:False}).get(h,False),
                                       histtype='step', alpha=0.75, label=current_condition
                 )
             ax.legend(
