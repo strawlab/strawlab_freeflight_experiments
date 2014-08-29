@@ -6,16 +6,19 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from std_msgs.msg import String, UInt32, Bool
-from geometry_msgs.msg import Vector3, Polygon, Point
+from geometry_msgs.msg import Vector3, Polygon, Point, Point32
 
 import flyflypath.model
 import flyflypath.view
+import flyflypath.transform
 from flyflypath.euclid import Point2, LineSegment2
 
 from gi.repository import Gtk, Gdk, GLib, GObject
 
 GObject.threads_init()
 Gdk.threads_init()
+
+XFORM = flyflypath.transform.SVGTransform()
 
 class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
     def __init__(self):
@@ -25,6 +28,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._trg = None
         self._active = False
         self._area = []
+        self._path = []
 
         t = threading.Thread(target=rospy.spin).start()
         self._lock = threading.Lock()
@@ -50,14 +54,41 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         rospy.Subscriber("trigger_area",
                          Polygon,
                          self._on_trigger_area)
+        rospy.Subscriber("path",
+                         Polygon,
+                         self._on_path)
+
+        #all in meters
+        rospy.Subscriber("source_m",
+                         Vector3,
+                         lambda msg: self._on_source_move(self._to_m_vec3(msg)))
+        rospy.Subscriber("target_m",
+                         Vector3,
+                         lambda msg: self._on_target_move(self._to_m_vec3(msg)))
+        rospy.Subscriber("trigger_area_m",
+                         Polygon,
+                         lambda msg: self._on_trigger_area(self._to_m_polygon(msg)))
+        rospy.Subscriber("path_m",
+                         Polygon,
+                         lambda msg: self._on_path(self._to_m_polygon(msg)))
+
 
         self._w.show_all()
 
         GLib.timeout_add(1000/20, self.redraw)
 
+    def _to_m_vec3(self, msg):
+        return Vector3(*XFORM.xyz_to_pxpypz(msg.x,msg.y,msg.z))
+
+    def _to_m_polygon(self, msg):
+        return Polygon(points=[Point32(*XFORM.xyz_to_pxpypz(p.x,p.y,p.z)) for p in msg.points])
+
     def _quit(self, *args):
         rospy.signal_shutdown("quit")
         Gtk.main_quit()
+
+    def _on_path(self, msg):
+        self._path = tuple(Point2(p.x,p.y) for p in msg.points)
 
     def _on_trigger_area(self, msg):
         self._area = tuple(Point2(p.x,p.y) for p in msg.points)
