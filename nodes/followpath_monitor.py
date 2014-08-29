@@ -6,7 +6,7 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
 from std_msgs.msg import String, UInt32, Bool
-from geometry_msgs.msg import Vector3, PoseArray, Point
+from geometry_msgs.msg import Vector3, Polygon, Point
 
 import flyflypath.model
 import flyflypath.view
@@ -33,6 +33,11 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         self._w.connect("delete-event", self._quit)
         self._w.add(self)
 
+        rospy.Subscriber("active",
+                         Bool,
+                         self._on_active)
+
+        #all in pixels
         rospy.Subscriber("svg_filename",
                          String,
                          self._on_svg_filename)
@@ -42,11 +47,8 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         rospy.Subscriber("target",
                          Vector3,
                          self._on_target_move)
-        rospy.Subscriber("active",
-                         Bool,
-                         self._on_active)
         rospy.Subscriber("trigger_area",
-                         PoseArray,
+                         Polygon,
                          self._on_trigger_area)
 
         self._w.show_all()
@@ -58,7 +60,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         Gtk.main_quit()
 
     def _on_trigger_area(self, msg):
-        self._area = [Point2(p.position.x,p.position.y) for p in msg.poses]
+        self._area = tuple(Point2(p.x,p.y) for p in msg.points)
 
     def _on_svg_filename(self, msg):
         with self._lock:
@@ -90,9 +92,10 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
             trg_pt = self._trg
         if self._src is not None and self._trg is not None:
             try:
-                vecs.append( LineSegment2(
+                vecs.append( (LineSegment2(
                                 Point2(self._src.x,self._src.y),
-                                Point2(self._trg.x,self._trg.y))
+                                Point2(self._trg.x,self._trg.y)),
+                             (1,0,0))
                 )
             except AttributeError:
                 #zero length line
@@ -102,7 +105,7 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
         if self._active:
             pts.append( (src_pt,(1,0,0)) )
 
-        return vecs,pts,tuple(self._area)
+        return vecs,pts,[(self._area,(0,0.35,0)), (self._path,(0,0,0))]
 
 if __name__ == "__main__":
     rospy.init_node("followpath_monitor")
