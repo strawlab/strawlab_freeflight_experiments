@@ -40,7 +40,7 @@ from strawlab_freeflight_experiments.topics import *
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5 #10.0*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 60*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0   #### ????? ####
 
@@ -74,7 +74,7 @@ Y_MAXIMUM = 0.18
 
 
 
-TIMEOUT             = 5
+TIMEOUT             = 1
 IMPOSSIBLE_OBJ_ID   = 0             #### ????? ####
 
 PI = np.pi
