@@ -2,10 +2,14 @@
 """Experiment ID, string condition manipulation and genotype condition manipulation from the DCN experiments."""
 from itertools import chain
 from subprocess import check_call
+import os.path as op
+
 from joblib import cpu_count, Parallel, delayed
+
 from flydata.strawlab.experiments import FreeflightExperiment
 from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
+
 
 #################
 # UUIDS
@@ -326,10 +330,7 @@ def normalize_genotype_string(genotype):
 # Initial data combination and filtering
 #################
 
-def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost1.46/'
-                                            'strawlab_freeflight_experiments/'
-                                            'scripts/'
-                                            'conflict-analysis.py',
+def recombine_csv_with_hdf5(analysis_script='straw-conflict',
                             uuids=DCN_UUIDs,
                             arenas='flycave',
                             zfilt_min=0.1,
@@ -340,9 +341,16 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
                             run=False,
                             n_jobs=None):
     """Generate commands to combine&analyse scripts, optionally running them."""
-    # FIXME: handle overwrite by deleting, if not handled by
-    import os.path as op
-    commands = []
+    # FIXME: handle overwrite by deleting, if not handled by John's code already
+    STRAW_ROOT = '/opt/ros/ros-flycave.electric.boost1.46/strawlab_freeflight_experiments/scripts/'
+    SANTI_ROOT = '~/Proyectos/imp/software/strawlab_freeflight_experiments/scripts/'
+    KNOWN_SCRIPTS = {
+        'straw-conflict': op.join(STRAW_ROOT, 'conflict-analysis.py'),
+        'santi-conflict': op.join(SANTI_ROOT, 'conflict-analysis.py')
+    }
+    other_analysis_script = KNOWN_SCRIPTS.get(analysis_script, None)
+    if not other_analysis_script is None:
+        analysis_script = other_analysis_script
     if isinstance(uuids, basestring):
         uuids = [uuids]
     if isinstance(arenas, basestring):
@@ -350,6 +358,7 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
     if len(arenas) != len(uuids):
         raise Exception('There should be the same number of arenas as of uuids (%d != %d)' %
                         (len(arenas), len(uuids)))
+    commands = []
     for arena, uuid in zip(arenas, uuids):
         outdir_uuid = '' if outdir is None else op.join(outdir, uuid)
         commands.append('%s ' % analysis_script +
@@ -371,10 +380,6 @@ def recombine_csv_with_hdf5(analysis_script='/opt/ros/ros-flycave.electric.boost
             n_jobs = cpu_count()
         print 'Running...'
         Parallel(n_jobs=n_jobs)(delayed(check_call)(cl, shell=True) for cl in commands)
-
-# recombine_csv_with_hdf5(analysis_script='/home/santi/Proyectos/imp/'
-#                                         'software/strawlab_freeflight_experiments/scripts/conflict-analysis.py',
-#                         outdir='/mnt/strawscience/santi/dcn-freeflight/00-recombined')
 
 
 #################
@@ -405,10 +410,21 @@ def load_lisa_dcn_trajectories(uuids):
     experiments = load_lisa_dcn_experiments(uuids)
     return list(chain(*[exp.trajectories() for exp in experiments]))
 
+
+def print_analysis_parameters():
+    print 'exp-date | analysis-date | analysis-cl'
+    for exp in load_lisa_dcn_experiments(DCN_UUIDs):
+        print '%s | %s | %s' % (
+            exp.md().start_asdatetime().strftime('%d %b %Y %X'),
+            exp.sfff().pkl_modification_datetime().strftime('%d %b %Y %X'),
+            exp.sfff().analysis_command_line())
+
+
 if __name__ == '__main__':
     import argh
     parser = argh.ArghParser()
     parser.add_commands([
-        recombine_csv_with_hdf5
+        recombine_csv_with_hdf5,
+        print_analysis_parameters
     ])
     parser.dispatch()

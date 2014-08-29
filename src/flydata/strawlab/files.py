@@ -9,6 +9,8 @@ import os
 import os.path as op
 import pickle
 import shutil
+import datetime
+import pytz
 
 from flydata.misc import ensure_dir
 from oscail.common.config import Configurable, Configuration
@@ -206,6 +208,9 @@ class FreeflightAnalysisFiles(Configurable):
         if self._analysis_json_data is None:
             self._analysis_json_data = self._read_json_data()
         return self._analysis_json_data
+
+    def pkl_modification_datetime(self, tzinfo=pytz.timezone('Europe/Vienna')):
+        return datetime.datetime.fromtimestamp(op.getmtime(self._analysis_pkl_file), tz=tzinfo)
 
     def analysis_command_line(self):
         if self._analysis_command_line is None:

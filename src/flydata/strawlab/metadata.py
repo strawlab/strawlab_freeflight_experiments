@@ -3,6 +3,7 @@
 from datetime import datetime
 import json
 import os.path as op
+import pytz
 
 from flydata.misc import run_db_statement, ensure_dir, giveupthefunc
 
@@ -165,8 +166,11 @@ class FreeflightExperimentMetadata(object):
         return self.prop('start_nsecs')
 
     def start_t(self):
-        """Returns the unix timestamp for when (UTC time) the experiment started (long or None)."""
+        """Returns the unix timestamp for when (UTC time) the experiment started (double or None)."""
         return self.start_secs() + self.start_nsecs() * 1E-9
+
+    def start_asdatetime(self, tzinfo=pytz.timezone('Europe/Vienna')):
+        return datetime.fromtimestamp(self.start_t(), tz=tzinfo)
 
     def stop_secs(self):
         """Returns the unix timestamp for when (UTC time) the experiment should approximatelly stop (long or None)."""
@@ -178,8 +182,11 @@ class FreeflightExperimentMetadata(object):
         return self.prop('stop_nsecs')
 
     def stop_t(self):
-        """Returns the unix timestamp for when (UTC time) the experiment should approximatelly stop (long or None)."""
+        """Returns the unix timestamp for when (UTC time) the experiment should approximatelly stop (double or None)."""
         return self.stop_secs() + self.stop_nsecs() * 1E-9
+
+    def stop_asasdatetime(self, tzinfo=pytz.timezone('Europe/Vienna')):
+        return datetime.fromtimestamp(self.stop_t(), tz=tzinfo)
 
     ######
     # Official mutability
