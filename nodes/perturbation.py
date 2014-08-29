@@ -75,14 +75,17 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
+#              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|4|1|8||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro|0.1|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro|0.2|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
@@ -165,15 +168,16 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    @property
-    def is_perturbation_experiment(self):
-        return not isinstance(self.perturber, sfe_perturb.NoPerturb)
-    @property
-    def is_replay_experiment_rotation(self):
-        return np.isnan(self.p_const)
-    @property
-    def is_replay_experiment_z(self):
-        return np.isnan(self.v_gain)
+    def is_perturbation_experiment(self, what):
+        return (not isinstance(self.perturber, sfe_perturb.NoPerturb)) and self.perturber.what == what
+
+    def is_replay_experiment(self, what):
+        if what == 'rotation_rate':
+            return np.isnan(self.p_const)
+        elif what == 'z':
+            return np.isnan(self.v_gain)
+        else:
+            raise Exception("Unsupported replay configuration")
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -220,17 +224,32 @@ class Node(object):
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
 
-    def get_v_rate(self,fly_z):
+    def get_v_rate(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        #return early if open loop
+        if self.is_perturbation_experiment('z'):
+            if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             self.model.ratio, self.ratio_total,
+                                             now, framenumber, currently_locked_obj_id):
+                rate,state = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
+
+                if state=='finished':
+                    self.drop_lock_on(blacklist=True)
+                    rospy.loginfo("'z' perturbation finished")
+
+                return rate
+
         #return early if this is a replay experiment
-        if self.is_replay_experiment_z:
+        if self.is_replay_experiment('z'):
             return self.replay_z.next()
 
         return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         could_perturb = False
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
-            could_perturb = self.is_perturbation_experiment
+        if self.svg_fn and (not self.is_replay_experiment('rotation_rate')):
+            could_perturb = self.is_perturbation_experiment('rotation_rate')
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -247,17 +266,13 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
-                print 'perturbation progress: %s' % self.perturber.progress
-
                 if state=='finished':
                     self.drop_lock_on(blacklist=True)
-
-                    rospy.loginfo('perturbation finished')
+                    rospy.loginfo("'rotation_rate' perturbation finished")
 
                     if self.condition in COOL_CONDITIONS:
                         #fly is still flying
@@ -268,7 +283,7 @@ class Node(object):
                 return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
-        if self.is_replay_experiment_rotation:
+        if self.is_replay_experiment('rotation_rate'):
             return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
@@ -349,7 +364,7 @@ class Node(object):
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
-                v_rate = self.get_v_rate(fly_z)
+                v_rate = self.get_v_rate(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
