@@ -266,8 +266,8 @@ class Node(object):
                     self.src_m_pub.publish(fly_x,fly_y,fly_z)
                     self.ack_pub.publish(self.control.controller_enabled > 0)
 
-                #150ms
-                if (i % 60) == 0:
+                #50ms
+                if (i % 20) == 0:
                     if cthread is not None:
                         cthread.join()
 

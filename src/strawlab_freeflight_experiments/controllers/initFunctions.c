@@ -53,7 +53,7 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	ekfp->ekf_flyparams.Vz = VZ;
 	
 	// parameters directly related to controller
-	cp->Ts = 0.15;
+	cp->Ts = 0.05;
 	cp->theta0 = 0;
 	cp->Tp = 2;
 	cp->Qy[0] = 10000;
