@@ -1026,6 +1026,8 @@ class CombineH5WithCSV(_Combine):
 
         #open the csv file as a dataframe
         csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
+        #add a tns colum
+        csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1163,9 +1165,6 @@ class CombineH5WithCSV(_Combine):
                     self._results_by_condition[oid].append( span_details )
                 except KeyError:
                     self._results_by_condition[oid] = [ span_details ]
-
-                #add a tns colum
-                csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                         n_samples,
