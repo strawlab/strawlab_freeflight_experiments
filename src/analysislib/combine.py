@@ -725,7 +725,7 @@ class CombineH5WithCSV(_Combine):
         if not self.plotdir:
             self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-        self.add_csv_and_h5_file(csv_file, h5_file, uuid, args)
+        self.add_csv_and_h5_file(csv_file, h5_file, args, uuid)
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
