@@ -700,6 +700,8 @@ class CombineH5WithCSV(_Combine):
         else:
             self.add_csv_and_h5_file = self.add_csv_and_h5_file_new
 
+        self._trajs = None
+
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
@@ -1199,6 +1201,12 @@ class CombineH5WithCSV(_Combine):
                     #restore a framenumber column for API compatibility
                     df['framenumber'] = df.index.values
 
+                    # Because of the outer join, trim filter do not work
+                    # (trimmed observations come back as haunting missing values)
+                    # This is a quick workaround...
+                    df.dropna(subset=['x'], inplace=True)
+                    # TODO: check for holes
+
                 elif (self._index == 'none') or (self._index.startswith('time')):
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by framenumber
@@ -1258,10 +1266,13 @@ class CombineH5WithCSV(_Combine):
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
 
-                # Let's instantiate a trajectory too
+                # Let's instantiate a FreeflightTrajectory too, as it is cheap. Alternative: do on demand
                 trajs.append(FreeflightTrajectory(metadata, oid, start_framenumber, start_time, cond, df, dt=dt))
 
-        self.trajs = trajs  # FIXME: initialize in init is better practice
+        self._trajs = trajs
 
         h5.close()
 
+    def get_trajs(self):
+        """Returns the combined trajectories as a list of FreeflightTrajectory objects."""
+        return self._trajs
