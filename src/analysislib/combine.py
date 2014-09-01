@@ -1037,7 +1037,7 @@ class CombineH5WithCSV(_Combine):
         results = self._results
         skipped = self._skipped
 
-        # Container for "FreeflightTrajectory"
+        # Container for "FreeflightTrajectory" objects
         trajs = []
         # Metadata
         if uuid is not None:
@@ -1079,7 +1079,6 @@ class CombineH5WithCSV(_Combine):
                 start_frame = trial_framenumbers[0] - args.frames_before
             else:
                 start_frame = trial_framenumbers[0]
-
             stop_frame = trial_framenumbers[-1]
 
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
