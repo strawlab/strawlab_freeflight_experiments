@@ -1204,7 +1204,7 @@ class CombineH5WithCSV(_Combine):
                     # Because of the outer join, trim filter do not work
                     # (trimmed observations come back as haunting missing values)
                     # This is a quick workaround...
-                    df.dropna(subset=['x'], inplace=True)
+                    df = df.dropna(subset=['x'])
                     # TODO: check for holes
 
                 elif (self._index == 'none') or (self._index.startswith('time')):
