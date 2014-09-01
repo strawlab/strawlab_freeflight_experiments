@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sys
+import os.path
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -17,14 +19,17 @@ if __name__=='__main__':
                     lenfilt=0,
     )
     parser.add_argument(
+        '--index', default='framenumber',
+        help='the index of the returned dataframe (framenumber, none, time+NN)')
+    parser.add_argument(
         "--animate", action="store_true")
     parser.add_argument(
         "--save", action="store_true", help="save a csv of this trajectory")
     parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
-        "--show-extra", help="show these fields too (comma separated list)",
-        default="")
+        "--plot-values", help="plot these fields too (comma separated list)",
+        default=",".join(["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]))
     
     args = parser.parse_args()
 
@@ -35,15 +40,12 @@ if __name__=='__main__':
 
     uuid = args.uuid[0]
     obj_id = args.idfilt[0]
-    
-    suffix = autil.get_csv_for_uuid(uuid)
-    combine = autil.get_combiner(suffix)
-    combine.calc_turn_stats = True
-    combine.add_from_uuid(uuid,suffix,args=args)
 
-    plot_axes=["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]
-    for extra in args.show_extra.split(','):
-        plot_axes.append(extra)
+    combine = autil.get_combiner_for_args(args)
+    combine.set_index(args.index)
+    combine.add_from_args(args)
+
+    plot_axes = args.plot_values.split(',')
 
     ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
@@ -79,8 +81,9 @@ if __name__=='__main__':
                     )
 
                 if args.save:
-                    df.to_csv("%s_%s_%s.csv" % (uuid, obj_id, name))
-                    df.save("%s_%s_%s.df" % (uuid, obj_id, name))
+                    basedir = args.outdir if args.outdir else combine.plotdir
+                    df.to_csv(os.path.join(basedir,"%s_%s_%s.csv" % (uuid, obj_id, name)))
+                    df.save(os.path.join(basedir,"%s_%s_%s.df" % (uuid, obj_id, name)))
 
     if args.show:
         aplt.show_plots()

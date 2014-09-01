@@ -28,9 +28,8 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    combine = autil.get_combiner("rotation")
-    combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}*.csv")
+    combine = autil.get_combiner_for_args(args)
+    combine.add_from_args(args)
 
     fname = combine.fname
     results,dt = combine.get_results()
@@ -71,15 +70,17 @@ if __name__=='__main__':
 
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
-    histograms = ("velocity","dtheta","rcurve","rotation_rate")
     correlation_options = {"rotation_rate:dtheta":{"range":[[-1.45,1.45],[-10,10]]},
                            "latencies":set(range(0,40,2) + [40,80]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
     }
+    histograms = ("velocity","dtheta","rcurve","rotation_rate","v_offset_rate")
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
                                    "rcurve":True,
-                                   "rotation_rate":True},
+                                   "rotation_rate":True,
+                                   "v_offset_rate":False},
+                         "ylogscale":{"v_offset_rate":True},
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
                                   "rcurve":(0,1),

@@ -116,7 +116,6 @@ public:
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
     std::string get_message_type(const std::string& topic_name) const;
 
-    void setVelocity(double x, double y, double z);
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
 
@@ -129,14 +128,16 @@ private:
     osg::ref_ptr<ConstantShooter> _shooter;
     osg::ref_ptr<osgParticle::Placer> _placer;
     osg::ref_ptr<VelocityOperator> _vel_operator;
+    osg::ref_ptr<osgParticle::ParticleSystem> _ps;
+
+    void set_star_velocity(float x, float y, float z);
+    void set_star_size(float v);
 };
 
 StimulusStarFieldAndModel::StimulusStarFieldAndModel() {
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
-
-    setVelocity( 0.0, 0.0, 0.0);
 
     _group = new osg::Group;
     switch_node = new osg::PositionAttitudeTransform;
@@ -180,23 +181,22 @@ void StimulusStarFieldAndModel::post_init(bool slave) {
 
     // this is based on the OSG example osgparticleshader.cpp
 
-    osg::ref_ptr<osgParticle::ParticleSystem> ps = new osgParticle::ParticleSystem;
-    ps->getDefaultParticleTemplate().setLifeTime( 5.0f );
-    ps->getDefaultParticleTemplate().setShape( osgParticle::Particle::POINT );
-    ps->setVisibilityDistance( -1.0f );
+    _ps = new osgParticle::ParticleSystem;
+    _ps->getDefaultParticleTemplate().setLifeTime( 5.0f );
+    _ps->getDefaultParticleTemplate().setShape( osgParticle::Particle::POINT );
+    _ps->setVisibilityDistance( -1.0f );
 
     std::string textureFile = get_plugin_data_path("blackstar.png");
-    ps->setDefaultAttributesUsingShaders( textureFile, false, 0 );
+    _ps->setDefaultAttributesUsingShaders( textureFile, false, 0 );
 
-    osg::StateSet* stateset = ps->getOrCreateStateSet();
-    stateset->setAttribute( new osg::Point(5.0f) ); // pointSize
+    osg::StateSet* stateset = _ps->getOrCreateStateSet();
     stateset->setTextureAttributeAndModes( 0, new osg::PointSprite, osg::StateAttribute::ON );
 
     osg::ref_ptr<osgParticle::ModularEmitter> emitter = new osgParticle::ModularEmitter;
-    emitter->setParticleSystem( ps.get() );
+    emitter->setParticleSystem( _ps.get() );
 
     osg::ref_ptr<osgParticle::ModularProgram> program = new osgParticle::ModularProgram;
-    program->setParticleSystem( ps.get() );
+    program->setParticleSystem( _ps.get() );
     program->addOperator( _vel_operator.get() );
 
     createStarfieldEffect( emitter.get(), program.get() );
@@ -211,13 +211,16 @@ void StimulusStarFieldAndModel::post_init(bool slave) {
     root->addChild( parent.get() );
     root->addChild( updater.get() );
 
-    updater->addParticleSystem( ps.get() );
+    updater->addParticleSystem( _ps.get() );
 
     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-    geode->addDrawable( ps.get() );
+    geode->addDrawable( _ps.get() );
     root->addChild( geode.get() );
 
     _group->setName("StimulusStarFieldAndModel._group");
+
+    set_star_velocity( 0.0, 0.0, 0.0);
+    set_star_size( 5.0 );
 }
 
 void StimulusStarFieldAndModel::createStarfieldEffect( osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program ){
@@ -244,12 +247,25 @@ osg::Vec4 StimulusStarFieldAndModel::get_clear_color() const {
 std::vector<std::string> StimulusStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("star_velocity");
+    result.push_back("star_size");
     result.push_back("model_pose");
     return result;
 }
 
+void StimulusStarFieldAndModel::set_star_velocity(float x, float y, float z) {
+    _starfield_velocity = osg::Vec3(x,y,z);
+    _shooter->setVelocity( _starfield_velocity );
+    _vel_operator->setVelocity( _starfield_velocity );
+}
+
+void StimulusStarFieldAndModel::set_star_size(float v) {
+    osg::StateSet* stateset = _ps->getOrCreateStateSet();
+    stateset->setAttribute( new osg::Point(v) );
+}
+
 void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_name,
                                              const std::string& json_message) {
+
     json_t *root;
     json_error_t error;
 
@@ -258,7 +274,9 @@ void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_na
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
-        setVelocity(vel[0],vel[1],vel[2]);
+        set_star_velocity(vel[0],vel[1],vel[2]);
+    } else if (topic_name=="star_size") {
+        set_star_size(parse_float(root));
     } else if (topic_name=="model_pose") {
         json_t *data_json;
 
@@ -275,17 +293,13 @@ void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_na
     json_decref(root);
 }
 
-void StimulusStarFieldAndModel::setVelocity(double x, double y, double z) {
-    _starfield_velocity = osg::Vec3(x,y,z);
-    _shooter->setVelocity( _starfield_velocity );
-    _vel_operator->setVelocity( _starfield_velocity );
-}
-
 std::string StimulusStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
 
     if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
+    } else if (topic_name=="star_size") {
+        result = "std_msgs/Float32";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
     } else {

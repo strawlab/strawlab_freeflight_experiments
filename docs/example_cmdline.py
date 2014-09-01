@@ -24,10 +24,9 @@ if __name__ == "__main__":
     #this checks that the user has specified enough UUIDs or csv and h5 file
     analysislib.args.check_args(parser, args, max_uuids=1)
 
-    combine = autil.get_combiner(autil.get_csv_for_args(args))
+    combine = autil.get_combiner_for_args(args)
     #dont print to the console as we load the file
     combine.disable_debug()
-
     combine.add_from_args(args)
 
     #get the data as requested on the command line

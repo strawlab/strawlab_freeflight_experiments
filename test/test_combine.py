@@ -4,11 +4,83 @@ import sys
 import numpy as np
 import unittest
 import collections
+import tempfile
 
 import roslib
+import roslib.packages
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.args
+import analysislib.util as autil
+import autodata.files
+
+
+def _quiet(combine):
+    combine.disable_debug()
+
+class TestCombineData(unittest.TestCase):
+
+    def setUp(self):
+        self._uuid = '0'*32
+        ddir = os.path.join(
+                    roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
+                   'test','data'
+        )
+        self._ddir = ddir
+        self._pdir = os.path.join(ddir, 'plots')
+
+        #make autodata look in the tempdir for file
+        os.environ['FLYDRA_AUTODATA_BASEDIR'] = self._ddir
+        os.environ['FLYDRA_AUTODATA_PLOTDIR'] = self._pdir
+
+    def tearDown(self):
+        del os.environ['FLYDRA_AUTODATA_BASEDIR']
+        del os.environ['FLYDRA_AUTODATA_PLOTDIR']
+
+    def test_auto_combine(self):
+        combine = autil.get_combiner_for_uuid(self._uuid)
+        _quiet(combine)
+
+        combine.add_from_uuid(self._uuid)
+        cols = set(combine.get_result_columns())
+        self.assertEqual(cols,
+                         set(['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate',
+                              'trg_x', 'trg_y', 'trg_z', 'v_offset_rate', 'x', 'y',
+                              'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az',
+                              'theta', 'dtheta', 'radius', 'omega', 'rcurve',
+                              't_nsec','framenumber','tns','t_sec','exp_uuid',
+                              'flydra_data_file','lock_object','condition']))
+
+    def _get_comb(self):
+        try:
+            combine = autil.get_combiner_for_uuid(self._uuid)
+        except AttributeError:
+            combine = autil.get_combiner("rotation.csv") #back compat for testing old branch pre merge
+        combine.disable_warn()
+        combine.disable_debug()
+        combine.add_from_uuid(self._uuid)
+        return combine
+
+    def _get_fn(self, df):
+        try:
+            return df['framenumber'].values
+        except KeyError:
+            return df.index.values
+
+    def test_date(self):
+        combine = self._get_comb()
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        self.assertAlmostEqual(time0, 1380896219.427156, 3)
+
+    def test_range(self):
+        combine = self._get_comb()
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+
+        fn = self._get_fn(df)
+
+        self.assertEqual(fn[0], 3843)
+        self.assertEqual(framenumber0, 3843)
+        self.assertEqual(fn[-1], 5777)
 
 class TestCombine(unittest.TestCase):
 
@@ -26,31 +98,37 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(framenumber0,framenumber0_2)
 
     def test_combine_h5(self):
-        combine = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate",
-                                debug=False,
-        )
-        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a", "conflict.csv")
+        #get the csv file
+        fm = autodata.files.FileModel()
+        fm.select_uuid("f5adba10e8b511e2a28b6c626d3a008a")
+        csv = fm.get_file_model("*.csv").fullpath
+
+        combine = autil.get_combiner_for_csv(csv)
+        _quiet(combine)
+
+        combine.add_from_uuid("f5adba10e8b511e2a28b6c626d3a008a")
+
         a = combine.get_one_result(174)
 
         fname = combine.fname
         results,dt = combine.get_results()
 
         combine2 = analysislib.combine.CombineH5()
+        _quiet(combine2)
+
         combine2.add_h5_file(combine.h5_file)
         b = combine2.get_one_result(174)
 
         self._assert_two_equal(a,b)
 
-        combine3 = analysislib.combine.CombineH5WithCSV(
-                                "ratio","rotation_rate",
-                                debug=False,
-        )
         parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
         )
-        combine3.add_from_args(args, "conflict.csv")
+        combine3 = autil.get_combiner_for_args(args)
+        _quiet(combine3)
+
+        combine3.add_from_args(args)
         c = combine3.get_one_result(174)
 
         self._assert_two_equal(a,c)
@@ -64,9 +142,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(framenumber0,7792)
         self.assertAlmostEqual(time0, 1374168638.8101971)
 
-
     def test_csv(self):
         combine = analysislib.combine.CombineCSV()
+        _quiet(combine)
+
         combine.add_csv_file(self.RT_CSV)
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
@@ -74,6 +153,8 @@ class TestCombine(unittest.TestCase):
 
     def test_csv_args(self):
         combine = analysislib.combine.CombineCSV()
+        _quiet(combine)
+
         parser,args = analysislib.args.get_default_args(
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
@@ -83,8 +164,24 @@ class TestCombine(unittest.TestCase):
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)
 
+    def test_multi(self):
+        tdir = tempfile.mkdtemp()
+        parser,args = analysislib.args.get_default_args(
+                    uuid=["75344a94e4c711e2b4c76c626d3a008a","69d1d022e58a11e29e446c626d3a008a"],
+                    outdir=tdir
+        )
+        combine = autil.get_combiner_for_args(args)
+        _quiet(combine)
+
+        combine.add_from_args(args)
+
+        self.assertEqual(combine.get_num_conditions(), 3)
+        self.assertEqual(combine.get_total_trials(), 1005)
+
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
+        _quiet(c1)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["34e60d6efddc11e2848064315026cb58"],
                 outdir='/tmp/',
@@ -98,7 +195,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(len(df), 19945)
 
         del c1
+
         c2 = analysislib.combine.CombineCSV()
+        _quiet(c2)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["31b764cafb6c11e299c864315026cb58"],
                 outdir='/tmp/',
@@ -112,7 +212,10 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(len(df), 17472)
 
         del c2
+
         cc = analysislib.combine.CombineCSV()
+        _quiet(cc)
+
         parser,args = analysislib.args.get_default_args(
                 uuid=["34e60d6efddc11e2848064315026cb58","31b764cafb6c11e299c864315026cb58"],
                 outdir='/tmp/',

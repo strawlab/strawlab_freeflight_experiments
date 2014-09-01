@@ -31,6 +31,11 @@ Programmatic Scripts
 Command Line Tools
 ==================
 
+Followpath Monitor
+
+draws the path the fly should follow (e.g. the xx.svg file in your stimulus), the position of the fly and the position it shuld go next
+it is located in the folder "nodes"
+   rosrun strawlab_freeflight_experiments followpath_monitor.py
 .. automodule:: analysislib.args
    :members:
 

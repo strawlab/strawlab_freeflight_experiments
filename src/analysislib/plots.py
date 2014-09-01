@@ -18,6 +18,7 @@ import matplotlib.legend as mlegend
 import matplotlib.text as mtext
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
+from dateutil.rrule import rrule, SECONDLY
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -39,11 +40,17 @@ OUTSIDE_LEGEND = True
 def _perm_check(args):
     if not strawlab.constants.set_permissions():
         if not args.ignore_permission_errors:
-            raise Exception("Could not change process permissions (see --ignore-permission-errors)")
+            raise Exception("Could not change process permissions "
+                            "(see --ignore-permission-errors). Hint: "
+                            "prefix your call with 'sg strawlabnfs '.")
         print "WARNING: could not set process permissions"
 
-def get_safe_filename(s):
-    return s.translate(None, ''.join("\"\\/.+|'"))
+def get_safe_filename(s, allowed_spaces=True):
+    clean = s.translate(None, ''.join("\"\\/.+|'<>[]="))
+    if allowed_spaces:
+        return clean
+    else:
+        return clean.replace(' ','_')
 
 def show_plots():
     try:
@@ -558,6 +565,20 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
+def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
+
+    if df.index.is_all_dates:
+        x = df.index.to_pydatetime()
+        xax = ax.get_xaxis()
+        xax.set_major_locator(SecondLocator(interval=3))
+        xax.set_major_formatter(SecondFormatter())
+    else:
+        x = df.index.values
+
+    ax.plot(x, df[colname].values, *plot_args, **plot_kwargs)
+
+    return x
+
 def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8), title=None):
     if name is None:
         name = '%s.infinity' % combine.fname
@@ -579,15 +600,19 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
         arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
 
         _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
-        _ax.plot(_df.index, _df['z'], 'k-')
-        _ax.set_xlim(_df.index[0], _df.index[-1])
+
+        _ts = plot_timeseries(_ax, _df, 'z', 'k-')
+        _ax.set_xlim(_ts[0], _ts[-1])
+
         _ax.set_ylim(*ylimits.get("z",(0, 1)))
         _ax.set_ylabel("z")
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
-            _ax.plot(_df.index.values, _df[p].values, 'k-')
-            _ax.set_xlim(_df.index[0], _df.index[-1])
+
+            _ts = plot_timeseries(_ax, _df, p, 'k-')
+            _ax.set_xlim(_ts[0], _ts[-1])
+
             _ax.set_ylim(*ylimits.get(p,
                             (_df[p].min(), _df[p].max())))
             _ax.set_ylabel(p)
@@ -1003,4 +1028,15 @@ def _min_dist_inside(point, rotation, box):
         # Intersects the bottom axis
         distances.append((box.y0 - y0) / sin(rotation))
     return min(distances)
+
+class SecondLocator(mdates.RRuleLocator):
+    def __init__(self, bysecond=None, interval=1, tz=None):
+        if bysecond is None:
+            bysecond = list(xrange(60))
+        rule = mdates.rrulewrapper(SECONDLY, bysecond=bysecond, interval=interval)
+        mdates.RRuleLocator.__init__(self, rule, tz)
+
+class SecondFormatter(mdates.DateFormatter):
+    def __init__(self):
+        mdates.DateFormatter.__init__(self,'%M:%S')
 

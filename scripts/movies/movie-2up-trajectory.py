@@ -241,11 +241,8 @@ if __name__ == "__main__":
     analysislib.args.check_args(parser, args, max_uuids=1)
 
     if args.uuid is not None:
-
         uuid = args.uuid[0]
-
-        suffix = analysislib.util.get_csv_for_args(args)
-        combine = analysislib.util.get_combiner(suffix)
+        combine = analysislib.util.get_combiner_for_args(args)
         combine.add_from_args(args)
     else:
         uuid = ''

@@ -43,6 +43,7 @@ class SvgPathWidget(Gtk.DrawingArea):
         polyline = self._model.polyline
         svgiter = self._model.svgiter
 
+        #draw the true svg in black
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (1)
         for path_element in svgiter:
@@ -67,10 +68,10 @@ class SvgPathWidget(Gtk.DrawingArea):
         cr.set_source_surface(self._surface, 0.0, 0.0)
         cr.paint()
 
-        vecs,pts,poly = self.get_vec_and_points()
+        vecs,pts,polys = self.get_vec_and_points()
 
-        for vec in vecs:
-            cr.set_source_rgb (1, 0, 0)
+        for vec,rgb in vecs:
+            cr.set_source_rgb (*rgb)
             cr.set_line_width (1)
             cr.move_to(vec.p1.x,vec.p1.y)
             cr.line_to(vec.p2.x,vec.p2.y)
@@ -98,15 +99,16 @@ class SvgPathWidget(Gtk.DrawingArea):
                 offset += 12
 
 
-        if poly:
-            #draw the approximation
-            cr.set_source_rgb (0, 0, 1)
-            cr.set_line_width (0.3)
-            cr.move_to(poly[0].x,poly[0].y)
-            for i in range(1,len(poly)):
-                cr.line_to(poly[i].x,poly[i].y)
-            cr.close_path()
-            cr.stroke()
+        for poly,rgb in polys:
+            if poly:
+                #draw the approximation
+                cr.set_source_rgb (*rgb)
+                cr.set_line_width (0.5)
+                cr.move_to(poly[0].x,poly[0].y)
+                for i in range(1,len(poly)):
+                    cr.line_to(poly[i].x,poly[i].y)
+                cr.close_path()
+                cr.stroke()
 
         annots = self.get_annotations()
         for pt,rgb,txt in annots:
@@ -127,9 +129,9 @@ class SvgPathWidget(Gtk.DrawingArea):
     def get_vec_and_points(self):
         """
         returns a 3-tuple
-            euclid.LineSegment
+            [(euclid.LineSegment,(r,g,b)),]
             [(euclid.Point2,(r,g,b)),]
-            [euclid.Point2,]
+            [([euclid.Point2,],(r,g,b)),]
         """
         raise NotImplementedError
 

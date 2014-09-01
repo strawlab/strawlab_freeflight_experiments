@@ -27,40 +27,15 @@ import analysislib.arenas as aarenas
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-if __name__=='__main__':
-    parser = analysislib.args.get_parser(frames_before=10)
+def plot_perturbation_traces(combine, args, perturbation_options):
 
-    args = parser.parse_args()
-
-    analysislib.args.check_args(parser, args)
-
-    combine = autil.get_combiner("perturbation")
-    combine.calc_turn_stats = True
-    combine.add_from_args(args, "{rotation,perturbation}.csv")
-
-    fname = combine.fname
     results,dt = combine.get_results()
+    completed_perturbations = {c:[] for c in results}
 
-    print "plots stored in", combine.plotdir
-    print "files saved as", fname
-    ncond = combine.get_num_conditions()
-
-    aplt.save_args(combine, args)
-    aplt.save_results(combine, args)
-
-    arena = aarenas.get_arena_from_args(args)
-    (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
-
-    TO_PLOT = {"dtheta":{"ylim":(-10,10)},
-               "z":{"ylim":(zmin,zmax)},
-               "velocity":{},
-               "rotation_rate":{},
-    }
-
-    #step_conds = [c for c in results if not isinstance(sfe_perturb.get_perturb_class(c), sfe_perturb.NoPerturb)]
     for cond in results:
 
         perturb_desc = cond.split("/")[-1]
+
         pklass = sfe_perturb.get_perturb_class(perturb_desc)
 
         #only plot perturbations
@@ -99,6 +74,10 @@ if __name__=='__main__':
                 df['time'] = t
                 df['talign'] = t - t[fidx]
 
+                tmax = df['talign'].max()
+                if step_obj.completed_perturbation(tmax):
+                    completed_perturbations[cond].append((obj_id,tmax,tmax-df['talign'].min()))
+
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 
                 dfs[obj_id] = df
@@ -108,7 +87,7 @@ if __name__=='__main__':
         if dfs:
             pool = pd.concat(dfs.values(),join="outer",axis=0)
 
-            for to_plot in TO_PLOT:
+            for to_plot in perturbation_options:
                 grouped_oid = pool.groupby('obj_id')
 
                 #plot timeseries
@@ -144,22 +123,13 @@ if __name__=='__main__':
                     ax.set_xlabel('t (s)')
 
                     #plot from one second before to one second after
+                    step_obj.plot(ax2, t_extra=1, ylabel=str(step_obj), linestyle='-')
                     t0,t1 = step_obj.get_time_limits()
                     t0 -= 1; t1 += 1
-
-                    ax2.set_ylabel(str(step_obj),color='b')
-
-                    t,v = step_obj.get_perturb_vs_time(t0,t1)
-                    ax2.plot(t,v, 'b-')
-                    v0,v1 = step_obj.get_value_limits()
-                    ax2.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
-                    for tl in ax2.get_yticklabels():
-                        tl.set_color('b')
-
                     ax.set_xlim(t0,t1)
 
-                    if "ylim" in TO_PLOT[to_plot]:
-                        ax.set_ylim(*TO_PLOT[to_plot]["ylim"])
+                    if "ylim" in perturbation_options[to_plot]:
+                        ax.set_ylim(*perturbation_options[to_plot]["ylim"])
 
                     fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
@@ -183,6 +153,64 @@ if __name__=='__main__':
 
                 fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
+    name = combine.get_plot_filename("COMPLETED_PERTURBATIONS.md")
+    with open(name, 'w') as f:
+        l = "object ids which completed full perturbations"
+        f.write("%s\n"%l)
+        f.write("%s\n\n"%('-'*len(l)))
+
+        f.write("| condition | obj_id | perturb_length | trajectory_length |\n")
+        f.write("| --- | --- | --- | --- |\n")
+
+        i = None
+        for cond in sorted(completed_perturbations.keys()):
+            #make condition markdown table safe
+            scond = cond.replace('|','&#124;')
+            for i,(oid,pl,tl) in enumerate(completed_perturbations[cond]):
+                if i == 0:
+                    #first row
+                    f.write("| %s | %s | %.1f | %.1f |\n" % (scond, oid, pl, tl))
+                else:
+                    f.write("|    | %s | %.1f | %.1f |\n" % (oid, pl, tl))
+
+        if i is None:
+            #empty tables are not valid markdown...
+            f.write("| n/a | n/a | n/a | n/a |\n")
+
+        f.write("\n")
+
+
+if __name__=='__main__':
+    parser = analysislib.args.get_parser(frames_before=10)
+
+    args = parser.parse_args()
+
+    analysislib.args.check_args(parser, args)
+
+    combine = autil.get_combiner_for_args(args)
+    combine.add_from_args(args)
+
+    fname = combine.fname
+    results,dt = combine.get_results()
+
+    print "plots stored in", combine.plotdir
+    print "files saved as", fname
+    ncond = combine.get_num_conditions()
+
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
+
+    arena = aarenas.get_arena_from_args(args)
+    (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
+
+    TO_PLOT = {"dtheta":{"ylim":(-10,10)},
+               "z":{"ylim":(zmin,zmax)},
+               "vz":{"ylim":(-0.5,+0.5)},
+               "velocity":{},
+               "rotation_rate":{},
+    }
+
+    plot_perturbation_traces(combine, args, TO_PLOT)
 
     if args.show:
         aplt.show_plots()

@@ -17,8 +17,6 @@ import std_msgs.msg
 import geometry_msgs.msg
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
-import rospkg
-
 import flyflypath.transform
 import nodelib.log
 import nodelib.visualization

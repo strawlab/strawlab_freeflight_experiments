@@ -1,4 +1,5 @@
 import datetime
+import os.path
 
 import numpy as np
 
@@ -12,15 +13,20 @@ class _Fixup(object):
     active = False
     should_fix_rows = False
     should_fix_dataframe = False
+    should_fix_condition = False
 
     def __init__(self, row_wrapper, dataframe_wrapper, desc='N/A'):
         self._rr = row_wrapper
         self._dr = dataframe_wrapper
         self._desc = desc
 
-        self.should_fix_rows = self._rr is not None
+        self.should_fix_rows = self._rr.COLS if self._rr is not None else []
         self.should_fix_dataframe = self._dr is not None
-        self.active = self.should_fix_rows or self.should_fix_dataframe
+
+        if self._rr and "condition" in self._rr.COLS:
+            self.should_fix_condition = True
+
+        self.active = any((self.should_fix_rows,self.should_fix_dataframe,self.should_fix_condition))
 
     def __repr__(self):
         if self.active:
@@ -42,39 +48,67 @@ class _Fixup(object):
         else:
             return self._dr(df)
 
-class _FixConflictCsvRowModelPosition(object):
+    def fix_condition(self, cond):
+        if self._rr is None:
+            return cond
+        else:
+            return self._rr({"condition":cond})["condition"]
+
+def _get_cond(r):
+    #support old combine where row was a namedtuple and not an
+    #iterrow (dataframe row) iterator
+    try:
+        cond = r.condition
+    except AttributeError:
+        cond = r['condition']
+    return str(cond)
+
+class _DictOrAttr(object):
+
     def __init__(self, row):
         self._r = row
 
     def __getattr__(self, n):
-        if n in ('model_x','model_y','model_z'):
-            try:
-                mx,my,mz = self._r.condition.split('.osg|')[-1].split('|')
-                if n == 'model_x':
-                    return mx
-                elif n == 'model_y':
-                    return my
-                else:
-                    return mz
-            except ValueError:
-                return np.nan
-
+        if n in self.COLS:
+            return self._fix(n)
         return getattr(self._r, n)
 
-class _FixPerturbationConditionName(object):
-    def __init__(self, row):
-        self._r = row
+    def __getitem__(self, k):
+        if k in self.COLS:
+            return self._fix(k)
+        return self._r[k]
 
-    def __getattr__(self, n):
-        if n == 'condition':
-            c = self._r.condition
-            if c:
-                if 'chirp_linear|' in c:
-                    return c.replace('chirp_linear|','chirp_rotation_rate|linear|')
-                if 'step|' in c:
-                    return c.replace('step|','step_rotation_rate|')
 
-        return getattr(self._r, n)
+class _FixConflictCsvRowModelPosition(_DictOrAttr):
+
+    COLS = ('model_x','model_y','model_z')
+
+    def _fix(self, n):
+        try:
+            cond = _get_cond(self._r)
+            mx,my,mz = cond.split('.osg|')[-1].split('|')
+            if n == 'model_x':
+                return mx
+            elif n == 'model_y':
+                return my
+            else:
+                return mz
+
+        except ValueError:
+            return np.nan
+
+class _FixPerturbationConditionName(_DictOrAttr):
+
+    COLS = ('condition',)
+
+    def _fix(self, n):
+        c = _get_cond(self._r)
+        if c:
+            if 'chirp_linear|' in c:
+                return c.replace('chirp_linear|','chirp_rotation_rate|linear|')
+            if 'step|' in c:
+                return c.replace('step|','step_rotation_rate|')
+        return c
 
 def load_fixups(**kwargs):
     csv_file = kwargs.get('csv_file')
@@ -82,6 +116,8 @@ def load_fixups(**kwargs):
 
     if csv_file or h5_file:
 
+        csv_file = os.path.basename(csv_file)
+        h5_file = os.path.basename(h5_file)
         cdt = get_autodata_filename_datetime(csv_file)
         hdt = get_autodata_filename_datetime(h5_file)
 

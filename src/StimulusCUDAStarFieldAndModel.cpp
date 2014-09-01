@@ -53,6 +53,9 @@ public:
         if( !_ptcls.valid() )
             return;
 
+        if( !_fs.valid() )
+            return;
+
         if( !_timer.valid() )
         {
             _timer = new osgCuda::Timer;
@@ -87,10 +90,6 @@ public:
     {
         if( resource.isIdentifiedBy("PARTICLE BUFFER" ) )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
-    }
-
-    bool isFirstFrame() {
-        return _firstFrame;
     }
 
 private:
@@ -201,15 +200,11 @@ public:
          dynamic_cast<particleDataType*> (node->getUserData() );
       if(particleData)
       {
-          //particleData->updateTurretRotation();
-          //particleData->updateGunElevation();
           if( osgCompute::GLMemory::getContext() == NULL || osgCompute::GLMemory::getContext()->getState() == NULL ) {
               return;
           }
 
-          if ( !particleData->_move->isFirstFrame() ) {
-              particleData->_move->setFrameStamp( nv->getFrameStamp() );
-          }
+          particleData->_move->setFrameStamp( nv->getFrameStamp() );
 
           particleData->_emit->launch();
           particleData->_move->launch();
@@ -403,7 +398,7 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
     root = json_loads(json_message.c_str(), 0, &error);
 
-    if (root != NULL) {
+    if (root == NULL) {
         std::ostringstream errstream;
         errstream << "ERROR: could not load JSON message \"" << json_message << "\" to topic \"" << topic_name << "\".";
         std::string errmsg = errstream.str();
