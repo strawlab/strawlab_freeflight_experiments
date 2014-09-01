@@ -64,6 +64,7 @@ class _Combine(object):
         self._tfilt = None
         self._plotdir = None
         self._index = 'framenumber'
+        self._warn_cache = {}
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -122,6 +123,12 @@ class _Combine(object):
     def _warn(self, m):
         if self._enable_warn:
             print m
+
+    def _warn_once(self, m):
+        if m not in self._warn_cache:
+            self._warn(m)
+            self._warn_cache[m] = 0
+        self._warn_cache[m] += 1
 
     @property
     def plotdir(self):
@@ -1017,6 +1024,8 @@ class CombineH5WithCSV(_Combine):
 
         #open the csv file as a dataframe
         csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
+        #add a tns colum
+        csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1156,16 +1165,13 @@ class CombineH5WithCSV(_Combine):
             if not self._maybe_apply_tfilt_should_save(start_time):
                 df = None
 
-            n_samples = len(df)
             if df is not None:
+                n_samples = len(df)
                 span_details = (cond, n_samples)
                 try:
                     self._results_by_condition[oid].append( span_details )
                 except KeyError:
                     self._results_by_condition[oid] = [ span_details ]
-
-                #add a tns colum
-                csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                         n_samples,
@@ -1184,8 +1190,15 @@ class CombineH5WithCSV(_Combine):
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
                                 axis=1,join='outer')
+
+                    #for some reason, pandas crashes when attempting to replace
+                    #a column with length l with one of lenth l_new (where l_new >> l)
+                    #so remove the old colum first
+                    #grr added in pandas 13.1                  
+                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
                     #restore a framenumber column for API compatibility
                     df['framenumber'] = df.index.values
+
                 elif (self._index == 'none') or (self._index.startswith('time')):
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by framenumber
@@ -1214,11 +1227,14 @@ class CombineH5WithCSV(_Combine):
                     for _ix, row in df.iterrows():
                         fixed = fix.fix_row(row)
                         for col in fix.should_fix_rows:
+                            if col not in df.columns:
+                                self._warn_once("ERROR: column '%s' missing from dataframe (are you resampling?)" % col)
+                                continue
                             #modify in place
                             try:
                                 df.loc[_ix,col] = fixed[col]
                             except IndexError, e:
-                                self._warn("ERROR: could not apply fixup to obj_id %s (col %s)" % (oid,col))
+                                self._warn("ERROR: could not apply fixup to obj_id %s (column '%s')" % (oid,col))
 
                 #the start time and the start framenumber are defined by the experiment,
                 #so they come from the csv (fdf)

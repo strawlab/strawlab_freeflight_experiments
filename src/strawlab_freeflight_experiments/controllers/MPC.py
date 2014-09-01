@@ -24,7 +24,10 @@ class MPC:
         self._CT_wout = ct.c_double(0) #evolution of path param
         self._CT_thetaout = ct.c_double(0) #value of path param as used in control computation
 
-        self._CT_cur_fly_pos = np.zeros(2, dtype=ctypes.c_double)
+        self._CT_targetpoint = data = (ct.c_double * 2)() #current target point index of path [x,y]
+        self._target_x, self._target_y = 0,0
+
+        self._CT_cur_fly_pos = np.zeros(2, dtype=ctypes.c_double) #current fly pos [x,y]
         
 #        int decFct (double *xpos, double *ypos, int *id, int arrayLen, int reset,
 #                double *enableCntr, double *enableEKF,  
@@ -41,11 +44,12 @@ class MPC:
         self._ekffcn = lib.ekf_fly_model2
         self._ekffcn.argtypes = [ct.c_int, ct.c_void_p, ct.c_double, ct.POINTER(ct.c_double), ct.c_void_p]
 
-        #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState)
+        #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint)
         self._ctrfcn = lib.contr_subopt_MPC_fly_model2
         self._ctrfcn.argtypes = [ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_double),
                                  ct.c_int, ct.c_void_p, ct.c_void_p, ct.c_void_p,
-                                 ct.c_int, ct.c_void_p]
+                                 ct.c_int, ct.c_void_p,
+                                 ct.POINTER(ct.c_double)]
 
         #void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, projGrState_t *projGrState, contrp_t *cp, double *omegae) {
         self._cinfcn = lib.calcInput
@@ -116,6 +120,17 @@ class MPC:
         self._ekf_pminus = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
         self._ekf_pminus = np.reshape(self._ekf_pminus, (m.value,n.value), order='F')
 
+        #get a copy of the path
+        num = ct.c_int(0)
+        lib.get_path.argtypes = [ct.c_void_p, ct.POINTER(ct.c_int)]
+        lib.get_path.restype = ct.POINTER(ct.c_double)
+        path = lib.get_path(self._conp, num)
+        #reshape into num rows and 2 columns (x,y)
+        self._path = numpy.ctypeslib.as_array(path, shape=(num.value, 2))
+
+    @property
+    def path(self):
+        return self._path
     @property
     def ekf_enabled(self):
         return self._CT_ekf_enabled.value
@@ -128,6 +143,9 @@ class MPC:
     @property
     def path_progress(self):
         return self._CT_thetaout.value
+    @property
+    def target_point(self):
+        return self._target_x, self._target_y
 
     def run_control(self):
         #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState)
@@ -136,7 +154,9 @@ class MPC:
                      self._conp, self._prjs,
                      self._ekfs,
                      int(self.ekf_enabled),
-                     self._cins)
+                     self._cins,
+                     self._CT_targetpoint)
+        self._target_x, self._target_y = self._CT_targetpoint
 
     def run_ekf(self, fly, x=None, y=None):
         if x is None:
@@ -217,6 +237,8 @@ if __name__ == "__main__":
         m.run_ekf(f)
         m.run_control()
         m.run_calculate_input()
+
+    print m.target_point
 
     print m.rotation_rate
 

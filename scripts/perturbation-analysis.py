@@ -75,7 +75,6 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                 df['talign'] = t - t[fidx]
 
                 tmax = df['talign'].max()
-                print cond,obj_id,tmax
                 if step_obj.completed_perturbation(tmax):
                     completed_perturbations[cond].append((obj_id,tmax,tmax-df['talign'].min()))
 
@@ -206,6 +205,7 @@ if __name__=='__main__':
 
     TO_PLOT = {"dtheta":{"ylim":(-10,10)},
                "z":{"ylim":(zmin,zmax)},
+               "vz":{"ylim":(-0.5,+0.5)},
                "velocity":{},
                "rotation_rate":{},
     }

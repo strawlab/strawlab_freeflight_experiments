@@ -36,7 +36,10 @@ parser.add_argument(
     '-e', '--extra-args',
     help='extra args to add to the command')
 parser.add_argument(
-    '-A', '--arena',
+    '-f', '--force-args', action='store_true',
+    help='rerun analysis with the default arguments irrespective of those run previously')
+parser.add_argument(
+    '-A', '--arena', required=True,
     help='flycave, flycube, etc')
 parser.add_argument(
     '-N', '--db-name', default="freeflight",
@@ -102,9 +105,9 @@ for uuid in todo:
         jsondata = None
 
     #if the experiment contains neither json nor readme, use the default args
-    if not jsondata and not readme:
+    if args.force_args or (not jsondata and not readme):
         opts = DEFAULT_ARGS % (uuid, args.arena)
-        where = 'd'
+        where = 'f' if args.force_args else 'd' 
     elif jsondata:
         opts = jsondata['argv'].split('.py ')[1]
         where = 'j'
@@ -134,6 +137,10 @@ for uuid in todo:
             elif opt.strip() == '--show':
                 pass
             else:
+                argslist.append(opt)
+
+        if args.extra_args:
+            for opt in args.extra_args.split(' '):
                 argslist.append(opt)
 
         if not args.dry_run:
