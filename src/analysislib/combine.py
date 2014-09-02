@@ -1026,8 +1026,6 @@ class CombineH5WithCSV(_Combine):
 
         #open the csv file as a dataframe
         csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
-        #add a tns colum
-        csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1193,11 +1191,20 @@ class CombineH5WithCSV(_Combine):
                     df['framenumber'] = df.index.values
 
                 elif (self._index == 'none') or (self._index.startswith('time')):
+
+                    if self._index == 'none':
+                        merge_on = 'framenumber'
+                    else:
+                        #add a tns column to merge on
+                        odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
+                        merge_on = 'tns'
+
                     #in this case we want to keep all the rows (outer)
-                    #but the two dataframes should remain sorted by framenumber
+                    #but the two dataframes should remain sorted by either
+                    #framenumber or time
                     df = pd.merge(
                                 odf,df,
-                                on='framenumber',
+                                on=merge_on,
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
 
