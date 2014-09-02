@@ -27,7 +27,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE = 40.0
 
-TIMEOUT = 0.5
+TIMEOUT = 5
 
 HOLD_COND = "midgray.osg"
 OSG_FILE = "L.osgt/0.0,0.0,0.29/0.1,0.1,0.3"

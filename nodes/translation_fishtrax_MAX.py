@@ -82,7 +82,6 @@ CONDITIONS = [
                 "infinity04.svg/10.0/0.05/1/10.0/-0.01",
                 "infinity03.svg/10.0/0.05/1/10.0/-0.01",
                 "infinity04.svg/5.0/0.05/1/10.0/-0.01"
-                
 ]
 
 START_CONDITION = CONDITIONS[0]
