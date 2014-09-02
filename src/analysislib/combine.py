@@ -1189,17 +1189,31 @@ class CombineH5WithCSV(_Combine):
                     #
                     #an outer join allows the tracking data to have started
                     #before the csv (frames_before)
+
+                    #delete the framenumber from the h5 dataframe, it only
+                    #duplicates what should be in the index anyway
+                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
+
+                    #if there are any columns common in both dataframes the result
+                    #seems to be that the concat resizes the contained values
+                    #by adding an extra dimenstion.
+                    #df['x'].values.ndim = 1 becomes = 2 (for version of
+                    #pandas < 0.14). To work around this, remove any columns
+                    #in the csv dataframe that exists in df
+                    common_columns = df.columns & fdf.columns
+                    for c in common_columns:
+                        self._warn_once('ERROR: removing duplicated colum name "%s"' % c)
+                        del df[c]
+
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
                                 axis=1,join='outer')
 
-                    #for some reason, pandas crashes when attempting to replace
-                    #a column with length l with one of lenth l_new (where l_new >> l)
-                    #so remove the old colum first
-                    #grr added in pandas 13.1                  
-                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
                     #restore a framenumber column for API compatibility
                     df['framenumber'] = df.index.values
+
+                    if df['x'].values.ndim > 1:
+                        self._warn_once("ERROR: pandas merge added empty dimension to dataframe values")
 
                     # Because of the outer join, trim filter do not work
                     # (trimmed observations come back as haunting missing values)
