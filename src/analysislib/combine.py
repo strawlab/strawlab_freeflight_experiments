@@ -1026,8 +1026,6 @@ class CombineH5WithCSV(_Combine):
 
         #open the csv file as a dataframe
         csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
-        #add a tns colum
-        csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1059,6 +1057,8 @@ class CombineH5WithCSV(_Combine):
                              # Also we might want to remove the constraint that we need to know the UUID
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
+            df = None
+
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
@@ -1208,11 +1208,20 @@ class CombineH5WithCSV(_Combine):
                     # TODO: check for holes
 
                 elif (self._index == 'none') or (self._index.startswith('time')):
+
+                    if self._index == 'none':
+                        merge_on = 'framenumber'
+                    else:
+                        #add a tns column to merge on
+                        odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
+                        merge_on = 'tns'
+
                     #in this case we want to keep all the rows (outer)
-                    #but the two dataframes should remain sorted by framenumber
+                    #but the two dataframes should remain sorted by either
+                    #framenumber or time
                     df = pd.merge(
                                 odf,df,
-                                on='framenumber',
+                                on=merge_on,
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
 
@@ -1230,6 +1239,9 @@ class CombineH5WithCSV(_Combine):
 
                         if resamplespec is not None:
                             df = df.resample(resamplespec, fill_method='pad')
+
+                else:
+                    raise Exception('Unknown index requested %s' % self._index)
 
                 if fix.should_fix_rows:
                     for _ix, row in df.iterrows():
