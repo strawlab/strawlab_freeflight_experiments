@@ -80,7 +80,8 @@ class TestCombineData(unittest.TestCase):
 
         self.assertEqual(fn[0], 3843)
         self.assertEqual(framenumber0, 3843)
-        self.assertEqual(fn[-1], 5777)
+        self.assertEqual(fn[-1], 5750)
+
 
 class TestCombine(unittest.TestCase):
 
