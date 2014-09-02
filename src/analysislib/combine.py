@@ -1047,6 +1047,8 @@ class CombineH5WithCSV(_Combine):
         skipped = self._skipped
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
+            df = None
+
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
@@ -1222,6 +1224,9 @@ class CombineH5WithCSV(_Combine):
 
                         if resamplespec is not None:
                             df = df.resample(resamplespec, fill_method='pad')
+
+                else:
+                    raise Exception('Unknown index requested %s' % self._index)
 
                 if fix.should_fix_rows:
                     for _ix, row in df.iterrows():
