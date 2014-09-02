@@ -73,7 +73,7 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-              "checkerboard16.png/infinity03.svg/+0.4/-10.0/0.05/0.50",
+              "checkerboard16.png/infinity03.svg/+0.6/10.0/0.05/0.50",
               "checkerboard16.png/infinity03.svg/+0.6/-10.0/0.05/0.50",
                 "checkerboard16.png/infinity03.svg/+0.6/+10.0/0.05/0.50",
                 "checkerboard16.png/infinity03.svg/+0.6/-5.0/0.05/0.50",

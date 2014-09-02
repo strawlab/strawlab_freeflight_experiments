@@ -76,15 +76,13 @@ TAU= 2*PI
 #             z_target
 #
 CONDITIONS = [
-                "infinity03.svg/5.0/0.05/5/30.0/-0.01",
-                "infinity03.svg/15.0/0.05/5/15.0/-0.01",
-                "infinity03.svg/15.0/0.05/5/5/-0.01",
-                "infinity03.svg/30.0/0.05/5/15.0/-0.01",
-                "infinity03.svg/5.0/0.05/5/5.0/-0.01",
-                "infinity03.svg/5.0/0.05/5/15.0/-0.01",
-                "infinity03.svg/15.0/0.05/5/30.0/-0.01",
-                "infinity03.svg/30.0/0.05/5/30.0/-0.01",
-                "infinity03.svg/30.0/0.05/5/5.0/-0.01"
+                "infinity03.svg/5.0/0.05/1/10.0/-0.01",                
+                "infinity04.svg/10.0/0.05/1/5.0/-0.01",
+                "infinity03.svg/10.0/0.05/1/5.0/-0.01",
+                "infinity04.svg/10.0/0.05/1/10.0/-0.01",
+                "infinity03.svg/10.0/0.05/1/10.0/-0.01",
+                "infinity04.svg/5.0/0.05/1/10.0/-0.01"
+                
 ]
 
 START_CONDITION = CONDITIONS[0]
