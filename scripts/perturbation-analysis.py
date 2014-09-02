@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import os.path
 import sys
 import operator
@@ -205,6 +205,7 @@ if __name__=='__main__':
 
     TO_PLOT = {"dtheta":{"ylim":(-10,10)},
                "z":{"ylim":(zmin,zmax)},
+               "vz":{"ylim":(-0.5,+0.5)},
                "velocity":{},
                "rotation_rate":{},
     }

@@ -58,8 +58,9 @@ MAX_ROTATION_RATE = 1.5
 #             star_size
 #
 CONDITIONS = [
-              "infinity.svg/+10.0/0.1/+10.0/5.0",
-              "infinity.svg/+10.0/0.1/+10.0/10.0",
+              "infinity.svg/+5.0/0.1/+5.0/10.0",
+              "infinity.svg/+5.0/0.1/+5.0/20.0",
+              "infinity.svg/+5.0/0.1/+5.0/5.0",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover

@@ -9,13 +9,14 @@
 #include "contr_fct_subopt_MPC_model2.h"
 #include "dec_fct.h"
 #include "calculateInput.h"
+#include "calc_pathAndDer.h"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 // Nominal parameters of fly
 #define IFZZ 0.306e-12
 #define MF 0.9315e-6
-#define V0 0.5
+#define V0 0.25
 #define VY 1e-4
 #define VZ 1e-10
 
@@ -28,6 +29,8 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	 */
 
 	int i;
+	double pathDerDummy[2], pathDerDerDummy[2];
+	double deltaTheta;
     
     // parameters directly related to decision function
     decfp->Ts = 0.01; // sample time
@@ -50,7 +53,7 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	ekfp->ekf_flyparams.Vz = VZ;
 	
 	// parameters directly related to controller
-	cp->Ts = 0.15;
+	cp->Ts = 0.05;
 	cp->theta0 = 0;
 	cp->Tp = 2;
 	cp->Qy[0] = 10000;
@@ -113,6 +116,15 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	ekfp->x0[4] = 0.0;
 	
 	ekfp->Ts = 0.005;
+	
+	// calculate points of desiredPath
+	cp->NdesPath = 100; // number of points calculated for desired path
+	cp->desiredPath = (double *)calloc(cp->NdesPath*2, sizeof(double));
+	deltaTheta = 2*M_PI/((double)(cp->NdesPath));
+	for (i=0;i<cp->NdesPath;i++) {
+		pathAndDer (cp->desiredPath+i*2, pathDerDummy, pathDerDerDummy, i*deltaTheta, cp->a, cp->b, cp->delta, cp->xme, cp->yme);
+	}
+	//for (i=0;i<cp->NdesPath;i++) printf("%g %g\n",cp->desiredPath[i*2],cp->desiredPath[i*2+1]);
     
 }
 
@@ -142,6 +154,7 @@ void allocate_memory_controller (projGrState_t *projGrState, contrp_t *cp) {
 	projGrState->J = (double *)calloc(cp->Nhor, sizeof(double));
 	projGrState->rws = (double *)calloc(MAX(Nrws_dHdufct,Nrws_int) + 10, sizeof(double));
 	projGrState->theta = (double *)calloc(1, sizeof(double));
+	projGrState->finalInput = (double *)calloc(Nuh, sizeof(double));
 
 }
 

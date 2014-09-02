@@ -18,13 +18,12 @@ pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
-from geometry_msgs.msg import Vector3, Pose
+from geometry_msgs.msg import Vector3, Pose, Polygon, Point32
 
 from ros_flydra.msg import flydra_mainbrain_super_packet
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 
 import flyflypath.model
-import flyflypath.transform
 import nodelib.log
 
 from strawlab_freeflight_experiments.topics import *
@@ -71,10 +70,8 @@ START_CONDITION = CONDITIONS[0]
 #message is sent and a video recorded
 COOL_CONDITIONS = set()
 
-XFORM = flyflypath.transform.SVGTransform()
-
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","path_theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -91,6 +88,12 @@ class Node(object):
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
 
+        #publish for the follow_path monitor
+        self.svg_pub = rospy.Publisher("svg_filename", String, latch=True)
+        self.src_m_pub = rospy.Publisher("source_m", Vector3)
+        self.trg_m_pub = rospy.Publisher("target_m", Vector3)
+        self.path_m_pub = rospy.Publisher('path_m', Polygon, latch=True, tcp_nodelay=True)
+
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
 
@@ -101,7 +104,7 @@ class Node(object):
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
-        self.log.ratio = 0 #backwards compatibility - see theta for mpc path parameter
+        self.log.ratio = 0 #backwards compatibility - see path_theta for mpc path parameter
 
         #setup the MPC controller
         self.controllock = threading.Lock()
@@ -109,6 +112,9 @@ class Node(object):
             self.control = MPC.MPC()
             self.control.reset()
             #rotation_rate = omega
+
+        #publish the path
+        self.path_m_pub.publish(Polygon(points=[Point32(x,y,0) for x,y in self.control.path]))
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -128,12 +134,7 @@ class Node(object):
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
-        #target (for moving points)
-        self.trg_x = self.trg_y = 0.0
 
-        self.svg_pub = rospy.Publisher("svg_filename", String, latch=True)
-        self.src_pub = rospy.Publisher("source", Vector3)
-        self.trg_pub = rospy.Publisher("target", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
         self.switch_conditions(None,force=START_CONDITION)
@@ -154,7 +155,8 @@ class Node(object):
                 self.control.run_control()
         self.log.j = self.control._CT_jout.value
         self.log.w = self.control._CT_wout.value
-        self.log.theta = self.control._CT_thetaout.value
+        self.log.path_theta = self.control._CT_thetaout.value
+        self.log.trg_x, self.log.trg_y = self.control.target_point
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_update_ekf(self, x,y):
@@ -189,7 +191,7 @@ class Node(object):
         self.svg_fn = str(svg)
         self.svg_pub.publish(self.svg_fn)
 
-
+        self.log.trg_z = self.z_target
         self.log.cyl_r = self.rad_locked
 
         #HACK
@@ -250,6 +252,9 @@ class Node(object):
                     rotation_rate = self.control.rotation_rate
                     self.log.rotation_rate = rotation_rate
 
+                    trg_x, trg_y = self.control.target_point
+                    self.trg_m_pub.publish(trg_x,trg_y,self.z_target)
+
                     #print rotation_rate, fly_v, fly_z
 
                     if np.isnan(rotation_rate):
@@ -258,12 +263,11 @@ class Node(object):
                     else:
                         self.pub_rotation_velocity.publish(rotation_rate)
 
-                    px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
-                    self.src_pub.publish(px,py,fly_z)
+                    self.src_m_pub.publish(fly_x,fly_y,fly_z)
                     self.ack_pub.publish(self.control.controller_enabled > 0)
 
-                #150ms
-                if (i % 60) == 0:
+                #50ms
+                if (i % 20) == 0:
                     if cthread is not None:
                         cthread.join()
 

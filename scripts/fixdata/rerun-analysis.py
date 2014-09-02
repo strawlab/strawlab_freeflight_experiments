@@ -18,10 +18,7 @@ import strawlab.constants
 DEFAULT_LENFILT = '--lenfilt 1'
 DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
 
-DEFAULT_ARGS = "--uuid %s --zfilt trim --zfilt-min 0.05 --zfilt-max 0.38 --rfilt trim --arena %s --reindex --customfilt df[df['velocity']>0.1] --customfilt-len 1"
-
 EXCEPT = set()
-ONLY = set()#['d8f0d0289b1711e38ed610bf48d7699b'])
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
@@ -39,7 +36,10 @@ parser.add_argument(
     '-e', '--extra-args',
     help='extra args to add to the command')
 parser.add_argument(
-    '-A', '--arena',
+    '-f', '--force-args', action='store_true',
+    help='rerun analysis with the default arguments irrespective of those run previously')
+parser.add_argument(
+    '-A', '--arena', required=True,
     help='flycave, flycube, etc')
 parser.add_argument(
     '-N', '--db-name', default="freeflight",
@@ -86,9 +86,6 @@ for uuid in todo:
     if uuid in EXCEPT:
         continue
 
-    if ONLY and (uuid not in ONLY):
-        continue
-
     print uuid,
 
     try:
@@ -108,9 +105,9 @@ for uuid in todo:
         jsondata = None
 
     #if the experiment contains neither json nor readme, use the default args
-    if True:#not jsondata and not readme:
+    if args.force_args or (not jsondata and not readme):
         opts = DEFAULT_ARGS % (uuid, args.arena)
-        where = 'd'
+        where = 'f' if args.force_args else 'd' 
     elif jsondata:
         opts = jsondata['argv'].split('.py ')[1]
         where = 'j'
@@ -140,6 +137,10 @@ for uuid in todo:
             elif opt.strip() == '--show':
                 pass
             else:
+                argslist.append(opt)
+
+        if args.extra_args:
+            for opt in args.extra_args.split(' '):
                 argslist.append(opt)
 
         if not args.dry_run:

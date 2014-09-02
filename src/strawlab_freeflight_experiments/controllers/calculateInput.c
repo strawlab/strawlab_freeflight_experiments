@@ -38,10 +38,10 @@ void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, projGrState_t *projG
         cInpState->noCalls = cInpState->noCalls + 1;
 
         // interpolate to get current value of input at curt: 
-        interplin(interpInput, projGrState->t, projGrState->u, curt, cp->Nu, cp->Nhor, 0);    
-
+        interplin(interpInput, projGrState->t, projGrState->finalInput, curt, cp->Nu, cp->Nhor, 0);    
+		
         //omegae[0] = interpInput[0];  // use interpolation of input in the prediction horizon
-        omegae[0] = projGrState->u[0]; // use first value of u in the prediction horizon in ZOH-fashion
+        omegae[0] = projGrState->finalInput[0]; // use first value of u in the prediction horizon in ZOH-fashion
                 
     } else {
         // idle

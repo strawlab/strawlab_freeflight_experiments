@@ -2,9 +2,9 @@ import math
 
 import roslib
 roslib.load_manifest('geometry_msgs')
-from geometry_msgs.msg import Point, Pose, PoseArray
+from geometry_msgs.msg import Point, Pose, PoseArray, Polygon, Point32
 
-def get_circle_trigger_volume_posearray(xform, r, x0, y0):
+def _get_circle_trigger_volume(xform, r, x0, y0):
 
     def _xy_on_circle(radius, ox, oy, steps=16):
         angleStep = 2 * math.pi / steps
@@ -13,6 +13,14 @@ def get_circle_trigger_volume_posearray(xform, r, x0, y0):
             y = math.cos(a * angleStep) * radius + oy
             yield x, y
 
-    pxpy = [xform.xy_to_pxpy(*v) for v in _xy_on_circle(r,x0,y0)]
+    return [xform.xy_to_pxpy(*v) for v in _xy_on_circle(r,x0,y0)]
+
+def get_circle_trigger_volume_posearray(xform, r, x0, y0):
+    pxpy = _get_circle_trigger_volume(xform, r, x0, y0)
     poses = [Pose(position=Point(px,py,0)) for px,py in pxpy]
     return PoseArray(poses=poses)
+
+def get_circle_trigger_volume_polygon(xform, r, x0, y0):
+    pxpy = _get_circle_trigger_volume(xform, r, x0, y0)
+    points = [Point32(px,py,0) for px,py in pxpy]
+    return Polygon(points=points)

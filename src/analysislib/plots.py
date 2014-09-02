@@ -45,8 +45,12 @@ def _perm_check(args):
                             "prefix your call with 'sg strawlabnfs '.")
         print "WARNING: could not set process permissions"
 
-def get_safe_filename(s):
-    return s.translate(None, ''.join("\"\\/.+|'<>[]="))
+def get_safe_filename(s, allowed_spaces=True):
+    clean = s.translate(None, ''.join("\"\\/.+|'<>[]="))
+    if allowed_spaces:
+        return clean
+    else:
+        return clean.replace(' ','_')
 
 def show_plots():
     try:

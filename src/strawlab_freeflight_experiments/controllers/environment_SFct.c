@@ -124,7 +124,7 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortRequiredContiguous(S, 3, 1);
 
     
-    if (!ssSetNumOutputPorts(S, 7)) return;
+    if (!ssSetNumOutputPorts(S, 8)) return;
     ssSetOutputPortWidth(S, 0, 5); // estimated state of EKF
     ssSetOutputPortWidth(S, 1, 1); // omega_e from controller, input to the system
 	ssSetOutputPortWidth(S, 2, 1); // cost from controller
@@ -132,6 +132,7 @@ static void mdlInitializeSizes(SimStruct *S)
 	ssSetOutputPortWidth(S, 4, 1); // input to path parameter system
     ssSetOutputPortWidth(S, 5, 1); // enable flag for controller
     ssSetOutputPortWidth(S, 6, 1); // enable flag for EKF
+	ssSetOutputPortWidth(S, 7, 2); // current target point on the desired path
 		
 
     ssSetNumSampleTimes(S, 4); 
@@ -263,6 +264,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 	real_T         *w_out       = ssGetOutputPortRealSignal(S,4);
     real_T         *en_cntr_out = ssGetOutputPortRealSignal(S,5);
     real_T         *en_ekf_out  = ssGetOutputPortRealSignal(S,6);
+	real_T    *targetPoint_out  = ssGetOutputPortRealSignal(S,7);
     
 	real_T            *y     = (real_T*)ssGetInputPortSignal(S,0);
 	real_T            *udebug     = (real_T*)ssGetInputPortSignal(S,1);
@@ -312,7 +314,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         }
 	    
         // call controller function
-        contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState);
+        contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState, targetPoint_out);
         
         if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );

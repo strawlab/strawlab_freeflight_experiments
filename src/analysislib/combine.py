@@ -1,6 +1,5 @@
 import os.path
 import sys
-import argparse
 import Queue
 import random
 import time
@@ -14,6 +13,8 @@ import numpy as np
 import pytz
 import datetime
 import calendar
+from flydata.strawlab.metadata import FreeflightExperimentMetadata
+from flydata.strawlab.trajectories import FreeflightTrajectory
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -23,10 +24,9 @@ import nodelib.log
 
 import analysislib.fixes
 import analysislib.filters
-import analysislib.combine
 import analysislib.args
 import analysislib.curvature as acurve
-import analysislib.plots as aplt
+
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT
@@ -700,6 +700,8 @@ class CombineH5WithCSV(_Combine):
         else:
             self.add_csv_and_h5_file = self.add_csv_and_h5_file_new
 
+        self._trajs = None
+
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
@@ -723,7 +725,7 @@ class CombineH5WithCSV(_Combine):
         if not self.plotdir:
             self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-        self.add_csv_and_h5_file(csv_file, h5_file, args)
+        self.add_csv_and_h5_file(csv_file, h5_file, args, uuid)
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
@@ -749,7 +751,7 @@ class CombineH5WithCSV(_Combine):
                 if self.plotdir is None:
                     self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-                self.add_csv_and_h5_file(csv_file, h5_file, args)
+                self.add_csv_and_h5_file(csv_file, h5_file, args, uuid=uuid)
 
         else:
             csv_file = args.csv_file
@@ -998,10 +1000,8 @@ class CombineH5WithCSV(_Combine):
 
         h5.close()
 
-    def add_csv_and_h5_file_new(self, csv_fname, h5_file, args):
+    def add_csv_and_h5_file_new(self, csv_fname, h5_file, args, uuid=None):
         """Add a single csv and h5 file"""
-
-        warnings = {}
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
@@ -1046,7 +1046,19 @@ class CombineH5WithCSV(_Combine):
         results = self._results
         skipped = self._skipped
 
+        # Container for "FreeflightTrajectory" objects
+        trajs = []
+        # Metadata
+        if uuid is not None:
+            metadata = FreeflightExperimentMetadata(uuid=uuid)
+        else:
+            metadata = None  # FIXME: We need a "unknown metadata" object,
+                             # which we could use also if we fail to fetch MD
+                             # Also we might want to remove the constraint that we need to know the UUID
+
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
+            df = None
+
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
@@ -1078,7 +1090,6 @@ class CombineH5WithCSV(_Combine):
                 start_frame = trial_framenumbers[0] - args.frames_before
             else:
                 start_frame = trial_framenumbers[0]
-
             stop_frame = trial_framenumbers[-1]
 
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
@@ -1164,9 +1175,6 @@ class CombineH5WithCSV(_Combine):
                 except KeyError:
                     self._results_by_condition[oid] = [ span_details ]
 
-                #add a tns colum
-                csv['tns'] = np.array((csv['t_sec'].values * 1e9) + csv['t_nsec'], dtype=np.uint64)
-
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                         n_samples,
                                         start_frame,stop_frame,
@@ -1181,17 +1189,55 @@ class CombineH5WithCSV(_Combine):
                     #
                     #an outer join allows the tracking data to have started
                     #before the csv (frames_before)
+
+                    #delete the framenumber from the h5 dataframe, it only
+                    #duplicates what should be in the index anyway
+                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
+
+                    #if there are any columns common in both dataframes the result
+                    #seems to be that the concat resizes the contained values
+                    #by adding an extra dimenstion.
+                    #df['x'].values.ndim = 1 becomes = 2 (for version of
+                    #pandas < 0.14). To work around this, remove any columns
+                    #in the csv dataframe that exists in df
+                    common_columns = df.columns & fdf.columns
+                    for c in common_columns:
+                        self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c,c))
+                        cv = df[c].values
+                        del df[c]
+                        df['_'+c] = cv
+
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
                                 axis=1,join='outer')
+
                     #restore a framenumber column for API compatibility
                     df['framenumber'] = df.index.values
+
+                    if df['x'].values.ndim > 1:
+                        self._warn_once("ERROR: pandas merge added empty dimension to dataframe values")
+
+                    # Because of the outer join, trim filter do not work
+                    # (trimmed observations come back as haunting missing values)
+                    # This is a quick workaround...
+                    df = df.dropna(subset=['x'])
+                    # TODO: check for holes
+
                 elif (self._index == 'none') or (self._index.startswith('time')):
+
+                    if self._index == 'none':
+                        merge_on = 'framenumber'
+                    else:
+                        #add a tns column to merge on
+                        odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
+                        merge_on = 'tns'
+
                     #in this case we want to keep all the rows (outer)
-                    #but the two dataframes should remain sorted by framenumber
+                    #but the two dataframes should remain sorted by either
+                    #framenumber or time
                     df = pd.merge(
                                 odf,df,
-                                on='framenumber',
+                                on=merge_on,
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
 
@@ -1209,6 +1255,9 @@ class CombineH5WithCSV(_Combine):
 
                         if resamplespec is not None:
                             df = df.resample(resamplespec, fill_method='pad')
+
+                else:
+                    raise Exception('Unknown index requested %s' % self._index)
 
                 if fix.should_fix_rows:
                     for _ix, row in df.iterrows():
@@ -1245,5 +1294,13 @@ class CombineH5WithCSV(_Combine):
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
 
+                # Let's instantiate a FreeflightTrajectory too, as it is cheap. Alternative: do on demand
+                trajs.append(FreeflightTrajectory(metadata, oid, start_framenumber, start_time, cond, df, dt=dt))
+
+        self._trajs = trajs
+
         h5.close()
 
+    def get_trajs(self):
+        """Returns the combined trajectories as a list of FreeflightTrajectory objects."""
+        return self._trajs

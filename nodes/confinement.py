@@ -13,7 +13,6 @@ import flyvr.display_client as display_client
 from std_msgs.msg import String, UInt32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import nodelib.log
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE

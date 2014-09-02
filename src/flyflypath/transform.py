@@ -27,6 +27,13 @@ class SVGTransform:
     def pixel_to_m(self, m):
         return m/self._w/self._shrink
 
+    def xyz_to_pxpypz(self,x,y,z):
+        px,py = self.xy_to_pxpy(x,y)
+        return px,py,z
+
+    def pxpypz_to_xyz(self,px,py,pz):
+        x,y = self.pxpy_to_xy(px,py)
+        return x,y,pz
 
 if __name__ == "__main__":
     XFORM = SVGTransform()
