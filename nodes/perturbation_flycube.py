@@ -85,7 +85,7 @@ CONDITIONS = [
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
 
-START_CONDITION = CONDITIONS[0]
+START_CONDITION = CONDITIONS[-1]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
 COOL_CONDITIONS = set()
