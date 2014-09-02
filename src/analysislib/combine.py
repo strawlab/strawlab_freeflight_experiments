@@ -1202,8 +1202,10 @@ class CombineH5WithCSV(_Combine):
                     #in the csv dataframe that exists in df
                     common_columns = df.columns & fdf.columns
                     for c in common_columns:
-                        self._warn_once('ERROR: removing duplicated colum name "%s"' % c)
+                        self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c,c))
+                        cv = df[c].values
                         del df[c]
+                        df['_'+c] = cv
 
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
