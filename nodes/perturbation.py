@@ -75,7 +75,7 @@ REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
 # corresponding bias term
 #
 CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
+              "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|0.9|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
