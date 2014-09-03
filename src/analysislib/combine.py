@@ -1168,6 +1168,7 @@ class CombineH5WithCSV(_Combine):
                 df = None
 
             if df is not None:
+
                 n_samples = len(df)
                 span_details = (cond, n_samples)
                 try:
