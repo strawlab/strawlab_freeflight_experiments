@@ -26,7 +26,10 @@ def _write_df(dest, df, index):
 
     df.to_csv(dest+'.csv',**kwargs)
     df.to_pickle(dest+'.df')
-    scipy.io.savemat(dest+'.mat', df.to_dict('list'))
+
+    dict_df = df.to_dict('list')
+    dict_df['index'] = df.index.values
+    scipy.io.savemat(dest+'.mat', dict_df)
 
     print "WROTE csv,df,mat", dest
 
