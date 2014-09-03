@@ -1237,6 +1237,7 @@ class CombineH5WithCSV(_Combine):
                     #framenumber or time
                     df = pd.merge(
                                 odf,df,
+                                suffixes=("_csv","_h5"),
                                 on=merge_on,
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
