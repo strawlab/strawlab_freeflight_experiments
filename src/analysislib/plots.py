@@ -549,7 +549,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False, repeat=True):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
@@ -637,10 +637,11 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
 
     anim = animation.FuncAnimation(_fig,
                                animate,
-                               frames=_df.index,
+                               frames=_df.index.values,
                                init_func=init,
                                interval=50, blit=True,
                                fargs=(_df,_linexypt,_linetrgpt,_pt_axes),
+                               repeat=repeat,
     )
 
     return anim
