@@ -620,7 +620,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         return _init_axes
 
     # animation function.  This is called sequentially
-    def animate(i, df, xypt, trgpt, pt_axes):
+    def animate(i, df, xypt, trgpt, pt_axes, i0, iN):
         changed = []
         xypt.set_data(df['x'][i], df['y'][i])
         changed.append(xypt)
@@ -633,6 +633,10 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         for p in pt_axes:
             pt_axes[p].set_data(i, df[p][i])
 
+        if not repeat:
+            #we are being animated
+            print "\t%.1f%%" % (((float(i)-i0) / (iN-i0)) * 100)
+
         return changed + pt_axes.values()
 
     anim = animation.FuncAnimation(_fig,
@@ -640,7 +644,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
                                frames=_df.index.values,
                                init_func=init,
                                interval=50, blit=True,
-                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes),
+                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes, _df.index.values[0], _df.index.values[-1]),
                                repeat=repeat,
     )
 
