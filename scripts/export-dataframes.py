@@ -28,7 +28,7 @@ def _write_df(dest, df, index):
     df.to_pickle(dest+'.df')
     scipy.io.savemat(dest+'.mat', df.to_dict('list'))
 
-    print "wrote", dest
+    print "WROTE csv,df,mat", dest
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(

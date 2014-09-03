@@ -98,12 +98,11 @@ if __name__=='__main__':
             filename,uuid,obj_id,current_condition = anims[anim]
             title = "%s: obj_id %s (condition %s)" % (uuid, obj_id, current_condition)
             filename = os.path.join(basedir,filename + ".mp4")
-            print "SAVE MP4:",filename
+            print "WROTE MP4:",filename
             writer = Writer(fps=15, metadata=dict(title=title), bitrate=1800)
             anim.save(filename, writer=writer)
 
     if (not args.save_animation) and args.show:
-        print "1111111111111"
         aplt.show_plots()
 
     sys.exit(0)
