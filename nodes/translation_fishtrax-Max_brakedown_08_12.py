@@ -1,16 +1,5 @@
 #!/usr/bin/env python
 
-# This stimulus is intendedto just show a dark or bright stationary background
-# no locking should be done. For this reason stationary .osgt scenes were adapted
-# they are switched at adefigned rate
-#
-# TODO: get the locking out and the logging right
-#
-#
-#
-#
-#
-#
 import math
 import numpy as np
 import threading
@@ -26,7 +15,6 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
-import std_msgs.msg
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
@@ -40,7 +28,7 @@ from strawlab_freeflight_experiments.topics import *
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 10*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0   #### ????? ####
 
@@ -52,19 +40,17 @@ X_MIN = -0.15
 X_MAX =  0.15
 Y_MIN = -0.15
 Y_MAX =  0.15
-Z_MIN =  -0.09
-Z_MAX =  0.01
-
-
+Z_MIN =  -0.10
+Z_MAX =  0.03
 
 
 
 # time interval in seconds to check fly movement after lock on
-FLY_HEIGHT_CHECK_TIME = 2 #5 was good #0.5       
+FLY_HEIGHT_CHECK_TIME = 1 #5 was good #0.5       
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
-Z_MINIMUM = -0.10 # 0.01 max
+Z_MINIMUM = -0.09 # 0.01 max
 Z_MAXIMUM = 0.01 # 0.38 max
 
 # y range for fly tracking (dropped outside)
@@ -82,13 +68,21 @@ TAU= 2*PI
 
 
 
-#CONDITION =  .osg Filename
-#		duration to test
-# 
-
-
-CONDITIONS = [ 'cylinder_white.osgt','cylinder_blak.osgt']
-
+#CONDITION =  svg_path(if omitted target = 0,0)/
+#             gain/
+#             advance_threshold(m)/
+#             z_gain/
+#             star_size
+#             z_target
+#
+CONDITIONS = [
+                "infinity04.svg/10.0/0.05/5/10.0/-0.01",  #best condition
+                "infinity04.svg/10.0/0.05/5/10.0/-0.09",  #set z lower
+                "infinity04.svg/10.0/0.05/5/5.0/-0.01",
+                "infinity04.svg/10.0/0.05/5/20.0/-0.01",
+                "infinity04.svg/20.0/0.05/5/10.0/-0.01",
+                "infinity04.svg/5.0/0.05/5/10.0/-0.01"
+]
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -99,18 +93,22 @@ MAX_COOL = 10
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("stimulus_filename",)
+    STATE = ("trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","stim_x","stim_y","stim_z")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
-        self.dsc = display_client.DisplayServerProxy.set_stimulus_mode('StimulusOSGFile')  
+        self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
+            'StimulusStarField')
 
-
-	self.pub_stimulus = rospy.Publisher("stimulus_filename", std_msgs.msg.String, latch=True, tcp_nodelay=True)
+        self.pub_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
+        self.pub_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
+
+        self.pub_velocity.publish(0,0,0)
+        self.pub_size.publish(5.0)
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -140,11 +138,23 @@ class Node(object):
 
             self.blacklist = {}
 
+        self.n_cool = 0
+
+        #start criteria for experiment
+        self.x0 = self.y0 = 0
+        #target (for moving points)
+        self.trg_x = self.trg_y = 0.0
+
+        self.svg_pub = rospy.Publisher("svg_filename", String, latch=True)
+        self.src_pub = rospy.Publisher("source", Vector3)
+        self.trg_pub = rospy.Publisher("target", Vector3)
+        self.ack_pub = rospy.Publisher("active", Bool)
+
         self.switch_conditions(None,force=START_CONDITION)
 
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
-	self.ack_pub = rospy.Publisher("active", Bool)
+
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
@@ -156,8 +166,6 @@ class Node(object):
     def is_replay_experiment_z(self):
         return np.isnan(self.v_gain)
 
-
-
     def switch_conditions(self,event,force=''):
         if force:
             self.condition = force
@@ -165,17 +173,54 @@ class Node(object):
             i = CONDITIONS.index(self.condition)
             j = (i+1) % len(CONDITIONS)
             self.condition = CONDITIONS[j]
-        
-	self.log.condition = self.condition
+        self.log.condition = self.condition
 
         self.drop_lock_on()
 
-	self.pub_stimulus.publish(self.condition)
-        
+        svg,p,advance,v_gain,star_size,z_target = self.condition.split('/')
+        self.p_const = float(p)
+        self.v_gain = float(v_gain)
+        self.advance_px = XFORM.m_to_pixel(float(advance))
+        self.z_target = float(z_target)    #!!!z = 0 is surface
 
-        rospy.loginfo('condition: %s' % (self.condition))
+        if str(svg):
+            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
+            self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
+            self.svg_pub.publish(self.svg_fn)
+        else:
+            self.svg_fn = ''
 
+        self.pub_size.publish(float(star_size))
 
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
+
+    def get_v_rate(self,fly_z):
+        #return early if this is a replay experiment
+        if self.is_replay_experiment_z:
+            return self.replay_z.next()
+
+        return self.v_gain*(self.z_target - fly_z)
+
+    def get_starfield_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
+        if self.svg_fn and (not self.is_replay_experiment_rotation):
+            with self.trackinglock:
+                px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
+                segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
+                if segment.length < self.advance_px:
+                    self.log.ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
+                    self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+                    self.ratio_total += ADVANCE_RATIO
+        else:
+            self.trg_x = self.trg_y = 0.0
+
+        #return early if this is a replay experiment
+        if self.is_replay_experiment_rotation:
+            return self.replay_rotation.next(), self.trg_x,self.trg_y
+
+        dx = self.trg_x-fly_x
+        dy = self.trg_y-fly_y
+
+        return self.p_const*dx,self.p_const*dy,self.trg_x,self.trg_y
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -218,7 +263,9 @@ class Node(object):
                         rospy.loginfo('WALL: Wall (Y = %.2f > Y_MAXIMUM %.2f )' % (fly_y, Y_MAXIMUM))
                     else:
                         rospy.loginfo('WALL: Wall (Y = %.2f < Z_MINIMUM %.2f )' % (fly_y, Y_MINIMUM))
-                    continue   
+                    continue
+
+              
 
                 #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
@@ -235,6 +282,21 @@ class Node(object):
                         self.drop_lock_on()
                         rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
+
+                rate_x,rate_y,trg_x,trg_y = self.get_starfield_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
+                v_rate = self.get_v_rate(fly_z)
+
+                px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
+                self.src_pub.publish(px,py,fly_z)
+                trg_px, trg_py = XFORM.xy_to_pxpy(trg_x,trg_y)
+                self.trg_pub.publish(trg_px,trg_py,self.z_target)
+
+                self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = self.z_target
+
+                self.log.stim_x = rate_x
+                self.log.stim_y = rate_y
+                self.log.stim_z = v_rate
+                self.pub_velocity.publish(rate_x,rate_y,v_rate)
 
                 self.log.framenumber = framenumber
 
@@ -273,8 +335,6 @@ class Node(object):
         self.log.update()
         self.pub_lock_object.publish( self.log.lock_object )
 
-
-
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
             rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
@@ -285,6 +345,15 @@ class Node(object):
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
+
+            if self.svg_fn:
+                px,py = XFORM.xy_to_pxpy(obj.position.x,obj.position.y)
+                closest,ratio = self.model.connect_closest(p=None, px=px, py=py)
+                self.log.ratio,newpt = self.model.start_move_from_ratio(ratio)
+                self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+            else:
+                self.log.ratio = 0
+                self.trg_x = self.trg_y = 0.0
 
             self.ratio_total = 0
 
@@ -311,13 +380,19 @@ class Node(object):
             if blacklist:
                 self.blacklist[old_id] = True
 
+        self.pub_velocity.publish(0,0,0)
 
-
+        if (self.ratio_total > 2) and (old_id is not None):
+            if self.condition in COOL_CONDITIONS:
+                if self.n_cool < MAX_COOL:
+                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+                    self.pub_save.publish(old_id)
+                    self.n_cool += 1
 
         self.update()
 
 def main():
-    rospy.init_node("bright_dark")
+    rospy.init_node("translation")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
