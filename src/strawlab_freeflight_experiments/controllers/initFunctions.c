@@ -16,7 +16,7 @@
 // Nominal parameters of fly
 #define IFZZ 0.306e-12
 #define MF 0.9315e-6
-#define V0 0.5
+#define V0 0.25
 #define VY 1e-4
 #define VZ 1e-10
 
