@@ -799,7 +799,7 @@ def save_results(combine, args, maxn=20):
     name = combine.get_plot_filename("data.pkl")
     with open(name, "w+b") as f:
         if WRITE_PKL:
-            pickle.dump({"results":results,"dt":dt}, f)
+            pickle.dump({"results":results,"dt":dt}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     best = _get_flight_lengths(combine)
     name = combine.get_plot_filename("data.json")
