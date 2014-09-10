@@ -7,15 +7,18 @@ from glob import glob
 from itertools import izip, chain
 import os
 import os.path as op
-import pickle
 import shutil
 import datetime
+import pickle
+import cPickle
+import pickletools
 import pytz
+import numpy as np
 
 from flydata.misc import ensure_dir
 from oscail.common.config import Configurable, Configuration
 from flydata.log import warning, info
-import numpy as np
+
 
 # FIXME: this should be user configurable via commandline/envvar/configfile
 STRAWLAB_DATA_ROOT = '/mnt/strawscience/data'
@@ -54,6 +57,46 @@ def _verbose_copy(src, dest):
     info('\tCopying %s (%.2f MiB)' % (op.basename(src), op.getsize(src) / 1024. ** 2))
     ensure_dir(dest)
     shutil.copy(src, dest)
+
+
+###############################
+# Pickle functions
+###############################
+
+def _pickle_protocol_version(pkl):
+    # See http://www.diveintopython3.net/serializing.html
+    # This is too slow for pickle protocol >= 2
+    with open(pkl, 'r') as file_object:
+        maxproto = -1
+        for opcode, arg, pos in pickletools.genops(file_object):
+            maxproto = max(maxproto, opcode.proto)
+        return maxproto
+
+
+def _is_pickle_protocol_over_2(pkl):
+    # See http://stackoverflow.com/questions/19807790/given-a-pickle-dump-in-python-how-to-i-determine-the-used-protocol
+    with open(pkl, 'r') as reader:
+        return next(pickletools.genops(reader))[0].proto >= 2
+
+
+def _unpickle_fast(pkl_path):
+    # N.B. cPickle is 4 times slower deserializing than pickle
+    # probably we are hitting:
+    #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
+    # We are actually just saving protocol=0 pickles, which makes things big.
+    # See analysislib/plots.py#save_results
+    with open(pkl_path) as reader:
+        return pickle.load(reader) if not _is_pickle_protocol_over_2(pkl_path) else cPickle.load(reader)
+
+
+def repickle_to_highest_protocol(pkl_path, force=False):
+    if not _is_pickle_protocol_over_2(pkl_path) or force:
+        data = _unpickle_fast(pkl_path)
+        new_file = pkl_path + '.repickle.tmp'
+        with open(new_file, 'wb') as writer:
+            cPickle.dump(data, writer, cPickle.HIGHEST_PROTOCOL)
+        os.unlink(pkl_path)
+        os.rename(new_file, pkl_path)
 
 
 ###############################
@@ -195,13 +238,9 @@ class FreeflightAnalysisFiles(Configurable):
         with open(self._analysis_json_file) as reader:
             return json.load(reader)
 
-    def _read_data(self):
-        with open(self._analysis_pkl_file) as reader:
-            return pickle.load(reader)
-
     def _cached_data(self):
         if self._analysis_data is None:
-            self._analysis_data = self._read_data()
+            self._analysis_data = _unpickle_fast(self._analysis_pkl_file)
         return self._analysis_data  # TODO: weakref this if needed
 
     def _cached_json_data(self):
@@ -211,6 +250,9 @@ class FreeflightAnalysisFiles(Configurable):
 
     def pkl_modification_datetime(self, tzinfo=pytz.timezone('Europe/Vienna')):
         return datetime.datetime.fromtimestamp(op.getmtime(self._analysis_pkl_file), tz=tzinfo)
+
+    def repickle(self, force=False):
+        repickle_to_highest_protocol(self._analysis_pkl_file, force=force)
 
     def analysis_command_line(self):
         if self._analysis_command_line is None:
@@ -399,6 +441,10 @@ class FreeflightAnalysisFiles(Configurable):
     def from_uuid(uuid, filter_id=None):
         return FreeflightAnalysisFiles(
             _one_combined_data_dir(op.join(_analysis_byuuid_path(STRAWLAB_DATA_ROOT), uuid), filter_id))
+
+    @staticmethod
+    def from_path(path, filter_id=None):
+        return FreeflightAnalysisFiles(_one_combined_data_dir(path, filter_id))
 
 
 if __name__ == '__main__':
