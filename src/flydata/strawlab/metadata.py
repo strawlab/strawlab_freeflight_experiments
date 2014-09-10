@@ -38,6 +38,7 @@ def find_experiment(uuid):
         ('flycube', 'flycube3'),
         ('flycube', 'flycube5'),
         ('flycube', 'flycube8'),
+        ('fishvr', 'fishtrax'),
     )
     for db, arena in ARENAS:
         uri = strawlab_freeflightdb_uri(dbname=db)

@@ -134,6 +134,10 @@ class FreeflightTrajectory(object):
             return df[columns]
             # TODO: implement laziness, _series should not be assumed a pandas dataframe
 
+    def set_series(self, series):
+        # FIXME: workaround for wrong design
+        self._series = series
+
     def df(self, copy=False):
         """An alias to series()."""
         return self.series(copy=copy)

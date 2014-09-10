@@ -6,15 +6,10 @@ from itertools import chain
 import os.path as op
 
 from joblib import Parallel, delayed, cpu_count
+
 from flydata.strawlab.files import FreeflightAnalysisFiles
 from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
-
-
-class _TrajectoriesCacher(object):
-    def __init__(self, root):
-        super(_TrajectoriesCacher, self).__init__()
-        self.root = root
 
 
 class FreeflightExperiment(object):
@@ -48,7 +43,7 @@ class FreeflightExperiment(object):
         if md_transformers is not None:
             self._md.apply_transform_inplace(**md_transformers)
         if self.cache_root is not None:
-            self._md.to_json_file()
+            self._md.to_json_file()  # FIXME: do not write if it is already there
 
         # ATM we only extract trajectories from analysis pickle files. There the data is:
         #   - nicely postprocessed by the combine machinery
@@ -75,7 +70,10 @@ class FreeflightExperiment(object):
         return sorted(set(traj.condition() for traj in self.trajectories()))  # Arguably, should be read from metadata
 
     def sfff(self, filter_id=None):
-        return FreeflightAnalysisFiles.from_uuid(self.uuid(), filter_id=filter_id)
+        if self.cache_root is None:
+            return FreeflightAnalysisFiles.from_uuid(self.uuid(), filter_id=filter_id)
+        return FreeflightAnalysisFiles.from_path(op.join(self.cache_root, self.uuid()))
+        # FIXME: improve API and document
 
     def trajectories(self, filter_id=None, conditions=None):
         """Returns the list of FreeflightTrajectory objects."""
