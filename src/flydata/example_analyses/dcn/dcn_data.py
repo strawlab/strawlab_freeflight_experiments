@@ -370,7 +370,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
                         '--rfilt trim '
                         '--rfilt-max %g ' % rfilt_max +
                         '--lenfilt %g ' % lenfilt +
-                        '--outdir %s ' % outdir_uuid +
+                        ('' if not outdir_uuid else '--outdir %s ' % outdir_uuid) +
                         '&>~/combine-%s.log' % uuid)
 
     print 'Commands:\n%s' % '\n'.join(commands)
@@ -386,7 +386,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
 # Data loading and strings normalization
 #################
 
-def load_lisa_dcn_experiments(uuids):
+def load_lisa_dcn_experiments(uuids, cache_root_dir=None):
     """Loads FreeflightExperiment objects for the DCN experiments, normalizing the condition and genotype strings.
 
     Parameters
@@ -401,13 +401,14 @@ def load_lisa_dcn_experiments(uuids):
     if isinstance(uuids, basestring):
         uuids = [uuids]
     return [FreeflightExperiment(uuid=uuid,
+                                 cache_root_dir=cache_root_dir,
                                  md_transformers={'genotype': normalize_genotype_string},
                                  traj_transformers={'condition': normalize_condition_string})
             for uuid in uuids]
 
 
-def load_lisa_dcn_trajectories(uuids):
-    experiments = load_lisa_dcn_experiments(uuids)
+def load_lisa_dcn_trajectories(uuids, cache_root_dir=None):
+    experiments = load_lisa_dcn_experiments(uuids, cache_root_dir=cache_root_dir)
     return list(chain(*[exp.trajectories() for exp in experiments]))
 
 
