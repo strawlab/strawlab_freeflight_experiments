@@ -21,4 +21,5 @@
   <rosdep name="python-rospkg"/>
   <rosdep name="python-pandas"/>
   <rosdep name="python-nose"/>
+  <rosdep name="python-flydra"/>
 </package>
