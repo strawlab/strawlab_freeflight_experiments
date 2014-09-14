@@ -39,8 +39,9 @@ class NoMissingValuesContract(DataContract):
             X = [X]
         for i, traj in enumerate(X):
             traj = df_or_df_from_traj(traj)
+            # or use traj[self.columns].isnull() and relate to columns afterwards...
             missing_rows = {col: np.where(traj[col].isnull())[0] for col in self.columns}
-            yield not any(missing_rows.values()), missing_rows
+            yield not any(len(rows) > 0 for rows in missing_rows.values()), missing_rows
 
 
 class NoHolesContract(DataContract):
