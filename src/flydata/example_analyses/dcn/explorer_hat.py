@@ -97,6 +97,35 @@ class ByNameFilter(Configurable):
             traj.set_series(traj.series()[self.series_to_keep])  # Again, we might not want to do inplace the default
         return trajectories
 
+import numba
+
+
+@numba.autojit
+def ffill(array):
+    last = array[0]
+    for i in xrange(1, len(array)):
+        if array[i] != array[i]:
+            array[i] = last
+        else:
+            last = array[i]
+
+
+@numba.autojit
+def bfill(array):
+    last = array[len(array) - 1]
+    for i in xrange(1, len(array)):
+        i = len(array) - 1 - i
+        if array[i] != array[i]:
+            array[i] = last
+        else:
+            last = array[i]
+
+
+def nanfill(df, series_names):
+    for sname in series_names:
+        ffill(df[sname].values)
+        bfill(df[sname].values)
+
 
 class NaNFiller(Configurable):
 
@@ -207,8 +236,8 @@ STIMULI_SERIES = ('rotation_rate', 'trg_x', 'trg_y', 'trg_z', 'ratio')
 
 # Load the trajectories
 start = time()
-# trajs = load_lisa_dcn_trajectories(uuids=completed_exps[1], cache_root_dir=CACHE_DIR)
-trajs = load_lisa_dcn_trajectories(uuids=completed_exps, cache_root_dir=CACHE_DIR)
+trajs = load_lisa_dcn_trajectories(uuids=completed_exps[1], cache_root_dir=CACHE_DIR)
+# trajs = load_lisa_dcn_trajectories(uuids=completed_exps, cache_root_dir=CACHE_DIR)
 # with open(op.join(CACHE_DIR, 'cached.pkl')) as reader:
 #     trajs = pickle.load(reader)
 print 'Loading took %.2f seconds' % (time() - start)
@@ -219,10 +248,15 @@ print 'Loading took %.2f seconds' % (time() - start)
 trajs = ByNameFilter(series_to_keep=INTERESTING_SERIES).fit(trajs).transform(trajs)  # Is this correct for trg_x
                                                                                      # and the like?
 # Fill missing values in stimuli data
-trajs = NaNFiller(series=STIMULI_SERIES).fit(trajs).transform(trajs)
+start = time()
+# trajs = NaNFiller(series=STIMULI_SERIES).fit(trajs).transform(trajs)
+for traj in trajs:
+    nanfill(traj.series(), STIMULI_SERIES)
+print 'Pandas took %.2f seconds' % (time() - start)
 
-with open(op.join(CACHE_DIR, 'cached.pkl'), 'wb') as writer:
-    pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
+
+# with open(op.join(CACHE_DIR, 'cached.pkl'), 'wb') as writer:
+#     pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
 
 # Check contracts
 # no_missings_please = NoMissingValuesContract(columns=STIMULI_SERIES)
