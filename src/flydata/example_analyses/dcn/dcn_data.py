@@ -69,14 +69,9 @@ VT37804_TNTin = (
     'ad0377f0f95d11e38cd26c626d3a008a',  # VT37804 x TNTin
 )
 
-DCN_UUIDs = list(chain(
-    ATO_TNTE,
-    ATO_TNTin,
-    ULTIMATE_TNTE,
-    ULTIMATE_TNTin,
-    VT37804_TNTE,
-    VT37804_TNTin
-))
+DCN_UUIDs = ATO_TNTE + ATO_TNTin + ULTIMATE_TNTE + ULTIMATE_TNTin + VT37804_TNTE + VT37804_TNTin
+
+DCN_COMPLETED_EXPERIMENTS = ATO_TNTE + ATO_TNTin + VT37804_TNTE + VT37804_TNTin
 
 #################
 # Conditions
@@ -130,7 +125,7 @@ def unnormalize_condition_name(condition, known_conditions):
 ##### -End of workaround
 
 
-def dcn_conflict_select_interesting_columns(
+def dcn_conflict_select_columns(
     rotation_rate=True,  # speed of the stimulus rotation
     trg_x=True,          # x towards which the rotation stimulus is pushing the fly to
     trg_y=True,          # y towards which the rotation stimulus is pushing the fly to

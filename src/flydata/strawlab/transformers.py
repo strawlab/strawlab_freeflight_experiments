@@ -203,9 +203,34 @@ class MissingImputer(Transformer):
 
 
 ##############################
+# Missing values removal
+##############################
+
+class RowsWithMissingRemover(Transformer):
+
+    def __init__(self, columns=None, log_removed=False):
+        super(RowsWithMissingRemover, self).__init__()
+        self.columns = columns
+        self._log_removed = log_removed
+
+    def transform(self, X):
+        kept = []
+        for x in X:
+            df = df_or_df_from_traj(x)
+            columns = self.columns if self.columns is not None else df.columns
+            if not df[columns].isnull().any().any():
+                kept.append(x)
+            elif self._log_removed:
+                print '%s has missing values, removed...' % x.id_string()
+        return kept
+
+
+##############################
 # Global TODOs
 ##############################
 #
 # TODO: we should not make inplace a default but instead an option disabled by default
+# TODO: we should assume that we always have metadata, so we can give better feedback and identities on failures
 #
 ##############################
+

@@ -29,7 +29,9 @@ class DataContract(Configurable):
         if not isiterable(X):
             X = [X]
         for x in X:
-            self._check_one(x)
+            if not self._check_one(x):
+                return False
+        return True
 
     def _check_one(self, x):
         raise NotImplementedError()
@@ -65,10 +67,9 @@ class NoMissingValuesContract(DataContract):
         self.columns = columns
 
     def _check_one(self, x):
-        print x.id()
         df = df_or_df_from_traj(x)
         for column in self.columns if self.columns is not None else df.columns:
-            if df[column].isnull().sum() > 0:
+            if df[column].isnull().any():
                 return False
         return True
 
