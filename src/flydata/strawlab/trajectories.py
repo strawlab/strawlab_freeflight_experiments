@@ -134,10 +134,6 @@ class FreeflightTrajectory(object):
             return df[columns]
             # TODO: implement laziness, _series should not be assumed a pandas dataframe
 
-    def set_series(self, series):
-        # FIXME: workaround for wrong design
-        self._series = series
-
     def df(self, copy=False):
         """An alias to series()."""
         return self.series(copy=copy)
@@ -148,6 +144,14 @@ class FreeflightTrajectory(object):
         Everything else there would have been computed from x,y,z and possibly stimulus data.
         """
         return self.series(copy=copy, columns=('x', 'y', 'z'))
+
+    ####################
+    # Official mutability breakers
+    ####################
+
+    def set_series(self, series):
+        # FIXME: workaround for wrong design
+        self._series = series
 
     def apply_transform_inplace(self, **kwargs):
         """Applies single-attribute transformations to this trajectory.
@@ -412,3 +416,19 @@ class FreeflightTrajectory(object):
     @staticmethod
     def from_pandas(df, flattened=True):
         raise NotImplementedError()
+
+
+###################
+# Convenience functions
+###################
+
+def df_or_df_from_traj(df):
+    """Returns a pandas data-frame, either df itself or the series associated to a trajectory object."""
+    # Problem: well against duck typing
+    if isinstance(df, FreeflightTrajectory):
+        return df.series()
+    if isinstance(df, DataFrame):
+        return df
+    raise Exception('The type of the variable (%r) is not one of FreeflightTrajectory or DataFrame, '
+                    'and this is kinda static python'
+                    % type(df))

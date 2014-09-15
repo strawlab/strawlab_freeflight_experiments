@@ -1,18 +1,14 @@
 # coding=utf-8
-import gzip
 from itertools import product
-import h5py
-from pandas.io.pytables import HDFStore
-from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, ATO_TNTE, ATO_TNTin, \
-    VT37804_TNTE, VT37804_TNTin, load_lisa_dcn_experiments, dcn_conflict_select_interesting_columns
 from time import time
-from flydata.misc import ensure_dir
-from flydata.strawlab.data_contracts import NoMissingValuesContract
-from flydata.strawlab.metadata import FreeflightExperimentMetadata
-from flydata.strawlab.trajectories import FreeflightTrajectory
 import cPickle as pickle
 import os.path as op
-from oscail.common.config import Configurable
+
+from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, ATO_TNTE, ATO_TNTin, \
+    VT37804_TNTE, VT37804_TNTin, dcn_conflict_select_interesting_columns
+from flydata.misc import ensure_dir
+from flydata.strawlab.contracts import NoMissingValuesContract, NoHolesContract, AllNumericContract, check_contracts
+from flydata.strawlab.transformers import MissingImputer, ColumnsSelector, NumericEnforcer
 
 
 class PickleTrajectoryStorer(object):
@@ -79,92 +75,6 @@ class NaiveHDF5TrajectoryStorer(object):
         raise NotImplementedError()
 
 
-class FilterChain(object):
-    pass
-
-
-class ByNameFilter(Configurable):
-
-    def __init__(self, series_to_keep):
-        super(ByNameFilter, self).__init__(add_descriptors=False)
-        self.series_to_keep = series_to_keep
-
-    def fit(self, trajectories):
-        return self
-
-    def transform(self, trajectories):
-        for traj in trajectories:
-            traj.set_series(traj.series()[self.series_to_keep])  # Again, we might not want to do inplace the default
-        return trajectories
-
-import numba
-
-
-@numba.autojit
-def ffill(array):
-    last = array[0]
-    for i in xrange(1, len(array)):
-        if array[i] != array[i]:
-            array[i] = last
-        else:
-            last = array[i]
-
-
-@numba.autojit
-def bfill(array):
-    last = array[len(array) - 1]
-    for i in xrange(1, len(array)):
-        i = len(array) - 1 - i
-        if array[i] != array[i]:
-            array[i] = last
-        else:
-            last = array[i]
-
-
-def nanfill(df, series_names):
-    for sname in series_names:
-        ffill(df[sname].values)
-        bfill(df[sname].values)
-
-
-class NaNFiller(Configurable):
-
-    def __init__(self,
-                 series=('rotation_rate', 'trg_x', 'trg_y', 'trg_z', 'ratio'),
-                 first_pass_method='ffill',
-                 second_pass_method='bfill'):
-        super(NaNFiller, self).__init__(add_descriptors=False)
-        self.series_names = list(series)
-        self.fpm = first_pass_method
-        self.spm = second_pass_method
-
-    def fit(self, trajectories):  # We might want to add Y to the API, ala sklearn
-        return self
-
-    def transform(self, trajs):
-        for i, traj in enumerate(trajs):
-            print i
-            df = traj.series()
-            # print df['ratio'].isnull().sum()
-            # inplace not working + inplace should not be default
-            # cannot make it work like this in 5 minutes...
-            #   df.loc[self.series_names].fillna(method=self.fpm, inplace=True)
-            #   if self.spm is not None:
-            #       df.loc[self.series_names].fillna(method=self.spm, inplace=True)
-            # so ugly for:
-            for column in self.series_names:
-                df[column] = df[column].fillna(method=self.fpm)  # N.B. inplace is damn slow in pandas 0.14
-                                                                 # Should not be,
-                                                                 # this requires only one pass on each col!
-                if self.spm is not None:
-                    df[column] = df[column].fillna(method=self.spm)
-            # print df['ratio'].isnull().sum()
-            # ANd this is awfully slow...
-            traj.set_series(df)  # Depending on final trajectory semantics, this might be not necessary
-            # TODO: Compare to fillna(method='ffill'), without selecting columns
-        return trajs
-
-
 completed_exps = ATO_TNTE + ATO_TNTin + VT37804_TNTE + VT37804_TNTin
 
 CACHE_DIR = op.join(op.expanduser('~'), 'data-analysis', 'strawlab', 'dcns', '20140909', 'original')
@@ -194,35 +104,45 @@ STIMULI_SERIES = ('rotation_rate', 'trg_x', 'trg_y', 'trg_z', 'ratio')
 
 # Load the trajectories
 start = time()
-trajs = load_lisa_dcn_trajectories(uuids=completed_exps[1], cache_root_dir=CACHE_DIR)
-# trajs = load_lisa_dcn_trajectories(uuids=completed_exps, cache_root_dir=CACHE_DIR)
+# trajs = load_lisa_dcn_trajectories(uuids=completed_exps[1], cache_root_dir=CACHE_DIR)
+trajs = load_lisa_dcn_trajectories(uuids=completed_exps, cache_root_dir=CACHE_DIR)
 # with open(op.join(CACHE_DIR, 'cached.pkl')) as reader:
 #     trajs = pickle.load(reader)
 print 'Loading took %.2f seconds' % (time() - start)
 
-# Apply filters
+# Apply transformers
+TRANSFORMERS = (
+    # Filter-out uninteresting series
+    ColumnsSelector(series_to_keep=INTERESTING_SERIES),
+    # Make all series numeric
+    NumericEnforcer(),
+    # Fill missing values in stimuli data (make sure it makes sense for all the series)
+    MissingImputer(columns=STIMULI_SERIES, faster_if_available=True)
+)
 
-# Filter-out uninteresting and non-numeric series
-trajs = ByNameFilter(series_to_keep=INTERESTING_SERIES).fit(trajs).transform(trajs)  # Is this correct for trg_x
-                                                                                     # and the like?
-# Fill missing values in stimuli data
 start = time()
-# trajs = NaNFiller(series=STIMULI_SERIES).fit(trajs).transform(trajs)
-for traj in trajs:
-    nanfill(traj.series(), STIMULI_SERIES)
-print 'Pandas took %.2f seconds' % (time() - start)
+for transformer in TRANSFORMERS:
+    print transformer.configuration().id()
+    trajs = transformer.fit_transform(trajs)
+print 'Transformations took %.2f seconds' % (time() - start)
 
-
-# with open(op.join(CACHE_DIR, 'cached.pkl'), 'wb') as writer:
-#     pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
 
 # Check contracts
-# no_missings_please = NoMissingValuesContract(columns=STIMULI_SERIES)
-no_missings_please = NoMissingValuesContract(columns=trajs[0].series().columns)
-for agree, rows in no_missings_please.check(trajs):
-    if not agree:
-        print rows
-        raise Exception('There are missings...')
+CONTRACTS = (
+    NoMissingValuesContract(columns=INTERESTING_SERIES),  # No missing values, please
+    NoHolesContract(),                                    # No holes in time series, please
+    AllNumericContract(),                                 # No "object" columns, please
+)
+
+start = time()
+checked = check_contracts(trajs, CONTRACTS)
+print 'Checked:\n\t%s' % '\n\t'.join(checked)
+print 'Contracts checks took %.2f seconds' % (time() - start)
+
+
+# Save to our extraordinary data format (a pickle)
+with open(op.join(CACHE_DIR, 'cached.pkl'), 'wb') as writer:
+    pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
 
 exit(22)
 
@@ -318,8 +238,6 @@ for uuid in completed_exps[2:3]:
                                      filters=filters)
                 ds[:] = df.values
 
-
-
     ################################
     # Pandas HDFStore
     ################################
@@ -352,7 +270,6 @@ for uuid in completed_exps[2:3]:
     #         # h5.create_dataset(traj.id_string(), data=df, compression='lzf', shuffle=True)
     #         # h5.create_dataset(traj.id_string(), data=df, compression='lzf', shuffle=False)
     #         h5.create_dataset(traj.id_string(), data=df, compression=None)
-
 
 print 'Loading took %.2f seconds' % (time() - start)
 
@@ -404,8 +321,6 @@ for trajnum, traj in enumerate(trajs):
     #   we could use diff or the like
     #   look at the code I wrote for Etienne a while ago
     #
-
-# print df.model_x, df.model_y, df.model_z
 
 #
 # TODO: small application that generates a "reduced HTML" view of a "project"
