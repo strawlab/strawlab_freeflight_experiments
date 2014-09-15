@@ -130,6 +130,52 @@ def unnormalize_condition_name(condition, known_conditions):
 ##### -End of workaround
 
 
+def dcn_conflict_select_interesting_columns(
+    rotation_rate=True,  # speed of the stimulus rotation
+    trg_x=True,          # x towards which the rotation stimulus is pushing the fly to
+    trg_y=True,          # y towards which the rotation stimulus is pushing the fly to
+    trg_z=True,          # z towards which the rotation stimulus is pushing the fly to
+    cyl_x=False,
+    cyl_y=False,
+    cyl_r=False,
+    ratio=True,          # [0,1] infinity loop position from the center of the infinity figure
+    v_offset_rate=False,
+    phase=False,
+    model_x=False,
+    model_y=False,
+    model_z=False,
+    model_filename=False,
+    condition=False,
+    lock_object=False,
+    t_sec=False,
+    t_nsec=False,
+    flydra_data_file=False,
+    exp_uuid=False,
+    # Response information
+    x=True,
+    y=True,
+    z=True,
+    tns=False,
+    vx=True,
+    vy=True,
+    vz=True,
+    velocity=True,
+    ax=True,
+    ay=True,
+    az=True,
+    theta=True,
+    dtheta=True,
+    radius=True,
+    omega=True,
+    rcurve=True,
+    framenumber=False
+):
+    """Returns a list with the names of the parameters that are set to True
+    (which correspond to columns names in the combined dataframes)."""
+    return [column for column, useful in sorted(locals().items()) if useful]
+
+
+
 #################
 # Genotypes
 #################

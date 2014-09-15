@@ -4,7 +4,7 @@ from itertools import product
 import h5py
 from pandas.io.pytables import HDFStore
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, ATO_TNTE, ATO_TNTin, \
-    VT37804_TNTE, VT37804_TNTin, load_lisa_dcn_experiments
+    VT37804_TNTE, VT37804_TNTin, load_lisa_dcn_experiments, dcn_conflict_select_interesting_columns
 from time import time
 from flydata.misc import ensure_dir
 from flydata.strawlab.data_contracts import NoMissingValuesContract
@@ -188,48 +188,6 @@ CACHE_DIR = op.join(op.expanduser('~'), 'data-analysis', 'strawlab', 'dcns', '20
 # exit(33)
 #
 
-
-def dcn_conflict_select_interesting_columns(
-    rotation_rate=True,  # speed of the stimulus rotation
-    trg_x=True,          # x towards which the rotation stimulus is pushing the fly to
-    trg_y=True,          # y towards which the rotation stimulus is pushing the fly to
-    trg_z=True,          # z towards which the rotation stimulus is pushing the fly to
-    cyl_x=False,
-    cyl_y=False,
-    cyl_r=False,
-    ratio=True,          # [0,1] infinity loop position from the center of the infinity figure
-    v_offset_rate=False,
-    phase=False,
-    model_x=False,
-    model_y=False,
-    model_z=False,
-    model_filename=False,
-    condition=False,
-    lock_object=False,
-    t_sec=False,
-    t_nsec=False,
-    flydra_data_file=False,
-    exp_uuid=False,
-    # Response information
-    x=True,
-    y=True,
-    z=True,
-    tns=False,
-    vx=True,
-    vy=True,
-    vz=True,
-    velocity=True,
-    ax=True,
-    ay=True,
-    az=True,
-    theta=True,
-    dtheta=True,
-    radius=True,
-    omega=True,
-    rcurve=True,
-    framenumber=False,
-):
-    return [column for column, useful in sorted(locals().items()) if useful]
 
 INTERESTING_SERIES = dcn_conflict_select_interesting_columns()
 STIMULI_SERIES = ('rotation_rate', 'trg_x', 'trg_y', 'trg_z', 'ratio')
