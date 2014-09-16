@@ -90,6 +90,8 @@ class NumericEnforcer(Transformer):
             for column in self.columns if self.columns is not None else df.columns:
                 # Good discussion:
                 #   http://stackoverflow.com/questions/500328/identifying-numeric-and-array-types-in-numpy
+                # Look also to convert_objects
+                #   http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.convert_objects.html
                 if not np.issubdtype(df[column].dtype, np.number):
                     df[column] = df[column].astype(np.float, copy=False)  # Unflexible.
                                                                         # It should be easy to specify per-column types

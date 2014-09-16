@@ -78,8 +78,8 @@ DCN_COMPLETED_EXPERIMENTS = ATO_TNTE + ATO_TNTin + VT37804_TNTE + VT37804_TNTin
 #################
 
 # A condition with closed-loop rotation and a post in a corner
-CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
-ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
+DCN_CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
+DCN_ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 
 
 ##### Workaround for the following problem:
@@ -170,11 +170,9 @@ def dcn_conflict_select_columns(
     return [column for column, useful in sorted(locals().items()) if useful]
 
 
-
 #################
 # Genotypes
 #################
-
 
 def genotype_for_uuid(uuid):
     """

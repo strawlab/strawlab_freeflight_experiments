@@ -111,7 +111,7 @@ class NoHolesContract(DataContract):
 
 
 ############################################
-# All the series have numeric values
+# All the series have numeric values only
 ############################################
 
 class AllNumericContract(DataContract):
@@ -126,6 +126,85 @@ class AllNumericContract(DataContract):
             # Good discussion:
             #   http://stackoverflow.com/questions/500328/identifying-numeric-and-array-types-in-numpy
             if not np.issubdtype(df[column].dtype, np.number):
+                return False
+        return True
+
+
+############################################
+# Series are monotonically increasing / decreasing
+############################################
+
+def non_monotonic_regions(x, increasing=True, strict=False, max_jump=None):
+    """
+    Looks for regions in a time series that are not monotonic.
+
+
+    Parameters
+    ----------
+    x : numpy array
+
+    increasing : boolean, default True
+      If True we are looking for non-increasing regions (e.g. [5, 4] will be flagged);
+      if False, we are looking for non-decreasing reginons (e.g. [4, 5] will be flagged).
+
+    strict:
+      If True, strictly monotonic regions (e.g. [4, 4]) will be flagged;
+      if False, strictly monotonic regions (e.g. [4, 4]) will not be flagged.
+
+    discontinuity: number or None, default None
+      If it is a number, monotonicity violations that cross the discontinuity value are not
+      included in the non-monotonic regions. This is useful for wrapped quantities
+      (like angles or stimulus ratio).
+
+
+    Returns
+    -------
+    A numpy bool array of the same dimension as x indicating where x is non-monotonic.
+
+
+    Examples
+    --------
+    >>> x = [1, 2, 3, 4, 4]
+    >>> np.sum(non_monotonic_regions(x, increasing=True, strict=True))
+    1
+    >>> non_monotonic_regions(x, increasing=True, strict=True)[-1]
+    True
+    >>> non_monotonic_regions(x, increasing=True, strict=False)
+    array([False, False, False, False, False], dtype=bool)
+    >>> non_monotonic_regions(x, increasing=False, strict=False)
+    array([False,  True,  True,  True, False], dtype=bool)
+    >>> x = [0.1, 0.3, 0.25, 0.8, 1.0, 0.1]
+    >>> non_monotonic_regions(x, increasing=True, strict=False, max_jump=0.5)
+    array([False, False,  True, False, False, False], dtype=bool)
+    """
+    # Vectorized, not specially efficient version
+    # FIXME: Discontinuity treatment by max_jump is error prone, also doc is now not correct
+    xd = np.diff(x)
+    if increasing:
+        nonmonotonical = (xd <= 0) if strict else (xd < 0)
+    else:
+        nonmonotonical = (xd >= 0) if strict else (xd > 0)
+    if max_jump is not None:
+        nonmonotonical &= (np.abs(xd) < max_jump)
+    return np.insert(nonmonotonical, 0, False)
+
+
+class MonotonicalContract(DataContract):
+
+    def __init__(self, columns=None, increasing=True, strictly=False, max_jump=None):
+        super(MonotonicalContract, self).__init__('Some columns are not monotonical, but we do not support them')
+        self.columns = columns
+        self.increasing = increasing
+        self.strictly = strictly
+        self.max_jump = max_jump
+
+    def _check_one(self, x):
+        df = df_or_df_from_traj(x)
+        for column in self.columns if self.columns is not None else df.columns:
+            if non_monotonic_regions(df[column].values,
+                                     increasing=self.increasing,
+                                     strict=self.strictly,
+                                     max_jump=self.max_jump).any():
                 return False
         return True
 

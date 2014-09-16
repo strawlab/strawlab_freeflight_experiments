@@ -2,10 +2,12 @@
 from time import time
 import cPickle as pickle
 import os.path as op
+import numpy as np
 
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, dcn_conflict_select_columns, \
-    DCN_COMPLETED_EXPERIMENTS, load_lisa_dcn_experiments
+    DCN_COMPLETED_EXPERIMENTS, load_lisa_dcn_experiments, DCN_CONFLICT_CONDITION, DCN_ROTATION_CONDITION
 from flydata.strawlab.contracts import NoMissingValuesContract, NoHolesContract, AllNumericContract, check_contracts
+from flydata.strawlab.trajectories import FreeflightTrajectory
 from flydata.strawlab.transformers import MissingImputer, ColumnsSelector, NumericEnforcer, RowsWithMissingRemover
 
 
@@ -82,6 +84,91 @@ start = time()
 trajs = first_read()
 print 'Read %d trajectories in %.2f seconds' % (len(trajs), time() - start)
 
+# We can make a pandas dataframe containing the trajectories
+df = FreeflightTrajectory.to_pandas(trajs)
+
+# Let's group trajectories by conflict condition (yes, we could also use groupby)
+trajs_on_conflict = df[df['condition'] == DCN_CONFLICT_CONDITION]
+trajs_on_rotation = df[df['condition'] == DCN_ROTATION_CONDITION]
+assert len(df) == len(trajs_on_conflict) + len(trajs_on_rotation)
+
+# Let's group trajectories by condition and genotype...
+print df.groupby(by=('condition', 'genotype'))['traj'].count()
+# ...or by condition and experiment...
+print df.groupby(by=('condition', 'genotype'))['traj'].count()
+# ...or by night/day genotype...
+df['night'] = df['traj'].apply(lambda x: x.is_between_hours())
+print df.groupby(by=('night', 'genotype'))['traj'].count()
+
+#
+# OK, those counts can actually be misleading, how many trajectories per hour could be better
+# e.g. if there are 3 hours of day and 9 of night...
+#
+# In these metadatas we usually do not have a "experiment_stop" time.
+# Instead we can approximate the duration of an experiment as the difference
+# between the starting times of the first and the last trajectories
+#
+# Let's do it:
+#
+# roughly_exp_durations = df.groupby('uuid')['start'].max() - df.groupby('uuid')['start'].min()
+# roughly_exp_durations = roughly_exp_durations.apply(lambda x: x / np.timedelta64(1, 's'))
+# roughly_daylight_duration = blah
+# roughly_night_duration = bleh
+# df['exp_duration'] = df['uuid'].apply(lambda uuid: roughly_exp_durations[uuid])  # Lots of DRY
+# print df['exp_duration']
+#
+
+#
+# See also:
+#  - calculate_nloops
+#  - http://stackoverflow.com/questions/10475488/calculating-crossing-intercept-points-of-a-series-or-dataframe
+#  - http://stackoverflow.com/questions/3843017/efficiently-detect-sign-changes-in-python
+#  - crossings code in Etienne examples
+#
+
+import numba
+
+
+@numba.autojit
+def crosses(x):
+    result = np.zeros_like(x, dtype=np.bool)
+    for i in xrange(len(x) - 1):
+        if x[i] > x[i + 1]:
+            result[i] = True
+    return result
+
+
+@numba.autojit
+def decreasing_in_a_row(x):
+    result = np.zeros_like(x, dtype=np.bool)
+    already_decreasing = False
+    for i in xrange(len(x) - 1):
+        if x[i] > x[i + 1]:
+            if already_decreasing:
+                result[i] = True
+            already_decreasing = True
+        else:
+            already_decreasing = False
+    return result
+
+for i, traj in enumerate(trajs):
+    diw = decreasing_in_a_row(traj.series()['ratio'].values)
+    if np.sum(diw):
+        print i, traj.id_string(), np.sum(diw), np.where(diw)
+
+
+traj = df[(df['uuid'] == 'ad0377f0f95d11e38cd26c626d3a008a') &
+          (df['oid'] == 12430)].iloc[0].traj
+
+#
+# Look also at calc_unwrapped_ratio in curvature.py, although the bug, if there is one, is not there
+#
+
+print np.sum(crosses(traj.df()['ratio'].values))
+print np.where(crosses(traj.df()['ratio'].values))
+traj.df().ratio.plot()
+import matplotlib.pyplot as plt
+plt.show()
 
 #############################################################
 # OLD USELES STUFF TO REVIEW
