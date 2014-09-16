@@ -1168,6 +1168,7 @@ class CombineH5WithCSV(_Combine):
                 df = None
 
             if df is not None:
+
                 n_samples = len(df)
                 span_details = (cond, n_samples)
                 try:
@@ -1225,19 +1226,20 @@ class CombineH5WithCSV(_Combine):
 
                 elif (self._index == 'none') or (self._index.startswith('time')):
 
-                    if self._index == 'none':
-                        merge_on = 'framenumber'
-                    else:
-                        #add a tns column to merge on
+                    if self._index.startswith('time'):
+                        #add a tns column
                         odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
-                        merge_on = 'tns'
 
                     #in this case we want to keep all the rows (outer)
-                    #but the two dataframes should remain sorted by either
-                    #framenumber or time
+                    #but the two dataframes should remain sorted by
+                    #framenumber
+                    odf.save('%s_odf.df' % oid)
+                    df.save('%s_df.df' % oid)
+
                     df = pd.merge(
                                 odf,df,
-                                on=merge_on,
+                                suffixes=("_csv","_h5"),
+                                on='framenumber',
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
 
@@ -1247,6 +1249,14 @@ class CombineH5WithCSV(_Combine):
                             _,resamplespec = self._index.split('+')
                         except ValueError:
                             resamplespec = None
+
+                        #merging on the framenumber above was correct because if
+                        #we instead merge on tns then we loose a lot of data because
+                        #the tns values never agree. So recreate a tns column
+                        #that is the union of the two tns columns, and set that
+                        #as the index.
+                        df['tns'] = df['tns_h5']
+                        df['tns'][df['tns'].isnull()] = df['tns_csv'][df['tns'].isnull()]
 
                         df['datetime'] = df['tns'].values.astype('datetime64[ns]')
                         #any invalid (NaT) rows break resampling
