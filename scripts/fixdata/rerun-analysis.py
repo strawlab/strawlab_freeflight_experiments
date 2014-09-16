@@ -166,17 +166,10 @@ if __name__ == "__main__":
              'values. Can be a comma separated list of assays to process more data')
     args = parser.parse_args()
 
-    if not args.analysis_type:
-        args.analysis_type = args.type
-
-    try:
-        analysis_type,suffix = args.analysis_type.split('-')
-        suffix = '-' + suffix
-    except ValueError:
-        analysis_type = args.analysis_type
-        suffix = ''
-
-    analysis_script = "%s-analysis%s.py" %(analysis_type,suffix)
+    if args.analysis_type:
+        analysis_script = "%s.py" % args.analysis_type
+    else:
+        analysis_script = "%s-analysis.py" % args.type
 
     try:
         datetime.datetime.strptime(args.start, "%Y/%m/%d")
