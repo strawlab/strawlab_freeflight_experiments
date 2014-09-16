@@ -23,7 +23,7 @@ EXCEPT = set()
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '-t', '--type', required=True,
-    help='consider only this experiment type', choices=["rotation","confinement","conflict","perturbation","translation"])
+    help='consider only this experiment type (the name of the experiment in the database)')
 parser.add_argument(
     '-a', '--analysis-type',
     help='run this analysis script (e.g. rotation, translation, rotation-flycube)')
