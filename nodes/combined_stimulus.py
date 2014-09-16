@@ -30,7 +30,7 @@ from strawlab_freeflight_experiments import INVALID_VALUE
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 0.1*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 0.5*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
