@@ -76,7 +76,8 @@ CONDITIONS = [
               "checkerboard16.png/infinity03.svg/+0.6/-10.0/0.05/0.0",
                 "checkerboard16.png/infinity03.svg/+0.6/+10.0/0.05/0.0",
                 "checkerboard16.png/infinity03.svg/+0.6/-5.0/0.05/0.0",
-              "checkerboard16.png/infinity03.svg/+0.0/-10.0/0.05/0.00",
+              "checkerboard16.png/infinity03.svg/+1/-10.0/0.05/0.00",
+            "checkerboard16.png/infinity03.svg/+0.6/-10.0/0.05/1.0"
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -178,7 +179,7 @@ class Node(object):
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = -0.01
+        self.z_target = -0.02
 
         self.log.cyl_r = self.rad_locked
 
