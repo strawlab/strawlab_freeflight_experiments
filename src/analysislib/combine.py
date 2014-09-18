@@ -1232,10 +1232,8 @@ class CombineH5WithCSV(_Combine):
 
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by
-                    #framenumber
-                    odf.save('%s_odf.df' % oid)
-                    df.save('%s_df.df' % oid)
-
+                    #framenumber because we use that for building a new time index
+                    #if we resample
                     df = pd.merge(
                                 odf,df,
                                 suffixes=("_csv","_h5"),
