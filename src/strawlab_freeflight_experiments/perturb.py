@@ -4,6 +4,8 @@ import scipy.signal
 import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
 
+import matplotlib.gridspec
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import strawlab_freeflight_experiments.frequency as sfe_frequency
@@ -498,10 +500,23 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     sfe_frequency.plot_amp_spectrum(ax,y,fs)
     ax.set_xlim(0,maxfreq)
 
+def plot_perturbation_frequency_characteristics(fig,obj):
+    gs = matplotlib.gridspec.GridSpec(2,2)
+    ax = fig.add_subplot(gs[0,:])
+    obj.plot(ax, t_extra=0.5)
+    ax.set_title(str(obj))
+    ax.set_xlabel('t (s)')
+    ax.set_ylabel(str(obj.what))
+    ax = fig.add_subplot(gs[1,0])
+    plot_spectum(ax, obj)
+    ax = fig.add_subplot(gs[1,1])
+    plot_amp_spectrum(ax, obj)
+
 PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -511,17 +526,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     def _plot(f,obj):
-        ax = plt.subplot2grid((2,2),(0,0), colspan=2)
-        obj.plot(ax, t_extra=0.5)
-        ax.set_title(str(obj))
-        ax.set_xlabel('t (s)')
-        ax.set_ylabel(str(obj.what))
-        ax = plt.subplot2grid((2,2),(1,0))
-        plot_spectum(ax, obj)
-        ax = plt.subplot2grid((2,2),(1,1))
-        plot_amp_spectrum(ax, obj)
-
-        fn = analysislib.plots.get_safe_filename(str(obj)).replace(' ','_')
+        plot_perturbation_frequency_characteristics(f,obj)
+        fn = analysislib.plots.get_safe_filename(repr(obj),allowed_spaces=False)
         if args.save:
             f.savefig(fn+".png",bbox_inches='tight')
         if args.save_svg:
