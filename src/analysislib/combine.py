@@ -63,6 +63,7 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
 
@@ -131,13 +132,25 @@ class _Combine(object):
         self._warn_cache[m] += 1
 
     @property
+    def analysis_type(self):
+        if self._analysistype is None:
+            return os.path.basename(sys.argv[0])
+        else:
+            return self._analysistype
+
+    @analysis_type.setter
+    def analysis_type(self, val):
+        self._analysistype = val
+
+    @property
     def plotdir(self):
         """the directory in which to store plots for this analysis"""
         if self._plotdir is None:
+            #none before a csv file has been added / args have been processed
+            #(because of --outdir)
             return self._plotdir
 
-        me = os.path.basename(sys.argv[0])
-        pd = os.path.join(self._plotdir, me)
+        pd = os.path.join(self._plotdir, self.analysis_type)
  
         if not os.path.isdir(pd):
             os.makedirs(pd)
