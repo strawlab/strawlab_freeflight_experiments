@@ -1261,13 +1261,14 @@ class CombineH5WithCSV(_Combine):
                         except ValueError:
                             resamplespec = None
 
-                        #merging on the framenumber above was correct because if
-                        #we instead merge on tns then we loose a lot of data because
-                        #the tns values never agree. So recreate a tns column
-                        #that is the union of the two tns columns, and set that
-                        #as the index.
-                        df['tns'] = df['tns_h5']
-                        df['tns'][df['tns'].isnull()] = df['tns_csv'][df['tns'].isnull()]
+                        if df['framenumber'][0] != traj_start_frame:
+                            dfv = df['framenumber'].values
+                            self._warn("ERROR: csv started before tracking (fn csv:%r vs h5:%s, obj_id) %s" % (dfv[0:3],traj_start_frame,oid))
+                            #now the df is sorted we can just remove the invalid data from the front
+                            n_invalid_rows = np.where(dfv==traj_start_frame)[0][0]
+                            df = df.iloc[n_invalid_rows:]
+
+                        df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
 
                         df['datetime'] = df['tns'].values.astype('datetime64[ns]')
                         #any invalid (NaT) rows break resampling
