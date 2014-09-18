@@ -59,7 +59,9 @@ class Perturber:
 
     is_single_valued = True
 
-    def __init__(self, chunks, ratio_min, duration):
+    def __init__(self, chunks, ratio_min, duration, descriptor):
+        self.descriptor = descriptor
+
         if chunks:
             self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
         else:
@@ -68,6 +70,18 @@ class Perturber:
         self.duration = float(duration)
         self.ratio_min = float(ratio_min)
         self.reset()
+
+    def __hash__(self):
+        return hash((self.descriptor,self.progress))
+
+    def __eq__(self, o):
+        return (self.progress == o.progress) and (self.descriptor == o.descriptor)
+
+    def _get_duration(self):
+        return 0.98*self.duration
+
+    def _get_duration_discrete(self, Fs):
+        return int(self._get_duration()*Fs)
 
     def completed_perturbation(self, t):
         return t >= (0.98*self.duration)
@@ -130,7 +144,7 @@ class NoPerturb(Perturber):
     what = None
 
     def __init__(self, *args):
-        Perturber.__init__(self, '', 0, 0)
+        Perturber.__init__(self, '', 0, 0, self.DEFAULT_DESC)
     def __repr__(self):
         return "<NoPerturb>"
     def step(self, *args):
@@ -169,7 +183,7 @@ class PerturberStep(Perturber):
             raise Exception("Incorrect PerturberStep configuration")
         self.value = float(value)
 
-        Perturber.__init__(self, chunks, ratio_min, duration)
+        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
 
     def __repr__(self):
         return "<PerturberStep what=%s val=%.1f dur=%.1fs>" % (self.what, self.value, self.duration)
@@ -249,7 +263,7 @@ class PerturberStepN(Perturber):
 
         self.is_single_valued = len(self.values) == 1
 
-        Perturber.__init__(self, chunks, ratio_min, duration)
+        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
 
     def __repr__(self):
         return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what, self.values, self.duration)
@@ -317,8 +331,8 @@ class _PerturberInterpolation(Perturber):
     frequency
     """
 
-    def __init__(self, t, w, chunks, ratio_min, duration):
-        Perturber.__init__(self, chunks, ratio_min, self.t1)
+    def __init__(self, t, w, chunks, ratio_min, duration, descriptor):
+        Perturber.__init__(self, chunks, ratio_min, self.t1, descriptor)
         self._t = t
         self._w = w
 
@@ -390,7 +404,7 @@ class PerturberChirp(_PerturberInterpolation):
                            phi=90,
                            method=self.method) * self.value
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
 
     def __repr__(self):
         return "<PerturberChirp %s what=%s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method,self.what,self.value,self.duration,self.f0,self.f1)
@@ -426,7 +440,7 @@ class PerturberTone(_PerturberInterpolation):
         t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
         w = abs(self.value) * np.sin((t*self.f0*2*np.pi) + np.deg2rad(self.po))
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
 
     def __repr__(self):
         return "<PerturberTone what=%s val=%.1f dur=%.1fs f=%.1f p=%.1f>" % (self.what,self.value,self.duration,self.f0,self.po)
@@ -470,7 +484,7 @@ class PerturberMultiTone(_PerturberInterpolation):
                                         ns,
                                         self.value)
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1)
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
 
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
