@@ -4,7 +4,6 @@ import sys
 import operator
 import numpy as np
 import pandas as pd
-import itertools
 
 if not os.environ.get('DISPLAY'):
     print "DISPLAY NOT SET: USING AGG BACKEND"
@@ -21,77 +20,54 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
-import analysislib.curvature as curve
 import analysislib.util as autil
 import analysislib.arenas as aarenas
+import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 def plot_perturbation_traces(combine, args, perturbation_options):
 
-    results,dt = combine.get_results()
-    completed_perturbations = {c:[] for c in results}
+    #perturb_obj: {obj_id:Perturbation,...}
+    #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
+    #perturb_obj:cond
 
-    for cond in results:
+    perturbations, completed_perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
 
-        perturb_desc = cond.split("/")[-1]
+    for step_obj in perturbations:
+        phs = perturbations[step_obj]
+        cond = perturbation_conditions[step_obj]
+        if phs:
+            pool = pd.concat([ph.df for ph in phs.itervalues()],join="outer",axis=0)
+            grouped_oid = pool.groupby('obj_id')
 
-        pklass = sfe_perturb.get_perturb_class(perturb_desc)
+            #plot x-y trajectories while under perturbation
+            name = combine.get_plot_filename('xy_%s' % aplt.get_safe_filename(cond))
+            with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
+                ax = fig.add_subplot(1,1,1)
+                ax.set_title("%s" % cond, fontsize=12)
 
-        #only plot perturbations
-        if pklass == sfe_perturb.NoPerturb:
-            continue
+                for oid,_df in grouped_oid:
 
-        step_obj = pklass(perturb_desc)
+                    ph = phs[oid]
+                    pdf = _df.iloc[ph.start_idx:ph.end_idx]
 
-        r = results[cond]
+                    xv = pdf['x'].values
+                    yv = pdf['y'].values
+                    if len(xv):
+                        ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
-        dfs = {}
-        idxs = {}
-        lidxs = {}
+                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
+                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
-        for _df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                aplt.layout_trajectory_plots(ax, arena, in3d=False)
 
-            df = _df.fillna(method='ffill')
+                fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
-            #find the start of the perturbation (where perturb_progress == 0)
-            z = np.where(df['perturb_progress'].values == 0)
-            if len(z[0]):
-                fidx = z[0][0]
-
-                #find the index of the last perturbation (max -1)
-                l = np.where(df['perturb_progress'].values == df['perturb_progress'].max())
-                lidx = l[0][0]
-
-                #ensure we get a unique obj_id for later grouping. That is not necessarily
-                #guarenteed because obj_ids may be in multiple conditions, so if need be
-                #create a new one
-                if obj_id in dfs:
-                    obj_id = int(time.time()*1e6)
-                df['obj_id'] = obj_id
-
-                t = time0 + (np.arange(0,len(df),dtype=float) * dt)
-                df['time'] = t
-                df['talign'] = t - t[fidx]
-
-                tmax = df['talign'].max()
-                if step_obj.completed_perturbation(tmax):
-                    completed_perturbations[cond].append((obj_id,tmax,tmax-df['talign'].min()))
-
-                df['align'] = np.array(range(len(df)), dtype=int) - fidx
-
-                dfs[obj_id] = df
-                idxs[obj_id] = fidx
-                lidxs[obj_id] = lidx
-
-        if dfs:
-            pool = pd.concat(dfs.values(),join="outer",axis=0)
-
+            #plot timeseries for each requested
             for to_plot in perturbation_options:
-                grouped_oid = pool.groupby('obj_id')
 
-                #plot timeseries
-                name = combine.get_plot_filename('ts_%s_%s' % (to_plot,aplt.get_safe_filename(cond)))
+                name = combine.get_plot_filename('ts_%s_%s' % (to_plot,aplt.get_safe_filename(repr(cond),allowed_spaces=False)))
                 with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
 
                     ax = fig.add_subplot(1,1,1)
@@ -100,7 +76,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                     ax.set_title("%s" % cond, fontsize=12)
 
                     ax.text(0.01, 0.99, #top left
-                            "n=%d" % len(dfs),
+                            "n=%d" % len(phs),
                             fontsize=10,
                             horizontalalignment='left',
                             verticalalignment='top',
@@ -133,26 +109,6 @@ def plot_perturbation_traces(combine, args, perturbation_options):
 
                     fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
-            #plot trajectories while under perturbation
-            name = combine.get_plot_filename('xy_%s' % aplt.get_safe_filename(cond))
-            with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
-                ax = fig.add_subplot(1,1,1)
-                ax.set_title("%s" % cond, fontsize=12)
-
-                for oid,_df in grouped_oid:
-                    pdf = _df.iloc[idxs[oid]:lidxs[oid]]
-                    xv = pdf['x'].values
-                    yv = pdf['y'].values
-                    if len(xv):
-                        ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
-
-                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
-                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
-
-                aplt.layout_trajectory_plots(ax, arena, in3d=False)
-
-                fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
-
     name = combine.get_plot_filename("COMPLETED_PERTURBATIONS.md")
     with open(name, 'w') as f:
         l = "object ids which completed full perturbations"
@@ -166,7 +122,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
         for cond in sorted(completed_perturbations.keys()):
             #make condition markdown table safe
             scond = cond.replace('|','&#124;')
-            for i,(oid,pl,tl) in enumerate(completed_perturbations[cond]):
+            for i,(perturb_obj,oid,pl,tl) in enumerate(completed_perturbations[cond]):
                 if i == 0:
                     #first row
                     f.write("| %s | %s | %.1f | %.1f |\n" % (scond, oid, pl, tl))
@@ -178,7 +134,6 @@ def plot_perturbation_traces(combine, args, perturbation_options):
             f.write("| n/a | n/a | n/a | n/a |\n")
 
         f.write("\n")
-
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(frames_before=10)
