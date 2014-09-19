@@ -3,55 +3,15 @@
 from datetime import datetime
 import json
 import os.path as op
-import pytz
 
-from flydata.misc import run_db_statement, ensure_dir, giveupthefunc
-
-
-################################
-# DB Helpers
-################################
-
-def strawlab_freeflightdb_uri(protocol='postgresql',
-                              url='flycave-postgres-server.strawlab.org',  # FIXME: get this from app config
-                              dbname='flycube',
-                              userid='autodata',
-                              password=None):
-    """Returns the URI for a database, made easy for strawlab databases."""
-    # Auth info for our DB
-    HARDCODED_IDS = {
-        'resultswebserver': 'q69weld',   # Usually read only
-        'autodata': 'wiePh1ad',          # Usually write, but not admin
-    }
-    if password is None:
-        password = HARDCODED_IDS.get(userid, None)
-    if password is None:
-        raise Exception('Passwordless access not supported.')
-    return '%s://%s:%s@%s/%s' % (protocol, userid, password, url, dbname)
-
-
-def find_experiment(uuid):
-    ARENAS = (
-        ('freeflight', 'flycave'),
-        ('flycube', 'flycube1'),
-        ('flycube', 'flycube2'),
-        ('flycube', 'flycube3'),
-        ('flycube', 'flycube5'),
-        ('flycube', 'flycube8'),
-        ('fishvr', 'fishtrax'),
-    )
-    for db, arena in ARENAS:
-        uri = strawlab_freeflightdb_uri(dbname=db)
-        table_name = '/%s/experiment' % arena
-        result = run_db_statement(uri, 'SELECT * FROM "%s" WHERE uuid=\'%s\'' % (table_name, uuid)).fetchone()
-        if result is not None:
-            return db, arena, dict(result.items())
-    return None, None, None
+from flydata.misc import ensure_dir, giveupthefunc
+from flydata.strawlab.db import find_experiment
 
 
 ################################
 # The class...
 ################################
+
 
 class FreeflightExperimentMetadata(object):
     """Metadata (unique id, genotype etc.) from a single Freeflight experiment.
