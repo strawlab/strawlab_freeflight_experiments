@@ -3,6 +3,7 @@
 
 See also autodata.model.SQLModel
 """
+from operator import itemgetter
 from flydata.misc import run_db_statement
 
 # Needed for historical reasons, until we get one single table
@@ -10,13 +11,13 @@ FREEFLIGHT_KNOWN_ARENAS = (('freeflight', 'flycave'),
                            ('flycube', 'flycube1'),
                            ('flycube', 'flycube2'),
                            ('flycube', 'flycube3'),
-                           ('flycube', 'flycube4'),
+                           # ('flycube', 'flycube4'),
                            ('flycube', 'flycube5'),
                            ('flycube', 'flycube6'),
-                           ('flycube', 'flycube7'),
+                           # ('flycube', 'flycube7'),
                            ('flycube', 'flycube8'),
-                           ('flycube', 'flycube9'),
-                           ('flycube', 'flycube10'),
+                           # ('flycube', 'flycube9'),
+                           # ('flycube', 'flycube10'),
                            ('fishvr', 'fishtrax'))
 
 
@@ -61,4 +62,4 @@ def uuids_in_arena(db='fishvr', arena='fishtrax'):
     """Returns a list of uuids in the arena."""
     uri = strawlab_freeflightdb_uri(dbname=db)
     table_name = experiments_table(arena)
-    return run_db_statement(uri, 'SELECT uuid FROM "%s"' % table_name).fetchall()
+    return map(itemgetter(0), run_db_statement(uri, 'SELECT uuid FROM "%s"' % table_name).fetchall())
