@@ -3,6 +3,7 @@
 from datetime import datetime
 import json
 import os.path as op
+import pytz
 
 from flydata.misc import ensure_dir, giveupthefunc
 from flydata.strawlab.db import find_experiment
@@ -371,7 +372,6 @@ class FreeflightExperimentMetadata(object):
 if __name__ == '__main__':
 
     from itertools import chain
-    import pytz
 
     # Some UUIDs from Katja
     PDF_GAL4xKP041 = (

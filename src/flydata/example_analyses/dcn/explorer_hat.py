@@ -7,6 +7,7 @@ import numpy as np
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, dcn_conflict_select_columns, \
     DCN_COMPLETED_EXPERIMENTS, load_lisa_dcn_experiments, DCN_CONFLICT_CONDITION, DCN_ROTATION_CONDITION
 from flydata.strawlab.contracts import NoMissingValuesContract, NoHolesContract, AllNumericContract, check_contracts
+from flydata.strawlab.experiments import FreeflightExperiment
 from flydata.strawlab.trajectories import FreeflightTrajectory
 from flydata.strawlab.transformers import MissingImputer, ColumnsSelector, NumericEnforcer, RowsWithMissingRemover
 
@@ -83,6 +84,7 @@ print 'Loading all trajectories, after initial transformations and sanity checks
 start = time()
 trajs = first_read()
 print 'Read %d trajectories in %.2f seconds' % (len(trajs), time() - start)
+
 
 # We can make a pandas dataframe containing the trajectories
 df = FreeflightTrajectory.to_pandas(trajs)
