@@ -43,6 +43,7 @@ class FreeflightExperiment(object):
         if md_transformers is not None:
             self._md.apply_transform_inplace(**md_transformers)
         if self.cache_root is not None:
+            self._md.genotype()  # Force populate
             self._md.to_json_file()  # FIXME: do not write if it is already there
 
         # ATM we only extract trajectories from analysis pickle files. There the data is:
