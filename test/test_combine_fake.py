@@ -21,6 +21,7 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 class TestCombineFake(unittest.TestCase):
 
     def setUp(self):
+        self._tdir = tempfile.mkdtemp()
         self.combine = analysislib.combine._CombineFakeInfinity(nconditions=3)
         parser,self.args = analysislib.args.get_default_args(
                 outdir='/tmp/',
@@ -92,6 +93,13 @@ class TestCombineFake(unittest.TestCase):
         #the filtered dataframe should be shorter than the original one
         df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
         self.assertLess(len(df), len(self.df0))
+
+    def test_export(self):
+        d = os.path.join(self._tdir, "export")
+        dests = analysislib.combine.write_result_dataframe(d,self.df0, self.combine._index)
+        self.assertEqual(os.path.basename(dests),"export_framenumber.{csv,df,mat}")
+        dests = analysislib.combine.write_result_dataframe(d,self.df0, self.combine._index,to_mat=False)
+        self.assertEqual(os.path.basename(dests),"export_framenumber.{csv,df}")
 
 class TestCombineFake2(unittest.TestCase):
 

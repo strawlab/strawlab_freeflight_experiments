@@ -82,6 +82,3 @@ def get_input_output_columns(step_obj):
 
     return system_u, system_y
 
-
-
-
