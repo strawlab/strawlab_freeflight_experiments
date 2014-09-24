@@ -2,14 +2,15 @@
 from time import time
 import cPickle as pickle
 import os.path as op
-import numpy as np
 
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, dcn_conflict_select_columns, \
     DCN_COMPLETED_EXPERIMENTS, load_lisa_dcn_experiments, DCN_CONFLICT_CONDITION, DCN_ROTATION_CONDITION
+from flydata.features.correlations import RollingCorr
+from flydata.features.post import PostAttention
 from flydata.strawlab.contracts import NoMissingValuesContract, NoHolesContract, AllNumericContract, check_contracts
-from flydata.strawlab.experiments import FreeflightExperiment
 from flydata.strawlab.trajectories import FreeflightTrajectory
-from flydata.strawlab.transformers import MissingImputer, ColumnsSelector, NumericEnforcer, RowsWithMissingRemover
+from flydata.strawlab.transformers import MissingImputer, ColumnsSelector, NumericEnforcer, RowsWithMissingRemover, \
+    ShortLongRemover
 
 
 # A (local) directory in which we will store data and results
@@ -25,7 +26,7 @@ STIMULI_SERIES = ('rotation_rate', 'trg_x', 'trg_y', 'trg_z', 'ratio')
 def first_read(uuids=DCN_COMPLETED_EXPERIMENTS,
                cache_dir=CACHE_DIR,
                mirror_locally=False,
-               force=False):
+               recompute=False):
 
     # Local mirror of combined trajectories and metadata
     if mirror_locally:
@@ -34,25 +35,26 @@ def first_read(uuids=DCN_COMPLETED_EXPERIMENTS,
 
     cache_file = op.join(cache_dir, 'initial_data.pkl')
 
-    if not op.isfile(cache_file) or force:
+    if not op.isfile(cache_file) or recompute:
 
         # Load the trajectories from the local cache
         start = time()
         trajs = load_lisa_dcn_trajectories(uuids=uuids, cache_root_dir=CACHE_DIR)
-        print 'Loading took %.2f seconds' % (time() - start)
+        print 'Loading %d trajectories took %.2f seconds' % (len(trajs), time() - start)
 
         # Apply transformers
         TRANSFORMERS = (
+            # Get only long enough series (4 seconds or more...)
+            ShortLongRemover(min_length_frames=4000),
             # Filter-out uninteresting series
             ColumnsSelector(series_to_keep=INTERESTING_SERIES),
             # Make all series numeric
             NumericEnforcer(),
             # Fill missing values in stimuli data (make sure it makes sense for all the series)
             MissingImputer(columns=STIMULI_SERIES, faster_if_available=True),
-            # Filter-out trajectories with missing values in the responses (we do not know yet why that happened...)
+            # Filter-out trajectories with missing values in the responses anywhere (which should not happen anymore)
             RowsWithMissingRemover(log_removed=True)
         )
-
         start = time()
         for transformer in TRANSFORMERS:
             print transformer.configuration().id()
@@ -65,11 +67,26 @@ def first_read(uuids=DCN_COMPLETED_EXPERIMENTS,
             NoHolesContract(),                                    # No holes in time series, please
             AllNumericContract(),                                 # No "object" columns, please
         )
-
         start = time()
         checked = check_contracts(trajs, CONTRACTS)
         print 'Checked:\n\t%s' % '\n\t'.join(checked)
         print 'Check contracts took %.2f seconds' % (time() - start)
+
+        # Let's compute following and attention series
+        SOME_SERIES_EXTRACTORS = (
+            PostAttention(ws=20),
+            PostAttention(ws=40),
+            PostAttention(postx='trg_x', posty='trg_y', ws=20),
+            PostAttention(postx='trg_x', posty='trg_y', ws=40),
+            RollingCorr(response='dtheta', stimulus='rotation_rate', ws=20)
+        )
+        start = time()
+        for s in SOME_SERIES_EXTRACTORS:
+            print s.configuration().id()
+            s.compute(trajs)
+        print 'Compute some more series took %.2f seconds' % (time() - start)
+        # N.B. we should run more contract checks after this, but there are some NaNs that are valid...
+        #      that's because we do not support (yet) variable length series
 
         # Save to our extraordinary data format (a pickle)
         with open(cache_file, 'wb') as writer:
@@ -82,7 +99,7 @@ def first_read(uuids=DCN_COMPLETED_EXPERIMENTS,
 
 print 'Loading all trajectories, after initial transformations and sanity checks'
 start = time()
-trajs = first_read()
+trajs = first_read(recompute=True)
 print 'Read %d trajectories in %.2f seconds' % (len(trajs), time() - start)
 
 
@@ -102,6 +119,13 @@ print df.groupby(by=('condition', 'genotype'))['traj'].count()
 df['night'] = df['traj'].apply(lambda x: x.is_between_hours())
 print df.groupby(by=('night', 'genotype'))['traj'].count()
 
+
+#
+# cache_file_2 = op.join(CACHE_DIR, 'initial_data.pkl')
+# with open()
+# pickle.dump()
+#
+
 #
 # OK, those counts can actually be misleading, how many trajectories per hour could be better
 # e.g. if there are 3 hours of day and 9 of night...
@@ -120,6 +144,11 @@ print df.groupby(by=('night', 'genotype'))['traj'].count()
 # print df['exp_duration']
 #
 
+#########################
+#
+# Ratio-based segmentation
+#
+#########################
 #
 # See also:
 #  - calculate_nloops
@@ -127,50 +156,52 @@ print df.groupby(by=('night', 'genotype'))['traj'].count()
 #  - http://stackoverflow.com/questions/3843017/efficiently-detect-sign-changes-in-python
 #  - crossings code in Etienne examples
 #
-
-import numba
-
-
-@numba.autojit
-def crosses(x):
-    result = np.zeros_like(x, dtype=np.bool)
-    for i in xrange(len(x) - 1):
-        if x[i] > x[i + 1]:
-            result[i] = True
-    return result
-
-
-@numba.autojit
-def decreasing_in_a_row(x):
-    result = np.zeros_like(x, dtype=np.bool)
-    already_decreasing = False
-    for i in xrange(len(x) - 1):
-        if x[i] > x[i + 1]:
-            if already_decreasing:
-                result[i] = True
-            already_decreasing = True
-        else:
-            already_decreasing = False
-    return result
-
-for i, traj in enumerate(trajs):
-    diw = decreasing_in_a_row(traj.series()['ratio'].values)
-    if np.sum(diw):
-        print i, traj.id_string(), np.sum(diw), np.where(diw)
-
-
-traj = df[(df['uuid'] == 'ad0377f0f95d11e38cd26c626d3a008a') &
-          (df['oid'] == 12430)].iloc[0].traj
-
+#
+# import numba
+#
+#
+# @numba.autojit
+# def crosses(x):
+#     result = np.zeros_like(x, dtype=np.bool)
+#     for i in xrange(len(x) - 1):
+#         if x[i] > x[i + 1]:
+#             result[i] = True
+#     return result
+#
+#
+# @numba.autojit
+# def decreasing_in_a_row(x):
+#     result = np.zeros_like(x, dtype=np.bool)
+#     already_decreasing = False
+#     for i in xrange(len(x) - 1):
+#         if x[i] > x[i + 1]:
+#             if already_decreasing:
+#                 result[i] = True
+#             already_decreasing = True
+#         else:
+#             already_decreasing = False
+#     return result
+#
+# for i, traj in enumerate(trajs):
+#     diw = decreasing_in_a_row(traj.series()['ratio'].values)
+#     if np.sum(diw):
+#         print i, traj.id_string(), np.sum(diw), np.where(diw)
+#
+#
+# traj = df[(df['uuid'] == 'ad0377f0f95d11e38cd26c626d3a008a') &
+#           (df['oid'] == 12430)].iloc[0].traj
+#
 #
 # Look also at calc_unwrapped_ratio in curvature.py, although the bug, if there is one, is not there
 #
+#
+# print np.sum(crosses(traj.df()['ratio'].values))
+# print np.where(crosses(traj.df()['ratio'].values))
+# traj.df().ratio.plot()
+# import matplotlib.pyplot as plt
+# plt.show()
+#########################
 
-print np.sum(crosses(traj.df()['ratio'].values))
-print np.where(crosses(traj.df()['ratio'].values))
-traj.df().ratio.plot()
-import matplotlib.pyplot as plt
-plt.show()
 
 #############################################################
 # OLD USELES STUFF TO REVIEW

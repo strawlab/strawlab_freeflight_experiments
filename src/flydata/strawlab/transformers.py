@@ -7,8 +7,11 @@ from oscail.common.config import Configurable
 __all__ = (
     'Transformer',
     'ColumnsSelector',
+    'LengthSelector',
     'NumericEnforcer',
     'MissingImputer',
+    'RowsWithMissingRemover',
+    'ShortLongRemover',
 )
 
 
@@ -220,11 +223,38 @@ class RowsWithMissingRemover(Transformer):
         for x in X:
             df = df_or_df_from_traj(x)
             columns = self.columns if self.columns is not None else df.columns
-            if not df[columns].isnull().any().any():
+            if not df[list(columns)].isnull().any().any():
                 kept.append(x)
             elif self._log_removed:
                 print '%s has missing values, removed...' % x.id_string()
         return kept
+
+
+##############################
+# Select trajectories by length
+##############################
+
+class ShortLongRemover(Transformer):
+
+    def __init__(self,
+                 min_length_frames=0,
+                 max_length_frames=float('inf'),
+                 log_removed=False):
+        super(ShortLongRemover, self).__init__()
+        self.min = min_length_frames if min_length_frames is not None else 0
+        self.max = max_length_frames if max_length_frames is not None else float('inf')
+        self._log_removed = log_removed
+
+    def transform(self, X):
+        kept = []
+        for x in X:
+            df = df_or_df_from_traj(x)
+            if self.min <= len(df) <= self.max:
+                kept.append(x)
+            elif self._log_removed:
+                print '%s do not have a correct length, removed...' % x.id_string()
+        return kept
+    # factorize to have a common remover superclass
 
 
 ##############################

@@ -2,6 +2,7 @@
 """Series and features for stimulus with a post."""
 import numpy as np
 from scipy.spatial.distance import cosine
+from flydata.features.common import SeriesExtractor, FeatureExtractor
 
 
 def post_attention(df, postx=-0.15, posty=0.25, dt=0.01, ws=20):
@@ -76,7 +77,32 @@ def post_attention(df, postx=-0.15, posty=0.25, dt=0.01, ws=20):
     # Python land loop to compute each cosine
     c[:len(dxwdyw)] = [cosine(dxdy[i], dxwdyw[i]) for i in xrange(len(dxwdyw))]
     df['fly_post_cosine'] = np.array(c)
-    return ['dist_to_post', 'vel_to_post', 'fly_post_cosine']
+    return ['dist_to_post', 'vel_to_post', 'fly_post_cosine']  # ala John's code
+
+
+class PostAttention(SeriesExtractor):
+
+    def __init__(self, postx=-0.15, posty=0.25, dt=0.01, ws=20):
+        super(PostAttention, self).__init__()
+        self.postx = postx
+        self.posty = posty
+        self.ws = ws
+        self._dt = dt
+
+    def _compute_from_df(self, df):
+        postx = self.postx if self.postx not in df.columns else df[self.postx]
+        posty = self.posty if self.posty not in df.columns else df[self.posty]
+        post_attention(df, postx=postx, posty=posty, dt=self._dt, ws=self.ws)
+        # rename series to reflect provenance
+        df.rename(columns={no_provenance: provenance
+                           for no_provenance, provenance in
+                           zip(['dist_to_post', 'vel_to_post', 'fly_post_cosine'], self.fnames())})
+
+    def fnames(self):
+        return ['out=%s#%s' % (out_name, self.configuration().id()) for out_name in
+                ['dist_to_post', 'vel_to_post', 'fly_post_cosine']]
+
+    # Could be generalized even more
 
 
 def percentage_of_time_spent_in_circular_region(df, center=(-0.15, 0.25), radius=0.1):
@@ -94,3 +120,14 @@ def percentage_of_time_spent_in_circular_region(df, center=(-0.15, 0.25), radius
     x, y = df['x'].values, df['y'].values
     distance_to_center = np.sqrt((x - center_x)**2 + (y - center_y)**2)
     return np.sum(distance_to_center <= radius) / float(len(x))
+
+
+class TimeInCircularRegion(FeatureExtractor):
+
+    def __init__(self, center=(-0.15, 0.25), radius=0.1):
+        super(TimeInCircularRegion, self).__init__()
+        self.center = center
+        self.radius = radius
+
+    def _compute_from_df(self, df):
+        return percentage_of_time_spent_in_circular_region(df, center=self.center, radius=self.radius)

@@ -81,8 +81,11 @@ DCN_COMPLETED_EXPERIMENTS = ATO_TNTE + ATO_TNTin + VT37804_TNTE + VT37804_TNTin
 DCN_CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
 DCN_ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 
+# (x, y) for the post center in arena coordinates
+DCN_POST_CENTER = (-0.15, 0.25)
 
-##### Workaround for the following problem:
+#################
+# Workaround for the following problem:
 # checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20
 # and...
 # checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/
@@ -90,7 +93,7 @@ DCN_ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 #
 # Temporary solution: remove trailing /, but keep it for accessing
 # Better solution: normalize names in datafiles
-#####
+#################
 
 
 def normalize_condition_string(condition):
@@ -122,7 +125,8 @@ def unnormalize_condition_name(condition, known_conditions):
         condition = condition.condition()
     return condition + '/' if condition + '/' in known_conditions else condition
 
-##### -End of workaround
+#############
+# -End of workaround
 
 
 def dcn_conflict_select_columns(
@@ -187,8 +191,8 @@ def genotype_for_uuid(uuid):
     Note that this function requires access to our strawlab-vlan.
     At the moment we assume there is a single genotype tested per experiment.
     """
-    #The right place for this is the database.
-    #Scrapping the web is just a lame way to go...
+    # The right place for this is the database.
+    # Scrapping the web is just a lame way to go...
     import requests
     text = requests.get(u'http://strawcore:8080/experiment/freeflight_flycave/%s' % str(uuid)).text
     return text.partition('Genotype:</b>')[2].partition('</p>')[0].strip()
@@ -388,7 +392,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
         'santi-conflict': op.join(SANTI_ROOT, 'conflict-analysis.py')
     }
     other_analysis_script = KNOWN_SCRIPTS.get(analysis_script, None)
-    if not other_analysis_script is None:
+    if other_analysis_script is not None:
         analysis_script = other_analysis_script
     if isinstance(uuids, basestring):
         uuids = [uuids]
