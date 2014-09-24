@@ -63,6 +63,7 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
 
@@ -131,13 +132,25 @@ class _Combine(object):
         self._warn_cache[m] += 1
 
     @property
+    def analysis_type(self):
+        if self._analysistype is None:
+            return os.path.basename(sys.argv[0])
+        else:
+            return self._analysistype
+
+    @analysis_type.setter
+    def analysis_type(self, val):
+        self._analysistype = val
+
+    @property
     def plotdir(self):
         """the directory in which to store plots for this analysis"""
         if self._plotdir is None:
+            #none before a csv file has been added / args have been processed
+            #(because of --outdir)
             return self._plotdir
 
-        me = os.path.basename(sys.argv[0])
-        pd = os.path.join(self._plotdir, me)
+        pd = os.path.join(self._plotdir, self.analysis_type)
  
         if not os.path.isdir(pd):
             os.makedirs(pd)
@@ -1232,10 +1245,8 @@ class CombineH5WithCSV(_Combine):
 
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by
-                    #framenumber
-                    odf.save('%s_odf.df' % oid)
-                    df.save('%s_df.df' % oid)
-
+                    #framenumber because we use that for building a new time index
+                    #if we resample
                     df = pd.merge(
                                 odf,df,
                                 suffixes=("_csv","_h5"),
@@ -1250,13 +1261,14 @@ class CombineH5WithCSV(_Combine):
                         except ValueError:
                             resamplespec = None
 
-                        #merging on the framenumber above was correct because if
-                        #we instead merge on tns then we loose a lot of data because
-                        #the tns values never agree. So recreate a tns column
-                        #that is the union of the two tns columns, and set that
-                        #as the index.
-                        df['tns'] = df['tns_h5']
-                        df['tns'][df['tns'].isnull()] = df['tns_csv'][df['tns'].isnull()]
+                        if df['framenumber'][0] != traj_start_frame:
+                            dfv = df['framenumber'].values
+                            self._warn("ERROR: csv started before tracking (fn csv:%r vs h5:%s, obj_id) %s" % (dfv[0:3],traj_start_frame,oid))
+                            #now the df is sorted we can just remove the invalid data from the front
+                            n_invalid_rows = np.where(dfv==traj_start_frame)[0][0]
+                            df = df.iloc[n_invalid_rows:]
+
+                        df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
 
                         df['datetime'] = df['tns'].values.astype('datetime64[ns]')
                         #any invalid (NaT) rows break resampling
