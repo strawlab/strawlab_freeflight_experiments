@@ -96,7 +96,8 @@ class PostAttention(SeriesExtractor):
         # rename series to reflect provenance
         df.rename(columns={no_provenance: provenance
                            for no_provenance, provenance in
-                           zip(['dist_to_post', 'vel_to_post', 'fly_post_cosine'], self.fnames())})
+                           zip(['dist_to_post', 'vel_to_post', 'fly_post_cosine'], self.fnames())},
+                  inplace=True)
 
     def fnames(self):
         return ['out=%s#%s' % (out_name, self.configuration().id()) for out_name in

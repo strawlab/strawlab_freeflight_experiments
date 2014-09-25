@@ -4,6 +4,7 @@ import numpy as np
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
 from oscail.common.config import Configurable
+import pandas as pd
 
 
 # TODO: make FeatureExtractor also follow the fit-transform protocol
@@ -25,6 +26,16 @@ class FeatureExtractor(Configurable):
 
     def compute(self, X):
         return np.array([self.compute_one(x) for x in X])
+
+
+def compute_features(trajs, feature_extractors):
+    """A loop to compute a set of scalar features for trajectories."""
+    fnames = []
+    fvalues = []
+    for feature in feature_extractors:
+        fnames += feature.fnames()
+        fvalues.append(feature.compute(trajs))
+    return pd.DataFrame(data=np.vstack(fvalues).T, columns=fnames, index=[traj.id_string() for traj in trajs])
 
 
 class SeriesExtractor(FeatureExtractor):  # probably we can unify with FeatureExtractor
@@ -65,3 +76,23 @@ class Std(FeatureExtractor):
 
     def _compute_from_df(self, df):
         return df[self.column].std()
+
+
+class Kurtosis(FeatureExtractor):
+
+    def __init__(self, column):
+        super(Kurtosis, self).__init__()
+        self.column = column
+
+    def _compute_from_df(self, df):
+        return df[self.column].kurtosis()
+
+
+class Skew(FeatureExtractor):
+
+    def __init__(self, column):
+        super(Skew, self).__init__()
+        self.column = column
+
+    def _compute_from_df(self, df):
+        return df[self.column].skew()

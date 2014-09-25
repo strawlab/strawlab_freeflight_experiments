@@ -49,10 +49,10 @@ def stimuli_reaction_correlation(stimulus, response, min_num_measurements=2, lat
     return correlation
 
 
-class LaggedCorrelation(FeatureExtractor):
+class LaggedCorr(FeatureExtractor):
 
     def __init__(self, lag=0, stimulus='rotation_rate', response='dtheta'):
-        super(LaggedCorrelation, self).__init__()
+        super(LaggedCorr, self).__init__()
         self.lag = lag
         self.stimulus = stimulus
         self.response = response
@@ -126,4 +126,4 @@ class RollingCorr(SeriesExtractor):
                                     window=self.ws,
                                     min_periods=self.min_periods)
         # rename series to reflect provenance
-        df.rename(columns={fname: self.fnames()[0]})
+        df.rename(columns={fname: self.fnames()[0]}, inplace=True)
