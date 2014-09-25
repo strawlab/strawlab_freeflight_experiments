@@ -160,6 +160,9 @@ def load_freeflight_trajectories(uuids,
                                  md_transforms=None,
                                  traj_transforms=None,
                                  with_conditions=None):
+    # check if we don't just have a single uuid
+    if len(uuids) and len(uuids[0])==1:
+            raise ValueError('uuids not a list of uuids. (uuids[0]==1)')
     experiments = load_freeflight_experiments(uuids,
                                               project_root=project_root,
                                               lazy=True,
