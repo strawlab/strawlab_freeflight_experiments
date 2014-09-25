@@ -1,6 +1,12 @@
 # coding=utf-8
-"""Commodity Freeflight Analysis. Anyone can Cook.
-Lab-Meeting 2014/09/25.
+"""Lab-Meeting 2014/09/25: Commodity Freeflight Analysis (Anyone can Cook)
+
+This is an example of the boringmost critical task in data analysis: data retrieval and preparation.
+Do not expect fancy analysis!
+
+We use some of Lisa's DCN data to show how...
+
+There is also an accompanying ipython notebook that, probably, is newer...
 """
 from time import time
 import cPickle as pickle
@@ -81,6 +87,9 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
 
     cache_dir: string
       Path to a local directory where we will store the retrieved data (and some results)
+
+    data_name: string
+      An identifier for the data that will come out of this function
 
     mirror_locally: boolean, default False
       If true, the analysis files from strawscience are copied to cache_dir
