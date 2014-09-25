@@ -4,6 +4,8 @@ from time import time
 import matplotlib.pyplot as plt
 import numpy as np
 
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+
 from flydata.strawlab.contracts import NoMissingValuesContract
 from flydata.strawlab.experiments import load_freeflight_trajectories
 from flydata.strawlab.trajectories import FreeflightTrajectory
