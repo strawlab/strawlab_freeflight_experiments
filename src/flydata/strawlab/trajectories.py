@@ -416,13 +416,13 @@ class FreeflightTrajectory(object):
         """Represent a collection of trajectories as a pandas data-frame, record format."""
         if not flatten:
             return DataFrame(data=trajs, columns=('trajectories',))
-        return DataFrame(data=((traj.uuid(),
+        return DataFrame(data=[(traj.uuid(),
                                 traj.oid(),
                                 traj.genotype(),
                                 traj.condition(),
                                 traj.dt(),
                                 traj.start_asdatetime(),
-                                traj) for traj in trajs),
+                                traj) for traj in trajs],
                          index=(traj.id_string() for traj in trajs),
                          columns=('uuid', 'oid', 'genotype', 'condition', 'dt', 'start', 'traj'))
 
