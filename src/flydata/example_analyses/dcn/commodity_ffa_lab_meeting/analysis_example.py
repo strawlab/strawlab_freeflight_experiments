@@ -15,6 +15,7 @@ import os.path as op
 import seaborn as sb
 import matplotlib.pyplot as plt
 
+import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_trajectories, dcn_conflict_select_columns, \
     DCN_COMPLETED_EXPERIMENTS, load_lisa_dcn_experiments, DCN_POST_CENTER, DCN_CONFLICT_CONDITION, \
     DCN_ROTATION_CONDITION
