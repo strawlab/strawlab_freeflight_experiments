@@ -30,7 +30,7 @@ from strawlab_freeflight_experiments import INVALID_VALUE
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 0.5*60    #alternate between control and static (i.e. experimental control) seconds
+SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -79,13 +79,13 @@ MAX_ROTATION_RATE = 3
 
                             
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.1|-0.1|0.0",
-    #          "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/post3.osg|-0.0|0.0|0.2",
-              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.20/",             
-              "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.20/",
+              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.18/justpost1.osg|-0.1|-0.1|0.0",
+             # "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/post3.osg|-0.0|0.0|0.2",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",             
+              "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.18/",
 #              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
-#              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+          #    "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 ]
 
 START_CONDITION = CONDITIONS[0]
@@ -112,7 +112,6 @@ class Node(object):
         self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
-
         self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
         self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
@@ -206,7 +205,11 @@ class Node(object):
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
         self.z_target = 0.2
+
         self.log.cyl_r = self.rad_locked
+
+        #default to no perturb
+        self.perturber = sfe_perturb.NoPerturb()
 
         self.svg_fn = ''
         ssvg = str(svg)
@@ -214,6 +217,7 @@ class Node(object):
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
+            self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
@@ -223,12 +227,11 @@ class Node(object):
              model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
         #and the perturber
         elif perturb_or_post_desc is not None:
-            self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc) 
+ 
         #default to no conflict
             model_filename = '/dev/null'
             model_x = model_y = model_z = INVALID_VALUE
-        #default to no perturb
-        self.perturber = sfe_perturb.NoPerturb()
+
        
         #set the model in all cases
         self.model_filename = str(model_filename)
@@ -273,6 +276,8 @@ class Node(object):
         else:
             self.trg_x = self.trg_y = 0.0
 
+
+
         #return early if open loop
         if could_perturb:
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
@@ -284,7 +289,7 @@ class Node(object):
                                              now, framenumber, currently_locked_obj_id)
 
                 print 'perturbation progress: %s' % self.perturber.progress
-
+ 
                 if state=='finished':
                     self.drop_lock_on(blacklist=True)
 
