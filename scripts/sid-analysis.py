@@ -115,6 +115,8 @@ if __name__=='__main__':
         system_u_df = pool_dfs[system_u_name]
         system_y_df = pool_dfs[system_y_name]
 
+        assert system_u_df.shape == system_y_df.shape
+
         system_u_df_mean = system_u_df.mean(axis=1)
         system_y_df_mean = system_y_df.mean(axis=1)
 
@@ -170,6 +172,15 @@ if __name__=='__main__':
         with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
 
             ax = fig.add_subplot(1,1,1)
+
+            ax.text(0.01, 0.01, #top left
+                    "n=%d" % system_u_df.shape[1],
+                    fontsize=10,
+                    horizontalalignment='left',
+                    verticalalignment='bottom',
+                    transform=ax.transAxes,
+                    color='k')
+
             ax2 = ax.twinx()
             ax.plot(system_u_df_mean.values,'k-', label='mean input')
             ax.set_ylabel(system_u_name)
