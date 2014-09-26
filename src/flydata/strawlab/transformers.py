@@ -261,6 +261,7 @@ class ShortLongRemover(Transformer):
 # Global TODOs
 ##############################
 #
+# TODO: move this out to a different package (e.g. transformers)
 # TODO: we should not make inplace a default but instead an option disabled by default
 # TODO: we should assume that we always have metadata, so we can give better feedback and identities on failures
 #
