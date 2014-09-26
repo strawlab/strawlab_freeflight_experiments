@@ -156,13 +156,45 @@ def trajectories_from_experiments(experiments,
 
 def load_freeflight_trajectories(uuids,
                                  project_root=None,
-                                 n_jobs=cpu_count(),
+                                 n_jobs=1,
                                  md_transforms=None,
                                  traj_transforms=None,
                                  with_conditions=None):
-    # check if we don't just have a single uuid
-    if len(uuids) and len(uuids[0])==1:
-            raise ValueError('uuids not a list of uuids. (uuids[0]==1)')
+    """
+    Parameters
+    ----------
+    uuids: string or iterator over strings
+      The uuid(s) of the experiments we want to load
+
+    project_root: string, default None
+      Path to the directory where the experiments are stored.
+      If None, read from the global freeflight data repository
+
+    n_jobs: int or None, default 1
+      Number of threads used to read the data in.
+      If None or less than 1, use all CPUs.
+      If 1, no multithreading is used (useful to debug).
+
+    md_transforms: dictionary {'string': (x) -> y}, default None
+      Transformations to apply to the experiment metadata fields.
+      For example: md_transforms={'genotype': lambda genotype: 'hardcoded-genotype'}
+
+    traj_transforms:
+      Transformations to apply to the trajectories metadata fields.
+      For example: traj_transforms={'condition': lambda genotype: 'hardcoded-condition'}
+
+    with_conditions: string list or None
+      Only trajectories corresponding to trials with these conditions will be kept.
+      If None, all trajectories are kept.
+
+    Returns
+    -------
+    A list of freeflight trajectories, sorted by experiment and transformed according to these transforms.
+    """
+    if isinstance(uuids, (unicode, basestring)):
+        uuids = [uuids]
+    if n_jobs is None or n_jobs < 1:
+        n_jobs = cpu_count()
     experiments = load_freeflight_experiments(uuids,
                                               project_root=project_root,
                                               lazy=True,
