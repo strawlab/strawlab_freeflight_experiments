@@ -3,9 +3,11 @@ import sys
 import Queue
 import random
 import time
-import cPickle as pickle
+import cPickle
+import pickle
 import re
 import operator
+import hashlib
 
 import tables
 import pandas as pd
@@ -28,9 +30,10 @@ import analysislib.filters
 import analysislib.args
 import analysislib.curvature as acurve
 
-
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
+
+from oscail.common.config import Configuration, MAX_EXT4_FN_LENGTH
 
 #results = {
 #   condition:{
@@ -68,11 +71,71 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
+        self._configdict = {'v':1,  #bump this version when you change delicate combine machinery
+                            'index':self._index
+        }
+
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
         if (index not in VALID_INDEXES) and (not index.startswith('time')):
             raise ValueError('index must be one of %s,time+NN (where NN is a pandas resample specifier)' % ', '.join(VALID_INDEXES))
         self._index = index
+        self._configdict['index'] = self._index
+
+    def configuration(self):
+        return Configuration(self.__class__.__name__,self._configdict)
+
+    def _args_to_configuration(self, args):
+        for k,v in args._get_kwargs():
+            if k not in analysislib.args.DATA_MODIFYING_ARGS:
+                continue
+            if k in ('uuid','idfilt') and v is not None and len(v):
+                self._configdict[k] = sorted(v)
+            else:
+                self._configdict[k] = v
+
+    def _get_cache_name_and_config_string(self):
+        s = self.configuration().as_string()
+        if len(s) > (MAX_EXT4_FN_LENGTH - 4): #4=.pkl
+            fn = hashlib.sha224(s).hexdigest() + '.pkl'
+        else:
+            fn = s + '.pkl'
+        return os.path.join(AUTO_DATA_MNT,'cached','combine',fn), s
+
+    def _get_cache_name(self):
+        return self._get_cache_name_and_config_string()[0]
+
+    def _get_cache_file(self):
+        pkl = self._get_cache_name()
+        if os.path.exists(pkl):
+            self._debug("IO:     reading %s" % pkl)
+            with open(pkl,"r+b") as f:
+                # Speed optimisation, see:
+                #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
+                # and
+                #   http://stackoverflow.com/questions/19807790/
+                #   given-a-pickle-dump-in-python-how-to-i-determine-the-used-protocol
+                def unpickle_fast():
+                    import pickletools
+                    with open(pkl, 'r') as reader:
+                        if next(pickletools.genops(reader))[0].proto >= 2:
+                            return cPickle.load(f)
+                        return pickle.load(f)
+                return unpickle_fast()
+        return None
+
+    def _save_cache_file(self):
+        pkl,s = self._get_cache_name_and_config_string()
+        WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
+        with open(pkl,"w+b") as f:
+            self._debug("IO:     writing %s" % pkl)
+            cPickle.dump({"results":self._results,"dt":self._dt}, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        #if the string has been truncted to a hash then also write a text file with
+        #the calibration string
+        if os.path.basename(os.path.splitext(pkl)[0]) != s:
+            with open(pkl.replace('.pkl','.txt'),"w") as f:
+                f.write(s)
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -479,6 +542,8 @@ class _CombineFakeInfinity(_Combine):
         return df
 
     def add_from_args(self, args):
+        self._args_to_configuration(args)
+
         self._lenfilt = args.lenfilt
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
@@ -508,6 +573,8 @@ class CombineCSV(_Combine):
 
 
     def add_from_args(self, args, csv_suffix=None):
+        self._args_to_configuration(args)
+
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -619,6 +686,8 @@ class CombineH5(_Combine):
         self._dt = None
 
     def add_from_args(self, args):
+        self._args_to_configuration(args)
+
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
 
@@ -720,14 +789,6 @@ class CombineH5WithCSV(_Combine):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
         """
-        if not csv_suffix:
-            csv_suffix = self._csv_suffix
-
-        fm = autodata.files.FileModel()
-        fm.select_uuid(uuid)
-        csv_file = fm.get_file_model(csv_suffix).fullpath
-        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
-
         if 'args' in kwargs:
             args = kwargs['args']
         else:
@@ -735,16 +796,29 @@ class CombineH5WithCSV(_Combine):
             for k in kwargs:
                 setattr(args,k,kwargs[k])
 
-        #this handles the single uuid case
-        if not self.plotdir:
-            self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
-
-        self.add_csv_and_h5_file(csv_file, h5_file, args, uuid)
+        args.uuid = [uuid]
+        self.add_from_args(args, csv_suffix=csv_suffix)
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
         """
+        self._args_to_configuration(args)
+        if args.cached:
+            d = self._get_cache_file()
+            if d is not None:
+                self._results = d['results']
+                self._dt = d['dt']
+
+                if len(args.uuid) > 1:
+                    self.plotdir = args.outdir
+                else:
+                    fm = autodata.files.FileModel(basedir=args.basedir)
+                    fm.select_uuid(args.uuid[0])
+                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
+
+                return
+
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -758,8 +832,14 @@ class CombineH5WithCSV(_Combine):
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
                 fm.select_uuid(uuid)
-                csv_file = fm.get_file_model(csv_suffix).fullpath
-                h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+                try:
+                    csv_file = fm.get_file_model(csv_suffix).fullpath
+                    h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+                except autodata.files.NoFile:
+                    if len(args.uuid) == 1:
+                        raise
+                    else:
+                        continue
 
                 #this handles the single uuid case
                 if self.plotdir is None:
@@ -775,6 +855,8 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
+        self._save_cache_file()
+
     def get_spanned_results(self):
         spanned = {}
         for oid,details in self._results_by_condition.iteritems():
@@ -789,16 +871,6 @@ class CombineH5WithCSV(_Combine):
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
-
-        if args.cached:
-            name = self.get_plot_filename("data.pkl")
-            self._debug("IO:     reading %s" % name)
-            if os.path.isfile(name):
-                with open(name,'r+b') as f:
-                    d = pickle.load(f)
-                    self._results = d['results']
-                    self._dt = d['dt']
-                    return
 
         self._fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                                   h5_file=self.h5_file)
@@ -1019,16 +1091,6 @@ class CombineH5WithCSV(_Combine):
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
-
-        if args.cached:
-            name = self.get_plot_filename("data.pkl")
-            self._debug("IO:     reading %s" % name)
-            if os.path.isfile(name):
-                with open(name,'r+b') as f:
-                    d = pickle.load(f)
-                    self._results = d['results']
-                    self._dt = d['dt']
-                    return
 
         fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                             h5_file=self.h5_file)
