@@ -1264,9 +1264,11 @@ class CombineH5WithCSV(_Combine):
 
                         if df['framenumber'][0] != traj_start_frame:
                             dfv = df['framenumber'].values
-                            self._warn("ERROR: csv started before tracking (fn csv:%r vs h5:%s, obj_id) %s" % (dfv[0:3],traj_start_frame,oid))
                             #now the df is sorted we can just remove the invalid data from the front
                             n_invalid_rows = np.where(dfv==traj_start_frame)[0][0]
+
+                            self._warn("ERROR: csv started %s rows before tracking (fn csv:%r... vs h5:%s, obj_id) %s" % (n_invalid_rows,dfv[0:3],traj_start_frame,oid))
+
                             df = df.iloc[n_invalid_rows:]
 
                         df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
