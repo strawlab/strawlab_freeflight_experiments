@@ -28,14 +28,18 @@ STRAWLAB_DATA_ROOT = '/mnt/strawscience/data'
 # Utility functions
 ###############################
 
-def _autodata_byuuid_path(data_root):
+def autodata_byuuid_path(data_root, uuid=None):
     """Where would autodata be saving trajectory&co data files?"""
-    return op.join(data_root, 'auto_pipeline', 'raw_archive', 'by_uuid')
+    if uuid is None:
+        return op.join(data_root, 'auto_pipeline', 'raw_archive', 'by_uuid')
+    return op.join(data_root, 'auto_pipeline', 'raw_archive', 'by_uuid', uuid)
 
 
-def _analysis_byuuid_path(data_root):
+def analysis_byuuid_path(data_root, uuid=None):
     """Where would the analysis scripts be saving data&images&co files by default?"""
-    return op.join(data_root, 'plots')
+    if uuid is None:
+        return op.join(data_root, 'plots')
+    return op.join(data_root, 'plots', uuid)
 
 
 def _check_only_one(what_name, where_name):
@@ -47,6 +51,64 @@ def _check_only_one(what_name, where_name):
         warning(' More than one %s in %s:\n\t%r' % (what_name, where_name, collection))
     elif len(collection) < 1:
         warning(' Cannot find a single %s in %s' % (what_name, where_name))
+
+
+def mainbrain_file(uuid, data_root=STRAWLAB_DATA_ROOT):
+    """Returns the path to the mainbrain file for the provided uuid.
+    Raises an exception if it does not exist.
+    """
+    return _check_only_one(autodata_byuuid_path(data_root, uuid=uuid), '*.mainbrain.h5')
+
+
+def csv_file(uuid, data_root=STRAWLAB_DATA_ROOT):
+    """Returns the path to the csv file for the provided uuid.
+    Raises an exception if it does not exist.
+    """
+    return _check_only_one(autodata_byuuid_path(data_root, uuid=uuid), '*.csv')
+
+
+def simple_flydra_file(uuid, data_root=STRAWLAB_DATA_ROOT):
+    """Returns the path to the simple-flydra file for the provided uuid.
+    Raises an exception if it does not exist.
+    """
+    return _check_only_one(autodata_byuuid_path(data_root, uuid=uuid), '*.simple_flydra.h5')
+
+
+def repro_errors_file(uuid, data_root=STRAWLAB_DATA_ROOT):
+    """Returns the path to the reprojection errors file for the provided uuid.
+     Raises an exception if it does not exist.
+     """
+    return _check_only_one(autodata_byuuid_path(data_root, uuid=uuid), '*.repro_errors.h5')
+
+
+def check_has_data(uuid,
+                   data_root=STRAWLAB_DATA_ROOT,
+                   check_simple_flydra=True,
+                   check_reprojection_errors=False,
+                   raise_if_missing=False):
+    """Checks that there is data available for the experiment identified by uuid."""
+    if raise_if_missing:
+        if not op.isfile(mainbrain_file(uuid, data_root=data_root)):
+            raise Exception('Missing mainbrain file\n\t%s\n'
+                            'Please reupload if the experiment did finish' %
+                            mainbrain_file(uuid, data_root=data_root))
+        if not op.isfile(csv_file(uuid, data_root=data_root)):
+            raise Exception('Missing csv file\n\t%s\n'
+                            'Please reupload if the experiment did finish' %
+                            csv_file(uuid))
+        if check_simple_flydra and not op.isfile(simple_flydra_file(uuid, data_root=data_root)):
+            raise Exception('Missing simple-flydra file\n\t%s\n'
+                            'Please rerun smoothing (reuploading will work too)'
+                            % simple_flydra_file(uuid, data_root=data_root))
+        if check_reprojection_errors and not op.isfile(repro_errors_file(uuid, data_root=data_root)):
+            raise Exception('Missing reprojection errors file\n\t%s\n'
+                            'Please rerun smoothing (reuploading will work too)'
+                            % repro_errors_file(uuid, data_root=data_root))
+        return True
+    return op.isfile(mainbrain_file(uuid, data_root=data_root)) and \
+        op.isfile(csv_file(uuid, data_root=data_root)) and \
+        (not check_simple_flydra or op.isfile(simple_flydra_file(uuid, data_root=data_root))) and \
+        (not check_reprojection_errors or op.isfile(repro_errors_file(uuid, data_root=data_root)))
 
 
 def _verbose_copy(src, dest):
@@ -213,20 +275,17 @@ class FreeflightAnalysisFiles(Configurable):
 
         self._analysis_dir = analysis_dir
 
-        self._analysis_json_file = op.join(self._analysis_dir, 'data.json')  # Metadata like dt, conditions,
-                                                                             # long trajectories,
-                                                                             # parameters for the analysis...
+        self._analysis_json_file = op.join(self._analysis_dir, 'data.json')
+        # Metadata like dt, conditions, long trajectories, parameters for the analysis...
 
-        self._analysis_pkl_file = op.join(self._analysis_dir, 'data.pkl')  # A pickled bunch of trajectories and
-                                                                           # metadata merged with the
-                                                                           # Combiner framework
-                                                                           # from strawlab_freeflight
+        self._analysis_pkl_file = op.join(self._analysis_dir, 'data.pkl')
+        # A pickled bunch of trajectories and metadata merged with the Combiner framework from strawlab_freeflight
 
-        self._analysis_readme_file = op.join(self._analysis_dir, 'README')  # Complete information on how the analysis
-        # was generated
+        self._analysis_readme_file = op.join(self._analysis_dir, 'README')
+        # Complete information on how the analysis was generated
 
-        self._analysis_notes_file = op.join(self._analysis_dir, 'NOTES')  # Manually introduced information
-                                                                          # in the strawcore website
+        self._analysis_notes_file = op.join(self._analysis_dir, 'NOTES')
+        # Manually introduced information in the strawcore website
 
         # Lazy properties
         self._analysis_data = None
@@ -335,7 +394,7 @@ class FreeflightAnalysisFiles(Configurable):
             # Add "junk frames" before the trial actually starts? we do need to know about this at any time
             self.merging_frames_before_options(),
             # Cleaning up trajectories by geometrical constraints indicating valid arena locations
-            # ALways using "trim" (cut trajectories as soon as there is a violation)
+            # Always using "trim" (cut trajectories as soon as there is a violation)
             self.filtering_zfilt_options(),
             self.filtering_rfilt_options(),
             # This is dangerous and we should maybe minimize its use
@@ -431,20 +490,13 @@ class FreeflightAnalysisFiles(Configurable):
             for plot_file in glob(op.join(self._analysis_dir, '*.png')):
                 _verbose_copy(plot_file, dest_dir)
 
-    def objects_with_nans(self, variables=('x', 'y', 'z')):
-        """Returns all the object-ids which contain NaN in some (basic) quantities."""
-        # It should return condition-oid
-        # This is bogus if we do not remove oid-ambiguities
-        return [oid for _, _, oid, _, _, df in self.trajs() if df[variables].isnull().sum() > 0]
+    @classmethod
+    def from_uuid(cls, uuid, filter_id=None):
+        return cls(_one_combined_data_dir(op.join(analysis_byuuid_path(STRAWLAB_DATA_ROOT), uuid), filter_id))
 
-    @staticmethod
-    def from_uuid(uuid, filter_id=None):
-        return FreeflightAnalysisFiles(
-            _one_combined_data_dir(op.join(_analysis_byuuid_path(STRAWLAB_DATA_ROOT), uuid), filter_id))
-
-    @staticmethod
-    def from_path(path, filter_id=None):
-        return FreeflightAnalysisFiles(_one_combined_data_dir(path, filter_id))
+    @classmethod
+    def from_path(cls, path, filter_id=None):
+        return cls(_one_combined_data_dir(path, filter_id))
 
 
 if __name__ == '__main__':
