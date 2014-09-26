@@ -78,10 +78,15 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
             #suptitle
             bbox_extra_artists.append( c )
 
-    fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
+    try:
+        fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
 
-    if WRITE_SVG or write_svg:
-        fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+        if WRITE_SVG or write_svg:
+            fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+
+        print "WROTE",fname_base
+    except:
+        pass
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
