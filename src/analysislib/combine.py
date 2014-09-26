@@ -71,7 +71,7 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
-        self._configdict = {'v':1,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':2,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -1166,12 +1166,11 @@ class CombineH5WithCSV(_Combine):
                 start_frame = trial_framenumbers[0] - args.frames_before
             else:
                 start_frame = trial_framenumbers[0]
-            stop_frame = trial_framenumbers[-1]
 
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
                             oid,
                             start_frame,
-                            stop_frame)
+                            trial_framenumbers[-1])
 
             valid = trajectories.readWhere(query)
 
@@ -1196,7 +1195,8 @@ class CombineH5WithCSV(_Combine):
                 self._skipped[cond] += 1
                 continue
 
-            traj_start_frame = valid['framenumber'][0]
+            traj_start_frame = validframenumber[0]
+            traj_stop_frame = validframenumber[-1]
             traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
 
             flydra_series = []
@@ -1254,7 +1254,7 @@ class CombineH5WithCSV(_Combine):
 
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                         n_samples,
-                                        start_frame,stop_frame,
+                                        traj_start_frame,traj_stop_frame,
                                         oid,cond))
 
                 if self._index == 'framenumber':
@@ -1306,12 +1306,17 @@ class CombineH5WithCSV(_Combine):
                         #add a tns column
                         odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
 
+                    #we still must trim the original dataframe by the trim conditions (framenumber)
+                    odf_fns = odf['framenumber'].values
+                    odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   #first frame
+                    odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   #last frame
+
                     #in this case we want to keep all the rows (outer)
                     #but the two dataframes should remain sorted by
                     #framenumber because we use that for building a new time index
                     #if we resample
                     df = pd.merge(
-                                odf,df,
+                                odf.iloc[odf_fn0_idx:odf_fnN_idx],df,           #trim as filtered
                                 suffixes=("_csv","_h5"),
                                 on='framenumber',
                                 left_index=False,right_index=False,
