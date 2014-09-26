@@ -33,12 +33,18 @@ def plot_amp_spectrum(ax, y, fs, **kwargs):
     ax.set_ylabel('|Y(freq)|')
 
 def plot_coherence(ax, x, y, fs, **kwargs):
-    ax.cohere(x,y,Fs=fs, **kwargs)
+    try:
+        ax.cohere(x,y,Fs=fs, **kwargs)
+    except ValueError:
+        print "FAILURE TO PLOT", kwargs
 
-def plot_input_output_characteristics(fig, df, df_col_a, df_col_b, fs, max_freq, detrend=True, NFFT=None, dF=1.0, amp_spectrum=False, nfft_sweep=False):
+def plot_input_output_characteristics(fig, input_data, output_data, input_name, output_name, fs, max_freq, detrend=True, NFFT=None, dF=1.0, amp_spectrum=False, nfft_sweep=False):
 
-    a = df[df_col_a].values
-    b = df[df_col_b].values
+    #FIXME
+    a = input_data
+    b = output_data
+    df_col_a = input_name
+    df_col_b = output_name
 
     if NFFT is None:
         if dF is None:
