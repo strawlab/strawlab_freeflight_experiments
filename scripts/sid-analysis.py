@@ -127,6 +127,14 @@ if __name__=='__main__':
                     combine.get_plot_filename("mean_%s_%s" % (system_u_name,system_y_name)),
                     pd.DataFrame({"y":system_y_df_mean,"u":system_u_df_mean}),'none')
 
+        #save all input_traces
+        acombine.write_result_dataframe(
+                    combine.get_plot_filename("input_%s" % system_u_name),
+                    system_u_df,'none')
+        acombine.write_result_dataframe(
+                    combine.get_plot_filename("output_%s" % system_y_name),
+                    system_y_df,'none')
+
         model_results = {}
 
         for npole in range(2,5):
@@ -143,10 +151,21 @@ if __name__=='__main__':
                 if result_obj is not None and result_obj.fitpct > args.min_fit_pct and result_obj.fitmse < 20:
                     model_results["tf_p%dz%d_%.0f%%" % (npole,nzero,result_obj.fitpct)] = (result_obj,sfe_sid.control_object_from_result(result_obj))
 
+        #save the model fit for analysis
+        model_fits = {}
+        for model_desc,(result_obj,tf) in model_results.iteritems():
+            o = sfe_sid.get_model_fit(mlab, result_obj)
+            model_fits[model_desc] = o.squeeze()
+        model_fits['y'] = system_y_df_mean.values
+        model_fits['u'] = system_u_df_mean.values
+        acombine.write_result_dataframe(
+                    combine.get_plot_filename("mean_%s_%s" % (system_u_name,system_y_name)),
+                    pd.DataFrame(model_fits),'none')
+
         name = combine.get_plot_filename('bode_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             for model_desc,(result_obj,tf) in model_results.iteritems():
-                control.bode_plot(tf,label=model_desc)
+                control.bode_plot(tf,label=model_desc,omega=np.linspace(10e-1,10e1))
             fig.suptitle('Bode Plot\n%s)' % perturbation_obj)
             plt.legend(prop={'size':8})
 
@@ -189,12 +208,15 @@ if __name__=='__main__':
 
             ax.legend(loc='upper left',prop={'size':8})
 
-            ax2.plot(system_y_df_mean.index,system_y_df_mean.values,'b-', lw=2, label='mean response')
+            ax2.plot(system_y_df_mean.values,'b-', lw=2, label='mean response')
             ax2.fill_between(system_y_df_mean.index,
                              system_y_df_mean.values+system_y_df_std.values,
                              system_y_df_mean.values-system_y_df_std.values,
                              facecolor='blue', alpha=0.2)
             ax2.set_ylabel(system_y_name)
+
+            #for (col,s_y) in system_y_df.iteritems():
+            #    ax2.plot(s_y.values,lw=0.5, label=str(col))
 
             if system_y_name == 'dtheta':
                 ax2.set_ylim(-10,10)
