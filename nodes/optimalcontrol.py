@@ -71,7 +71,7 @@ START_CONDITION = CONDITIONS[0]
 COOL_CONDITIONS = set()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","path_theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -104,7 +104,7 @@ class Node(object):
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
-        self.log.ratio = 0 #backwards compatibility - see theta for mpc path parameter
+        self.log.ratio = 0 #backwards compatibility - see path_theta for mpc path parameter
 
         #setup the MPC controller
         self.controllock = threading.Lock()
@@ -155,7 +155,7 @@ class Node(object):
                 self.control.run_control()
         self.log.j = self.control._CT_jout.value
         self.log.w = self.control._CT_wout.value
-        self.log.theta = self.control._CT_thetaout.value
+        self.log.path_theta = self.control._CT_thetaout.value
         self.log.trg_x, self.log.trg_y = self.control.target_point
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)

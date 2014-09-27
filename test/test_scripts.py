@@ -53,7 +53,7 @@ class TestScript(unittest.TestCase):
         proc = subprocess.Popen(
                 "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
                 "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 "\
-                "--outdir %s --save" % self._tdir,
+                "--outdir %s --save-data" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir)

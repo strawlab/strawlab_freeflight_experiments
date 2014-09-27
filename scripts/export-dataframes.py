@@ -15,21 +15,6 @@ import analysislib.curvature as acurve
 import analysislib.util as autil
 import analysislib.combine as acombine
 
-def _write_df(dest, df, index):
-    dest = dest + '_' + aplt.get_safe_filename(index)
-
-    kwargs = {}
-    if index == 'framenumber':
-        kwargs['index_label'] = 'framenumber'
-    elif index.startswith('time'):
-        kwargs['index_label'] = 'time'
-
-    df.to_csv(dest+'.csv',**kwargs)
-    df.to_pickle(dest+'.df')
-    scipy.io.savemat(dest+'.mat', df.to_dict('list'))
-
-    print "wrote", dest
-
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
                     zfilt='none',
@@ -68,18 +53,22 @@ if __name__=='__main__':
             dest = os.path.join(odir,'%d' % obj_id)
 
             if args.split_column and (args.split_where is not None):
+                acombine.write_result_dataframe(dest, df, args.index)
                 #find the start of the perturbation (where perturb_progress == 0)
                 z = np.where(df[args.split_column].values == args.split_where)
                 if len(z[0]):
                     fidx = z[0][0]
                     bdf = df.iloc[:fidx]
-                    _write_df(dest+"_before", bdf, args.index)
+                    acombine.write_result_dataframe(dest+"_before", bdf, args.index)
                     adf = df.iloc[fidx:]
-                    _write_df(dest+"_after", adf, args.index)
+                    acombine.write_result_dataframe(dest+"_after", adf, args.index)
             else:
-                _write_df(dest, df, args.index)
+                acombine.write_result_dataframe(dest, df, args.index)
 
             if n >= args.n_longest:
                 break
+
+    with open(os.path.join(combine.plotdir,'README_DATA_FORMAT.txt'),'w') as f:
+        f.write(acombine.FORMAT_DOCS)
 
     sys.exit(0)

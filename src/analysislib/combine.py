@@ -3,9 +3,11 @@ import sys
 import Queue
 import random
 import time
-import cPickle as pickle
+import cPickle
+import pickle
 import re
 import operator
+import hashlib
 
 import tables
 import pandas as pd
@@ -13,6 +15,7 @@ import numpy as np
 import pytz
 import datetime
 import calendar
+import scipy.io
 from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
 
@@ -27,9 +30,10 @@ import analysislib.filters
 import analysislib.args
 import analysislib.curvature as acurve
 
-
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
+
+from oscail.common.config import Configuration, MAX_EXT4_FN_LENGTH
 
 #results = {
 #   condition:{
@@ -63,14 +67,75 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
+
+        self._configdict = {'v':2,  #bump this version when you change delicate combine machinery
+                            'index':self._index
+        }
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
         if (index not in VALID_INDEXES) and (not index.startswith('time')):
             raise ValueError('index must be one of %s,time+NN (where NN is a pandas resample specifier)' % ', '.join(VALID_INDEXES))
         self._index = index
+        self._configdict['index'] = self._index
+
+    def configuration(self):
+        return Configuration(self.__class__.__name__,self._configdict)
+
+    def _args_to_configuration(self, args):
+        for k,v in args._get_kwargs():
+            if k not in analysislib.args.DATA_MODIFYING_ARGS:
+                continue
+            if k in ('uuid','idfilt') and v is not None and len(v):
+                self._configdict[k] = sorted(v)
+            else:
+                self._configdict[k] = v
+
+    def _get_cache_name_and_config_string(self):
+        s = self.configuration().as_string()
+        if len(s) > (MAX_EXT4_FN_LENGTH - 4): #4=.pkl
+            fn = hashlib.sha224(s).hexdigest() + '.pkl'
+        else:
+            fn = s + '.pkl'
+        return os.path.join(AUTO_DATA_MNT,'cached','combine',fn), s
+
+    def _get_cache_name(self):
+        return self._get_cache_name_and_config_string()[0]
+
+    def _get_cache_file(self):
+        pkl = self._get_cache_name()
+        if os.path.exists(pkl):
+            self._debug("IO:     reading %s" % pkl)
+            with open(pkl,"r+b") as f:
+                # Speed optimisation, see:
+                #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
+                # and
+                #   http://stackoverflow.com/questions/19807790/
+                #   given-a-pickle-dump-in-python-how-to-i-determine-the-used-protocol
+                def unpickle_fast():
+                    import pickletools
+                    with open(pkl, 'r') as reader:
+                        if next(pickletools.genops(reader))[0].proto >= 2:
+                            return cPickle.load(f)
+                        return pickle.load(f)
+                return unpickle_fast()
+        return None
+
+    def _save_cache_file(self):
+        pkl,s = self._get_cache_name_and_config_string()
+        WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
+        with open(pkl,"w+b") as f:
+            self._debug("IO:     writing %s" % pkl)
+            cPickle.dump({"results":self._results,"dt":self._dt}, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        #if the string has been truncted to a hash then also write a text file with
+        #the calibration string
+        if os.path.basename(os.path.splitext(pkl)[0]) != s:
+            with open(pkl.replace('.pkl','.txt'),"w") as f:
+                f.write(s)
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -131,13 +196,25 @@ class _Combine(object):
         self._warn_cache[m] += 1
 
     @property
+    def analysis_type(self):
+        if self._analysistype is None:
+            return os.path.basename(sys.argv[0])
+        else:
+            return self._analysistype
+
+    @analysis_type.setter
+    def analysis_type(self, val):
+        self._analysistype = val
+
+    @property
     def plotdir(self):
         """the directory in which to store plots for this analysis"""
         if self._plotdir is None:
+            #none before a csv file has been added / args have been processed
+            #(because of --outdir)
             return self._plotdir
 
-        me = os.path.basename(sys.argv[0])
-        pd = os.path.join(self._plotdir, me)
+        pd = os.path.join(self._plotdir, self.analysis_type)
  
         if not os.path.isdir(pd):
             os.makedirs(pd)
@@ -465,6 +542,8 @@ class _CombineFakeInfinity(_Combine):
         return df
 
     def add_from_args(self, args):
+        self._args_to_configuration(args)
+
         self._lenfilt = args.lenfilt
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
@@ -494,6 +573,8 @@ class CombineCSV(_Combine):
 
 
     def add_from_args(self, args, csv_suffix=None):
+        self._args_to_configuration(args)
+
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -605,6 +686,8 @@ class CombineH5(_Combine):
         self._dt = None
 
     def add_from_args(self, args):
+        self._args_to_configuration(args)
+
         self._maybe_add_tfilt(args)
         self._maybe_add_customfilt(args)
 
@@ -706,14 +789,6 @@ class CombineH5WithCSV(_Combine):
         """Add a csv and h5 file collected from the experiment with the
         given uuid
         """
-        if not csv_suffix:
-            csv_suffix = self._csv_suffix
-
-        fm = autodata.files.FileModel()
-        fm.select_uuid(uuid)
-        csv_file = fm.get_file_model(csv_suffix).fullpath
-        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
-
         if 'args' in kwargs:
             args = kwargs['args']
         else:
@@ -721,16 +796,29 @@ class CombineH5WithCSV(_Combine):
             for k in kwargs:
                 setattr(args,k,kwargs[k])
 
-        #this handles the single uuid case
-        if not self.plotdir:
-            self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
-
-        self.add_csv_and_h5_file(csv_file, h5_file, args, uuid)
+        args.uuid = [uuid]
+        self.add_from_args(args, csv_suffix=csv_suffix)
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
         """
+        self._args_to_configuration(args)
+        if args.cached:
+            d = self._get_cache_file()
+            if d is not None:
+                self._results = d['results']
+                self._dt = d['dt']
+
+                if len(args.uuid) > 1:
+                    self.plotdir = args.outdir
+                else:
+                    fm = autodata.files.FileModel(basedir=args.basedir)
+                    fm.select_uuid(args.uuid[0])
+                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
+
+                return
+
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
@@ -744,8 +832,14 @@ class CombineH5WithCSV(_Combine):
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
                 fm.select_uuid(uuid)
-                csv_file = fm.get_file_model(csv_suffix).fullpath
-                h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+                try:
+                    csv_file = fm.get_file_model(csv_suffix).fullpath
+                    h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+                except autodata.files.NoFile:
+                    if len(args.uuid) == 1:
+                        raise
+                    else:
+                        continue
 
                 #this handles the single uuid case
                 if self.plotdir is None:
@@ -761,6 +855,8 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
+        self._save_cache_file()
+
     def get_spanned_results(self):
         spanned = {}
         for oid,details in self._results_by_condition.iteritems():
@@ -775,16 +871,6 @@ class CombineH5WithCSV(_Combine):
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
-
-        if args.cached:
-            name = self.get_plot_filename("data.pkl")
-            self._debug("IO:     reading %s" % name)
-            if os.path.isfile(name):
-                with open(name,'r+b') as f:
-                    d = pickle.load(f)
-                    self._results = d['results']
-                    self._dt = d['dt']
-                    return
 
         self._fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                                   h5_file=self.h5_file)
@@ -1006,16 +1092,6 @@ class CombineH5WithCSV(_Combine):
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
-        if args.cached:
-            name = self.get_plot_filename("data.pkl")
-            self._debug("IO:     reading %s" % name)
-            if os.path.isfile(name):
-                with open(name,'r+b') as f:
-                    d = pickle.load(f)
-                    self._results = d['results']
-                    self._dt = d['dt']
-                    return
-
         fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                             h5_file=self.h5_file)
 
@@ -1090,12 +1166,11 @@ class CombineH5WithCSV(_Combine):
                 start_frame = trial_framenumbers[0] - args.frames_before
             else:
                 start_frame = trial_framenumbers[0]
-            stop_frame = trial_framenumbers[-1]
 
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
                             oid,
                             start_frame,
-                            stop_frame)
+                            trial_framenumbers[-1])
 
             valid = trajectories.readWhere(query)
 
@@ -1120,7 +1195,8 @@ class CombineH5WithCSV(_Combine):
                 self._skipped[cond] += 1
                 continue
 
-            traj_start_frame = valid['framenumber'][0]
+            traj_start_frame = validframenumber[0]
+            traj_stop_frame = validframenumber[-1]
             traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
 
             flydra_series = []
@@ -1168,6 +1244,7 @@ class CombineH5WithCSV(_Combine):
                 df = None
 
             if df is not None:
+
                 n_samples = len(df)
                 span_details = (cond, n_samples)
                 try:
@@ -1177,7 +1254,7 @@ class CombineH5WithCSV(_Combine):
 
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                         n_samples,
-                                        start_frame,stop_frame,
+                                        traj_start_frame,traj_stop_frame,
                                         oid,cond))
 
                 if self._index == 'framenumber':
@@ -1189,17 +1266,33 @@ class CombineH5WithCSV(_Combine):
                     #
                     #an outer join allows the tracking data to have started
                     #before the csv (frames_before)
+
+                    #delete the framenumber from the h5 dataframe, it only
+                    #duplicates what should be in the index anyway
+                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
+
+                    #if there are any columns common in both dataframes the result
+                    #seems to be that the concat resizes the contained values
+                    #by adding an extra dimenstion.
+                    #df['x'].values.ndim = 1 becomes = 2 (for version of
+                    #pandas < 0.14). To work around this, remove any columns
+                    #in the csv dataframe that exists in df
+                    common_columns = df.columns & fdf.columns
+                    for c in common_columns:
+                        self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c,c))
+                        cv = df[c].values
+                        del df[c]
+                        df['_'+c] = cv
+
                     df = pd.concat((
                                 fdf.set_index('framenumber'),df),
                                 axis=1,join='outer')
 
-                    #for some reason, pandas crashes when attempting to replace
-                    #a column with length l with one of lenth l_new (where l_new >> l)
-                    #so remove the old colum first
-                    #grr added in pandas 13.1                  
-                    del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
                     #restore a framenumber column for API compatibility
                     df['framenumber'] = df.index.values
+
+                    if df['x'].values.ndim > 1:
+                        self._warn_once("ERROR: pandas merge added empty dimension to dataframe values")
 
                     # Because of the outer join, trim filter do not work
                     # (trimmed observations come back as haunting missing values)
@@ -1209,19 +1302,23 @@ class CombineH5WithCSV(_Combine):
 
                 elif (self._index == 'none') or (self._index.startswith('time')):
 
-                    if self._index == 'none':
-                        merge_on = 'framenumber'
-                    else:
-                        #add a tns column to merge on
+                    if self._index.startswith('time'):
+                        #add a tns column
                         odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
-                        merge_on = 'tns'
+
+                    #we still must trim the original dataframe by the trim conditions (framenumber)
+                    odf_fns = odf['framenumber'].values
+                    odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   #first frame
+                    odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   #last frame
 
                     #in this case we want to keep all the rows (outer)
-                    #but the two dataframes should remain sorted by either
-                    #framenumber or time
+                    #but the two dataframes should remain sorted by
+                    #framenumber because we use that for building a new time index
+                    #if we resample
                     df = pd.merge(
-                                odf,df,
-                                on=merge_on,
+                                odf.iloc[odf_fn0_idx:odf_fnN_idx],df,           #trim as filtered
+                                suffixes=("_csv","_h5"),
+                                on='framenumber',
                                 left_index=False,right_index=False,
                                 how='outer',sort=True)
 
@@ -1231,6 +1328,17 @@ class CombineH5WithCSV(_Combine):
                             _,resamplespec = self._index.split('+')
                         except ValueError:
                             resamplespec = None
+
+                        if df['framenumber'][0] != traj_start_frame:
+                            dfv = df['framenumber'].values
+                            #now the df is sorted we can just remove the invalid data from the front
+                            n_invalid_rows = np.where(dfv==traj_start_frame)[0][0]
+
+                            self._warn("ERROR: csv started %s rows before tracking (fn csv:%r... vs h5:%s, obj_id) %s" % (n_invalid_rows,dfv[0:3],traj_start_frame,oid))
+
+                            df = df.iloc[n_invalid_rows:]
+
+                        df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
 
                         df['datetime'] = df['tns'].values.astype('datetime64[ns]')
                         #any invalid (NaT) rows break resampling
@@ -1288,3 +1396,144 @@ class CombineH5WithCSV(_Combine):
     def get_trajs(self):
         """Returns the combined trajectories as a list of FreeflightTrajectory objects."""
         return self._trajs
+
+FORMAT_DOCS = """
+Exported Data Formats
+=====================
+
+Introduction
+------------
+
+Files are exported in three different formats csv,pandas dataframe (df)
+and matlab (mat).
+
+Depending on the choice of index and the output format the final data should
+be interpreted with the following knowledge.
+
+General Concepts
+----------------
+All data is a combination of that collected from the tracking system
+(at precisely 1/frame_rate intervals) and that recorded by the experiment
+(at any interval). Frame rate is typically 100 or 120Hz.
+
+The tracking data includes
+ * x,y,z (position, m)
+ * framenumber
+ * tns (time in nanoseconds)
+ * vx,vy,vz,velocity (velocity, m/s)
+ * ax,ay,az (acceleration, m/s2)
+ * theta (heading, rad)
+ * dtheta (turn rate, rad/s)
+ * radius (distance from origin, m)
+ * omega (?)
+ * rcurve (radius of curvature of current turn, m)
+
+The experimental data contained in the csv file can include any other fields,
+however it is guarenteed to contain at least the following
+ * t_sec (unix time seconds component)
+ * t_nsec (unix time, sub-second component as nanoseconds)
+ * framenumber
+ * condition (string)
+ * lock_object
+ * exp_uuid (string)
+
+** Note **
+When the tracking data and the experimental data is combined, any columns that
+are identically named in both will be renamed. Tracking data colums that have been
+renamed are suffixed with '_h5' while csv columns are added '_csv'
+
+Index Choice
+------------
+The index choice of the files is denoted by the filename suffix; _framenumber,
+_none, _time. According to the choice of index the two sources of data (tracking
+and csv) are combined as follows.
+
+** Framenumber index **
+The most recent (in time) record for each framenumber is taken from the
+experimental (csv) data. If the csv was written at a faster rate than the
+tracking data some records will be lost. If the csv was written slower
+than the tracking data then there will be missing elements in the columns
+of data originating from the csv.
+
+Data with a framenumber index will not contain framenumber column(s) but will
+contain tns and t_sec/nsec columns
+
+The framenumber is guarenteed to only increase, but may do so non-monotonically
+(due to missing tracking data for example)
+
+** No (none) index **
+All records from tracking and experimental data are combined together (temporal
+order is preserved). Columns may be missing elements. The wall-clock time for the
+tracking data is stored in tns. The wall-clock time for experimental csv
+data rows can be reconstructed from t_sec+t_nsec.
+
+Data with no index will contain framenumber columns (with _csv and _h5 suffixes)
+and will also contain tns and t_sec/nsec columns
+
+** Time index **
+Data with time index is often additionally resampled, indicated by the
+file name being timeXXX where X is an integer. If resampled, the string XXX
+is defined here -
+http://pandas.pydata.org/pandas-docs/dev/timeseries.html#offset-aliases
+
+For example a file named _time10L has been resampled to a 10 millisecond timebase.
+
+This is time aware resampling, so any record from either source that did not
+occur at the time instant is resampled. Data is up-sampled by padding the
+most recent value forward, and down-sampled by taking the mean over the
+interval.
+
+Data with a time index will contain framenumber columns (with _csv and _h5 suffixes)
+and tns and t_sec/nsec columns.
+
+If the data has NOT been resampled the data may still contain missing rows
+
+Output Format
+-------------
+In addition to the colum naming and data combining overview just given,
+the following things should be considered when loading exported data. 
+
+** csv files **
+The first colum contains the index. If 'framenumber' was chosen the column is
+labeled 'framenumber'. If 'none' index was chosen the column is
+left unlabeled and the values are monotonically increasing integers. If 'time'
+was chosen the column is labeled 'time' and contains strings of the
+format '%Y-%m-%d_%H:%M:%S.%f'
+
+** mat files **
+The mat files will also contain a variable 'index' which is an integer
+for 'framenumber' and 'none' types. If If the index type is 'time' then the values
+are nanoseconds since unix epoch.
+
+** df files **
+Pandas dataframes should contain information as previously described and also
+the data types and values for all with full precision
+
+"""
+
+def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True):
+    dest = dest + '_' + safe_condition_string(index)
+
+    kwargs = {}
+    if index == 'framenumber':
+        kwargs['index_label'] = 'framenumber'
+    elif index.startswith('time'):
+        kwargs['index_label'] = 'time'
+
+    if to_csv:
+        df.to_csv(dest+'.csv',**kwargs)
+
+    if to_df:
+        df.to_pickle(dest+'.df')
+
+    if to_mat:
+        dict_df = df.to_dict('list')
+        dict_df['index'] = df.index.values
+        scipy.io.savemat(dest+'.mat', dict_df)
+
+    formats = ('csv' if to_csv else '',
+               'df' if to_df else '',
+               'mat' if to_mat else '')
+
+    return "%s.{%s}" % (dest, ','.join(filter(len,formats)))
+

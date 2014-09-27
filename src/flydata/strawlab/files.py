@@ -498,6 +498,10 @@ class FreeflightAnalysisFiles(Configurable):
     def from_path(cls, path, filter_id=None):
         return cls(_one_combined_data_dir(path, filter_id))
 
+    @staticmethod
+    def from_path(path, filter_id=None):
+        return FreeflightAnalysisFiles(_one_combined_data_dir(path, filter_id))
+
 
 if __name__ == '__main__':
 

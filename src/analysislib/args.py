@@ -27,6 +27,17 @@ def get_default_args(**kwargs):
         setattr(args,k,v)
     return parser,args
 
+DATA_MODIFYING_ARGS = [
+    'uuid',
+    'zfilt','zfilt_min','zfilt_max',
+    'rfilt','rfilt_max',
+    'arena',
+    'idfilt',
+    'lenfilt',
+    'frames_before',
+    'custom_filt','custom_filt_len',
+]
+
 def get_parser(*only_these_options, **defaults):
     """
     returns an ArgumentParser instance configured with common filtering
@@ -184,7 +195,7 @@ def check_args(parser, args, max_uuids=1000):
             parser.error("if multiple uuids are given, --outdir is required")
     else:
         if None in (args.csv_file, args.h5_file):
-            parser.error("both --csv-file and --h5-file are required")
+            parser.error("either --uuid or both --csv-file and --h5-file are required")
 
     for f in ("tfilt_before", "tfilt_after"):
         v = getattr(args, f, None)
