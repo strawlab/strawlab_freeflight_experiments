@@ -106,7 +106,9 @@ if __name__=='__main__':
 
     for perturbation_obj in pool:
 
+
         cond = perturbation_conditions[perturbation_obj]
+        condn = aplt.get_safe_filename(cond, allowed_spaces=False)
 
         pool_dfs = pool[perturbation_obj]
 
@@ -124,15 +126,15 @@ if __name__=='__main__':
 
         #save the dataframes for analysis in MATLAB
         acombine.write_result_dataframe(
-                    combine.get_plot_filename("mean_%s_%s" % (system_u_name,system_y_name)),
+                    combine.get_plot_filename("mean_%s_%s_%s" % (system_u_name,system_y_name,condn)),
                     pd.DataFrame({"y":system_y_df_mean,"u":system_u_df_mean}),'none')
 
         #save all input_traces
         acombine.write_result_dataframe(
-                    combine.get_plot_filename("input_%s" % system_u_name),
+                    combine.get_plot_filename("input_%s_%s" % (system_u_name,condn)),
                     system_u_df,'none')
         acombine.write_result_dataframe(
-                    combine.get_plot_filename("output_%s" % system_y_name),
+                    combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
                     system_y_df,'none')
 
         model_results = {}
