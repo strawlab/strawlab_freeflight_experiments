@@ -159,6 +159,7 @@ def test_configuration_as_string():
 
 @pytest.fixture
 def c1():
+    """A simple configurable object."""
     class C1(Configurable):
         def __init__(self, p1='blah', p2='bleh', length=1):
             super(C1, self).__init__()
@@ -170,27 +171,38 @@ def c1():
     return C1()
 
 
-def test_configurable(c1):
-
+@pytest.fixture
+def c2(c1):
+    """A configurable object with a nested configurable."""
     class C2(Configurable):
         def __init__(self, name='roxanne', c1=c1):
             super(C2, self).__init__()
             self.name = name
             self.c1 = c1
+    return C2()
 
+
+@pytest.fixture
+def c3(c1, c2, quote_string_values=True):
+    """A configurable object with nested configurables and irrelevant members."""
     class C3(Configurable):
-        def __init__(self, c1=c1, c2=C2(), irrelevant=True):
+        def __init__(self, c1=c1, c2=c2, irrelevant=True, quote_string_values=quote_string_values):
             super(C3, self).__init__()
             self.c1 = c1
             self.c2 = c2
             self.irrelevant = irrelevant
+            self._quote_string_values = quote_string_values
 
         def configuration(self):
             return Configuration(
                 self.__class__.__name__,
                 non_id_keys=('irrelevant',),
-                configuration_dict=config_dict_for_object(self))
+                configuration_dict=config_dict_for_object(self),
+                quote_string_values=self._quote_string_values)
+    return C3()
 
+
+def test_non_nested_configurations(c1):
     # Non-nested configurations
     config_c1 = c1.configuration()
     assert config_c1.name == 'C1'
@@ -202,17 +214,26 @@ def test_configurable(c1):
     assert config_c1.id() == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
     assert len(set(config_c1.keys()) | {'p1', 'p2', 'length'}) == 3
 
-    # Nested configurations
-    c2 = C2()
+
+def test_nested_configurables(c1, c2):
+    # Nested configurables
     config_c2 = c2.configuration()
     assert config_c2.name == 'C2'
     assert len(config_c2.configdict) == 2
     assert config_c2['name'] == 'roxanne'
-    assert config_c2.c1.configuration() == config_c1
+    assert config_c2.c1.configuration() == c1.configuration()
     assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
 
+
+def test_nested_configurations(c1, c2):
+    # Nested
+    c2.c1 = c1.configuration()
+    config_c2 = c2.configuration()
+    assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
+
+
+def test_non_id_keys(c3):
     # non-id keys
-    c3 = C3()
     config_c3 = c3.configuration()
     assert config_c3.id() == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
                              'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"'
@@ -230,11 +251,12 @@ def test_configurable(c1):
     assert config_c3.id() == 'C3#C1Syn="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
                              'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"'
 
-    # nested configurations
-    c2 = C2()
-    c2.c1 = c1.configuration()
-    config_c2 = c2.configuration()
-    assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
+
+def test_non_quoted_string_values(c3):
+    # non-quoted string values must cascade recursively
+    # - this makes things complex, should get rid of this feat
+    assert c3.configuration().id(quote_string_vals=False) == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
+                                                             'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"'
 
 
 def test_configurable_magics(c1):
@@ -405,7 +427,7 @@ def test_mlexp_info_helper():
         itime=False)
     assert info['title'] == 'test'
     assert info['data_setup'] == 'TestDataset#'
-    assert info['model_setup'] == 'PreproModel#C=1.0#prepro="Prepro#max=1#min=0"#reg=l2'
+    assert info['model_setup'] == 'PreproModel#C=1.0#prepro="Prepro#max=1#min=0"#reg=\'l2\''
     assert info['eval_setup'] == 'CVEval#num_folds=5#seed=2147483647'
     assert info['fsource'] == inspect.getsourcelines(test_mlexp_info_helper)
     assert info['comments'] == 'comments4nothing'
