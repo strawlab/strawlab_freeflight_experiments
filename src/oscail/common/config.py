@@ -152,13 +152,20 @@ class Configuration(object):
         """The default representation is the configuration string including non_ids keys."""
         return self.id(nonids_too=True)
 
-    def as_string(self, nonids_too=False):
+    def as_string(self, nonids_too=False, sep='#'):
         """Makes a best effort to represent this configuration as a string.
 
         Parameters
         ----------
-        nonids_too : bool, [default False]
-            if False, non-ids keys are ignored.
+        nonids_too : bool, default False
+          if False, non-ids keys are ignored.
+
+        sep : string, default '#'
+          the string to separate parameters; the default, '#', is a good value because
+          it comes early in the ASCII table (before any alphanum character); the caveat
+          is that it requires quotes when using on shell scripts
+          (as usually # is the comment opening character)
+          Choose carefully and be consistent.
 
         Returns
         -------
@@ -193,13 +200,13 @@ class Configuration(object):
                    [(f, kvs_dict[f]) for f in self._postfix_keys]
 
         kvs = sort_kvs_fl()
-        return '#'.join(
+        return sep.join(
             '%s=%s' % (self.synonym(k), self._nested_string(v))
             for k, v in kvs
             if nonids_too or k not in self._non_ids)
 
     def id(self, nonids_too=False, maxlength=0):
-        """Returns the id string of this configuration.
+        """Returns the id unicode string of this configuration.
 
         Non-ids keys are ignored if nonids_too is False.
 
@@ -217,12 +224,16 @@ class Configuration(object):
     def _nested_string(self, v):
         """Returns the nested configuration string for a variaety of value types."""
         def nest(string):
-            return '"%s"' % string
+            return u'"%s"' % string
 
         if isinstance(v, Configuration):
             return nest(v.id())
-        if isinstance(v, Configurable):
-            return nest(v.configuration().id())
+        if isinstance(v, Configurable) or hasattr(v, 'configuration'):
+            configuration = getattr(v, 'configuration')
+            configuration = configuration() if callable(configuration) else configuration
+            if isinstance(configuration, Configuration):
+                return nest(configuration.id())
+            raise Exception('object has a "configuration" attribute, but it is not of Configuration class')
         if inspect.isbuiltin(v):  # Special message if we try to pass something like sorted or np.array
             raise Exception('Cannot determine the argspec of a non-python function (%s). '
                             'Please wrap it in a configurable' % v.__name__)
@@ -243,12 +254,14 @@ class Configuration(object):
             config.name = v.__name__
             config.configdict = params_with_defaults
             return nest(config.id())
-        if ' at 0x' in str(v):  # An object without proper representation, try a best effort
+        if ' at 0x' in unicode(v):  # An object without proper representation, try a best effort
             config = copy(self)  # Careful
             config.name = v.__class__.__name__
             config.configdict = config_dict_for_object(v)
             return nest(config.id())
-        return str(v)
+        if isinstance(v, (unicode, basestring)):
+            return u'\'%s\'' % v
+        return unicode(v)
 
     def set_synonym(self, name, synonym):
         """Configures the synonym for the property name."""
@@ -354,7 +367,7 @@ class Configurable(object):
 #
 
 
-def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quotes=True):
+def parse_id_string(id_string, sep='#', parse_nested=True, infer_numbers=True, remove_quotes=True):
     """
     Parses configuration string into a pair (name, configuration).
 
@@ -362,6 +375,9 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
     ----------
     id_string : string
         The id string to parse back. Something like "name#k1=v1#k2="name#k22=v22"#k3=v3".
+
+    sep : string, default '#'
+        The string that separates 'key=value' pairs (see 'sep' in Configuration)
 
     parse_nested : bool, [default True]
         If true, a value that is a nested configuration string (enclosed in single or double quotes)
@@ -412,7 +428,7 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
         return string
 
     # Sanity checks
-    if id_string.startswith('#'):
+    if id_string.startswith(sep):
         raise Exception('%s has no name, and it should (it starts already by #)' % id_string)
 
     if not id_string:
@@ -421,7 +437,7 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
     # Parse
     splitter = shlex.shlex(instream=id_string)  # shlex works with our simple syntax
     splitter.wordchars += '.'                   # so numbers are not splitted...
-    splitter.whitespace = '#'
+    splitter.whitespace = sep
     splitter.whitespace_split = False
     parameters = list(splitter)
     name = parameters[0]
