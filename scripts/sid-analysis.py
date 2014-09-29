@@ -145,12 +145,27 @@ if __name__=='__main__':
         possible_models = []
         
         for order in (2,3,4):
-            result_obj = sfe_sid.SidMATLAB.run_tfest(mlab,
+            result_obj = sfe_sid.MATLABIdtf.run_tfest(mlab,
                                            iddata,
                                            np=order,
                                            nz=order)
             print "TFEST MODEL FIT: %s\n\t%s" % (cond, result_obj)
             possible_models.append(result_obj)
+            result_obj = sfe_sid.MATLABIdpoly.run_oe(mlab,
+                                           iddata,
+                                           nb=order,
+                                           nf=order,
+                                           nk=1)
+            print "OEEST MODEL FIT: %s\n\t%s" % (cond, result_obj)
+            possible_models.append(result_obj)
+            result_obj = sfe_sid.MATLABIdpoly.run_arx(mlab,
+                                           iddata,
+                                           nb=order,
+                                           nf=order,
+                                           nk=1)
+            print "OEEST MODEL FIT: %s\n\t%s" % (cond, result_obj)
+            possible_models.append(result_obj)
+
 
         for result_obj in possible_models:
             if result_obj is not None and result_obj.fitpct > args.min_fit_pct and result_obj.fitmse < 20:
@@ -175,21 +190,24 @@ if __name__=='__main__':
         name = combine.get_plot_filename('bode_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             for model_desc,(result_obj,tf) in model_results.iteritems():
-                control.bode_plot(tf,label=model_desc,omega=np.linspace(10e-1,10e1))
+                if tf is not None:
+                    control.bode_plot(tf,label=model_desc,omega=np.linspace(10e-1,10e1))
             fig.suptitle('Bode Plot\n%s)' % perturbation_obj)
             plt.legend(prop={'size':8})
 
         name = combine.get_plot_filename('pzmap_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             for model_desc,(result_obj,tf) in model_results.iteritems():
-                control.pzmap.pzmap(tf)
+                if tf is not None:
+                    control.pzmap.pzmap(tf)
             fig.suptitle('P-Z Map\n%s)' % perturbation_obj)
 
         name = combine.get_plot_filename('step_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             ax = fig.add_subplot(1,1,1)
             for model_desc,(result_obj,tf) in model_results.iteritems():
-                a,b = control.step_response(tf, T=np.linspace(0,5,100))
+                if tf is not None:
+                    a,b = control.step_response(tf, T=np.linspace(0,5,100))
                 ax.plot(a,b,label=model_desc)
             fig.suptitle('Step Response\n%s)' % perturbation_obj)
             ax.set_ylabel(system_y_name)

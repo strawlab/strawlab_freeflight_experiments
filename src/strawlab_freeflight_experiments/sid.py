@@ -28,7 +28,7 @@ def get_matlab_file(name):
                         'src','strawlab_freeflight_experiments','matlab',name)
 
 class _SIDResult(object):
-    def __init__(self, z, p, k, fitpct, fitmse, sid_data, sid_model):
+    def __init__(self, abrv, est_args, z, p, k, fitpct, fitmse, sid_data, sid_model):
         self.z = z
         self.p = p
         self.k = k
@@ -36,6 +36,15 @@ class _SIDResult(object):
         self.fitmse = fitmse
         self.sid_data = sid_data
         self.sid_model = sid_model
+
+        self._abrv = abrv
+        self._est_args = est_args
+
+    def __str__(self):
+        return "%s_p%dz%d_%.0f%%" % (self._abrv,
+                                     len(self.p),len(self.z),self.fitpct)
+
+class MATLABIdtf(_SIDResult):
 
     def get_control_object(self, mlab):
         num, den = mlab.run_code("""
@@ -45,17 +54,6 @@ function [num den] = get_coeffs(mdl)
     den = tfc.den;
 end""", self.sid_model, nout=2)
         return control.tf(num, den)
-
-class SidMATLAB(_SIDResult):
-
-    def __init__(self, abrv, est_args, *args):
-        _SIDResult.__init__(self, *args)
-        self._abrv = abrv
-        self._est_args = est_args
-
-    def __str__(self):
-        return "%s_p%dz%d_%.0f%%" % (self._abrv,
-                                     len(self.p),len(self.z),self.fitpct)
 
     @staticmethod
     def run_tfest(mlab,iddata,np,nz):
@@ -71,11 +69,61 @@ class SidMATLAB(_SIDResult):
     end""",iddata,np,nz,
             nout=6,
             saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
-            return SidMATLAB("tf%d%d" % (np, nz),
+            return MATLABIdtf("tf%d%d" % (np, nz),
                                  "np=%d,nd=%d" % (np, nz),
                                  z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
             return None
+
+class MATLABIdpoly(_SIDResult):
+
+    def get_control_object(self, mlab):
+        return None
+
+    @staticmethod
+    def run_oe(mlab,iddata,nb,nf,nk):
+        #keep the models on the matlab side for a while by giving them random names
+        this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
+        try:
+            z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
+        Opt = oeOptions;                       
+        Opt.Focus = 'simulation';
+        mdl = oe(trial_data,[nb nf nk],Opt);
+        fitmse = mdl.Report.Fit.MSE;
+        fitpct = mdl.Report.Fit.FitPercent;
+        [z p k] = zpkdata(mdl);
+    end""",iddata,nb,nf,nk,
+            nout=6,
+            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
+            return MATLABIdpoly("oe%d%d%d" % (nb, nf, nk),
+                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
+                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
+        except RuntimeError, e:
+            return None
+
+    @staticmethod
+    def run_arx(mlab,iddata,nb,nf,nk):
+        #keep the models on the matlab side for a while by giving them random names
+        this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
+        try:
+            z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
+        Opt = arxOptions;
+        Opt.Focus = 'simulation';
+        mdl = arx(trial_data,[nb nf nk],Opt);
+        fitmse = mdl.Report.Fit.MSE;
+        fitpct = mdl.Report.Fit.FitPercent;
+        [z p k] = zpkdata(mdl);
+    end""",iddata,nb,nf,nk,
+            nout=6,
+            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
+            return MATLABIdpoly("arx%d%d%d" % (nb, nf, nk),
+                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
+                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
+        except RuntimeError, e:
+            return None
+
 
 def upload_data(mlab, y, u, Ts):
     this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
