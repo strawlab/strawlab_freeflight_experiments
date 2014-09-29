@@ -145,12 +145,10 @@ if __name__=='__main__':
         possible_models = []
         
         for order in (2,3,4):
-            result_obj = sfe_sid.run_tfest(mlab,
+            result_obj = sfe_sid.SidMATLAB.run_tfest(mlab,
                                            iddata,
-                                           num_poles=order,
-                                           num_zeros=order,
-                                           io_delay=9,
-                                           Ts=0.01)
+                                           np=order,
+                                           nz=order)
             print "TFEST MODEL FIT: %s\n\t%s" % (cond, result_obj)
             possible_models.append(result_obj)
 
