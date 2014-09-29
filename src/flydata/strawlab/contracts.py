@@ -217,4 +217,4 @@ def check_contracts(trajs, contracts):
     for contract in contracts:
         if not contract.check(trajs):
             raise Exception(contract.fail_message)
-    return [contract.configuration().id() for contract in contracts]
+    return [contract.who().id() for contract in contracts]

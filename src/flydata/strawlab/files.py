@@ -408,7 +408,7 @@ class FreeflightAnalysisFiles(Configurable):
             self.filtering_tfilt_options(),
             self.filtering_idfilt_options()))
 
-    def configuration(self):
+    def who(self):
         return Configuration(
             self.__class__.__name__,
             configuration_dict=dict(self.merging_filtering_options()))
@@ -513,7 +513,7 @@ if __name__ == '__main__':
         for analysis in analyses:
             print '\t%s' % analysis
             ffa = FreeflightAnalysisFiles(analysis)
-            print ffa.configuration().id()
+            print ffa.who().id()
             for condition in ffa.conditions():
                 oid2data = defaultdict(list)
                 for x0, y0, oid, framenumber0, time0, df in ffa.trajs(condition):

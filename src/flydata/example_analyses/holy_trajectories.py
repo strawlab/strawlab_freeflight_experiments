@@ -203,7 +203,7 @@ experiments = load_freeflight_experiments(chain(PDF_GAL4xKP041, PDF_GAL4xCS, KP0
 # Or just slow flying (inidicating a poor choice of threshold or a too simplistic filter)
 print 'This is the customfilt-related options for these experiments (and the full data ID)'
 for exp in experiments:
-    print exp.uuid(), exp.sfff().filtering_customfilt_options(), exp.sfff().configuration().id()
+    print exp.uuid(), exp.sfff().filtering_customfilt_options(), exp.sfff().who().id()
 
 # Let's from now on just work with FreeflightTrajectory objects
 print 'Loading trajectories...'

@@ -79,8 +79,8 @@ class MaxMinTrimmer(Transformer):
     def transform(self, X):
         pass
 
-    def configuration(self):
-        return super(MaxMinTrimmer, self).configuration()
+    def who(self):
+        return super(MaxMinTrimmer, self).who()
 
 
 ##############################

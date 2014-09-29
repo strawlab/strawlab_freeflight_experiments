@@ -4,7 +4,7 @@
 It works this way:
 
   - Objects provide their own ids based on parameters=value dictionaries.
-    They do so by returning an instance of the *Configuration* class from a method "configuration()"
+    They do so by returning an instance of the *Configuration* class from a method called "who()"
     (and that's all)
 
   - Optionally, this package provides a Configurable class that can be inherited to provide automatic
@@ -22,17 +22,16 @@ Examples
 ...          self.company = company
 ...          self.verbose = verbose
 ...
-...
-...      def configuration(self):
+...      def who(self):
 ...          return Configuration('ducked', {'quantity': self.quantity, 'name': self.name, 'company': self.company})
 >>>
 >>>
 >>> duckedc = DuckedConfigurable(33, 'salty-lollypops', verbose=False)
 >>> # The configuration id string helps consistency by sorting by key alphanumeric order
->>> duckedc.configuration().id()
+>>> duckedc.who().id()
 u"ducked#company=None#name='salty-lollypops'#quantity=33"
->>> # Inheriting from Configurable makes objects gain a configuration() method
->>> # In this case, configuration() is infered automatically
+>>> # Inheriting from Configurable makes objects gain a who() method
+>>> # In this case, who() is infered automatically
 >>> class Company(Configurable):
 ...     def __init__(self, name, city, verbose=True):
 ...          super(Company, self).__init__()
@@ -41,11 +40,11 @@ u"ducked#company=None#name='salty-lollypops'#quantity=33"
 ...          self._verbose = verbose  # not part of config
 ...          self.social_reason_ = '%s S.A., %s' % (name, city)  # not part of config
 >>> cc = Company(name='Chupa Chups', city='Barcelona')
->>> cc.configuration().id()
+>>> cc.who().id()
 u"Company#city='Barcelona'#name='Chupa Chups'"
 >>> # Ultimately, we can nest configurables...
 >>> duckedc = DuckedConfigurable(33, 'salty-lollypops', company=cc, verbose=False)
->>> print duckedc.configuration().id()
+>>> print duckedc.who().id()
 ducked#company="Company#city='Barcelona'#name='Chupa Chups'"#name='salty-lollypops'#quantity=33
 """
 
@@ -190,9 +189,11 @@ class Configuration(object):
                "verbose=True" is a parameter of the nested configuration
           "min_split=10" is another property
         """
+
         # String quoting policy defaults to this configuration's if not specified
         if quote_string_vals is None:
             quote_string_vals = self._quote_strings
+
         # Key-value list
         def sort_kvs_fl():
             kvs = self.configdict.iteritems()
@@ -379,7 +380,7 @@ class Configurable(object):
         super(Configurable, self).__init__()
         self._add_descriptors = add_descriptors
 
-    def configuration(self):
+    def who(self):
         """Returns a Configuration object."""
         return Configuration(
             self.__class__.__name__,

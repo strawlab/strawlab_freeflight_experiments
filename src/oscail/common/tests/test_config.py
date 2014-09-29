@@ -193,7 +193,7 @@ def c3(c1, c2, quote_string_values=True):
             self.irrelevant = irrelevant
             self._quote_string_values = quote_string_values
 
-        def configuration(self):
+        def who(self):
             return Configuration(
                 self.__class__.__name__,
                 non_id_keys=('irrelevant',),
@@ -204,7 +204,7 @@ def c3(c1, c2, quote_string_values=True):
 
 def test_non_nested_configurations(c1):
     # Non-nested configurations
-    config_c1 = c1.configuration()
+    config_c1 = c1.who()
     assert config_c1.name == 'C1'
     assert len(config_c1.configdict) == 3
     assert config_c1.p1 == 'blah'
@@ -217,24 +217,24 @@ def test_non_nested_configurations(c1):
 
 def test_nested_configurables(c1, c2):
     # Nested configurables
-    config_c2 = c2.configuration()
+    config_c2 = c2.who()
     assert config_c2.name == 'C2'
     assert len(config_c2.configdict) == 2
     assert config_c2['name'] == 'roxanne'
-    assert config_c2.c1.configuration() == c1.configuration()
+    assert config_c2.c1.who() == c1.who()
     assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
 
 
 def test_nested_configurations(c1, c2):
     # Nested
-    c2.c1 = c1.configuration()
-    config_c2 = c2.configuration()
+    c2.c1 = c1.who()
+    config_c2 = c2.who()
     assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
 
 
 def test_non_id_keys(c3):
     # non-id keys
-    config_c3 = c3.configuration()
+    config_c3 = c3.who()
     assert config_c3.id() == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
                              'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"'
     assert config_c3.id(nonids_too=True) == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
@@ -255,13 +255,13 @@ def test_non_id_keys(c3):
 def test_non_quoted_string_values(c3):
     # non-quoted string values must cascade recursively
     # - this makes things complex, should get rid of this feat
-    assert c3.configuration().id(quote_string_vals=False) == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
-                                                             'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"'
+    assert c3.who().id(quote_string_vals=False) == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
+                                                   'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"'
 
 
 def test_configurable_magics(c1):
     # configuration magics
-    assert str(c1.configuration()) == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
+    assert str(c1.who()) == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
 
 
 def test_configurable_functions(c1):
@@ -270,7 +270,7 @@ def test_configurable_functions(c1):
 
     # Functions
     c1.p1 = identity
-    assert c1.configuration().id() == 'C1#length=1#p1="identity#"#p2=\'bleh\''
+    assert c1.who().id() == 'C1#length=1#p1="identity#"#p2=\'bleh\''
 
 
 def test_configurable_partial(c1):
@@ -280,14 +280,14 @@ def test_configurable_partial(c1):
 
     # Partial functions
     c1.p1 = partial(identity, x=1)
-    assert c1.configuration().id() == 'C1#length=1#p1="identity#x=1"#p2=\'bleh\''
+    assert c1.who().id() == 'C1#length=1#p1="identity#x=1"#p2=\'bleh\''
 
 
 def test_configurable_builtins(c1):
     # Builtins - or whatever foreigner - do not allow introspection
     c1.p1 = sorted
     with pytest.raises(Exception) as excinfo:
-        c1.configuration().id()
+        c1.who().id()
     assert excinfo.value.message == 'Cannot determine the argspec of a non-python function (sorted). ' \
                                     'Please wrap it in a configurable'
 
@@ -299,7 +299,7 @@ def test_configurable_anyobject(c1):
         def __init__(self):
             self.param = 'yes'
     c1.p1 = RandomClass()
-    assert c1.configuration().id() == 'C1#length=1#p1="RandomClass#param=\'yes\'"#p2=\'bleh\''
+    assert c1.who().id() == 'C1#length=1#p1="RandomClass#param=\'yes\'"#p2=\'bleh\''
 
 
 def test_configurable_data_descriptors():
@@ -315,14 +315,14 @@ def test_configurable_data_descriptors():
             return self._prop
 
     cp = ClassWithProps(add_descriptors=True)
-    assert cp.configuration().id() == 'ClassWithProps#prop=3'
+    assert cp.who().id() == 'ClassWithProps#prop=3'
     cp = ClassWithProps(add_descriptors=False)
-    assert cp.configuration().id() == 'ClassWithProps#'
+    assert cp.who().id() == 'ClassWithProps#'
 
     # Objects with dynamically added properties
     setattr(cp, 'dprop', property(lambda: 5))
     with pytest.raises(Exception) as excinfo:
-        cp.configuration().id()
+        cp.who().id()
     assert excinfo.value.message == 'Dynamic properties are not suppported.'
 
 
@@ -337,7 +337,7 @@ def test_configurable_slots():
             self.prop = 3
 
     slots = Slots()
-    assert slots.configuration().id() == 'Slots#prop=3'
+    assert slots.who().id() == 'Slots#prop=3'
 
 
 def test_configurable_inheritance():
@@ -355,24 +355,24 @@ def test_configurable_inheritance():
             self.c = 'subC'
             self.a = 'subA'
 
-    assert Sub().configuration().id() == 'Sub#a=\'subA\'#b=\'superB\'#c=\'subC\''
+    assert Sub().who().id() == 'Sub#a=\'subA\'#b=\'superB\'#c=\'subC\''
 
 
 def test_configurable_nickname(c1):
 
     class NicknamedConfigurable(Configurable):
-        def configuration(self):
-            c = super(NicknamedConfigurable, self).configuration()
+        def who(self):
+            c = super(NicknamedConfigurable, self).who()
             c.nickname = 'bigforest'
             return c
 
     # nicknamed configurations
-    assert NicknamedConfigurable().configuration().nickname == 'bigforest'
-    assert NicknamedConfigurable().configuration().nickname_or_id() == 'bigforest'
+    assert NicknamedConfigurable().who().nickname == 'bigforest'
+    assert NicknamedConfigurable().who().nickname_or_id() == 'bigforest'
 
     # not nicknamed configurations
-    assert c1.configuration().nickname is None
-    assert c1.configuration().nickname_or_id() == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
+    assert c1.who().nickname is None
+    assert c1.who().nickname_or_id() == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
 
 
 def test_configurable_duck():
@@ -388,7 +388,7 @@ def test_configurable_duck():
             super(NestedDuckedConfiguration, self).__init__()
             self.ducked = cduck
     nested_duck = NestedDuckedConfiguration()
-    assert nested_duck.configuration().id() == 'NestedDuckedConfiguration#ducked="DuckedConfiguration#param1=33"'
+    assert nested_duck.who().id() == 'NestedDuckedConfiguration#ducked="DuckedConfiguration#param1=33"'
 
 
 def test_mlexp_info_helper():
@@ -419,9 +419,9 @@ def test_mlexp_info_helper():
     before = int(datetime.now().strftime("%s"))
     info = mlexp_info_helper(
         title='test',
-        data_setup=TestDataset().configuration(),
-        model_setup=PreproModel(prepro=Prepro(), reg='l2').configuration(),
-        eval_setup=CVEval(num_folds=5, seed=2147483647).configuration(),
+        data_setup=TestDataset().who(),
+        model_setup=PreproModel(prepro=Prepro(), reg='l2').who(),
+        eval_setup=CVEval(num_folds=5, seed=2147483647).who(),
         exp_function=test_mlexp_info_helper,
         comments='comments4nothing',
         itime=False)
