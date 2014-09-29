@@ -186,7 +186,6 @@ def test_configurable(c1):
             self.irrelevant = irrelevant
 
         def configuration(self):
-            """Returns a Configuration object."""
             return Configuration(
                 self.__class__.__name__,
                 non_id_keys=('irrelevant',),
@@ -228,19 +227,19 @@ def test_configurable(c1):
     assert config_c3.id(maxlength=1) == sha2
     config_c3.set_synonym('c1', 'C1Syn')
     assert config_c3.synonym('c1') == 'C1Syn'
-    assert config_c3.id() == 'C3#C1Syn="C1#length=1#p1=blah#p2=bleh"#' \
-                             'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"'
+    assert config_c3.id() == 'C3#C1Syn="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
+                             'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"'
 
     # nested configurations
     c2 = C2()
     c2.c1 = c1.configuration()
     config_c2 = c2.configuration()
-    assert config_c2.id() == 'C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne'
+    assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
 
 
 def test_configurable_magics(c1):
     # configuration magics
-    assert str(c1.configuration()) == 'C1#length=1#p1=blah#p2=bleh'
+    assert str(c1.configuration()) == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
 
 
 def test_configurable_functions(c1):
@@ -249,7 +248,7 @@ def test_configurable_functions(c1):
 
     # Functions
     c1.p1 = identity
-    assert c1.configuration().id() == 'C1#length=1#p1="identity#"#p2=bleh'
+    assert c1.configuration().id() == 'C1#length=1#p1="identity#"#p2=\'bleh\''
 
 
 def test_configurable_partial(c1):
@@ -259,7 +258,7 @@ def test_configurable_partial(c1):
 
     # Partial functions
     c1.p1 = partial(identity, x=1)
-    assert c1.configuration().id() == 'C1#length=1#p1="identity#x=1"#p2=bleh'
+    assert c1.configuration().id() == 'C1#length=1#p1="identity#x=1"#p2=\'bleh\''
 
 
 def test_configurable_builtins(c1):
@@ -278,7 +277,7 @@ def test_configurable_anyobject(c1):
         def __init__(self):
             self.param = 'yes'
     c1.p1 = RandomClass()
-    assert c1.configuration().id() == 'C1#length=1#p1="RandomClass#param=yes"#p2=bleh'
+    assert c1.configuration().id() == 'C1#length=1#p1="RandomClass#param=\'yes\'"#p2=\'bleh\''
 
 
 def test_configurable_data_descriptors():
@@ -334,7 +333,7 @@ def test_configurable_inheritance():
             self.c = 'subC'
             self.a = 'subA'
 
-    assert Sub().configuration().id() == 'Sub#a=subA#b=superB#c=subC'
+    assert Sub().configuration().id() == 'Sub#a=\'subA\'#b=\'superB\'#c=\'subC\''
 
 
 def test_configurable_nickname(c1):
@@ -351,7 +350,7 @@ def test_configurable_nickname(c1):
 
     # not nicknamed configurations
     assert c1.configuration().nickname is None
-    assert c1.configuration().nickname_or_id() == 'C1#length=1#p1=blah#p2=bleh'
+    assert c1.configuration().nickname_or_id() == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
 
 
 def test_configurable_duck():
