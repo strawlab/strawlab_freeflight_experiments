@@ -329,15 +329,21 @@ def config_dict_for_object(obj, add_descriptors=False):
 class Configurable(object):
     """A configurable object has a configuration.
 
+    This class strives to be as little intrusive as possible and performs all its
+    magic only on request (call to "configuration").
+
     By default, the object is introspected to get the configuration, so that:
        - the name is the class name of the object
        - the parameters are the instance variables that do not start or end with '_'
        - data descriptors (e.g. @property) are not part of the configuration
 
+
     See also
     --------
     config_dict_for_object, Configuration
     """
+
+    __slots__ = ('_add_descriptors',)
 
     def __init__(self, add_descriptors=False):
         super(Configurable, self).__init__()
