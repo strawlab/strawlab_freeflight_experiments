@@ -81,14 +81,14 @@ class Configuration(object):
     configuration_dict : dictionary
         The {key:value} property dictionary for this configuration.
 
-    nickname : string, [default None]
+    nickname : string, default None
         The nickname can be an arbitrary, short, human-friendly string used to represent this configuration.
 
-    non_id_keys : iterable (usually of strings), [default None]
+    non_id_keys : iterable (usually of strings), default None
         A list of keys that should not be considered when generating ids.
         For example: "num_threads" or "verbose" should not change results when fitting a model.
 
-    synonyms : dictionary, [default None]
+    synonyms : dictionary, default None
         We allow to use up to one synonyms for each property name, the mapping is this dictionary.
         Use with caution, as it can make hard or impossible configuration reconstruction or identification
         if badly implemented.
@@ -96,13 +96,17 @@ class Configuration(object):
     sort_by_key : bool
         Sort parameters by key (in lexicographic order if keys are strings) when building the id string.
 
-    prefix_keys : list of keys [default None]
+    prefix_keys : list of keys, default None
         These keys will appear first in the configuration string.
         Their order is not affected by "sorted_by_key" flag.
 
-    postfix_keys : list of keys [default None]
+    postfix_keys : list of keys, default None
         These keys will appear last in the configuration string.
         Their order is not affected by "sorted_by_key" flag.
+
+    quote_strings : boolean, default True
+        If True string values will be single-quoted in the configuration string.
+        This value can be overrided at anytime by specifying quote_string_values when calling to id()
     """
 
     def __init__(self,
@@ -114,7 +118,8 @@ class Configuration(object):
                  synonyms=None,
                  sort_by_key=True,
                  prefix_keys=None,
-                 postfix_keys=None):
+                 postfix_keys=None,
+                 quote_string_values=True):
         super(Configuration, self).__init__()
         self.name = name
         self.configdict = configuration_dict
@@ -122,6 +127,7 @@ class Configuration(object):
         self._prefix_keys = prefix_keys if prefix_keys else []
         self._postfix_keys = postfix_keys if postfix_keys else []
         self._sort_by_key = sort_by_key
+        self._quote_strings = quote_string_values
         # Synonyms to allow more concise representations
         self._synonyms = {}
         if synonyms is not None:
@@ -145,14 +151,14 @@ class Configuration(object):
         return self.configdict[item]
 
     def __getitem__(self, item):
-        """Allow to retrieve configuration values using dot notation over Configuration objects."""
+        """Allow to retrieve configuration values using [] notation over Configuration objects."""
         return self.configdict[item]
 
     def __str__(self):
         """The default representation is the configuration string including non_ids keys."""
         return self.id(nonids_too=True)
 
-    def as_string(self, nonids_too=False, sep='#'):
+    def as_string(self, nonids_too=False, sep='#', quote_string_vals=None):
         """Makes a best effort to represent this configuration as a string.
 
         Parameters
@@ -184,6 +190,9 @@ class Configuration(object):
                "verbose=True" is a parameter of the nested configuration
           "min_split=10" is another property
         """
+        # String quoting policy defaults to this configuration's if not specified
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
         # Key-value list
         def sort_kvs_fl():
             kvs = self.configdict.iteritems()
@@ -201,38 +210,57 @@ class Configuration(object):
 
         kvs = sort_kvs_fl()
         return sep.join(
-            '%s=%s' % (self.synonym(k), self._nested_string(v))
+            '%s=%s' % (self.synonym(k), self._nested_string(v, quote_string_vals=quote_string_vals))
             for k, v in kvs
             if nonids_too or k not in self._non_ids)
 
-    def id(self, nonids_too=False, maxlength=0):
+    def id(self, nonids_too=False, maxlength=0, quote_string_vals=None):
         """Returns the id unicode string of this configuration.
 
-        Non-ids keys are ignored if nonids_too is False.
+        Parameters
+        ----------
+        nonids_too: boolean, default False
+          Non-ids keys are ignored if nonids_too is False.
 
-        If the id length goes over maxlength, the parameters part get replaced by its sha256.
+        malength: int, default 0
+          If the id length goes over maxlength, the parameters part get replaced by its sha256.
+          If <= 0, it is ignored and the full id string will be returned.
+
+        quote_string_vals: boolean, default None
+          If True, string values will be quoted.
+          If None, we use the Configuration set property.
         """
-        my_id = '%s#%s' % (self.synonym(self.name), self.as_string(nonids_too=nonids_too))
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
+
+        if quote_string_vals is False:
+            print 'Here'
+
+        my_id = u'%s#%s' % (self.synonym(self.name), self.as_string(nonids_too=nonids_too,
+                                                                    quote_string_vals=quote_string_vals))
         if 0 < maxlength < len(my_id):
             return hashlib.sha256(my_id).hexdigest()
         return my_id
 
-    def nickname_or_id(self, nonids_too=False, maxlength=0):
+    def nickname_or_id(self, nonids_too=False, maxlength=0, quote_string_vals=None):
         """Returns the nickname if it exists, otherwise it returns the id (respecting nonids_too and maxlength)."""
-        return self.id(nonids_too=nonids_too, maxlength=maxlength) if self.nickname is None else self.nickname
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
+        return self.id(nonids_too=nonids_too, maxlength=maxlength, quote_string_vals=quote_string_vals) \
+            if self.nickname is None else self.nickname
 
-    def _nested_string(self, v):
+    def _nested_string(self, v, quote_string_vals):
         """Returns the nested configuration string for a variaety of value types."""
         def nest(string):
             return u'"%s"' % string
 
         if isinstance(v, Configuration):
-            return nest(v.id())
-        if isinstance(v, Configurable) or hasattr(v, 'configuration'):
+            return nest(v.id(quote_string_vals=quote_string_vals))
+        if hasattr(v, 'configuration'):
             configuration = getattr(v, 'configuration')
             configuration = configuration() if callable(configuration) else configuration
             if isinstance(configuration, Configuration):
-                return nest(configuration.id())
+                return nest(configuration.id(quote_string_vals=quote_string_vals))
             raise Exception('object has a "configuration" attribute, but it is not of Configuration class')
         if inspect.isbuiltin(v):  # Special message if we try to pass something like sorted or np.array
             raise Exception('Cannot determine the argspec of a non-python function (%s). '
@@ -244,7 +272,7 @@ class Configuration(object):
             config = copy(self)
             config.name = name
             config.configdict = keywords
-            return nest(config.id())
+            return nest(config.id(quote_string_vals=quote_string_vals))
         if inspect.isfunction(v):
             args, _, _, defaults = inspect.getargspec(v)
             defaults = [] if not defaults else defaults
@@ -253,14 +281,16 @@ class Configuration(object):
             config = copy(self)
             config.name = v.__name__
             config.configdict = params_with_defaults
-            return nest(config.id())
+            return nest(config.id(quote_string_vals=quote_string_vals))
         if ' at 0x' in unicode(v):  # An object without proper representation, try a best effort
             config = copy(self)  # Careful
             config.name = v.__class__.__name__
             config.configdict = config_dict_for_object(v)
-            return nest(config.id())
+            return nest(config.id(quote_string_vals=quote_string_vals))
         if isinstance(v, (unicode, basestring)):
-            return u'\'%s\'' % v
+            if quote_string_vals:
+                return u'\'%s\'' % v
+            return u'%s' % v
         return unicode(v)
 
     def set_synonym(self, name, synonym):
@@ -385,14 +415,14 @@ def parse_id_string(id_string, sep='#', parse_nested=True, infer_numbers=True, r
     sep : string, default '#'
         The string that separates 'key=value' pairs (see 'sep' in Configuration)
 
-    parse_nested : bool, [default True]
+    parse_nested : bool, default True
         If true, a value that is a nested configuration string (enclosed in single or double quotes)
         is parsed into a pair (name, configuration) by calling recursivelly this function.
 
-    infer_numbers : bool, [default=True]
+    infer_numbers : bool, default True
         If True, parse floats and ints to be numbers; if False, strings are returned instead.
 
-    remove_remove_quotes : bool, [default=True]
+    remove_quotes : bool, default True
         If True (and parse_nested is False), quotes are removed from values; otherwise quotes are kept.
 
     Returns
@@ -422,15 +452,18 @@ def parse_id_string(id_string, sep='#', parse_nested=True, infer_numbers=True, r
         if remove_quotes:
             if is_quoted(string):
                 string = string[1:-1]
+        # a number?
         if infer_numbers:
             try:
                 return int(string)
             except:
-                pass
-            try:
-                return float(string)
-            except:
-                pass
+                try:
+                    return float(string)
+                except:
+                    pass
+        # quoted string?
+        if string.startswith('\'') and string.endswith('\''):
+            return string[1:-1]
         return string
 
     # Sanity checks
