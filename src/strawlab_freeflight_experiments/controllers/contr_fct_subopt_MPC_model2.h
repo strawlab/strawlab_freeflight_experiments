@@ -28,6 +28,8 @@ typedef struct {
     int Ngrad; // number of gradient steps per sampling instant
     double lsmin0, lsmax0; // initial lower and upper bound of interval for approximate line search
     double ulim[4]; // lower and upper bound for inputs (omegae to the fly and w to the auxiliary system)
+	double *desiredPath; // holds coordinates of the desired path, length NdesPath*2
+	int NdesPath; // number of points for the discretization of the desired path
 }contrp_t;
 
 typedef struct {
@@ -43,6 +45,8 @@ typedef struct {
     double *J; // used for calculating the cost
 	double *rws; // used for storing temporary values
 	double *theta; // state of the auxiliary system describing the evolution of the path parameter
+	double *finalInput; // holds input trajectory after call of the controller (iterations of the 
+						// gradient projection method) is finished
     double status[10]; /* status: array containing status information of the controller: 
                         *  0: is reset -> reset has been performed if value 1
                         *  1: in normal operation if value 1
@@ -55,7 +59,7 @@ typedef struct {
 contrp_t * contr_new_params();
 projGrState_t * contr_new_state();
 
-void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState);
+void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint);
 
 void initProjGradMethod (projGrState_t *projGrState, contrp_t *cp);
 
@@ -74,6 +78,8 @@ void inputproj(double *u, double *t, contrp_t *cp);
 const double *get_proj_state(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
 const double *get_proj_costate(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
 const double *get_proj_input(contrp_t *cp, projGrState_t *projGrState, int *n, int *m);
+
+const double *get_path(contrp_t *cp, int *num);
 
 #endif
 

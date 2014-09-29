@@ -7,6 +7,7 @@ import roslib
 import roslib.packages
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
+import analysislib.args
 import analysislib.util as autil
 import strawlab.constants
 
@@ -35,11 +36,11 @@ class TestDataStore(unittest.TestCase):
         n = self.combine.get_total_trials()
         self.assertEqual(n, 5)
         df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(5)
-        self.assertEqual(len(df), 1924)
+        self.assertEqual(len(df), 1908)
 
     def testSingleLoad(self):
         df,dt = autil.get_one_trajectory(self.uuid, 5, disable_debug=True, disable_warn=True)
-        self.assertEqual(len(df), 1924)
+        self.assertEqual(len(df), 1908)
 
     def testFilenames(self):
         readme = self.combine.get_plot_filename("README")
@@ -51,9 +52,28 @@ class TestDataStore(unittest.TestCase):
         plotdir = self.combine.plotdir
         self.assertEqual(plotdir, os.path.join(self.pdir,self.uuid,_me_exec))
 
+    def testCache(self):
+        combine = autil.get_combiner_for_uuid(self.uuid)
+        combine.add_from_uuid(self.uuid, cached=False)
+        self.assertTrue(os.path.exists(combine._get_cache_name()))
+        combine = autil.get_combiner_for_uuid(self.uuid)
+        combine.add_from_uuid(self.uuid, cached=True)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        self.assertEqual(len(df), 1908)
+
+    def testCache2(self):
+        combine = autil.get_combiner_for_uuid(self.uuid)
+        parser,args = analysislib.args.get_default_args(
+                    uuid=[self.uuid for i in range(10)],
+                    outdir='/tmp/'
+        )
+        combine = autil.get_combiner_for_args(args)
+        combine.add_from_args(args)
+
     def tearDown(self):
         del os.environ['FLYDRA_AUTODATA_BASEDIR']
         del os.environ['FLYDRA_AUTODATA_PLOTDIR']
+
 
 if __name__=='__main__':
     unittest.main()

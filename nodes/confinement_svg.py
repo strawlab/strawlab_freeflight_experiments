@@ -13,9 +13,8 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import String, UInt32, Bool, Float32
-from geometry_msgs.msg import Vector3, Pose, PoseArray, Point
+from geometry_msgs.msg import Vector3, Pose, Polygon, Point
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import flyflypath.transform
 import nodelib.log
@@ -78,7 +77,7 @@ class Node(object):
         self.svg_pub = rospy.Publisher('svg_filename', String, latch=True, tcp_nodelay=True)
         self.srcpx_pub = rospy.Publisher('source', Vector3, latch=False, tcp_nodelay=True)
         self.active_pub = rospy.Publisher('active', Bool, latch=True, tcp_nodelay=True)
-        self.trigarea_pub = rospy.Publisher('trigger_area', PoseArray, latch=True, tcp_nodelay=True)
+        self.trigarea_pub = rospy.Publisher('trigger_area', Polygon, latch=True, tcp_nodelay=True)
 
         self.pushover_pub = rospy.Publisher('note', String)
         self.save_pub = rospy.Publisher('save_object', UInt32)
@@ -104,7 +103,7 @@ class Node(object):
         self.srcpx_pub.publish(0,0,0)
         self.active_pub.publish(False)
         self.trigarea_pub.publish(
-                nodelib.visualization.get_circle_trigger_volume_posearray(
+                nodelib.visualization.get_circle_trigger_volume_polygon(
                                         XFORM,
                                         START_RADIUS,self.x0,self.y0)
         )

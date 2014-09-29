@@ -3,16 +3,19 @@ from __future__ import division
 import numpy as np
 import scipy.signal
 import matplotlib.mlab
+import matplotlib.gridspec
 
 from numpy.fft import fft, fftfreq, irfft
 from numpy.random import RandomState
 
-def plot_spectrum(ax, y, fs):
-    ax.psd(y,Fs=fs)
+def plot_spectrum(ax, y, fs, detrend=False, **kwargs):
+    ax.psd(y,Fs=fs,
+           detrend=matplotlib.mlab.detrend_mean if detrend else matplotlib.mlab.detrend_none,
+           **kwargs)
     ax.set_ylabel('PSD (dB/Hz)')
     ax.set_yscale('symlog')
 
-def plot_amp_spectrum(ax, y, fs):
+def plot_amp_spectrum(ax, y, fs, **kwargs):
     """
     Plots a Single-Sided Amplitude Spectrum of y(t)
     """
@@ -25,9 +28,70 @@ def plot_amp_spectrum(ax, y, fs):
     Y = scipy.fft(y)/n # fft computing and normalization
     Y = Y[range(n//2)]
 
-    ax.plot(frq,abs(Y),'ro') # plotting the spectrum
+    ax.plot(frq,abs(Y),'ro',**kwargs)
     ax.set_xlabel('Frequency')
     ax.set_ylabel('|Y(freq)|')
+
+def plot_coherence(ax, x, y, fs, **kwargs):
+    try:
+        ax.cohere(x,y,Fs=fs, **kwargs)
+    except ValueError:
+        print "FAILURE TO PLOT", kwargs
+
+def plot_input_output_characteristics(fig, input_data, output_data, input_name, output_name, fs, max_freq, detrend=True, NFFT=None, dF=1.0, amp_spectrum=False, nfft_sweep=False):
+
+    #FIXME
+    a = input_data
+    b = output_data
+    df_col_a = input_name
+    df_col_b = output_name
+
+    if NFFT is None:
+        if dF is None:
+            raise ValueError('if NFFT is omitted dF (frequency resolution) must be supplied')
+        #for choosing the number of FFT bins (N) the following must be satisfied
+        #N*dF*dt=1
+        #where dF=frequency resolution
+        #dt = 1/Fs
+        #.. N = Fs/dF
+        NFFT = int(np.ceil(fs/dF))
+
+    gs = matplotlib.gridspec.GridSpec(3 if amp_spectrum else 2,2)
+    ax1 = fig.add_subplot(gs[0,0])
+    ax2 = fig.add_subplot(gs[0,1],sharey=ax1)
+    if amp_spectrum:
+        ax1b = fig.add_subplot(gs[1,0])
+        ax2b = fig.add_subplot(gs[1,1],sharey=ax1b)
+    ax3 = fig.add_subplot(gs[-1,:])
+
+    nfft = NFFT
+    while nfft > max_freq:
+        plot_spectrum(ax1,a,fs,detrend=detrend,NFFT=nfft)
+        ax1.set_title(df_col_a)
+        ax1.set_xlim(0,max_freq)
+        plot_spectrum(ax2,b,fs,detrend=detrend,NFFT=nfft)
+        ax2.set_title(df_col_b)
+        ax2.set_xlim(0,max_freq)
+        ax2.set_ylabel('')
+        if amp_spectrum:
+            plot_amp_spectrum(ax1b,a,fs)
+            ax1b.set_xlim(0,max_freq)
+            plot_amp_spectrum(ax2b,b,fs)
+            ax2b.set_xlim(0,max_freq)
+            ax2b.set_ylabel('')
+
+        plot_coherence(ax3, a, b, fs,NFFT=nfft, label="NFFT:%d" % nfft)
+        ax3.set_xlim(0,max_freq)
+
+        if not nfft_sweep:
+            break
+
+        nfft = int(nfft // 2)
+
+    if nfft_sweep:
+        ax3.legend()
+
+    return 'many' if nfft_sweep else nfft
 
 def get_crest_factor(sig):
     return np.amax(abs(sig))/matplotlib.mlab.rms_flat(sig)

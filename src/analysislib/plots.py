@@ -45,8 +45,12 @@ def _perm_check(args):
                             "prefix your call with 'sg strawlabnfs '.")
         print "WARNING: could not set process permissions"
 
-def get_safe_filename(s):
-    return s.translate(None, ''.join("\"\\/.+|'<>[]="))
+def get_safe_filename(s, allowed_spaces=True):
+    clean = s.translate(None, ''.join("\"\\/.+|'<>[]="))
+    if allowed_spaces:
+        return clean
+    else:
+        return clean.replace(' ','_')
 
 def show_plots():
     try:
@@ -74,10 +78,15 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
             #suptitle
             bbox_extra_artists.append( c )
 
-    fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
+    try:
+        fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
 
-    if WRITE_SVG or write_svg:
-        fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+        if WRITE_SVG or write_svg:
+            fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+
+        print "WROTE",fname_base
+    except:
+        pass
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
@@ -502,9 +511,12 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
     return x
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8), title=None):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None):
     if name is None:
         name = '%s.infinity' % combine.fname
+
+    if ylimits is None:
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -545,9 +557,12 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, figsize=(16,8), title=None, show_trg=False, repeat=True):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
+
+    if ylimits is None:
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -616,7 +631,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         return _init_axes
 
     # animation function.  This is called sequentially
-    def animate(i, df, xypt, trgpt, pt_axes):
+    def animate(i, df, xypt, trgpt, pt_axes, i0, iN):
         changed = []
         xypt.set_data(df['x'][i], df['y'][i])
         changed.append(xypt)
@@ -629,14 +644,19 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsiz
         for p in pt_axes:
             pt_axes[p].set_data(i, df[p][i])
 
+        if not repeat:
+            #we are being animated
+            print "\t%.1f%%" % (((float(i)-i0) / (iN-i0)) * 100)
+
         return changed + pt_axes.values()
 
     anim = animation.FuncAnimation(_fig,
                                animate,
-                               frames=_df.index,
+                               frames=_df.index.values,
                                init_func=init,
                                interval=50, blit=True,
-                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes),
+                               fargs=(_df,_linexypt,_linetrgpt,_pt_axes, _df.index.values[0], _df.index.values[-1]),
+                               repeat=repeat,
     )
 
     return anim
@@ -795,7 +815,7 @@ def save_results(combine, args, maxn=20):
     name = combine.get_plot_filename("data.pkl")
     with open(name, "w+b") as f:
         if WRITE_PKL:
-            pickle.dump({"results":results,"dt":dt}, f)
+            pickle.dump({"results":results,"dt":dt}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     best = _get_flight_lengths(combine)
     name = combine.get_plot_filename("data.json")

@@ -40,12 +40,13 @@ class TestView(view.SvgPathWidget):
         if self._model and self._mousex is not None:
             src_pt = euclid.Point2(self._mousex,self._mousey)
             if self._model.moving_pt is not None:
-                vecs.append(self._model.connect_to_moving_point(p=None,
-                                    px=self._mousex,py=self._mousey)
+                vecs.append((self._model.connect_to_moving_point(p=None,
+                                    px=self._mousex,py=self._mousey),
+                            (1,0,0))
                 )
 
             seg, ratio = self._model.connect_closest(p=None,px=self._mousex,py=self._mousey)
-            vecs.append(seg)
+            vecs.append((seg,(0,0,1)))
 
         return vecs,[(src_pt,(1,0,0)),(trg_pt,(0,1,0))],[]
 

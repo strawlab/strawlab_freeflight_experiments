@@ -11,7 +11,6 @@ import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import String, UInt32, Float32
 from ros_flydra.msg import flydra_mainbrain_super_packet
-import rospkg
 
 import nodelib.log
 
