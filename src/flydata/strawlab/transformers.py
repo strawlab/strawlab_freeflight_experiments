@@ -18,7 +18,7 @@ __all__ = (
 class Transformer(Configurable):
     """
     A filter class transform a collection of objects in some way.
-    As it is common in data-analysis pipelines, we use a two phase protocol (and model the API after sklearn)
+    As it is common in data-analysis pipelines, we use a two-phases protocol (the API follows sklearn)
 
       1. Filter.fit(X, y=None) will "train" the filter using data X and possibly also labels y
                                for example, compute max and mins for normalisation
@@ -33,7 +33,8 @@ class Transformer(Configurable):
 
     __slots__ = ()  # So that we allow subclasses to decide if they want slots or not
 
-    def __init__(self, add_descriptors=False):
+    def __init__(self,
+                 add_descriptors=False):
         super(Transformer, self).__init__(add_descriptors)
 
     def fit(self, X, y=None):
@@ -47,11 +48,39 @@ class Transformer(Configurable):
     @abstractmethod
     def transform(self, X):
         """Returns transformed X. In many instances, "fit" should be called first."""
-        raise NotImplementedError()  # abc
+        raise NotImplementedError()
 
     def fit_transform(self, X, y=None):
         """Fits the transformer and applies the transformation to X, returning transformed X."""
         return self.fit(X, y=y).transform(X)
+
+
+def list_or_tuple(x):
+    return (x,) if not isinstance(x, (list, tuple)) else x
+
+
+class RadiusTrimmer(Transformer):
+    pass
+
+
+class MaxMinTrimmer(Transformer):
+    """
+    Trims matrices (typically pandas dataframes) so that none of the values is over the provided boundaries.
+    """
+
+    def __init__(self, columns='z', minval=float('-inf'), maxval=float('inf')):
+        super(MaxMinTrimmer, self).__init__()
+        self._columns = list_or_tuple(columns)
+        self._min = list_or_tuple(minval)
+        self._min = self._min + (float('-inf'),) * (len(columns) - len(self._min))
+        self._max = list_or_tuple(maxval)
+        self._max = self._max + (float('inf'),) * (len(columns) - len(self._max))
+
+    def transform(self, X):
+        pass
+
+    def configuration(self):
+        return super(MaxMinTrimmer, self).configuration()
 
 
 ##############################
