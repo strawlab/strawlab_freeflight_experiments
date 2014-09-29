@@ -1,5 +1,53 @@
 # coding=utf-8
-"""An attempt to abstract configurability and experiment identifiability in a convenient way."""
+"""An attempt to abstract configurability and experiment identifiability in a convenient way.
+
+It works this way:
+
+  - Objects provide their own ids based on parameters=value dictionaries.
+    They do so by returning an instance of the *Configuration* class from a method "configuration()"
+    (and that's all)
+
+  - Optionally, this package provides a Configurable class that can be inherited to provide automatic
+    creation of Configuration objects from the class dictionary (and optionally slots). All attributes
+    will be considered part of the configuration, except for those whose names start or end by '_'.
+
+Examples
+--------
+
+>>> # Objects of this class provide a configuration
+>>> class DuckedConfigurable(object):
+...      def __init__(self, quantity, name, company=None, verbose=True):
+...          self.quantity = quantity
+...          self.name = name
+...          self.company = company
+...          self.verbose = verbose
+...
+...
+...      def configuration(self):
+...          return Configuration('ducked', {'quantity': self.quantity, 'name': self.name, 'company': self.company})
+>>>
+>>>
+>>> duckedc = DuckedConfigurable(33, 'salty-lollypops', verbose=False)
+>>> # The configuration id string helps consistency by sorting by key alphanumeric order
+>>> duckedc.configuration().id()
+u"ducked#company=None#name='salty-lollypops'#quantity=33"
+>>> # Inheriting from Configurable makes objects gain a configuration() method
+>>> # In this case, configuration() is infered automatically
+>>> class Company(Configurable):
+...     def __init__(self, name, city, verbose=True):
+...          super(Company, self).__init__()
+...          self.name = name
+...          self.city = city
+...          self._verbose = verbose  # not part of config
+...          self.social_reason_ = '%s S.A., %s' % (name, city)  # not part of config
+>>> cc = Company(name='Chupa Chups', city='Barcelona')
+>>> cc.configuration().id()
+u"Company#city='Barcelona'#name='Chupa Chups'"
+>>> # Ultimately, we can nest configurables...
+>>> duckedc = DuckedConfigurable(33, 'salty-lollypops', company=cc, verbose=False)
+>>> print duckedc.configuration().id()
+ducked#company="Company#city='Barcelona'#name='Chupa Chups'"#name='salty-lollypops'#quantity=33
+"""
 
 # Authors: Santi Villalba <sdvillal@gmail.com>
 # Licence: BSD 3 clause
@@ -79,7 +127,7 @@ class Configuration(object):
         if synonyms is not None:
             for longname, shortname in synonyms.iteritems():
                 self.set_synonym(longname, shortname)
-        #Keys here won't make it to the configuration string unless explicitly asked for
+        # Keys here won't make it to the configuration string unless explicitly asked for
         if not non_id_keys:
             self._non_ids = set()
         elif is_iterable(non_id_keys):
@@ -129,7 +177,7 @@ class Configuration(object):
                "verbose=True" is a parameter of the nested configuration
           "min_split=10" is another property
         """
-        #Key-value list
+        # Key-value list
         def sort_kvs_fl():
             kvs = self.configdict.iteritems()
             if self._sort_by_key:
