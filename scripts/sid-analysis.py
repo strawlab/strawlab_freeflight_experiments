@@ -137,27 +137,37 @@ if __name__=='__main__':
                     combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
                     system_y_df,'none')
 
-        model_results = {}
 
-        for npole in range(2,5):
-            for nzero in range(1,5):
-                #run systemid on the mean of the perturbations
-                result_obj = sfe_sid.run_tfest(mlab,
-                                               system_y_df_mean.values,
-                                               system_u_df_mean.values,
-                                               num_poles=npole,
-                                               num_zeros=nzero,
-                                               io_delay=9,
-                                               Ts=0.01)
-                print "MODEL FIT: %s\n\t%s" % (cond, result_obj)
-                if result_obj is not None and result_obj.fitpct > args.min_fit_pct and result_obj.fitmse < 20:
-                    model_results["tf_p%dz%d_%.0f%%" % (npole,nzero,result_obj.fitpct)] = (result_obj,sfe_sid.control_object_from_result(result_obj))
+        #run systemid on the mean of the perturbations
+        iddata = sfe_sid.upload_data(mlab, system_y_df_mean.values, system_u_df_mean.values, 0.01)
+
+        model_results = {}
+        possible_models = []
+        
+        for order in (2,3,4):
+            result_obj = sfe_sid.run_tfest(mlab,
+                                           iddata,
+                                           num_poles=order,
+                                           num_zeros=order,
+                                           io_delay=9,
+                                           Ts=0.01)
+            print "TFEST MODEL FIT: %s\n\t%s" % (cond, result_obj)
+            possible_models.append(result_obj)
+
+        for result_obj in possible_models:
+            if result_obj is not None and result_obj.fitpct > args.min_fit_pct and result_obj.fitmse < 20:
+                name = str(result_obj)
+                model_results[name] = (result_obj, result_obj.get_control_object(mlab))
 
         #save the model fit for analysis
         model_fits = {}
         for model_desc,(result_obj,tf) in model_results.iteritems():
             o = sfe_sid.get_model_fit(mlab, result_obj)
             model_fits[model_desc] = o.squeeze()
+
+#            print sfe_sid.get_bode_response(mlab, result_obj, np.logspace(-2,10,50))
+
+
         model_fits['y'] = system_y_df_mean.values
         model_fits['u'] = system_u_df_mean.values
         acombine.write_result_dataframe(
@@ -236,6 +246,7 @@ if __name__=='__main__':
 
 
     if args.show:
+        mlab.drawnow()
         aplt.show_plots()
 
     mlab.stop()
