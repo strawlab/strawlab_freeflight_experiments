@@ -200,7 +200,7 @@ def test_configurable(c1):
     assert config_c1.p2 == 'bleh'
     assert config_c1.length == 1
     assert config_c1 == config_c1
-    assert config_c1.id() == 'C1#length=1#p1=blah#p2=bleh'
+    assert config_c1.id() == 'C1#length=1#p1=\'blah\'#p2=\'bleh\''
     assert len(set(config_c1.keys()) | {'p1', 'p2', 'length'}) == 3
 
     # Nested configurations
@@ -210,21 +210,21 @@ def test_configurable(c1):
     assert len(config_c2.configdict) == 2
     assert config_c2['name'] == 'roxanne'
     assert config_c2.c1.configuration() == config_c1
-    assert config_c2.id() == 'C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne'
+    assert config_c2.id() == 'C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\''
 
     # non-id keys
     c3 = C3()
     config_c3 = c3.configuration()
-    assert config_c3.id() == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
-                             'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"'
-    assert config_c3.id(nonids_too=True) == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
-                                            'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"#' \
+    assert config_c3.id() == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
+                             'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"'
+    assert config_c3.id(nonids_too=True) == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
+                                            'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"#' \
                                             'irrelevant=True'
-    assert config_c3.id(nonids_too=True) == 'C3#c1="C1#length=1#p1=blah#p2=bleh"#' \
-                                            'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"#' \
+    assert config_c3.id(nonids_too=True) == 'C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#' \
+                                            'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"#' \
                                             'irrelevant=True'
-    sha2 = hashlib.sha256('C3#c1="C1#length=1#p1=blah#p2=bleh"#'
-                          'c2="C2#c1="C1#length=1#p1=blah#p2=bleh"#name=roxanne"').hexdigest()
+    sha2 = hashlib.sha256('C3#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#'
+                          'c2="C2#c1="C1#length=1#p1=\'blah\'#p2=\'bleh\'"#name=\'roxanne\'"').hexdigest()
     assert config_c3.id(maxlength=1) == sha2
     config_c3.set_synonym('c1', 'C1Syn')
     assert config_c3.synonym('c1') == 'C1Syn'
@@ -352,6 +352,22 @@ def test_configurable_nickname(c1):
     # not nicknamed configurations
     assert c1.configuration().nickname is None
     assert c1.configuration().nickname_or_id() == 'C1#length=1#p1=blah#p2=bleh'
+
+
+def test_configurable_duck():
+
+    class DuckedConfiguration(object):
+        def configuration(self):
+            return Configuration(self.__class__.__name__, {'param1': 33})
+    cduck = DuckedConfiguration()
+    assert cduck.configuration().id() == 'DuckedConfiguration#param1=33'
+
+    class NestedDuckedConfiguration(Configurable):
+        def __init__(self):
+            super(NestedDuckedConfiguration, self).__init__()
+            self.ducked = cduck
+    nested_duck = NestedDuckedConfiguration()
+    assert nested_duck.configuration().id() == 'NestedDuckedConfiguration#ducked="DuckedConfiguration#param1=33"'
 
 
 def test_mlexp_info_helper():
