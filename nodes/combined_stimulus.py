@@ -79,9 +79,8 @@ MAX_ROTATION_RATE = 3
 
                             
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.18/justpost1.osg|-0.1|-0.1|0.0",
-             # "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/post3.osg|-0.0|0.0|0.2",
+              "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.2/justpost1.osg|-0.1|-0.1|0.0",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.2/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",             
               "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.18/",
 #              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
@@ -179,8 +178,6 @@ class Node(object):
     def is_replay_experiment_z(self):
         return np.isnan(self.v_gain)
 
-
-
     def switch_conditions(self,event,force=''):
         if force:
             self.condition = force
@@ -211,17 +208,21 @@ class Node(object):
         #default to no perturb
         self.perturber = sfe_perturb.NoPerturb()
 
-        self.svg_fn = ''
+        self.svg_fn = ''        
         ssvg = str(svg)
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
+
             self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        rospy.loginfo('perturbation: %r' % self.perturber)       
+
         #try and get details of the conflict post
         if ".osg" in perturb_or_post_desc:
              model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
@@ -232,8 +233,7 @@ class Node(object):
             model_filename = '/dev/null'
             model_x = model_y = model_z = INVALID_VALUE
 
-       
-        #set the model in all cases
+         #set the model in all cases
         self.model_filename = str(model_filename)
         self.model_x = float(model_x)
         self.model_y = float(model_y)
@@ -250,10 +250,7 @@ class Node(object):
         self.log.model_x = self.model_x
         self.log.model_y = self.model_y
         self.log.model_z = self.model_z
-
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
-        rospy.loginfo('perturbation: %r' % self.perturber)
-
+        
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
         if self.is_replay_experiment_z:
@@ -276,8 +273,6 @@ class Node(object):
         else:
             self.trg_x = self.trg_y = 0.0
 
-
-
         #return early if open loop
         if could_perturb:
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
@@ -297,8 +292,8 @@ class Node(object):
 
                     if self.condition in COOL_CONDITIONS:
                         #fly is still flying
-#                        if abs(fly_z-self.z_target) < 0.1:
-#                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+                        if abs(fly_z-self.z_target) < 0.1:
+                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
                             self.pub_save.publish(currently_locked_obj_id)
 
                 return rate, self.trg_x,self.trg_y
@@ -483,9 +478,9 @@ class Node(object):
 
             self.ratio_total = 0
 
-#            self.perturber.reset()
-#            self.replay_rotation.reset()
-#            self.replay_z.reset()
+            self.perturber.reset()
+            self.replay_rotation.reset()
+            self.replay_z.reset()
 
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
