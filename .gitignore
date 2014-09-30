@@ -2,3 +2,4 @@ build
 lib
 *.pyc
 case
+*.ipynb_checkpoints*
