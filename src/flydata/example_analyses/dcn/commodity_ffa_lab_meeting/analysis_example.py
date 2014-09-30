@@ -133,7 +133,7 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
         # Load the trajectories from the local cache
         print '\tLoading data from original combine results...'
         start = time()
-        trajs = load_lisa_dcn_trajectories(uuids=uuids, cache_root_dir=CACHE_DIR)  # WARNING missing provenance!
+        trajs = load_lisa_dcn_trajectories(uuids=uuids, cache_root_dir=cache_dir)  # WARNING missing provenance!
         print '\tLoaded %d trajectories, it took %.2f seconds' % (len(trajs), time() - start)
 
         # Apply transformers

@@ -3,14 +3,14 @@ import numpy as np
 from flydata.features.common import FeatureExtractor
 
 
-def crossings(series, threshold=0, after=False):
+def crossings(x, threshold=0, after=False):
     """Returns the indices of the elements before or after crossing a threshold.
 
     N.B. touching the threshold itself is considered a cross.
 
     Parameters
     ----------
-    series: array
+    x: array
     The data
 
     threshold: float, default 0
@@ -37,9 +37,9 @@ def crossings(series, threshold=0, after=False):
     >>> print crossings(np.array([0, 3, -3, -3]), threshold=-2.5)
     [1]
     """
-    if len(series.shape) > 1:
-        raise Exception('Only 1D arrays, please (you gave me %d dimensions)' % len(series.shape))
-    where_crosses = np.where(np.diff(np.sign(series - threshold)))[0]
+    if len(x.shape) > 1:
+        raise Exception('Only 1D arrays, please (you gave me %d dimensions)' % len(x.shape))
+    where_crosses = np.where(np.diff(np.sign(x - threshold)))[0]
     if after:
         return where_crosses + 1
     return where_crosses
@@ -47,33 +47,31 @@ def crossings(series, threshold=0, after=False):
 
 def find_intervals(x):
     """
-    Returns pairs of indices representing the intervals in which x is True or nonzero.
+    Finds the intervals in which x is True or non-zero.
 
+
+    Returns
+    -------
+    Pairs of indices representing the intervals in which x is True or nonzero.
     The pairs represent valid python intervals, lower point included, upper point excluded.
 
-    For example:
 
+    Examples
+    --------
     >>> find_intervals([])
     []
-
     >>> find_intervals([1])
     [(0, 1)]
-
     >>> find_intervals([0, 1])
     [(1, 2)]
-
     >>> find_intervals([0, 0, 1, 1, 0, 0, 1, 1, 0])
     [(2, 4), (6, 8)]
-
     >>> find_intervals([0, 0, 0])
     []
-
     >>> find_intervals([1, 1, 1])
     [(0, 3)]
-
     >>> find_intervals([True, True, True])
     [(0, 3)]
-
     >>> find_intervals([1, 1, 1, 0])
     [(0, 3)]
     """
@@ -106,19 +104,35 @@ def find_intervals(x):
     return zip(starts, ends)
 
 
+class TrueIntervals(FeatureExtractor):
+
+    # TODO: take into account timedate indices
+
+    def __init__(self, column):
+        super(TrueIntervals, self).__init__()
+        self.column = column
+
+    def _compute_from_df(self, df):
+        return find_intervals(df[self.column])
+
+
 class TrueIntervalsStats(FeatureExtractor):
 
-    def __init__(self, column, dt=0.01):
+    def __init__(self, column, dt=0.01, as_seconds=True):
         super(TrueIntervalsStats, self).__init__()
         self.column = column
+        self.seconds = as_seconds
         self.dt = dt
 
     def _compute_from_df(self, df):
         intervals = find_intervals(df[self.column])
         interval_count = len(intervals)
         if interval_count > 0:
-            # FIXME: we need dt here to allow different dts per experiment
-            lengths = np.array([b - a for a, b in intervals]).astype(np.float) * self.dt
+            lengths = np.array([b - a for a, b in intervals]).astype(np.float)
+            # FIXME: we need metadata here to allow different dts per experiment
+            #        a general solution would be to carry too metadata if it si available
+            if self.seconds:
+                lengths *= self.dt
             max_length = np.max(lengths)
             min_length = np.min(lengths)
             mean_length = np.mean(lengths)

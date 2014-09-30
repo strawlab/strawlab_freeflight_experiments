@@ -1,4 +1,5 @@
 # coding=utf-8
+from itertools import chain
 from pandas import DataFrame
 import numpy as np
 
@@ -25,17 +26,14 @@ class FeatureExtractor(Configurable):
         raise NotImplementedError()
 
     def compute(self, X):
-        return np.array([self.compute_one(x) for x in X])
+        res = np.array([self.compute_one(x) for x in X])
+        return res if res.ndim == 2 else res.reshape(-1, 1)
 
 
-def compute_features(trajs, feature_extractors):
-    """A loop to compute a set of scalar features for trajectories."""
-    fnames = []
-    fvalues = []
-    for feature in feature_extractors:
-        fnames += feature.fnames()
-        fvalues.append(feature.compute(trajs))
-    return pd.DataFrame(data=np.vstack(fvalues).T, columns=fnames, index=[traj.id_string() for traj in trajs])
+def compute_features(fxs, trajs):
+    X = np.hstack([fx.compute(trajs) for fx in fxs])
+    fnames = list(chain(*[fx.fnames() for fx in fxs]))
+    return pd.DataFrame(data=X, columns=fnames, index=[traj.id_string() for traj in trajs])
 
 
 class SeriesExtractor(FeatureExtractor):  # probably we can unify with FeatureExtractor

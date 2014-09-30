@@ -132,3 +132,17 @@ class TimeInCircularRegion(FeatureExtractor):
 
     def _compute_from_df(self, df):
         return percentage_of_time_spent_in_circular_region(df, center=self.center, radius=self.radius)
+
+
+class InCircularRegion(SeriesExtractor):
+
+    def __init__(self, center=(-0.15, 0.25), radius=0.1):
+        super(InCircularRegion, self).__init__()
+        self.center = center
+        self.radius = radius
+
+    def _compute_from_df(self, df):
+        center_x, center_y = self.center
+        x, y = df['x'].values, df['y'].values
+        distance_to_center = np.sqrt((x - center_x)**2 + (y - center_y)**2)  # we should just save the radius
+        df[self.fnames()[0]] = distance_to_center <= self.radius
