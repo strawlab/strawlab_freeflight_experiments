@@ -213,6 +213,7 @@ if __name__=='__main__':
 
             #plot the mean timeseries and any model fits using matplotlib
             name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
 
                 ax = fig.add_subplot(1,1,1)
@@ -257,7 +258,7 @@ if __name__=='__main__':
                 ax2.legend(loc='upper right',prop={'size':8})
 
                 ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
-                ax.set_title('%s\n%s:%s' % (perturbation_obj,system_u_name,system_y_name))
+                ax.set_title(title)
 
 
             #MATLAB PLOTTING FROM HERE
