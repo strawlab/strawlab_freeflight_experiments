@@ -60,14 +60,11 @@ def collect_perturbation_traces(combine, args):
 
                 tmax = df['talign'].max()
                 completed = False
-                if step_obj.completed_perturbation_discrete(lidx,fidx,100):
+                if step_obj.completed_perturbation(tmax) and (lidx > fidx):
                     completed_perturbations[cond].append((step_obj,obj_id,tmax,tmax-df['talign'].min()))
                     completed = True
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
-
-                #clip to all be the same length
-                lidx = fidx + step_obj._get_duration_discrete(100)
 
                 perturbations[step_obj][obj_id] = PerturbationHolder(df, fidx, lidx, obj_id, completed)
 
