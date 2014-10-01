@@ -265,8 +265,9 @@ if __name__=='__main__':
                 continue
 
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.compare_models(mlab,iddata,possible_models)
+                sfe_sid.compare_models(mlab,title,iddata,possible_models)
 
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)

@@ -159,14 +159,17 @@ end""",iddata,title,
        nout=1,saveout=(mlab.varname('idfrd'),))
     return idfrd_model
 
-def compare_models(mlab,iddata,result_objs):
+def compare_models(mlab,title,iddata,result_objs):
+    mlab.set_variable('figtitle',title)
+
     model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs])
     model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
     mlab.run_code("""
 compare(%s);
 mf = findall(0,'Type','figure','Tag','System_Identification_COMPARE_PLOT_v1');
 ax = findall(mf,'type','axes');
-legend(ax(2),%s);""" % (','.join(model_varnames),','.join(model_names)))
+legend(ax(2),%s);
+title(ax(2),figtitle);""" % (','.join(model_varnames),','.join(model_names)))
 
 def bode_models(mlab,title,show_confidence,result_objs):
     mlab.set_variable('figtitle',title)
