@@ -69,7 +69,9 @@ def post_attention(df, postx=-0.15, posty=0.25, dt=0.01, ws=20):
 
     # Instantaneous coordinate-distance to the post
     dxdy = np.array([dx, dy]).T
-    # Instantaneous fly direction
+    # Instantaneous fly direction -
+    # FIXME: probably a better estimate of this is a byproduct of the Kalman filter
+    # (check mainbrain file, do we also generate it and keep it on the forward-backward smoothing step?)
     dxwdyw = np.array([x[:-ws] - x[ws:], y[:-ws] - y[ws:]]).T
     # Fill with NaN missing values at the end of the series
     c = np.empty_like(x)
