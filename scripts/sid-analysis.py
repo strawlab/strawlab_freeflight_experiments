@@ -162,9 +162,12 @@ if __name__=='__main__':
             #upload the pooled
             system_u_df = pd.concat(system_us,axis=1)
             system_y_df = pd.concat(system_ys,axis=1)
+            system_y_df_mean = system_y_df.mean(axis=1)
+            system_u_df_mean = system_u_df.mean(axis=1)
+
             system_iddata_mean = sfe_sid.upload_data(mlab,
-                                         system_y_df.mean(axis=1).values,
-                                         system_u_df.mean(axis=1).values,
+                                         system_y_df_mean.values,
+                                         system_u_df_mean.values,
                                          0.01)
 
         #any completed perturbations?
@@ -208,6 +211,56 @@ if __name__=='__main__':
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
+            #plot the mean timeseries and any model fits using matplotlib
+            name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
+
+                ax = fig.add_subplot(1,1,1)
+
+                ax.text(0.01, 0.01, #top left
+                        "n=%d" % system_u_df.shape[1],
+                        fontsize=10,
+                        horizontalalignment='left',
+                        verticalalignment='bottom',
+                        transform=ax.transAxes,
+                        color='k')
+
+                ax2 = ax.twinx()
+                ax.plot(system_u_df_mean.values,'k-', label='mean input')
+                ax.set_ylabel(system_u_name)
+
+                perturbation_obj.plot(ax, t_extra=0, plot_xaxis=False, color='r', label='model input')
+
+                ax.legend(loc='upper left',prop={'size':8})
+
+                system_y_df_std = system_y_df.std(axis=1)
+
+                ax2.plot(system_y_df_mean.values,'b-', lw=2, label='mean response')
+                ax2.fill_between(system_y_df_mean.index,
+                                 system_y_df_mean.values+system_y_df_std.values,
+                                 system_y_df_mean.values-system_y_df_std.values,
+                                 facecolor='blue', alpha=0.2)
+                ax2.set_ylabel(system_y_name)
+
+                #for (col,s_y) in system_y_df.iteritems():
+                #    ax2.plot(s_y.values,lw=0.5, label=str(col))
+
+                if system_y_name == 'dtheta':
+                    ax2.set_ylim(-10,10)
+                elif system_y_name == 'vz':
+                    ax2.set_ylim(-0.5,0.5)
+
+                for result_obj in possible_models:
+                    o = sfe_sid.get_model_fit(mlab, system_iddata_mean, result_obj.sid_model)
+                    ax2.plot(o,label=str(result_obj),alpha=0.8)
+
+                ax2.legend(loc='upper right',prop={'size':8})
+
+                ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
+                ax.set_title('%s\n%s:%s' % (perturbation_obj,system_u_name,system_y_name))
+
+
+            #MATLAB PLOTTING FROM HERE
             if not possible_models:
                 continue
 
@@ -224,53 +277,6 @@ if __name__=='__main__':
             title = 'Pole Zero Plot: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.pzmap_models(mlab,title,True,possible_models)
-
-#        #as a sanity check, plot the mean timeseries and std
-#        name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond, allowed_spaces=False)))
-#        with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
-
-#            ax = fig.add_subplot(1,1,1)
-
-#            ax.text(0.01, 0.01, #top left
-#                    "n=%d" % system_u_df.shape[1],
-#                    fontsize=10,
-#                    horizontalalignment='left',
-#                    verticalalignment='bottom',
-#                    transform=ax.transAxes,
-#                    color='k')
-
-#            ax2 = ax.twinx()
-#            ax.plot(system_u_df_mean.values,'k-', label='mean input')
-#            ax.set_ylabel(system_u_name)
-
-#            perturbation_obj.plot(ax, t_extra=0, plot_xaxis=False, color='r', label='model input')
-
-#            ax.legend(loc='upper left',prop={'size':8})
-
-#            ax2.plot(system_y_df_mean.values,'b-', lw=2, label='mean response')
-#            ax2.fill_between(system_y_df_mean.index,
-#                             system_y_df_mean.values+system_y_df_std.values,
-#                             system_y_df_mean.values-system_y_df_std.values,
-#                             facecolor='blue', alpha=0.2)
-#            ax2.set_ylabel(system_y_name)
-
-#            #for (col,s_y) in system_y_df.iteritems():
-#            #    ax2.plot(s_y.values,lw=0.5, label=str(col))
-
-#            if system_y_name == 'dtheta':
-#                ax2.set_ylim(-10,10)
-#            elif system_y_name == 'vz':
-#                ax2.set_ylim(-0.5,0.5)
-
-#            for model_desc,(result_obj,tf) in model_results.iteritems():
-#                o = sfe_sid.get_model_fit(mlab, result_obj)
-#                ax2.plot(o,label=model_desc,alpha=0.8)
-
-#            ax2.legend(loc='upper right',prop={'size':8})
-
-#            ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
-#            ax.set_title('%s\n%s:%s' % (perturbation_obj,system_u_name,system_y_name))
-
 
     if args.show:
         t = threading.Thread(target=_show_mlab_figures, args=(mlab,))

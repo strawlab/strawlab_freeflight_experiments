@@ -202,9 +202,9 @@ legend(%s);
 def control_object_from_result(result_obj):
     return control.tf(result_obj.num,result_obj.den)
 
-def get_model_fit(mlab, result_obj):
+def get_model_fit(mlab, iddata, sid_model):
     mlab.run_code('[ydata,fit,x0]=compare(%s,%s);'\
-                  'y=ydata.OutputData(:);' % (result_obj.sid_data, result_obj.sid_model))
+                  'y=ydata.OutputData(:);' % (iddata, sid_model))
     return mlab.get_variable('y')
 
 def get_bode_response(mlab, result_obj, freq_range):
