@@ -27,18 +27,32 @@ def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                         'src','strawlab_freeflight_experiments','matlab',name)
 
+class _SIDFail(object):
+    fitpct = 0
+
 class _SIDResult(object):
     def __init__(self, abrv, est_args, z, p, k, fitpct, fitmse, sid_data, sid_model):
         self.z = z
         self.p = p
         self.k = k
-        self.fitpct = fitpct
-        self.fitmse = fitmse
+        self._fitpct = fitpct
+        self._fitmse = fitmse
         self.sid_data = sid_data
         self.sid_model = sid_model
 
         self._abrv = abrv
         self._est_args = est_args
+
+    #these are vectors if the id was performed on a merged iddata object
+    @property
+    def fitpct(self):
+        return np.mean(self._fitpct)
+    @property
+    def fitmse(self):
+        return np.mean(self._fitmse)
+    @property
+    def tag(self):
+        return self._abrv
 
     def __str__(self):
         return "%s_p%dz%d_%.0f%%" % (self._abrv,
@@ -57,23 +71,23 @@ end""", self.sid_model, nout=2)
 
     @staticmethod
     def run_tfest(mlab,iddata,np,nz):
-        #keep the models on the matlab side for a while by giving them random names
-        this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
+        print repr(iddata)
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz)
         mdl = tfest(trial_data,np,nz,'Ts',trial_data.Ts);
+        mdl.name = ['tf' num2str(np) num2str(nz)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
     end""",iddata,np,nz,
             nout=6,
-            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
+            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdtf("tf%d%d" % (np, nz),
-                                 "np=%d,nd=%d" % (np, nz),
-                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
+                              "np=%d,nd=%d" % (np, nz),
+                              z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
-            return None
+            return _SIDFail()
 
 class MATLABIdpoly(_SIDResult):
 
@@ -82,56 +96,107 @@ class MATLABIdpoly(_SIDResult):
 
     @staticmethod
     def run_oe(mlab,iddata,nb,nf,nk):
-        #keep the models on the matlab side for a while by giving them random names
-        this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
         Opt = oeOptions;                       
         Opt.Focus = 'simulation';
         mdl = oe(trial_data,[nb nf nk],Opt);
+        mdl.name = ['oe' num2str(nb) num2str(nf) num2str(nk)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
     end""",iddata,nb,nf,nk,
             nout=6,
-            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
+            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdpoly("oe%d%d%d" % (nb, nf, nk),
-                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
-                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
+                                "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
+                                z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
-            return None
+            return _SIDFail()
 
     @staticmethod
     def run_arx(mlab,iddata,nb,nf,nk):
-        #keep the models on the matlab side for a while by giving them random names
-        this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
         Opt = arxOptions;
         Opt.Focus = 'simulation';
         mdl = arx(trial_data,[nb nf nk],Opt);
+        mdl.name = ['arx' num2str(nb) num2str(nf) num2str(nk)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
     end""",iddata,nb,nf,nk,
             nout=6,
-            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', 'sid_model_%s' % this_id))
+            saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdpoly("arx%d%d%d" % (nb, nf, nk),
-                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
-                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
+                                "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
+                                z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
-            return None
+            return _SIDFail()
 
 
 def upload_data(mlab, y, u, Ts):
-    this_id = ''.join(random.choice(string.ascii_uppercase) for _ in range(10))
     iddata = mlab.run_code("""
 function trial_data = make_iddata(y,u,Ts)
     trial_data = iddata(y(:),u(:),Ts);
-end""",y,u,Ts,nout=1,saveout=["iddata_%s" % this_id])
+end""",y,u,Ts,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
+
+def iddata_spa(mlab, iddata,title):
+    idfrd_model = mlab.run_code("""
+function g = do_spa(trial_data,title)
+    w = logspace(-2,1.5,50);
+    g = spa(trial_data,[],w);
+    bo = bodeoptions;
+    if title
+        bo.Title.String = title;
+    end
+    h = bodeplot(g,bo);
+    showConfidence(h,1);
+end""",iddata,title,
+       nout=1,saveout=(mlab.varname('idfrd'),))
+    return idfrd_model
+
+def compare_models(mlab,iddata,result_objs):
+    model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs])
+    model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
+    mlab.run_code("""
+compare(%s);
+mf = findall(0,'Type','figure','Tag','System_Identification_COMPARE_PLOT_v1');
+ax = findall(mf,'type','axes');
+legend(ax(2),%s);""" % (','.join(model_varnames),','.join(model_names)))
+
+def bode_models(mlab,title,show_confidence,result_objs):
+    mlab.set_variable('figtitle',title)
+
+    model_varnames = map(str,[r.sid_model for r in result_objs])
+    model_names = ["'%s'" % r for r in result_objs]
+
+    mlab.run_code("""
+bo = bodeoptions;
+bo.Title.String = figtitle;
+h = bodeplot(%s,bo);
+legend(%s);
+%s""" % (','.join(model_varnames),
+         ','.join(model_names),
+         'showConfidence(h,1)' if show_confidence else ''))
+
+def pzmap_models(mlab,title,show_confidence,result_objs):
+    mlab.set_variable('figtitle',title)
+
+    model_varnames = map(str,[r.sid_model for r in result_objs])
+    model_names = ["'%s'" % r for r in result_objs]
+
+    mlab.run_code("""
+bo = pzoptions;
+bo.Title.String = figtitle;
+h = iopzplot(%s,bo);
+legend(%s);
+%s""" % (','.join(model_varnames),
+         ','.join(model_names),
+         'showConfidence(h,1)' if show_confidence else ''))
 
 
 def control_object_from_result(result_obj):
