@@ -1,8 +1,10 @@
+import re
 import tempfile
 import os.path
 import collections
 import random
 import string
+import itertools
 
 import pymatbridge
 import pandas as pd
@@ -42,6 +44,7 @@ class _SIDResult(object):
 
         self._abrv = abrv
         self._est_args = est_args
+        self._name = ''
 
     #these are vectors if the id was performed on a merged iddata object
     @property
@@ -51,12 +54,17 @@ class _SIDResult(object):
     def fitmse(self):
         return np.mean(self._fitmse)
     @property
-    def tag(self):
+    def spec(self):
         return self._abrv
 
+    def set_name(self, n):
+        self._name = n
+
     def __str__(self):
-        return "%s_p%dz%d_%.0f%%" % (self._abrv,
-                                     len(self.p),len(self.z),self.fitpct)
+        if self._name:
+            return self._name
+        else:
+            return "%s_p%dz%d_%.0f%%" % (self._abrv,len(self.p),len(self.z),self.fitpct)
 
 class MATLABIdtf(_SIDResult):
 
@@ -136,12 +144,28 @@ class MATLABIdpoly(_SIDResult):
         except RuntimeError, e:
             return _SIDFail()
 
+def run_model_from_specifier(mlab, iddata, spec):
+    spec_type,spec_params = re.match('([a-zA-Z]+)([0-9]+)', spec).groups()
+    if (spec_type == 'tf') and (len(spec_params) == 2):
+        np,nz = map(int,spec_params)
+        return MATLABIdtf.run_tfest(mlab, iddata, np, nz)
+    elif (spec_type in ('oe','arx')) and (len(spec_params) == 3):
+        nb,nf,nk = map(int,spec_params)
+        if spec_type == 'oe':
+            return MATLABIdpoly.run_oe(mlab, iddata, nb, nf, nk)
+        else:
+            return MATLABIdpoly.run_arx(mlab, iddata, nb, nf, nk)
+    else:
+        raise ValueError("Unknown model specifier")
 
-def upload_data(mlab, y, u, Ts):
+def upload_data(mlab, y, u, Ts, detrend):
     iddata = mlab.run_code("""
-function trial_data = make_iddata(y,u,Ts)
+function trial_data = make_iddata(y,u,Ts,detrend_first)
     trial_data = iddata(y(:),u(:),Ts);
-end""",y,u,Ts,nout=1,saveout=(mlab.varname('iddata'),))
+    if detrend_first
+        trial_data = detrend(trial_data);
+    end
+end""",y,u,Ts,detrend,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
 
 def iddata_spa(mlab, iddata,title):
@@ -171,35 +195,56 @@ ax = findall(mf,'type','axes');
 legend(ax(2),%s);
 title(ax(2),figtitle);""" % (','.join(model_varnames),','.join(model_names)))
 
-def bode_models(mlab,title,show_confidence,result_objs):
+def bode_models(mlab,title,show_confidence,show_legend,result_objs):
     mlab.set_variable('figtitle',title)
 
     model_varnames = map(str,[r.sid_model for r in result_objs])
     model_names = ["'%s'" % r for r in result_objs]
+
+    if show_legend:
+        plot_args = ','.join(model_varnames)
+        legend = 'legend(%s);' % ','.join(model_names)
+    else:
+        plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
+        legend = ''
 
     mlab.run_code("""
 bo = bodeoptions;
 bo.Title.String = figtitle;
 h = bodeplot(%s,bo);
-legend(%s);
-%s""" % (','.join(model_varnames),
-         ','.join(model_names),
-         'showConfidence(h,1)' if show_confidence else ''))
+%s
+%s""" % (plot_args,
+         legend,
+         'showConfidence(h,1);' if show_confidence else ''))
 
-def pzmap_models(mlab,title,show_confidence,result_objs):
+def pzmap_models(mlab,title,show_confidence,show_legend,result_objs):
     mlab.set_variable('figtitle',title)
 
     model_varnames = map(str,[r.sid_model for r in result_objs])
     model_names = ["'%s'" % r for r in result_objs]
 
+    if show_legend:
+        plot_args = ','.join(model_varnames)
+        legend = 'legend(%s);' % ','.join(model_names)
+    else:
+        plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
+        legend = ''
+
     mlab.run_code("""
 bo = pzoptions;
 bo.Title.String = figtitle;
+po.XLimMode = 'manual';
+po.XLim = [-1.5 2];
+po.YLimMode = 'manual';
+po.YLim = [-1.5 1.5];
 h = iopzplot(%s,bo);
-legend(%s);
-%s""" % (','.join(model_varnames),
-         ','.join(model_names),
-         'showConfidence(h,1)' if show_confidence else ''))
+%s
+%s
+xlim([-1.5 2]);
+ylim([-1.5 1.5]);
+""" % (plot_args,
+       legend,
+       'showConfidence(h,1);' if show_confidence else ''))
 
 
 def control_object_from_result(result_obj):

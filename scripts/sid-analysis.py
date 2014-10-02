@@ -101,6 +101,11 @@ def plot_input_output_characteristics(combine, args, perturbations, completed_pe
                 fig.suptitle('%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (perturbation_obj,100,nfft_desc))
 
 if __name__=='__main__':
+
+    DETREND = True
+    LOOKBACK = 400
+    MODEL_SPECS_TO_TEST = ('tf44','tf33','oe441','oe331','arx441','arx331')
+
     parser = analysislib.args.get_parser()
     parser.add_argument(
         "--min-fit-pct", type=float, default=40,
@@ -127,14 +132,18 @@ if __name__=='__main__':
     plot_perturbation_signal(combine, args, perturbations, completed_perturbations, perturbation_conditions)
     plot_input_output_characteristics(combine, args, perturbations, completed_perturbations, perturbation_conditions)
 
+    #loop per condition
     for perturbation_obj in perturbations:
 
         cond = perturbation_conditions[perturbation_obj]
         condn = aplt.get_safe_filename(cond, allowed_spaces=False)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
+        #any perturbations started
         phs = perturbations[perturbation_obj]
         if phs:
+
+            any_completed_perturbations = False
 
             #all input_u/output_y data for all completed perturbations
             system_us = []
@@ -144,20 +153,25 @@ if __name__=='__main__':
             system_iddata_mean = None
 
             for ph in phs.itervalues():
+                #any perturbations completed
                 if ph.completed:
-                    #take out the perturbation period only
+                    any_completed_perturbations = True
+
+                    #take out the perturbation period only (for the mean response)
                     print ph.end_idx - ph.start_idx,perturbation_obj._get_duration_discrete(100)
 
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
-                    u = pdf[system_u_name].values
-                    y = pdf[system_y_name].values
+                    system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
+                    system_ys.append( pd.Series(pdf[system_y_name].values, name=str(ph.obj_id)) )
 
-                    system_us.append( pd.Series(u, name=str(ph.obj_id)) )
-                    system_ys.append( pd.Series(y, name=str(ph.obj_id)) )
-
-                    #upload to matlab the data for this perturbation
-                    iddata = sfe_sid.upload_data(mlab, y, u, 0.01)
+                    #upload to matlab the data for this perturbation and also including
+                    #some data before the perturbation
+                    pdf_extra = ph.df.iloc[max(0,ph.start_idx-LOOKBACK):ph.end_idx]
+                    iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
                     system_iddata.append( iddata )
+
+                    dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
+                    mlab.run_code("save('%s','%s');" % (dest,iddata))
 
             #upload the pooled
             system_u_df = pd.concat(system_us,axis=1)
@@ -168,10 +182,15 @@ if __name__=='__main__':
             system_iddata_mean = sfe_sid.upload_data(mlab,
                                          system_y_df_mean.values,
                                          system_u_df_mean.values,
-                                         0.01)
+                                         0.01,
+                                         DETREND)
 
-        #any completed perturbations?
-        if system_iddata:
+            dest = combine.get_plot_filename("iddata_mean_%s_%s_%s" % (system_u_name,system_y_name,condn))
+            mlab.run_code("save('%s','%s');" % (dest,system_iddata_mean))
+
+        if any_completed_perturbations:
+
+            possible_models = []
 
             #create a iddata object that contains all complete perturbations
             pooled_id_varname = mlab.varname('iddata')
@@ -179,35 +198,20 @@ if __name__=='__main__':
                     pooled_id_varname,
                     ','.join([str(i) for i in system_iddata])))
             pooled_id = mlab.proxy_variable(pooled_id_varname)
+            dest = combine.get_plot_filename("iddata_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
+            mlab.run_code("save('%s','%s');" % (dest,pooled_id))
 
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode (from data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
-            possible_models = []
-
+            #do initial model order selection based on the means, as that
+            #data is less noisy
             iddata = system_iddata_mean
 
-            for order in (2,3,4):
-                result_obj = sfe_sid.MATLABIdtf.run_tfest(mlab,
-                                               iddata,
-                                               np=order,
-                                               nz=order)
-                if result_obj.fitpct > args.min_fit_pct:
-                    possible_models.append(result_obj)
-                result_obj = sfe_sid.MATLABIdpoly.run_oe(mlab,
-                                               iddata,
-                                               nb=order,
-                                               nf=order,
-                                               nk=1)
-                if result_obj.fitpct > args.min_fit_pct:
-                    possible_models.append(result_obj)
-                result_obj = sfe_sid.MATLABIdpoly.run_arx(mlab,
-                                               iddata,
-                                               nb=order,
-                                               nf=order,
-                                               nk=1)
+            for spec in MODEL_SPECS_TO_TEST:
+                result_obj = sfe_sid.run_model_from_specifier(mlab,iddata,spec)
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
@@ -273,12 +277,34 @@ if __name__=='__main__':
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.bode_models(mlab,title,True,possible_models)
+                sfe_sid.bode_models(mlab,title,True,True,possible_models)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Pole Zero Plot: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.pzmap_models(mlab,title,True,possible_models)
+                sfe_sid.pzmap_models(mlab,title,True,True,possible_models)
+
+            #now re-identify the models for each individual trajectory
+            possible_models.sort() #sort by fit pct
+            for pm in possible_models:
+                indmdls = []
+                for n,i in enumerate(system_iddata):
+                    mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
+                    #accept a lower fit due to noise on the individual trajectories
+                    if mdl.fitpct > (0.5*args.min_fit_pct):
+                        mdl.set_name('%s_%d' % (pm.spec,n))
+                        indmdls.append(mdl)
+                if indmdls:
+                    name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    title = 'Bode %s (individual): %s->%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj)
+                    with mlab.fig(name+'.png') as f:
+                        sfe_sid.bode_models(mlab,title,False,False,indmdls)
+                    name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    title = 'Pole Zero Plot %s (individual): %s->%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj)
+                    with mlab.fig(name+'.png') as f:
+                        sfe_sid.pzmap_models(mlab,title,False,False,indmdls)
+                    #with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    #    sfe_sid.pzmap_models(mlab,title,True,True,indmdls)
 
     if args.show:
         t = threading.Thread(target=_show_mlab_figures, args=(mlab,))

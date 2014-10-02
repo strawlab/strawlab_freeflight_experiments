@@ -256,9 +256,13 @@ class _Combine(object):
         """the framerate of the data"""
         return 1.0 / self._dt
 
-    def get_plot_filename(self, name):
+    def get_plot_filename(self, name, subdir=''):
         """return a full path to the autodata directory to save any plots"""
-        return os.path.join(self.plotdir,name)
+        if subdir:
+            pd = os.path.join(self.plotdir,subdir)
+            if not os.path.isdir(pd):
+                os.makedirs(pd)
+        return os.path.join(self.plotdir,subdir,name)
 
     def get_num_skipped(self, condition):
         """returns the number of skipped trials for the given condition.
