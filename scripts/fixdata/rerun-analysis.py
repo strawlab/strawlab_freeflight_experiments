@@ -16,7 +16,7 @@ import autodata.files
 import strawlab.constants
 
 DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
+DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --cached --arena %s'
 
 EXCEPT = set()
 
@@ -96,7 +96,8 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
                     if args.reindex:
                         argslist.append(opt)
                 elif opt.strip() == '--cached':
-                    pass
+                    if args.cached:
+                        argslist.append(opt)
                 elif opt.strip() == '--show':
                     pass
                 else:
@@ -168,6 +169,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
         help='dont reindex h5 file')
+    parser.add_argument(
+        '-c', '--no-cache', action='store_false', default=True, dest='cached',
+        help='dont used cached data')
     parser.add_argument(
         '-S','--assay',
         help='the name of the assay (flycave, flycube4, fishtrax, etc). Pass this '
