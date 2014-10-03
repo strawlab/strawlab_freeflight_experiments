@@ -60,6 +60,7 @@ def plot_input_output_characteristics(combine, args, perturbations, completed_pe
 
         phs = perturbations[perturbation_obj]
         if phs:
+            any_completed_perturbations = False
 
             #all input_u/output_y data for all completed perturbations
             system_us = []
@@ -67,38 +68,41 @@ def plot_input_output_characteristics(combine, args, perturbations, completed_pe
 
             for ph in phs.itervalues():
                 if ph.completed:
+                    any_completed_perturbations = True
+
                     #take out the perturbation period only
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
                     system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
                     system_ys.append( pd.Series(pdf[system_y_name].values, name=str(ph.obj_id)) )
 
-            system_u_df = pd.concat(system_us,axis=1)
-            system_y_df = pd.concat(system_ys,axis=1)
+            if any_completed_perturbations:
+                system_u_df = pd.concat(system_us,axis=1)
+                system_y_df = pd.concat(system_ys,axis=1)
 
-            system_u_df_mean = system_u_df.mean(axis=1).values
-            system_y_df_mean = system_y_df.mean(axis=1).values
+                system_u_df_mean = system_u_df.mean(axis=1).values
+                system_y_df_mean = system_y_df.mean(axis=1).values
 
-            #save the dataframes for analysis in MATLAB
-            acombine.write_result_dataframe(
-                        combine.get_plot_filename("mean_%s_%s_%s" % (system_u_name,system_y_name,condn)),
-                        pd.DataFrame({"y":system_y_df_mean,"u":system_u_df_mean}),'none')
+                #save the dataframes for analysis in MATLAB
+                acombine.write_result_dataframe(
+                            combine.get_plot_filename("mean_%s_%s_%s" % (system_u_name,system_y_name,condn)),
+                            pd.DataFrame({"y":system_y_df_mean,"u":system_u_df_mean}),'none')
 
-            #save all input_traces
-            acombine.write_result_dataframe(
-                        combine.get_plot_filename("input_%s_%s" % (system_u_name,condn)),
-                        system_u_df,'none')
-            acombine.write_result_dataframe(
-                        combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
-                        system_y_df,'none')
+                #save all input_traces
+                acombine.write_result_dataframe(
+                            combine.get_plot_filename("input_%s_%s" % (system_u_name,condn)),
+                            system_u_df,'none')
+                acombine.write_result_dataframe(
+                            combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
+                            system_y_df,'none')
 
-            name = combine.get_plot_filename('cohere_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond, allowed_spaces=False)))
-            with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
-                nfft_desc = sfe_frequency.plot_input_output_characteristics(fig,
-                                system_u_df_mean, system_y_df_mean,
-                                system_u_name, system_y_name,
-                                fs=100, max_freq=12, NFFT=None, amp_spectrum=False, nfft_sweep=False)
+                name = combine.get_plot_filename('cohere_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond, allowed_spaces=False)))
+                with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
+                    nfft_desc = sfe_frequency.plot_input_output_characteristics(fig,
+                                    system_u_df_mean, system_y_df_mean,
+                                    system_u_name, system_y_name,
+                                    fs=100, max_freq=12, NFFT=None, amp_spectrum=False, nfft_sweep=False)
 
-                fig.suptitle('%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (perturbation_obj,100,nfft_desc))
+                    fig.suptitle('%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (perturbation_obj,100,nfft_desc))
 
 if __name__=='__main__':
 
@@ -142,7 +146,6 @@ if __name__=='__main__':
         #any perturbations started
         phs = perturbations[perturbation_obj]
         if phs:
-
             any_completed_perturbations = False
 
             #all input_u/output_y data for all completed perturbations
@@ -173,6 +176,7 @@ if __name__=='__main__':
                     dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
 
+        if any_completed_perturbations:
             #upload the pooled
             system_u_df = pd.concat(system_us,axis=1)
             system_y_df = pd.concat(system_ys,axis=1)
@@ -187,8 +191,6 @@ if __name__=='__main__':
 
             dest = combine.get_plot_filename("iddata_mean_%s_%s_%s" % (system_u_name,system_y_name,condn))
             mlab.run_code("save('%s','%s');" % (dest,system_iddata_mean))
-
-        if any_completed_perturbations:
 
             possible_models = []
 
