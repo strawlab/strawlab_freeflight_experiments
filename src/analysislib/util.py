@@ -48,7 +48,11 @@ def get_combiner_for_args(args):
     command line argument
     """
     if args.uuid:
-        return get_combiner_for_uuid(args.uuid[0])
+        for uuid in args.uuid:
+            try:
+                return get_combiner_for_uuid(uuid)
+            except autodata.files.NoFile:
+                print "NO CSV FOR", uuid
     elif args.csv_file:
         fm = autodata.files.FileModel()
         fm.select_file(args.csv_file)

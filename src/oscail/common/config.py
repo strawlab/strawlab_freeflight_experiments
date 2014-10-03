@@ -1,5 +1,52 @@
 # coding=utf-8
-"""An attempt to abstract configurability and experiment identifiability in a convenient way."""
+"""An attempt to abstract configurability and experiment identifiability in a convenient way.
+
+It works this way:
+
+  - Objects provide their own ids based on parameters=value dictionaries.
+    They do so by returning an instance of the *Configuration* class from a method called "who()"
+    (and that's all)
+
+  - Optionally, this package provides a Configurable class that can be inherited to provide automatic
+    creation of Configuration objects from the class dictionary (and optionally slots). All attributes
+    will be considered part of the configuration, except for those whose names start or end by '_'.
+
+Examples
+--------
+
+>>> # Objects of this class provide a configuration
+>>> class DuckedConfigurable(object):
+...      def __init__(self, quantity, name, company=None, verbose=True):
+...          self.quantity = quantity
+...          self.name = name
+...          self.company = company
+...          self.verbose = verbose
+...
+...      def who(self):
+...          return Configuration('ducked', {'quantity': self.quantity, 'name': self.name, 'company': self.company})
+>>>
+>>>
+>>> duckedc = DuckedConfigurable(33, 'salty-lollypops', verbose=False)
+>>> # The configuration id string helps consistency by sorting by key alphanumeric order
+>>> duckedc.who().id()
+u"ducked#company=None#name='salty-lollypops'#quantity=33"
+>>> # Inheriting from Configurable makes objects gain a who() method
+>>> # In this case, who() is infered automatically
+>>> class Company(Configurable):
+...     def __init__(self, name, city, verbose=True):
+...          super(Company, self).__init__()
+...          self.name = name
+...          self.city = city
+...          self._verbose = verbose  # not part of config
+...          self.social_reason_ = '%s S.A., %s' % (name, city)  # not part of config
+>>> cc = Company(name='Chupa Chups', city='Barcelona')
+>>> cc.who().id()
+u"Company#city='Barcelona'#name='Chupa Chups'"
+>>> # Ultimately, we can nest configurables...
+>>> duckedc = DuckedConfigurable(33, 'salty-lollypops', company=cc, verbose=False)
+>>> print duckedc.who().id()
+ducked#company="Company#city='Barcelona'#name='Chupa Chups'"#name='salty-lollypops'#quantity=33
+"""
 
 # Authors: Santi Villalba <sdvillal@gmail.com>
 # Licence: BSD 3 clause
@@ -33,14 +80,14 @@ class Configuration(object):
     configuration_dict : dictionary
         The {key:value} property dictionary for this configuration.
 
-    nickname : string, [default None]
+    nickname : string, default None
         The nickname can be an arbitrary, short, human-friendly string used to represent this configuration.
 
-    non_id_keys : iterable (usually of strings), [default None]
+    non_id_keys : iterable (usually of strings), default None
         A list of keys that should not be considered when generating ids.
         For example: "num_threads" or "verbose" should not change results when fitting a model.
 
-    synonyms : dictionary, [default None]
+    synonyms : dictionary, default None
         We allow to use up to one synonyms for each property name, the mapping is this dictionary.
         Use with caution, as it can make hard or impossible configuration reconstruction or identification
         if badly implemented.
@@ -48,13 +95,17 @@ class Configuration(object):
     sort_by_key : bool
         Sort parameters by key (in lexicographic order if keys are strings) when building the id string.
 
-    prefix_keys : list of keys [default None]
+    prefix_keys : list of keys, default None
         These keys will appear first in the configuration string.
         Their order is not affected by "sorted_by_key" flag.
 
-    postfix_keys : list of keys [default None]
+    postfix_keys : list of keys, default None
         These keys will appear last in the configuration string.
         Their order is not affected by "sorted_by_key" flag.
+
+    quote_strings : boolean, default True
+        If True string values will be single-quoted in the configuration string.
+        This value can be overrided at anytime by specifying quote_string_values when calling to id()
     """
 
     def __init__(self,
@@ -66,7 +117,8 @@ class Configuration(object):
                  synonyms=None,
                  sort_by_key=True,
                  prefix_keys=None,
-                 postfix_keys=None):
+                 postfix_keys=None,
+                 quote_string_values=True):
         super(Configuration, self).__init__()
         self.name = name
         self.configdict = configuration_dict
@@ -74,12 +126,13 @@ class Configuration(object):
         self._prefix_keys = prefix_keys if prefix_keys else []
         self._postfix_keys = postfix_keys if postfix_keys else []
         self._sort_by_key = sort_by_key
+        self._quote_strings = quote_string_values
         # Synonyms to allow more concise representations
         self._synonyms = {}
         if synonyms is not None:
             for longname, shortname in synonyms.iteritems():
                 self.set_synonym(longname, shortname)
-        #Keys here won't make it to the configuration string unless explicitly asked for
+        # Keys here won't make it to the configuration string unless explicitly asked for
         if not non_id_keys:
             self._non_ids = set()
         elif is_iterable(non_id_keys):
@@ -97,20 +150,27 @@ class Configuration(object):
         return self.configdict[item]
 
     def __getitem__(self, item):
-        """Allow to retrieve configuration values using dot notation over Configuration objects."""
+        """Allow to retrieve configuration values using [] notation over Configuration objects."""
         return self.configdict[item]
 
     def __str__(self):
         """The default representation is the configuration string including non_ids keys."""
         return self.id(nonids_too=True)
 
-    def as_string(self, nonids_too=False):
+    def as_string(self, nonids_too=False, sep='#', quote_string_vals=None):
         """Makes a best effort to represent this configuration as a string.
 
         Parameters
         ----------
-        nonids_too : bool, [default False]
-            if False, non-ids keys are ignored.
+        nonids_too : bool, default False
+          if False, non-ids keys are ignored.
+
+        sep : string, default '#'
+          the string to separate parameters; the default, '#', is a good value because
+          it comes early in the ASCII table (before any alphanum character); the caveat
+          is that it requires quotes when using on shell scripts
+          (as usually # is the comment opening character)
+          Choose carefully and be consistent.
 
         Returns
         -------
@@ -129,7 +189,12 @@ class Configuration(object):
                "verbose=True" is a parameter of the nested configuration
           "min_split=10" is another property
         """
-        #Key-value list
+
+        # String quoting policy defaults to this configuration's if not specified
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
+
+        # Key-value list
         def sort_kvs_fl():
             kvs = self.configdict.iteritems()
             if self._sort_by_key:
@@ -145,36 +210,59 @@ class Configuration(object):
                    [(f, kvs_dict[f]) for f in self._postfix_keys]
 
         kvs = sort_kvs_fl()
-        return '#'.join(
-            '%s=%s' % (self.synonym(k), self._nested_string(v))
+        return sep.join(
+            '%s=%s' % (self.synonym(k), self._nested_string(v, quote_string_vals=quote_string_vals))
             for k, v in kvs
             if nonids_too or k not in self._non_ids)
 
-    def id(self, nonids_too=False, maxlength=0):
-        """Returns the id string of this configuration.
+    def id(self, nonids_too=False, maxlength=0, quote_string_vals=None):
+        """Returns the id unicode string of this configuration.
 
-        Non-ids keys are ignored if nonids_too is False.
+        Parameters
+        ----------
+        nonids_too: boolean, default False
+          Non-ids keys are ignored if nonids_too is False.
 
-        If the id length goes over maxlength, the parameters part get replaced by its sha256.
+        malength: int, default 0
+          If the id length goes over maxlength, the parameters part get replaced by its sha256.
+          If <= 0, it is ignored and the full id string will be returned.
+
+        quote_string_vals: boolean, default None
+          If True, string values will be quoted.
+          If None, we use the Configuration set property.
         """
-        my_id = '%s#%s' % (self.synonym(self.name), self.as_string(nonids_too=nonids_too))
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
+
+        if quote_string_vals is False:
+            print 'Here'
+
+        my_id = u'%s#%s' % (self.synonym(self.name), self.as_string(nonids_too=nonids_too,
+                                                                    quote_string_vals=quote_string_vals))
         if 0 < maxlength < len(my_id):
             return hashlib.sha256(my_id).hexdigest()
         return my_id
 
-    def nickname_or_id(self, nonids_too=False, maxlength=0):
+    def nickname_or_id(self, nonids_too=False, maxlength=0, quote_string_vals=None):
         """Returns the nickname if it exists, otherwise it returns the id (respecting nonids_too and maxlength)."""
-        return self.id(nonids_too=nonids_too, maxlength=maxlength) if self.nickname is None else self.nickname
+        if quote_string_vals is None:
+            quote_string_vals = self._quote_strings
+        return self.id(nonids_too=nonids_too, maxlength=maxlength, quote_string_vals=quote_string_vals) \
+            if self.nickname is None else self.nickname
 
-    def _nested_string(self, v):
+    def _nested_string(self, v, quote_string_vals):
         """Returns the nested configuration string for a variaety of value types."""
         def nest(string):
-            return '"%s"' % string
+            return u'"%s"' % string
 
         if isinstance(v, Configuration):
-            return nest(v.id())
-        if isinstance(v, Configurable):
-            return nest(v.configuration().id())
+            return nest(v.id(quote_string_vals=quote_string_vals))
+        if hasattr(v, 'configuration'):
+            configuration = getattr(v, 'configuration')
+            configuration = configuration() if callable(configuration) else configuration
+            if isinstance(configuration, Configuration):
+                return nest(configuration.id(quote_string_vals=quote_string_vals))
+            raise Exception('object has a "configuration" attribute, but it is not of Configuration class')
         if inspect.isbuiltin(v):  # Special message if we try to pass something like sorted or np.array
             raise Exception('Cannot determine the argspec of a non-python function (%s). '
                             'Please wrap it in a configurable' % v.__name__)
@@ -185,7 +273,7 @@ class Configuration(object):
             config = copy(self)
             config.name = name
             config.configdict = keywords
-            return nest(config.id())
+            return nest(config.id(quote_string_vals=quote_string_vals))
         if inspect.isfunction(v):
             args, _, _, defaults = inspect.getargspec(v)
             defaults = [] if not defaults else defaults
@@ -194,13 +282,17 @@ class Configuration(object):
             config = copy(self)
             config.name = v.__name__
             config.configdict = params_with_defaults
-            return nest(config.id())
-        if ' at 0x' in str(v):  # An object without proper representation, try a best effort
+            return nest(config.id(quote_string_vals=quote_string_vals))
+        if ' at 0x' in unicode(v):  # An object without proper representation, try a best effort
             config = copy(self)  # Careful
             config.name = v.__class__.__name__
             config.configdict = config_dict_for_object(v)
-            return nest(config.id())
-        return str(v)
+            return nest(config.id(quote_string_vals=quote_string_vals))
+        if isinstance(v, (unicode, basestring)):
+            if quote_string_vals:
+                return u'\'%s\'' % v
+            return u'%s' % v
+        return unicode(v)
 
     def set_synonym(self, name, synonym):
         """Configures the synonym for the property name."""
@@ -268,21 +360,27 @@ def config_dict_for_object(obj, add_descriptors=False):
 class Configurable(object):
     """A configurable object has a configuration.
 
+    This class strives to be as little intrusive as possible and performs all its
+    magic only on request (call to "configuration").
+
     By default, the object is introspected to get the configuration, so that:
        - the name is the class name of the object
        - the parameters are the instance variables that do not start or end with '_'
        - data descriptors (e.g. @property) are not part of the configuration
+
 
     See also
     --------
     config_dict_for_object, Configuration
     """
 
+    __slots__ = ('_add_descriptors',)
+
     def __init__(self, add_descriptors=False):
         super(Configurable, self).__init__()
         self._add_descriptors = add_descriptors
 
-    def configuration(self):
+    def who(self):
         """Returns a Configuration object."""
         return Configuration(
             self.__class__.__name__,
@@ -306,7 +404,7 @@ class Configurable(object):
 #
 
 
-def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quotes=True):
+def parse_id_string(id_string, sep='#', parse_nested=True, infer_numbers=True, remove_quotes=True):
     """
     Parses configuration string into a pair (name, configuration).
 
@@ -315,14 +413,17 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
     id_string : string
         The id string to parse back. Something like "name#k1=v1#k2="name#k22=v22"#k3=v3".
 
-    parse_nested : bool, [default True]
+    sep : string, default '#'
+        The string that separates 'key=value' pairs (see 'sep' in Configuration)
+
+    parse_nested : bool, default True
         If true, a value that is a nested configuration string (enclosed in single or double quotes)
         is parsed into a pair (name, configuration) by calling recursivelly this function.
 
-    infer_numbers : bool, [default=True]
+    infer_numbers : bool, default True
         If True, parse floats and ints to be numbers; if False, strings are returned instead.
 
-    remove_remove_quotes : bool, [default=True]
+    remove_quotes : bool, default True
         If True (and parse_nested is False), quotes are removed from values; otherwise quotes are kept.
 
     Returns
@@ -352,19 +453,22 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
         if remove_quotes:
             if is_quoted(string):
                 string = string[1:-1]
+        # a number?
         if infer_numbers:
             try:
                 return int(string)
             except:
-                pass
-            try:
-                return float(string)
-            except:
-                pass
+                try:
+                    return float(string)
+                except:
+                    pass
+        # quoted string?
+        if string.startswith('\'') and string.endswith('\''):
+            return string[1:-1]
         return string
 
     # Sanity checks
-    if id_string.startswith('#'):
+    if id_string.startswith(sep):
         raise Exception('%s has no name, and it should (it starts already by #)' % id_string)
 
     if not id_string:
@@ -373,7 +477,7 @@ def parse_id_string(id_string, parse_nested=True, infer_numbers=True, remove_quo
     # Parse
     splitter = shlex.shlex(instream=id_string)  # shlex works with our simple syntax
     splitter.wordchars += '.'                   # so numbers are not splitted...
-    splitter.whitespace = '#'
+    splitter.whitespace = sep
     splitter.whitespace_split = False
     parameters = list(splitter)
     name = parameters[0]

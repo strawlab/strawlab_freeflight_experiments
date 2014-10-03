@@ -57,7 +57,7 @@ def callable2call(c):
             defaults = [] if not defaults else defaults
             args = [] if not args else args
             args_set = set(args)
-            #Check that everything is fine...
+            # Check that everything is fine...
             keywords = dict(zip(args[-len(defaults):], defaults) + keywords.items())  # N.B. order matters
             keywords_set = set(keywords.keys())
             if len(keywords_set - args_set) > 0:
@@ -74,8 +74,8 @@ def callable2call(c):
                 positional=positional + list(c.args),                  # N.B. order matters
                 keywords=dict(pkeywords.items() + keywords.items()))   # N.B. order matters
         if hasattr(c, '__call__'):
-            return c.__name__, keywords  # No way to get the argspec from anything arriving here
-                                         # (builtins and the like...).
+            # No way to get the argspec from anything arriving here (builtins and the like...)
+            return c.__name__, keywords
         raise Exception('Only callables (partials, functions, builtins...) are allowed, %r is none of them' % c)
     return callable2call_recursive(c)
 
@@ -95,7 +95,7 @@ def internet_time(ntpservers=('europe.pool.ntp.org', 'ntp-0.imp.univie.ac.at')):
     """
     # Maybe also parse from, e.g., the webpage of the time service of the U.S. army
     try:
-        from oscail.integration.thirdparty import ntplib
+        import ntplib
         for server in ntpservers:
             response = ntplib.NTPClient().request(server, version=3)
             dt = datetime.datetime.utcfromtimestamp(response.tx_time)

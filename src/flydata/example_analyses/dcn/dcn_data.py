@@ -69,25 +69,23 @@ VT37804_TNTin = (
     'ad0377f0f95d11e38cd26c626d3a008a',  # VT37804 x TNTin
 )
 
-DCN_UUIDs = list(chain(
-    ATO_TNTE,
-    ATO_TNTin,
-    ULTIMATE_TNTE,
-    ULTIMATE_TNTin,
-    VT37804_TNTE,
-    VT37804_TNTin
-))
+DCN_UUIDs = ATO_TNTE + ATO_TNTin + ULTIMATE_TNTE + ULTIMATE_TNTin + VT37804_TNTE + VT37804_TNTin
+
+DCN_COMPLETED_EXPERIMENTS = ATO_TNTE + ATO_TNTin + VT37804_TNTE + VT37804_TNTin
 
 #################
 # Conditions
 #################
 
 # A condition with closed-loop rotation and a post in a corner
-CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
-ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
+DCN_CONFLICT_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0'
+DCN_ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 
+# (x, y) for the post center in arena coordinates
+DCN_POST_CENTER = (-0.15, 0.25)
 
-##### Workaround for the following problem:
+#################
+# Workaround for the following problem:
 # checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20
 # and...
 # checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/
@@ -95,7 +93,7 @@ ROTATION_CONDITION = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20'
 #
 # Temporary solution: remove trailing /, but keep it for accessing
 # Better solution: normalize names in datafiles
-#####
+#################
 
 
 def normalize_condition_string(condition):
@@ -127,13 +125,58 @@ def unnormalize_condition_name(condition, known_conditions):
         condition = condition.condition()
     return condition + '/' if condition + '/' in known_conditions else condition
 
-##### -End of workaround
+#############
+# -End of workaround
+
+
+def dcn_conflict_select_columns(
+    rotation_rate=True,  # speed of the stimulus rotation
+    trg_x=True,          # x towards which the rotation stimulus is pushing the fly to
+    trg_y=True,          # y towards which the rotation stimulus is pushing the fly to
+    trg_z=True,          # z towards which the rotation stimulus is pushing the fly to
+    cyl_x=False,
+    cyl_y=False,
+    cyl_r=False,
+    ratio=True,          # [0,1] infinity loop position from the center of the infinity figure
+    v_offset_rate=False,
+    phase=False,
+    model_x=False,
+    model_y=False,
+    model_z=False,
+    model_filename=False,
+    condition=False,
+    lock_object=False,
+    t_sec=False,
+    t_nsec=False,
+    flydra_data_file=False,
+    exp_uuid=False,
+    # Response information
+    x=True,
+    y=True,
+    z=True,
+    tns=False,
+    vx=True,
+    vy=True,
+    vz=True,
+    velocity=True,
+    ax=True,
+    ay=True,
+    az=True,
+    theta=True,
+    dtheta=True,
+    radius=True,
+    omega=True,
+    rcurve=True,
+    framenumber=False
+):
+    """Returns a list with the names of the parameters that are set to True
+    (which correspond to columns names in the combined dataframes)."""
+    return [column for column, useful in sorted(locals().items()) if useful]
 
 
 #################
 # Genotypes
 #################
-
 
 def genotype_for_uuid(uuid):
     """
@@ -148,8 +191,8 @@ def genotype_for_uuid(uuid):
     Note that this function requires access to our strawlab-vlan.
     At the moment we assume there is a single genotype tested per experiment.
     """
-    #The right place for this is the database.
-    #Scrapping the web is just a lame way to go...
+    # The right place for this is the database.
+    # Scrapping the web is just a lame way to go...
     import requests
     text = requests.get(u'http://strawcore:8080/experiment/freeflight_flycave/%s' % str(uuid)).text
     return text.partition('Genotype:</b>')[2].partition('</p>')[0].strip()
@@ -349,7 +392,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
         'santi-conflict': op.join(SANTI_ROOT, 'conflict-analysis.py')
     }
     other_analysis_script = KNOWN_SCRIPTS.get(analysis_script, None)
-    if not other_analysis_script is None:
+    if other_analysis_script is not None:
         analysis_script = other_analysis_script
     if isinstance(uuids, basestring):
         uuids = [uuids]
@@ -370,7 +413,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
                         '--rfilt trim '
                         '--rfilt-max %g ' % rfilt_max +
                         '--lenfilt %g ' % lenfilt +
-                        '--outdir %s ' % outdir_uuid +
+                        ('' if not outdir_uuid else '--outdir %s ' % outdir_uuid) +
                         '&>~/combine-%s.log' % uuid)
 
     print 'Commands:\n%s' % '\n'.join(commands)
@@ -386,7 +429,7 @@ def recombine_csv_with_hdf5(analysis_script='straw-conflict',
 # Data loading and strings normalization
 #################
 
-def load_lisa_dcn_experiments(uuids):
+def load_lisa_dcn_experiments(uuids, cache_root_dir=None):
     """Loads FreeflightExperiment objects for the DCN experiments, normalizing the condition and genotype strings.
 
     Parameters
@@ -401,13 +444,14 @@ def load_lisa_dcn_experiments(uuids):
     if isinstance(uuids, basestring):
         uuids = [uuids]
     return [FreeflightExperiment(uuid=uuid,
+                                 cache_root_dir=cache_root_dir,
                                  md_transformers={'genotype': normalize_genotype_string},
                                  traj_transformers={'condition': normalize_condition_string})
             for uuid in uuids]
 
 
-def load_lisa_dcn_trajectories(uuids):
-    experiments = load_lisa_dcn_experiments(uuids)
+def load_lisa_dcn_trajectories(uuids, cache_root_dir=None):
+    experiments = load_lisa_dcn_experiments(uuids, cache_root_dir=cache_root_dir)
     return list(chain(*[exp.trajectories() for exp in experiments]))
 
 

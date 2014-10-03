@@ -47,6 +47,70 @@ class DiskTrajectoryStorage(object):
         pass
 
 
+class PickleTrajectoryStorer(object):
+
+    __MAGIC_NUMBER__ = 0
+
+    def __init__(self, dest_dir, pkl_name='trajectories.pkl'):
+        super(PickleTrajectoryStorer, self).__init__()
+        self.dest_dir = dest_dir
+        self.pkl_name = pkl_name
+
+    def store(self, trajs):
+        ensure_dir(self.dest_dir)
+        with open(op.join(self.dest_dir, self.pkl_name), 'wb') as writer:
+            pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, traj_ids=None):
+        with open(op.join(self.dest_dir, self.pkl_name), 'r') as reader:
+            pickle.load(reader)
+
+    def present_trajectories_ids(self):
+        raise NotImplementedError()
+
+    def present_conditions(self):
+        raise NotImplementedError()
+
+    def present_series(self):
+        raise NotImplementedError()
+
+    def present_features(self):
+        raise NotImplementedError()
+
+
+class NaiveHDF5TrajectoryStorer(object):
+
+    __MAGIC_NUMBER__ = 0
+
+    def __init__(self, dest_dir, hdf_name='trajectories.h5', compression='lzf', shuffle=False):
+        super(NaiveHDF5TrajectoryStorer, self).__init__()
+        self.dest_dir = dest_dir
+        self.hdf_name = hdf_name
+        self.compression = compression
+        self.shuffle = shuffle
+
+    def store(self, trajs):
+        ensure_dir(self.dest_dir)
+        with open(op.join(self.dest_dir, self.pkl_name), 'wb') as writer:
+            pickle.dump(trajs, writer, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, traj_ids=None):
+        with open(op.join(self.dest_dir, self.pkl_name), 'r') as reader:
+            pickle.load(reader)
+
+    def present_trajectories_ids(self):
+        raise NotImplementedError()
+
+    def present_conditions(self):
+        raise NotImplementedError()
+
+    def present_series(self):
+        raise NotImplementedError()
+
+    def present_features(self):
+        raise NotImplementedError()
+
+
 ###################
 # Assess correctness
 ###################

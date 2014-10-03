@@ -120,6 +120,20 @@ class FreeflightTrajectory(object):
         """Returns the start time as a string in ISO 8601 format."""
         return self.start_asdatetime(tzinfo=tzinfo).isoformat()
 
+    def is_between_hours(self,
+                         minhour=20, minminutes=0,
+                         maxhour=8, maxminutes=0,
+                         tzinfo=pytz.timezone('Europe/Vienna')):
+        """Returns True iff the start time of the trajectory happened between minhour and maxhour.
+        Note that if maxhour is smaller than minhour, an overnight period is assumed.
+        """
+        start_dt = self.start_asdatetime(tzinfo=tzinfo)
+        minhour_dt = start_dt.replace(hour=minhour, minute=minminutes)
+        maxhour_dt = start_dt.replace(hour=maxhour, minute=maxminutes)
+        if maxhour < minhour:
+            maxhour_dt += datetime.timedelta(days=1)
+        return minhour_dt <= start_dt <= maxhour_dt
+
     def series(self, columns=None, copy=False):
         """Returns a pandas dataframe with the series data for the trajectory.
         If copy is True, a deepcopy of the dataframe is returned.
@@ -144,6 +158,14 @@ class FreeflightTrajectory(object):
         Everything else there would have been computed from x,y,z and possibly stimulus data.
         """
         return self.series(copy=copy, columns=('x', 'y', 'z'))
+
+    ####################
+    # Official mutability breakers
+    ####################
+
+    def set_series(self, series):
+        # FIXME: workaround for wrong design
+        self._series = series
 
     def apply_transform_inplace(self, **kwargs):
         """Applies single-attribute transformations to this trajectory.
@@ -394,17 +416,32 @@ class FreeflightTrajectory(object):
         """Represent a collection of trajectories as a pandas data-frame, record format."""
         if not flatten:
             return DataFrame(data=trajs, columns=('trajectories',))
-        columns = ('uuid', 'oid', 'genotype', 'condition', 'dt', 'start', 'series')
-        return DataFrame(data=((traj.uuid(),
-                               traj.oid(),
-                               traj.genotype(),
-                               traj.condition(),
-                               traj.dt(),
-                               traj.start(),
-                               traj.series()) for traj in trajs),
-                         columns=columns,
-                         dtype=(np.str, np.int, np.str, np.str, np.float, np.float, object))
+        return DataFrame(data=[(traj.uuid(),
+                                traj.oid(),
+                                traj.genotype(),
+                                traj.condition(),
+                                traj.dt(),
+                                traj.start_asdatetime(),
+                                traj) for traj in trajs],
+                         index=(traj.id_string() for traj in trajs),
+                         columns=('uuid', 'oid', 'genotype', 'condition', 'dt', 'start', 'traj'))
 
     @staticmethod
     def from_pandas(df, flattened=True):
         raise NotImplementedError()
+
+
+###################
+# Convenience functions
+###################
+
+def df_or_df_from_traj(df):
+    """Returns a pandas data-frame, either df itself or the series associated to a trajectory object."""
+    # Problem: well against duck typing
+    if isinstance(df, FreeflightTrajectory):
+        return df.series()
+    if isinstance(df, DataFrame):
+        return df
+    raise Exception('The type of the variable (%r) is not one of FreeflightTrajectory or DataFrame, '
+                    'and this is kinda static python'
+                    % type(df))

@@ -78,10 +78,15 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
             #suptitle
             bbox_extra_artists.append( c )
 
-    fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
+    try:
+        fig.savefig(fname_base+'.png',bbox_inches='tight', bbox_extra_artists=bbox_extra_artists)
 
-    if WRITE_SVG or write_svg:
-        fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+        if WRITE_SVG or write_svg:
+            fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+
+        print "WROTE",fname_base
+    except:
+        pass
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
@@ -579,9 +584,12 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
     return x
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize=(16,8), title=None):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None):
     if name is None:
         name = '%s.infinity' % combine.fname
+
+    if ylimits is None:
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -622,9 +630,12 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits, name=None, figsize
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
-def animate_infinity(combine, args,_df,data,plot_axes,ylimits, name=None, figsize=(16,8), title=None, show_trg=False, repeat=True):
+def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, figsize=(16,8), title=None, show_trg=False, repeat=True):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
+
+    if ylimits is None:
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 

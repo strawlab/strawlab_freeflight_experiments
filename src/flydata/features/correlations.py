@@ -1,7 +1,7 @@
 # coding=utf-8
 import pandas as pd
 import numpy as np
-from flydata.features.common import FeatureExtractor
+from flydata.features.common import FeatureExtractor, SeriesExtractor
 
 
 ##################################
@@ -49,17 +49,16 @@ def stimuli_reaction_correlation(stimulus, response, min_num_measurements=2, lat
     return correlation
 
 
-class LaggedCorrelation(FeatureExtractor):
+class LaggedCorr(FeatureExtractor):
 
     def __init__(self, lag=0, stimulus='rotation_rate', response='dtheta'):
-        super(LaggedCorrelation, self).__init__()
+        super(LaggedCorr, self).__init__()
         self.lag = lag
         self.stimulus = stimulus
         self.response = response
 
     def _compute_from_df(self, df):
         return correlatepd(df, self.stimulus, self.response, lag=self.lag)
-
 
 
 ##################################
@@ -109,4 +108,22 @@ def rolling_correlation(df, response='dtheta', stimulus='rotation_rate', window=
     df[fname] = df[fname].fillna(method='pad').fillna(method='bfill')  # ...and wronger
     return fname
     # FIXME: quick and dirty treat of non finite numbers and missing stimulus...
-    # FIXME: include
+
+
+class RollingCorr(SeriesExtractor):
+
+    def __init__(self, response='dtheta', stimulus='rotation_rate', ws=40, min_periods=None):
+        super(RollingCorr, self).__init__()
+        self.resp = response
+        self.stim = stimulus
+        self.ws = ws
+        self.min_periods = min_periods
+
+    def _compute_from_df(self, df):
+        fname = rolling_correlation(df,
+                                    response=self.resp,
+                                    stimulus=self.stim,
+                                    window=self.ws,
+                                    min_periods=self.min_periods)
+        # rename series to reflect provenance
+        df.rename(columns={fname: self.fnames()[0]}, inplace=True)

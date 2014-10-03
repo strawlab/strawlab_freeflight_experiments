@@ -2,4 +2,3 @@ build
 lib
 *.pyc
 case
-dist_df.pkl

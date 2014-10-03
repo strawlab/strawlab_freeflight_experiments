@@ -6,7 +6,7 @@ import pandas as pd
 
 from flydata.example_analyses.dcn.dcn_data import load_lisa_dcn_experiments, ATO_TNTE, ATO_TNTin
 from flydata.features.common import Length
-from flydata.features.correlations import LaggedCorrelation
+from flydata.features.correlations import LaggedCorr
 
 # Let's compute some features, put them in a matrix, get the "target", build a model, do NHST...
 
@@ -15,9 +15,9 @@ if __name__ == '__main__':
 
     # Define the features we want
     FEATURES = [
-        LaggedCorrelation(stimulus='rotation_rate', response='dtheta', lag=lag) for lag in range(0, 101, 2)
+        LaggedCorr(stimulus='rotation_rate', response='dtheta', lag=lag) for lag in range(0, 101, 2)
     ] + [
-        LaggedCorrelation(stimulus='dtheta', response='rotation_rate', lag=lag) for lag in range(0, 101, 2)
+        LaggedCorr(stimulus='dtheta', response='rotation_rate', lag=lag) for lag in range(0, 101, 2)
     ] + [
         Length(),
     ]

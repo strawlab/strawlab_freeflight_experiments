@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from flydata.strawlab.experiments import load_freeflight_trajectories
-from flydata.example_analyses.dcn.dcn_data import ROTATION_CONDITION, load_lisa_dcn_experiments
+from flydata.example_analyses.dcn.dcn_data import DCN_ROTATION_CONDITION, load_lisa_dcn_experiments
 
 
 if __name__ == '__main__':
@@ -113,7 +113,7 @@ if __name__ == '__main__':
         start = time()
         print 'Loading trajectories...'
         trajs = [traj for traj in load_lisa_dcn_experiments(uuids=UUIDS)[0].trajs()
-                 if traj.condition() == ROTATION_CONDITION]
+                 if traj.condition() == DCN_ROTATION_CONDITION]
         print '\tThere are %d trajectories (loaded in %.2f seconds)' % (len(trajs), time() - start)
 
         correlations_at_lag = defaultdict(list)  # Store the features

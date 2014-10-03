@@ -87,7 +87,10 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
 
         t = time.time()
         try:
-            argslist = ["strawlab_freeflight_experiments", analysis_script]
+            if args.no_rosrun:
+                argslist = [analysis_script]
+            else:
+                argslist = ["strawlab_freeflight_experiments", analysis_script]
             for opt in opts.split(' '):
                 if opt.strip() == '--reindex':
                     if args.reindex:
@@ -104,13 +107,19 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
                     argslist.append(opt)
 
             if not args.dry_run:
-                sh.rosrun(
+                if args.no_rosrun:
+                    sh.python(
                     *argslist,
                     _out=os.path.join("LOG","%s.stdout" % uuid),
                     _err=os.path.join("LOG","%s.stderr" % uuid))
+                else:
+                    sh.rosrun(
+                        *argslist,
+                        _out=os.path.join("LOG","%s.stdout" % uuid),
+                        _err=os.path.join("LOG","%s.stderr" % uuid))
 
             dt = time.time() - t
-            print "succeeded (%.1fs)" % dt, " ".join(argslist[1:])
+            print "succeeded (%.1fs)" % dt, " ".join(argslist)
         except Exception, e:
             print "failed", opts
 
@@ -164,6 +173,9 @@ if __name__ == "__main__":
         help='the name of the assay (flycave, flycube4, fishtrax, etc). Pass this '
              'instead of --db-name --db-prefix and --assay to automatically guess these '
              'values. Can be a comma separated list of assays to process more data')
+    parser.add_argument(
+        '-r', '--no-rosrun', action='store_true', default=False)
+
     args = parser.parse_args()
 
     if args.analysis_type:
