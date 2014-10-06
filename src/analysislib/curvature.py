@@ -299,6 +299,8 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
     results,dt = combine.get_results()
     fname = combine.fname
 
+    cols = combine.get_result_columns()
+
     hist2d = correlation_options.get('hist2d', True)
     latencies = sorted(correlation_options.get('latencies',range(0,40,2)+[5,15,40,80]))
     latencies_to_plot = sorted(correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)))
@@ -307,6 +309,10 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
     corr_latencies = {k:{} for k in combine.get_conditions()}
 
     for corra,corrb in correlations:
+        if (corra not in cols) or (corrb not in cols):
+            print "ERROR: no %s:%s data to correlate" % (corra,corrb)
+            continue
+
         #backwards compatible file extensions
         fsuffix = "" if ((corra == 'rotation_rate') and (corrb == 'dtheta')) else "_%s_%s" % (corra,corrb)
 
@@ -432,7 +438,14 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
     results,dt = combine.get_results()
     fname = combine.fname
 
+    #make sure the cols exist
+    data_cols = combine.get_result_columns()
+
     for h in histograms:
+        if h not in data_cols:
+            print "ERROR: no %s data to histogram" % h
+            continue
+
         with aplt.mpl_fig("%s_%s" % (fname,h), args) as fig:
             ax = fig.gca()
             for current_condition in sorted(nens):
@@ -468,6 +481,10 @@ def flatten_data(args, combine, flatten_columns):
     REPLACE = {"checkerboard16.png/infinity.svg/0.3/0.5/0.1/0.20":"checkerboard16.png/infinity.svg/0.3/-0.5/0.1/0.20"}
 
     results,dt = combine.get_results()
+
+    #make sure the cols exist
+    data_cols = combine.get_result_columns()
+    flatten_columns = [f for f in flatten_columns if f in data_cols]
 
     flat_data = {i:{} for i in flatten_columns}
     nens = {}
