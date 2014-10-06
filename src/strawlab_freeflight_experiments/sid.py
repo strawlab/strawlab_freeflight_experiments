@@ -173,11 +173,12 @@ def iddata_spa(mlab, iddata,title):
 function g = do_spa(trial_data,title)
     w = logspace(-2,1.5,50);
     g = spa(trial_data,[],w);
-    bo = bodeoptions;
+    opt = bodeoptions;
+    opt.Title.Interpreter = 'none';
     if title
-        bo.Title.String = title;
+        opt.Title.String = title;
     end
-    h = bodeplot(g,bo);
+    h = bodeplot(g,opt);
     showConfidence(h,1);
 end""",iddata,title,
        nout=1,saveout=(mlab.varname('idfrd'),))
@@ -193,7 +194,7 @@ compare(%s);
 mf = findall(0,'Type','figure','Tag','System_Identification_COMPARE_PLOT_v1');
 ax = findall(mf,'type','axes');
 legend(ax(2),%s);
-title(ax(2),figtitle);""" % (','.join(model_varnames),','.join(model_names)))
+title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
 def bode_models(mlab,title,show_confidence,show_legend,result_objs):
     mlab.set_variable('figtitle',title)
@@ -203,15 +204,16 @@ def bode_models(mlab,title,show_confidence,show_legend,result_objs):
 
     if show_legend:
         plot_args = ','.join(model_varnames)
-        legend = 'legend(%s);' % ','.join(model_names)
+        legend = "legend(%s);" % ','.join(model_names)
     else:
         plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
         legend = ''
 
     mlab.run_code("""
-bo = bodeoptions;
-bo.Title.String = figtitle;
-h = bodeplot(%s,bo);
+opt = bodeoptions;
+opt.Title.String = figtitle;
+opt.Title.Interpreter = 'none';
+h = bodeplot(%s,opt);
 %s
 %s""" % (plot_args,
          legend,
@@ -225,19 +227,20 @@ def pzmap_models(mlab,title,show_confidence,show_legend,result_objs):
 
     if show_legend:
         plot_args = ','.join(model_varnames)
-        legend = 'legend(%s);' % ','.join(model_names)
+        legend = "legend(%s);" % ','.join(model_names)
     else:
         plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
         legend = ''
 
     mlab.run_code("""
-bo = pzoptions;
-bo.Title.String = figtitle;
-po.XLimMode = 'manual';
-po.XLim = [-1.5 2];
-po.YLimMode = 'manual';
-po.YLim = [-1.5 1.5];
-h = iopzplot(%s,bo);
+opt = pzoptions;
+opt.Title.String = figtitle;
+opt.Title.Interpreter = 'none';
+opt.XLimMode = 'manual';
+opt.XLim = [-1.5 2];
+opt.YLimMode = 'manual';
+opt.YLim = [-1.5 1.5];
+h = iopzplot(%s,opt);
 %s
 %s
 xlim([-1.5 2]);

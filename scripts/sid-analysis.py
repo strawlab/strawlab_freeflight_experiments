@@ -152,8 +152,8 @@ if __name__=='__main__':
             system_us = []
             system_ys = []
 
-            system_iddata = []
-            system_iddata_mean = None
+            individual_iddata = []
+            individual_iddata_mean = None
 
             for ph in phs.itervalues():
                 #any perturbations completed
@@ -171,7 +171,7 @@ if __name__=='__main__':
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-LOOKBACK):ph.end_idx]
                     iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
-                    system_iddata.append( iddata )
+                    individual_iddata.append(iddata)
 
                     dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
@@ -183,14 +183,14 @@ if __name__=='__main__':
             system_y_df_mean = system_y_df.mean(axis=1)
             system_u_df_mean = system_u_df.mean(axis=1)
 
-            system_iddata_mean = sfe_sid.upload_data(mlab,
+            individual_iddata_mean = sfe_sid.upload_data(mlab,
                                          system_y_df_mean.values,
                                          system_u_df_mean.values,
                                          0.01,
                                          DETREND)
 
             dest = combine.get_plot_filename("iddata_mean_%s_%s_%s" % (system_u_name,system_y_name,condn))
-            mlab.run_code("save('%s','%s');" % (dest,system_iddata_mean))
+            mlab.run_code("save('%s','%s');" % (dest,individual_iddata_mean))
 
             possible_models = []
 
@@ -198,7 +198,7 @@ if __name__=='__main__':
             pooled_id_varname = mlab.varname('iddata')
             mlab.run_code("%s = merge(%s);" % (
                     pooled_id_varname,
-                    ','.join([str(i) for i in system_iddata])))
+                    ','.join([str(i) for i in individual_iddata])))
             pooled_id = mlab.proxy_variable(pooled_id_varname)
             dest = combine.get_plot_filename("iddata_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
@@ -208,12 +208,10 @@ if __name__=='__main__':
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
-            #do initial model order selection based on the means, as that
-            #data is less noisy
-            iddata = system_iddata_mean
-
+            #do initial model order selection based on the mean of the trajectories
+            #over the perturbation period (as that data is less noisy)
             for spec in MODEL_SPECS_TO_TEST:
-                result_obj = sfe_sid.run_model_from_specifier(mlab,iddata,spec)
+                result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec)
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
@@ -258,7 +256,7 @@ if __name__=='__main__':
                     ax2.set_ylim(-0.5,0.5)
 
                 for result_obj in possible_models:
-                    o = sfe_sid.get_model_fit(mlab, system_iddata_mean, result_obj.sid_model)
+                    o = sfe_sid.get_model_fit(mlab, individual_iddata_mean, result_obj.sid_model)
                     ax2.plot(o,label=str(result_obj),alpha=0.8)
 
                 ax2.legend(loc='upper right',prop={'size':8})
@@ -274,7 +272,7 @@ if __name__=='__main__':
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.compare_models(mlab,title,iddata,possible_models)
+                sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
 
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
@@ -290,7 +288,8 @@ if __name__=='__main__':
             possible_models.sort() #sort by fit pct
             for pm in possible_models:
                 indmdls = []
-                for n,i in enumerate(system_iddata):
+                meanmdls = []
+                for n,i in enumerate(individual_iddata):
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
                     #accept a lower fit due to noise on the individual trajectories
                     if mdl.fitpct > (0.5*args.min_fit_pct):
