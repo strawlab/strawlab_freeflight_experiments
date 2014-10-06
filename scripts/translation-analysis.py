@@ -21,6 +21,9 @@ import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
 
+from flydata.features.coord_systems import Coords2Coords
+
+
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
 
@@ -69,11 +72,14 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-    from flydata.features.coord_systems import Coords2Coords
-    trajs = combine.get_trajs()
+
+    # Compute fly-coordinate-system stim_x and stim_y
+    # trajs = combine.get_trajs()  # obviously not working if analysis was run in an out-of-date freeflight analysis
+    trajs = itertools.chain(*[res['df'] for res in results.itervalues()])
     c2c = Coords2Coords(stimvelx='stim_x', stimvely='stim_y')
-    trajs = c2c.compute(trajs)
-    trans_x, trans_y = c2c.fnames()
+    c2c.compute(trajs)
+    trans_x, trans_y = c2c.fnames()  # These are awful names, rename them with traj.rename(columns=..., inplace=True)
+    # Note how we added the correlation with the new series here..
     correlations = (('stim_x','vx'),(trans_x,'vx')) #('stim_z','vz'))
     histograms = ("velocity","dtheta","stim_x","vx")
     correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},

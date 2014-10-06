@@ -351,7 +351,12 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                             label=_current_condition)
 
                 #the maximum of the means is the most correlated shifted latency
-                max_latencies_shift[_current_condition] = (latencies[ccef_m.argmax()], ccef_m.max())
+                # FIXME: try...catch is a quick and dirty solution for latencies[ccef_m.argmax()] out of bounds failing
+                try:
+                    max_latencies_shift[_current_condition] = (latencies[ccef_m.argmax()], ccef_m.max())
+                except:
+                    max_latencies_shift[_current_condition] = (0, 0)
+
 
             ax.legend(
                 loc='upper center' if OUTSIDE_LEGEND else 'upper right',
