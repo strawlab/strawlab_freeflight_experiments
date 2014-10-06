@@ -180,7 +180,7 @@ end""",y,u,Ts,detrend,nout=1,saveout=(mlab.varname('iddata'),))
 def iddata_spa(mlab, iddata,title):
     idfrd_model = mlab.run_code("""
 function g = do_spa(trial_data,title)
-    w = logspace(-0.5,1.5,100);
+    w = logspace(-2,2,100);
     g = spa(trial_data,[],w);
     opt = bodeoptions;
     opt.Title.Interpreter = 'none';
@@ -219,7 +219,7 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
         legend = ''
 
     mlab.run_code("""
-w = logspace(-0.5,1.5,100);
+w = logspace(-2,2,100);
 opt = bodeoptions;
 opt.Title.String = figtitle;
 opt.Title.Interpreter = 'none';
