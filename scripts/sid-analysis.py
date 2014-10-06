@@ -277,12 +277,12 @@ if __name__=='__main__':
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.bode_models(mlab,title,True,True,possible_models)
+                sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Pole Zero Plot: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.pzmap_models(mlab,title,True,True,possible_models)
+                sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
 
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
@@ -293,17 +293,43 @@ if __name__=='__main__':
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
                     #accept a lower fit due to noise on the individual trajectories
                     if mdl.fitpct > (0.5*args.min_fit_pct):
-                        mdl.set_name('%s_%d' % (pm.spec,n))
+                        mdl.name = '%s_%d' % (pm.spec,n)
+                        mdl.matlab_color = 'k'
                         indmdls.append(mdl)
                 if indmdls:
+                    extra_models = []
+
+                    #create a merged model from the individual models (mean of models)
+                    try:
+                        mom_varname = mlab.varname('sidmodelmerged')
+                        mlab.run_code("%s = merge(%s);" % (
+                                mom_varname,
+                                ','.join([str(r.sid_model) for r in indmdls])))
+                        merged_model = sfe_sid.SIDResultMerged(mlab.proxy_variable(mom_varname), pm.spec)
+                        merged_model.matlab_color = 'b'
+                        extra_models.append(merged_model)
+                    except RuntimeError:
+                        print "ERROR MERGING %d %s MODELS" % (len(indmdls),pm.spec)
+
+                    #also show the model mad on the basis of the mean trajectories
+                    pm.matlab_color = 'r'
+                    extra_models.append(pm)
+
+                    #and also a model based on all the data
+                    alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
+                    alldata_model.matlab_color = 'g'
+                    extra_models.append(alldata_model)
+
+                    extra_desc = 'r=model(mean_perturb),b=merge(individual_models),g=model(individual_data)'
+
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
-                    title = 'Bode %s (individual): %s->%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj)
+                    title = 'Bode %s (individual): %s->%s\n%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
-                        sfe_sid.bode_models(mlab,title,False,False,indmdls)
+                        sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
-                    title = 'Pole Zero Plot %s (individual): %s->%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj)
+                    title = 'Pole Zero Plot %s (individual): %s->%s\n%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
-                        sfe_sid.pzmap_models(mlab,title,False,False,indmdls)
+                        sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
                     #with mlab.fig(name+'.eps',driver='epsc2') as f:
                     #    sfe_sid.pzmap_models(mlab,title,True,True,indmdls)
 

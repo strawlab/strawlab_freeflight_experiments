@@ -31,6 +31,7 @@ def get_matlab_file(name):
 
 class _SIDFail(object):
     fitpct = 0
+    failed = True
 
 class _SIDResult(object):
     def __init__(self, abrv, est_args, z, p, k, fitpct, fitmse, sid_data, sid_model):
@@ -44,7 +45,10 @@ class _SIDResult(object):
 
         self._abrv = abrv
         self._est_args = est_args
-        self._name = ''
+
+        self.name = ''
+        self.matlab_color = 'k'
+        self.failed = False
 
     #these are vectors if the id was performed on a merged iddata object
     @property
@@ -57,14 +61,16 @@ class _SIDResult(object):
     def spec(self):
         return self._abrv
 
-    def set_name(self, n):
-        self._name = n
-
     def __str__(self):
-        if self._name:
-            return self._name
+        if self.name:
+            return self.name
         else:
             return "%s_p%dz%d_%.0f%%" % (self._abrv,len(self.p),len(self.z),self.fitpct)
+
+class SIDResultMerged(_SIDResult):
+    def __init__(self, sid_model, spec):
+        _SIDResult.__init__(self, spec, '', 0, 0, 0, 0, 0, None, sid_model)
+        self.name = '%s_MoM' % spec
 
 class MATLABIdtf(_SIDResult):
 
@@ -82,19 +88,20 @@ end""", self.sid_model, nout=2)
         print repr(iddata)
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
-    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz)
-        mdl = tfest(trial_data,np,nz,'Ts',trial_data.Ts);
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts)
+        mdl = tfest(trial_data,np,nz,'Ts',ts);
         mdl.name = ['tf' num2str(np) num2str(nz)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
-    end""",iddata,np,nz,
+    end""",iddata,np,nz,0.01,
             nout=6,
             saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdtf("tf%d%d" % (np, nz),
                               "np=%d,nd=%d" % (np, nz),
                               z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
+            print e
             return _SIDFail()
 
 class MATLABIdpoly(_SIDResult):
@@ -121,6 +128,7 @@ class MATLABIdpoly(_SIDResult):
                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
+            print e
             return _SIDFail()
 
     @staticmethod
@@ -142,6 +150,7 @@ class MATLABIdpoly(_SIDResult):
                                 "nb=%d,nf=%d,nk=%d" % (nb, nf, nk),
                                 z(), p(), k(), fitpct(), fitmse(), iddata, sid_model)
         except RuntimeError, e:
+            print e
             return _SIDFail()
 
 def run_model_from_specifier(mlab, iddata, spec):
@@ -171,14 +180,14 @@ end""",y,u,Ts,detrend,nout=1,saveout=(mlab.varname('iddata'),))
 def iddata_spa(mlab, iddata,title):
     idfrd_model = mlab.run_code("""
 function g = do_spa(trial_data,title)
-    w = logspace(-2,1.5,50);
+    w = logspace(-0.5,1.5,100);
     g = spa(trial_data,[],w);
     opt = bodeoptions;
     opt.Title.Interpreter = 'none';
     if title
         opt.Title.String = title;
     end
-    h = bodeplot(g,opt);
+    h = bodeplot(g,w,opt);
     showConfidence(h,1);
 end""",iddata,title,
        nout=1,saveout=(mlab.varname('idfrd'),))
@@ -187,7 +196,7 @@ end""",iddata,title,
 def compare_models(mlab,title,iddata,result_objs):
     mlab.set_variable('figtitle',title)
 
-    model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs])
+    model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs if not r.failed])
     model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
     mlab.run_code("""
 compare(%s);
@@ -196,40 +205,44 @@ ax = findall(mf,'type','axes');
 legend(ax(2),%s);
 title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
-def bode_models(mlab,title,show_confidence,show_legend,result_objs):
+def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
     mlab.set_variable('figtitle',title)
 
-    model_varnames = map(str,[r.sid_model for r in result_objs])
-    model_names = ["'%s'" % r for r in result_objs]
+    if use_model_colors:
+        plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
+    else:
+        plot_args = ','.join(map(str,[r.sid_model for r in result_objs if not r.failed]))
 
     if show_legend:
-        plot_args = ','.join(model_varnames)
-        legend = "legend(%s);" % ','.join(model_names)
+        legend = "legend(%s);" % ','.join(["'%s'" % r for r in result_objs if not r.failed])
     else:
-        plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
         legend = ''
 
     mlab.run_code("""
+w = logspace(-0.5,1.5,100);
 opt = bodeoptions;
 opt.Title.String = figtitle;
 opt.Title.Interpreter = 'none';
-h = bodeplot(%s,opt);
+h = bodeplot(%s,w,opt);
+ylims = getoptions(h,'YLim');
+ylims{1} = [-20,20];
+setoptions(h,'YLimMode','manual','YLim',ylims);
 %s
 %s""" % (plot_args,
          legend,
          'showConfidence(h,1);' if show_confidence else ''))
 
-def pzmap_models(mlab,title,show_confidence,show_legend,result_objs):
+def pzmap_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
     mlab.set_variable('figtitle',title)
 
-    model_varnames = map(str,[r.sid_model for r in result_objs])
-    model_names = ["'%s'" % r for r in result_objs]
+    if use_model_colors:
+        plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
+    else:
+        plot_args = ','.join(map(str,[r.sid_model for r in result_objs if not r.failed]))
 
     if show_legend:
-        plot_args = ','.join(model_varnames)
-        legend = "legend(%s);" % ','.join(model_names)
+        legend = "legend(%s);" % ','.join(["'%s'" % r for r in result_objs if not r.failed])
     else:
-        plot_args = ','.join(itertools.chain(*[(m,"'k'") for m in model_varnames]))
         legend = ''
 
     mlab.run_code("""
