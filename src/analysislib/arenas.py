@@ -6,7 +6,7 @@ def get_arena_from_args(args):
     elif args.arena=='flycube':
         arena = FlyCube()
     elif args.arena=='fishbowl':
-        arena = analysislib.arenas.FishBowl()
+        arena = FishBowl()
     else:
         raise ValueError('unknown arena %r'%args.arena)
     return arena
@@ -52,7 +52,7 @@ class FlyCaveCylinder(ArenaBase):
         return [self.height/2.0,self.height]
 
 class FishBowl(ArenaBase):
-    def __init__(self,radius=0.35,height=0.08):
+    def __init__(self,radius=0.175,height=0.08):
         self.radius = radius
         self.height = height
     def plot_mpl_line_2d(self,ax,*args,**kwargs):
@@ -61,7 +61,7 @@ class FishBowl(ArenaBase):
         return ax.plot( rad*np.cos(theta), rad*np.sin(theta), *args, **kwargs)
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
-        return (-self.radius, self.radius, -self.radius, self.radius, 0, -self.height)
+        return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
 
 class FlyCube(ArenaBase):
     def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
