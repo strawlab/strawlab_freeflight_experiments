@@ -25,18 +25,42 @@ from flydata.strawlab.transformers import ColumnsSelector, MissingImputer
 
 
 TRANSLATIONAL_UUIDS = (
-    '67521a4e2a0f11e49631bcee7bdac270',
+    # '67521a4e2a0f11e49631bcee7bdac270',
+    # '24ca8464287e11e4ab9ebcee7bdac270',
+    # '3e39ed1e2d3211e491fabcee7bdac270',
+    'b00fcc162c6911e49afbbcee7bdac270',
+    # 'a5414fbe294711e4a1f5bcee7bdac270',
+    # 'ebbac5d02d3211e49186bcee7bdac428',
+    # '07990bfa2c6a11e4a500bcee7bdac428',
+    # 'a3e403142a0f11e4aa28bcee7bdac428',
+    # '0736b0a6294811e4bbaebcee7bdac428',
+    # '9d01e24c287e11e4b6c3bcee7bdac428',
+    # '2a56e23c2a0f11e4b44cd850e6c4a608',
+    # '6c3ba674294711e4a3fcd850e6c4a608',
+    # 'e27c1c4a287c11e4afacd850e6c4a608',
+    # '8cf02b4e2d3211e4af64d850e6c4a608',
+    # '0f03e5fa2c6911e484c1d850e6c4a608',
 )
 
 # Get the data from the analysis run
 trajs = load_freeflight_trajectories(TRANSLATIONAL_UUIDS)
 trajs_df = FreeflightTrajectory.to_pandas(trajs)
 
+
 # We are interested only in some of the columns
 interesting_series = ('velocity', 'vx', 'vy', 'stim_x', 'stim_y')
 trajs = ColumnsSelector(series_to_keep=interesting_series).fit_transform(trajs)
 # We do not want missing values on the stimuli series
 trajs = MissingImputer(columns=('stim_x', 'stim_y')).fit_transform(trajs)
+
+# contract = NoMissingValuesContract(columns=interesting_series)
+# for traj in trajs:
+#     if not contract.check([traj]):
+#         print traj.id_string(), len(traj.df()), traj.md().arena()
+#         print np.sum(traj.df().isnull())
+#         print traj.df()['vx']
+#         exit(22)
+
 if not NoMissingValuesContract().check(trajs):
     raise Exception('There are missing values')
 
@@ -53,7 +77,7 @@ for traj in trajs:
 # Let's just plot lagged_correlation(vx, stim_x), per condition
 lags = np.arange(200)
 dt = 0.01  # FIXME
-fexes = [LaggedCorr(lag=lag, stimulus='stim_x', response='vx') for lag in lags]
+fexes = [LaggedCorr(lag=lag, stimulus=trans_x, response='vx') for lag in lags]
 conditions = sorted(trajs_df['condition'].unique())
 figure, axes = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
 for condition, ax in zip(conditions, axes):
