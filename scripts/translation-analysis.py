@@ -69,9 +69,15 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-    correlations = (('stim_x','vx'),)#('stim_z','vz'))
+    from flydata.features.coord_systems import Coords2Coords
+    trajs = combine.get_trajs()
+    c2c = Coords2Coords(stimvelx='stim_x', stimvely='stim_y')
+    trajs = c2c.compute(trajs)
+    trans_x, trans_y = c2c.fnames()
+    correlations = (('stim_x','vx'),(trans_x,'vx')) #('stim_z','vz'))
     histograms = ("velocity","dtheta","stim_x","vx")
     correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
+                           "%s:vx" % trans_x:{"range":[[-1,1],[-0.3,0.3]]},
                            "latencies":range(0,150,5),
                            "latencies_to_plot":(0,5,10,15,25,50,75,100,125),
     }
