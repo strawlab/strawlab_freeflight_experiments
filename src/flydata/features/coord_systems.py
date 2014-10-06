@@ -55,11 +55,13 @@ def change_coor(velx, vely, refvelx, refvely):
     translations = np.array([velx - refvelx, vely - refvely]).T
 
     # Return a list of x and y couples for the velocities values of the translation in the fly coordinates.
-    results = []
-    for rotmat, trans in zip(rotation_matrices, translations):
-        results.append(rotmat.dot(trans))
+    # results = []
+    # for rotmat, trans in zip(rotation_matrices, translations):
+    #     results.append(rotmat.dot(trans))
+    # return np.array(results)
+    # We can do better than this python-land loop...
 
-    return np.array(results)
+    return np.einsum('nkm,nm->nk', rotation_matrices, translations)
 
 
 class Coords2Coords(SeriesExtractor):
