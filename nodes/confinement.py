@@ -21,7 +21,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONDITIONS = ("midgray.osg/+0.0/+0.000",
               "checkerboard.png.osg/+0.0/+0.000")
-START_CONDITION = CONDITIONS[0]
+START_CONDITION = CONDITIONS[1]
 
 TIMEOUT = 0.5
 
