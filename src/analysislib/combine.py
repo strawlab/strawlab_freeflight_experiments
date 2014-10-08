@@ -139,12 +139,7 @@ class _Combine(object):
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
-	# print max of obj_i's to get an estimate how long combein will ta
-        	try:
-		maxObjId = trajectories[:]['framenumber'].max()
-		self._debug('max obj_id: %d' % (maxObjId))
-	except:
-		pass
+
         #unexplainable protip - adding an index on the framenumber table makes
         #things slloooowwww
         if trajectories.cols.framenumber.is_indexed:
