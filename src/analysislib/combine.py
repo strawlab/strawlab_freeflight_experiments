@@ -71,7 +71,7 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
-        self._configdict = {'v':3,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':4,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -1109,7 +1109,25 @@ class CombineH5WithCSV(_Combine):
             self._debug("IO:     fixing data %s" % fix)
 
         #open the csv file as a dataframe
-        csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
+        try:
+            csv = pd.read_csv(self.csv_file,na_values=('None',),
+                              error_bad_lines=False,
+                              dtype={'framenumber':int,
+                                     'condition':str,
+                                     'exp_uuid':str,
+                                     'flydra_data_file':str})
+        except:
+            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
+            #protect against rubbish in the framenumber column
+            csv = pd.read_csv(self.csv_file,na_values=('None',),
+                              error_bad_lines=False,
+                              low_memory=False,
+                              dtype={'framenumber':float,
+                                     'condition':str,
+                                     'exp_uuid':str,
+                                     'flydra_data_file':str})
+            csv = csv.dropna(subset=['framenumber'])
+            csv['framenumber'] = csv['framenumber'].astype(int)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1164,9 +1182,6 @@ class CombineH5WithCSV(_Combine):
             #causing there to be multiple rows with the same framenumber.
             #find the last index for all unique framenumbers for this trial
             fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
-            #for later joins, and because its logical, framenumber must be
-            #an integer
-            fdf['framenumber'] = fdf['framenumber'].astype(int)
             trial_framenumbers = fdf['framenumber'].values
 
             #get the comparible range of data from flydra
