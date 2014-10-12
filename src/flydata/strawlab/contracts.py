@@ -4,7 +4,8 @@ from pandas import DatetimeIndex
 from pandas.util.testing import isiterable
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from oscail.common.config import Configurable
+from whatami.config import Configurable
+
 
 __all__ = (
     # superclass
@@ -217,4 +218,4 @@ def check_contracts(trajs, contracts):
     for contract in contracts:
         if not contract.check(trajs):
             raise Exception(contract.fail_message)
-    return [contract.who().id() for contract in contracts]
+    return [contract.what().id() for contract in contracts]

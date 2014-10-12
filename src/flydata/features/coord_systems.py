@@ -96,8 +96,8 @@ class Coords2Coords(SeriesExtractor):
             df[name] = res
 
     def fnames(self):
-        return ['stimvelx#%s' % self.who().id(),
-                'stimvely#%s' % self.who().id()]
+        return ['stimvelx#%s' % self.what().id(),
+                'stimvely#%s' % self.what().id()]
 
     # TODO: document
     # TODO: generalize to 3D (and higher dimensionalities)

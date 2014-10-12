@@ -8,18 +8,19 @@ import pickle
 import re
 import operator
 import hashlib
+import datetime
+import calendar
 
 import tables
 import pandas as pd
 import numpy as np
 import pytz
-import datetime
-import calendar
 import scipy.io
+
 from flydata.strawlab.metadata import FreeflightExperimentMetadata
 from flydata.strawlab.trajectories import FreeflightTrajectory
-
 import roslib
+
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
@@ -33,7 +34,7 @@ import analysislib.curvature as acurve
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
 
-from oscail.common.config import Configuration, MAX_EXT4_FN_LENGTH
+from whatami.config import Configuration, MAX_EXT4_FN_LENGTH
 
 #results = {
 #   condition:{

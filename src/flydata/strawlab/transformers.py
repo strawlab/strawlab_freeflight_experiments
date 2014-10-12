@@ -1,8 +1,11 @@
 # coding=utf-8
-import numpy as np
 from abc import ABCMeta, abstractmethod
+
+import numpy as np
+
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from oscail.common.config import Configurable
+from whatami.config import Configurable
+
 
 __all__ = (
     'Transformer',
@@ -79,8 +82,8 @@ class MaxMinTrimmer(Transformer):
     def transform(self, X):
         pass
 
-    def who(self):
-        return super(MaxMinTrimmer, self).who()
+    def what(self):
+        return super(MaxMinTrimmer, self).what()
 
 
 ##############################

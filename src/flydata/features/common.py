@@ -1,11 +1,13 @@
 # coding=utf-8
 from itertools import chain
+
 from pandas import DataFrame
 import numpy as np
+import pandas as pd
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from oscail.common.config import Configurable
-import pandas as pd
+from whatami.config import Configurable
+
 
 
 # TODO: make FeatureExtractor also follow the fit-transform protocol
@@ -14,7 +16,7 @@ import pandas as pd
 class FeatureExtractor(Configurable):
 
     def fnames(self):
-        return [self.who().id()]
+        return [self.what().id()]
 
     def compute_one(self, x):
         x = df_or_df_from_traj(x)

@@ -12,12 +12,14 @@ import datetime
 import pickle
 import cPickle
 import pickletools
+
 import pytz
 import numpy as np
 
 from flydata.misc import ensure_dir
-from oscail.common.config import Configurable, Configuration
+from whatami.config import Configurable, Configuration
 from flydata.log import warning, info
+
 
 
 # FIXME: this should be user configurable via commandline/envvar/configfile
@@ -408,7 +410,7 @@ class FreeflightAnalysisFiles(Configurable):
             self.filtering_tfilt_options(),
             self.filtering_idfilt_options()))
 
-    def who(self):
+    def what(self):
         return Configuration(
             self.__class__.__name__,
             configuration_dict=dict(self.merging_filtering_options()))
@@ -513,7 +515,7 @@ if __name__ == '__main__':
         for analysis in analyses:
             print '\t%s' % analysis
             ffa = FreeflightAnalysisFiles(analysis)
-            print ffa.who().id()
+            print ffa.what().id()
             for condition in ffa.conditions():
                 oid2data = defaultdict(list)
                 for x0, y0, oid, framenumber0, time0, df in ffa.trajs(condition):

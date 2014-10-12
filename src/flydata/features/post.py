@@ -102,7 +102,7 @@ class PostAttention(SeriesExtractor):
                   inplace=True)
 
     def fnames(self):
-        return ['out=%s#%s' % (out_name, self.who().id()) for out_name in
+        return ['out=%s#%s' % (out_name, self.what().id()) for out_name in
                 ['dist_to_post', 'vel_to_post', 'fly_post_cosine']]
 
     # Could be generalized even more

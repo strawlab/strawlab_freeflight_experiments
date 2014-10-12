@@ -141,5 +141,5 @@ class TrueIntervalsStats(FeatureExtractor):
         return 0, 0, 0, 0, 0
 
     def fnames(self):
-        return ['out=%s#%s' % (out_name, self.who().id()) for out_name in
+        return ['out=%s#%s' % (out_name, self.what().id()) for out_name in
                 ['count', 'minlength', 'maxlength', 'meanlength', 'stdlength']]

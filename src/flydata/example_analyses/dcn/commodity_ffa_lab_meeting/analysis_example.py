@@ -125,7 +125,7 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
     cache_file = op.join(cache_dir, '%s.pkl' % data_name)
 
     # Provenance: store what we do to the data
-    provenance = [FreeflightAnalysisFiles(op.join(CACHE_DIR, uuids[0])).who().id()]  # All same...
+    provenance = [FreeflightAnalysisFiles(op.join(CACHE_DIR, uuids[0])).what().id()]  # All same...
     provenance_file = op.join(cache_dir, '%s-provenance.log' % data_name)
 
     if not op.isfile(cache_file) or recompute:
@@ -140,16 +140,16 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
         print '\tTransforming the trajectories data-set...'
         start = time()
         for transformer in transformers:
-            print '\t\t' + transformer.who().id()
+            print '\t\t' + transformer.what().id()
             trajs = transformer.fit_transform(trajs)
-            provenance.append(transformer.who().id())
+            provenance.append(transformer.what().id())
         print '\tTransformations took %.2f seconds, there are %d trajectories left' % (time() - start, len(trajs))
 
         # Check contracts
         print '\tChecking data contracts...'
         start = time()
         checked = check_contracts(trajs, contracts)
-        provenance.extend([contract.who().id() for contract in CONTRACTS])
+        provenance.extend([contract.what().id() for contract in CONTRACTS])
         print '\tChecked:\n\t\t%s' % '\n\t\t'.join(checked)
         print '\tCheck contracts took %.2f seconds' % (time() - start)
 
@@ -157,9 +157,9 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
         print '\tComputing more time-series...'
         start = time()
         for series_extractor in series_extractors:
-            print '\t\t' + series_extractor.who().id()
+            print '\t\t' + series_extractor.what().id()
             series_extractor.compute(trajs)
-            provenance.append(series_extractor.who().id())
+            provenance.append(series_extractor.what().id())
         print 'Compute some more series took %.2f seconds' % (time() - start)
         # N.B. we should check more contracts after this, but careful with some missing values that are valid...
         #      that's because we do not support (yet) variable length series
