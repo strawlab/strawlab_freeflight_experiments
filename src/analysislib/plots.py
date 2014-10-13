@@ -208,21 +208,23 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
 
             dur = sum(len(df) for df in r['df'])*dt
 
+            alpha = 0.1
+
             if in3d:
                 for df in r['df']:
                     xv = df['x'].values
                     yv = df['y'].values
                     zv = df['z'].values
-                    ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
             else:
                 for df in r['df']:
                     xv = df['x'].values
                     yv = df['y'].values
-                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
                     if show_starts:
-                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
                     if show_ends:
-                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=RASTERIZE )
+                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
 
             if args.show_obj_ids:
                 if in3d:
@@ -240,6 +242,77 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
+
+def plot_dist_from_origin(combine, args, figsize, name=None):
+    if name is None:
+        name = '%s.dist_from_origin' % (combine.fname,)
+    results,dt = combine.get_results()
+    with mpl_fig(name,args,figsize=figsize) as fig:
+        axes = set()
+        ax = fig.add_subplot(1,1,1)
+        means = []
+        stds = []
+        labels = []
+        x = []
+        lens = []
+        allr=[]
+        allcond=[]
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            axes.add( ax )
+
+            if not r['count']:
+                print "WARNING: NO DATA TO PLOT"
+                continue
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            xvs = []
+            yvs = []
+            for df in r['df']:
+                xvs.append( df['x'].values )
+                yvs.append( df['y'].values )
+
+            xv = np.concatenate(xvs)
+            yv = np.concatenate(yvs)
+            r = np.sqrt(xv**2 + yv**2)
+            mean_r = np.mean(r)
+            std_r = np.std(r)
+
+            means.append( mean_r )
+            stds.append( std_r )
+            labels.append( current_condition )
+            x.append(i)
+            lens.append( len(r) )
+            allr.extend( list(r) )
+            allcond.extend( [current_condition]*len(r) )
+
+        df = pandas.DataFrame({'radius':allr,'condition':allcond})
+        df.to_pickle('dist_df.pkl')
+        means = np.array( means )
+        stds = np.array( stds )
+        lens = np.array( lens )
+
+        print '*'*100
+        print 'dist means',means
+        print 'dist stds',stds
+        print 'labels',labels
+        print 'lens',lens
+        print '*'*100
+        ax.plot( x, means )
+        ax.plot( x, means+stds )
+        ax.plot( x, means-stds )
+        ax.set_xticks( x )
+        ax.set_xticklabels( labels )
+
+        for ax in axes:
+            ax.set_ylabel( 'distance (m)' )
+
+            locations = ['left','bottom']
+            for loc, spine in ax.spines.items():
+                if loc in locations:
+                    spine.set_position( ('outward',10) ) # outward by 10 points
+                else:
+                    spine.set_color('none') # don't draw spine
 
 def plot_histograms(combine, args, figncols, name=None, colorbar=False):
     figsize = (5.0*figncols,(2*5.0) + 2)     #2 rows
@@ -691,8 +764,10 @@ def _calculate_nloops(df):
 
 def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
-    name = combine.get_plot_filename(name)
+    if 'ratio' not in combine.get_result_columns():
+        return
 
+    name = combine.get_plot_filename(name)
     results,dt = combine.get_results()
 
     best = {}
