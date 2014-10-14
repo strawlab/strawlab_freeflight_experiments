@@ -2,10 +2,16 @@
 import sys
 import os.path
 
+if not os.environ.get('DISPLAY'):
+    print "DISPLAY NOT SET: USING AGG BACKEND"
+    import matplotlib
+    matplotlib.use('agg')
+
 import matplotlib.animation as animation
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+import strawlab.constants
 
 import analysislib.filters
 import analysislib.combine
@@ -39,27 +45,30 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args, max_uuids=1)
 
-    if not args.idfilt or len(args.idfilt) != 1:
-        parser.error("one obj_id must be specified")
-
     uuid = args.uuid[0]
-    obj_id = args.idfilt[0]
+    obj_ids = map(int,args.idfilt)
 
     combine = autil.get_combiner_for_args(args)
     combine.set_index(args.index)
     combine.add_from_args(args)
 
+    if args.outdir:
+        basedir = args.outdir
+    elif args.save_animation:
+        basedir = strawlab.constants.get_movie_dir(uuid, camera=combine.analysis_type)
+        if not os.path.isdir(basedir):
+            os.makedirs(basedir)
+    else:
+        basedir = combine.plotdir
+
     plot_axes = args.plot_values.split(',')
 
-    ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
-
     results, dt = combine.get_results()
-    basedir = args.outdir if args.outdir else combine.plotdir
 
     anims = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
-        for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-            if _obj_id == obj_id:
+        for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+            if obj_id in obj_ids:
 
                 name = analysislib.combine.safe_condition_string(current_condition)
 
@@ -72,7 +81,6 @@ if __name__=='__main__':
                             combine, args,
                             df,dt,
                             plot_axes=plot_axes,
-                            ylimits=ylimits,
                             title=title,
                             show_trg=args.show_target and ('trg_x' in df.columns),
                             repeat=not args.save_animation
@@ -84,7 +92,6 @@ if __name__=='__main__':
                             df,dt,
                             name=name,
                             plot_axes=plot_axes,
-                            ylimits=ylimits,
                             title=title,
                     )
 

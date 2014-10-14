@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 
 import pandas as pd
 import numpy as np
@@ -17,6 +18,8 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.movie
 
 RASTERIZE=False
+
+DRAW_WHILE_ANIMATING = True
 
 def _plot_3d(ax, r):
     radius = [0.5]
@@ -44,7 +47,7 @@ if __name__ == "__main__":
     FPS     = 20
     TOT_DUR = 5
 
-    dat = "/mnt/strawarchive/John/infinity-for-lisa-ist/data.pkl"
+    dat = "/mnt/strawscience/strawarchive-mirror/John/infinity-for-lisa-ist/data.pkl"
 
     with open(dat, "r") as f:
         data = pickle.load(f)
@@ -54,7 +57,9 @@ if __name__ == "__main__":
 
     movie = analysislib.movie.MovieMaker()
 
-    #plt.ion()
+    if DRAW_WHILE_ANIMATING:
+        plt.ion()
+
     fig = plt.figure()
 
     ax = fig.add_subplot(111, projection='3d')
@@ -79,8 +84,6 @@ if __name__ == "__main__":
     fig.savefig(movie.next_frame())
     fig.savefig(movie.next_frame())
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
     _plot_3d(ax, experiment_results)
 
     for elev,angle in zip(elev,angle):
@@ -88,6 +91,9 @@ if __name__ == "__main__":
         ax.view_init(elev, angle)
         fig.tight_layout()
         fig.savefig(movie.next_frame())
+
+        if DRAW_WHILE_ANIMATING:
+            plt.draw()
 
     ax.set_zlabel('')    
     ax.set_zticks([])
@@ -97,7 +103,7 @@ if __name__ == "__main__":
     fig.savefig(movie.next_frame())
     fig.savefig(movie.next_frame())
 
-    moviefname = movie.render('/mnt/strawarchive/John/infinity-for-lisa-ist/')
+    moviefname = movie.render('/mnt/strawscience/strawarchive-mirror/John/infinity-for-lisa-ist/')
     movie.cleanup()
 
     print moviefname

@@ -27,6 +27,17 @@ def get_default_args(**kwargs):
         setattr(args,k,v)
     return parser,args
 
+DATA_MODIFYING_ARGS = [
+    'uuid',
+    'zfilt','zfilt_min','zfilt_max',
+    'rfilt','rfilt_max',
+    'arena',
+    'idfilt',
+    'lenfilt',
+    'frames_before',
+    'custom_filt','custom_filt_len',
+]
+
 def get_parser(*only_these_options, **defaults):
     """
     returns an ArgumentParser instance configured with common filtering

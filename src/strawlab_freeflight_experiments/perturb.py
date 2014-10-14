@@ -84,7 +84,10 @@ class Perturber:
         return int(self._get_duration()*Fs)
 
     def completed_perturbation(self, t):
-        return t >= (0.98*self.duration)
+        return t >= self._get_duration()
+
+    def completed_perturbation_discrete(self, lidx, fidx, Fs):
+        return (lidx > fidx) and ((lidx - fidx) > self._get_duration_discrete(Fs))
 
     def reset(self):
         self.progress = -1
@@ -121,14 +124,18 @@ class Perturber:
                 tl.set_color(color)
 
 
-    def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
+    def plot(self, ax, t_extra=1, ylabel=None, plot_xaxis=True, **plot_kwargs):
         t0,t1 = self.get_time_limits()
         t0 -= t_extra; t1 += t_extra
 
         t,v = self.get_perturb_vs_time(t0,t1)
 
-        plot_kwargs['label'] = self.what
-        ax.plot(t,v, **plot_kwargs)
+        if 'label' not in plot_kwargs:
+            plot_kwargs['label'] = self.what
+        if plot_xaxis:
+            ax.plot(t,v, **plot_kwargs)
+        else:
+            ax.plot(v, **plot_kwargs)
 
         v0,v1 = self.get_value_limits()
         ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
@@ -301,7 +308,7 @@ class PerturberStepN(Perturber):
     def get_value_limits(self, n=0):
         return min(self.values[n],0),max(self.values[n],0)
 
-    def plot(self, ax, t_extra=1, ylabel=None, **plot_kwargs):
+    def plot(self, ax, t_extra=1, ylabel=None, plot_xaxis=True, **plot_kwargs):
         #unlike step and chirp, show a legend to distinguish the
         #series and don't bother with making the ylabel a different color
         t0,t1 = self.get_time_limits()
@@ -313,8 +320,13 @@ class PerturberStepN(Perturber):
             t,v = self.get_perturb_vs_time(t0,t1,i)
             _v0,_v1 = self.get_value_limits(i)
 
-            plot_kwargs['label'] = self.what_parts[i]
-            ax.plot(t,v, **plot_kwargs)
+            if 'label' not in plot_kwargs:
+                plot_kwargs['label'] = self.what_parts[i]
+            if plot_xaxis:
+                ax.plot(t,v, **plot_kwargs)
+            else:
+                ax.plot(v, **plot_kwargs)
+
 
             v0 = np.nanmax([v0, _v0])
             v1 = np.nanmax([v1, _v1])

@@ -33,12 +33,18 @@ def plot_amp_spectrum(ax, y, fs, **kwargs):
     ax.set_ylabel('|Y(freq)|')
 
 def plot_coherence(ax, x, y, fs, **kwargs):
-    ax.cohere(x,y,Fs=fs, **kwargs)
+    try:
+        ax.cohere(x,y,Fs=fs, **kwargs)
+    except ValueError:
+        print "FAILURE TO PLOT", kwargs
 
-def plot_input_output_characteristics(fig, df, df_col_a, df_col_b, fs, max_freq, detrend=True, NFFT=None, dF=1.0, amp_spectrum=False, nfft_sweep=False):
+def plot_input_output_characteristics(fig, input_data, output_data, input_name, output_name, fs, max_freq, detrend=True, NFFT=None, dF=1.0, amp_spectrum=False, nfft_sweep=False):
 
-    a = df[df_col_a].values
-    b = df[df_col_b].values
+    #FIXME
+    a = input_data
+    b = output_data
+    df_col_a = input_name
+    df_col_b = output_name
 
     if NFFT is None:
         if dF is None:
@@ -134,6 +140,10 @@ def _get_phases(N, N0, method, randomstate):
         phase = -np.pi*_rudinshapiro(N)
         phase[phase == -np.pi] = 0
         return phase
+    elif method == "rudinshapiro2":
+        phase = -np.pi*_rudinshapiro(N)
+        phase[phase == -np.pi] = 0
+        return phase - (np.pi/2.0)
     elif method == "newman":
         k = np.arange(N) + N0
         phase = (np.pi*(k-1)**2)/N
