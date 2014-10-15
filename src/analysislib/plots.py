@@ -764,8 +764,10 @@ def _calculate_nloops(df):
 
 def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
-    name = combine.get_plot_filename(name)
+    if 'ratio' not in combine.get_result_columns():
+        return
 
+    name = combine.get_plot_filename(name)
     results,dt = combine.get_results()
 
     best = {}

@@ -7,6 +7,7 @@ import re
 import time
 import shlex
 import json
+import shutil
 
 import sh
 
@@ -16,7 +17,7 @@ import autodata.files
 import strawlab.constants
 
 DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --cached --arena %s'
+DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
 
 EXCEPT = set()
 
@@ -48,81 +49,14 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
 
         print desc,uuid,
 
-        try:
-            filename = os.path.join(
-                            autodata.files.FileModel(uuid=uuid).get_plot_dir(),
-                            analysis_script, "README")
-            readme = open(filename).read()
-        except (autodata.files.NoFile, IOError):
-            readme = ""
-
-        try:
-            filename = os.path.join(
-                            autodata.files.FileModel(uuid=uuid).get_plot_dir(),
-                            analysis_script, "data.json")
-            jsondata = json.loads(open(filename).read())
-        except (autodata.files.NoFile, IOError):
-            jsondata = None
-
-        #if the experiment contains neither json nor readme, use the default args
-        if args.force_args or (not jsondata and not readme):
-            opts = DEFAULT_ARGS % (uuid, arena)
-            where = 'f' if args.force_args else 'd' 
-        elif jsondata:
-            opts = jsondata['argv'].split('.py ')[1]
-            where = 'j'
-        elif readme:
-            match = re.search(r"""--lenfilt[ ]*?([1-9]+)""", readme)
-            if match:
-                lenfilt = str(match.groups()[0])
-            else:
-                lenfilt = "1"
-            opts = DEFAULT_ARGS % (uuid, arena)
-            opts = opts.replace(DEFAULT_LENFILT, '--lenfilt %s' % lenfilt)
-            where = 'r'
-        else:
-            raise Exception("Error generating arguments")
-
-        print where,
-
-        t = time.time()
-        try:
-            if args.no_rosrun:
-                argslist = [analysis_script]
-            else:
-                argslist = ["strawlab_freeflight_experiments", analysis_script]
-            for opt in opts.split(' '):
-                if opt.strip() == '--reindex':
-                    if args.reindex:
-                        argslist.append(opt)
-                elif opt.strip() == '--cached':
-                    if args.cached:
-                        argslist.append(opt)
-                elif opt.strip() == '--show':
-                    pass
-                else:
-                    argslist.append(opt)
-
-            if args.extra_args:
-                for opt in args.extra_args.split(' '):
-                    argslist.append(opt)
-
+        plotdir = os.path.join(autodata.files.FileModel(uuid=uuid).get_plot_dir(),
+                               analysis_script)
+        if os.path.isdir(plotdir):
             if not args.dry_run:
-                if args.no_rosrun:
-                    sh.python(
-                    *argslist,
-                    _out=os.path.join("LOG","%s.stdout" % uuid),
-                    _err=os.path.join("LOG","%s.stderr" % uuid))
-                else:
-                    sh.rosrun(
-                        *argslist,
-                        _out=os.path.join("LOG","%s.stdout" % uuid),
-                        _err=os.path.join("LOG","%s.stderr" % uuid))
-
-            dt = time.time() - t
-            print "succeeded (%.1fs)" % dt, " ".join(argslist)
-        except Exception, e:
-            print "failed", opts
+                shutil.rmtree(plotdir)
+            print 'rm -rf', plotdir
+        else:
+            print 'no plots'
 
     model.close()
 
@@ -155,9 +89,6 @@ if __name__ == "__main__":
         '-e', '--extra-args',
         help='extra args to add to the command')
     parser.add_argument(
-        '-f', '--force-args', action='store_true',
-        help='rerun analysis with the default arguments irrespective of those run previously')
-    parser.add_argument(
         '-A', '--arena', default='flycave',
         help='flycave, flycube, etc')
     parser.add_argument(
@@ -167,18 +98,10 @@ if __name__ == "__main__":
         '-P', '--db-prefix', default="/flycave/",
         help='database prefix (assay name) for listing experiments')
     parser.add_argument(
-        '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
-        help='dont reindex h5 file')
-    parser.add_argument(
-        '-c', '--no-cache', action='store_false', default=True, dest='cached',
-        help='dont used cached data')
-    parser.add_argument(
         '-S','--assay',
         help='the name of the assay (flycave, flycube4, fishtrax, etc). Pass this '
              'instead of --db-name --db-prefix and --assay to automatically guess these '
              'values. Can be a comma separated list of assays to process more data')
-    parser.add_argument(
-        '-r', '--no-rosrun', action='store_true', default=False)
 
     args = parser.parse_args()
 
