@@ -336,10 +336,19 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                     if len(df) < min(latencies):
                         continue
 
+                    # correlation for constant series (e.g. all 0s stimulus) is undefined
+                    if df[corra].nunique() < 2 or df[corrb].nunique() < 2:
+                        continue
+
                     #calculate correlation coefficients for all latencies
                     ccefs = [ _correlate(df,corra,corrb,l) for l in latencies ]
 
+
                     series.append( pd.Series(ccefs,index=latencies,name=_obj_id) )
+
+                # correlation was undefined for all series, nothing to do
+                if not series:
+                    continue
 
                 #plot the means for each latency
                 df = pd.concat(series, axis=1)
