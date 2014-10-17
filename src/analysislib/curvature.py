@@ -366,7 +366,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                             label=_current_condition)
 
                 #the maximum of the means is the most correlated shifted latency
-                max_index = ccef_m.index.get_loc(ccef_m.argmax())
+                max_index = ccef_m.index.get_loc(ccef_m.idxmax())
                 max_latencies_shift[_current_condition] = (latencies[max_index], ccef_m.max())
 
             ax.legend(
