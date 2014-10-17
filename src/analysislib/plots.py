@@ -186,7 +186,7 @@ def layout_trajectory_plots(ax, arena, in3d):
     if not in3d:
         ax.yaxis.set_ticks_position('left')
 
-def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False):
+def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -207,8 +207,6 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
                 continue
 
             dur = sum(len(df) for df in r['df'])*dt
-
-            alpha = 0.1
 
             if in3d:
                 for df in r['df']:
