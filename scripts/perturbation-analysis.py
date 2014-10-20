@@ -26,7 +26,7 @@ import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-def plot_perturbation_traces(combine, args, perturbation_options):
+def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False):
 
     pid = args.only_perturb_start_id
 
@@ -74,6 +74,13 @@ def plot_perturbation_traces(combine, args, perturbation_options):
 
                         ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
                         ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
+
+                    if plot_pre_perturbation:
+                        pdf = _df.iloc[:ph.start_idx]
+                        xv = pdf['x'].values
+                        yv = pdf['y'].values
+                        if len(xv):
+                            ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=aplt.RASTERIZE )
 
                 aplt.layout_trajectory_plots(ax, arena, in3d=False)
 
