@@ -58,33 +58,68 @@ def chain_standard(fexes, catalog=HCTSACatalog.catalog()):
     return new_fexes
 
 
-def computable_econometrics(catalog=HCTSACatalog.catalog()):
+def select_hctsa_features(selector):
     fexes = []
     for name, comp in HCTSA_Categories.all():
-        cat = catalog.categories_dict[name]
-        if cat.has_tag('econometricstoolbox') and 'GARCH' not in cat.catname:
+        if selector.select(name, comp):
             fexes += chain_standard([(name, comp)])
     return fexes
 
 
-def random_features():
-    fexes = []
-    for name, comp in HCTSA_Categories.all():
-        if name.startswith('WL_') or 'pNN' in name or 'ST_LocalExtrema' in name:
-            fexes += chain_standard([(name, comp)])
-    return fexes
+def econometrics_selector(name, _):
+    cat = HCTSACatalog.catalog().categories_dict[name]
+    return cat.has_tag('econometricstoolbox') and 'GARCH' not in cat.catname
+    # GARCH needs to be reworked after changes to the econometrics toolbox
+
+
+def add_noise_selector(name, _):
+    return name.startswith('CO_AddNoise')
+
+
+def wavelet_selector(name, _):
+    return name.startswith('WL_')
+
+
+def pNN_selector(name, _):
+    return 'pNN' in name
+
+
+def local_extrema_selector(name, _):
+    return 'ST_LocalExtrema' in name
+
+
+def ac_fourier_selector(name, _):
+    return name.startswith('AC') and name.endswith('Fourier')
+
+
+def ac_timedomain_selector(name, _):
+    return name.startswith('AC') and not name.endswith('Fourier')
+
+
+FEATURE_GROUPS = {
+    'econometrics': econometrics_selector,
+    'wavelet': wavelet_selector,
+    'titration': add_noise_selector,
+    'pNN': pNN_selector,
+    'local_extrema': local_extrema_selector,
+    'acfourier': ac_fourier_selector,
+    'actimedomain': ac_timedomain_selector,
+}
 
 
 def hctsa_cache(prefix):
-    return op.join(home(), '%shctsa_feats.pickle' % prefix)
+    return op.join(home(), '%s.pickle' % prefix)
 
 
 def hctsa_feats_cache_read(trajs,
-                           feats_file=hctsa_cache(''),
-                           fexes=computable_econometrics() + random_features(),
+                           feats_file=None,
+                           fexes_group='econometrics',
                            series=(TS_POST_NAME, TS_OPTO_NAME)):
 
-    # Make HCTSA results into arrays
+    if feats_file is None:
+        feats_file = hctsa_cache(fexes_group)
+
+    # Flatten HCTSA scalar and struct results into arrays
     def flatten_hctsa_result(fname, fval):
         if isinstance(fval, dict):
             fnames = []
@@ -101,10 +136,13 @@ def hctsa_feats_cache_read(trajs,
     if not op.isfile(feats_file):
         ids = []       # The trajectory ids
         features = []  # pandas series indexed by feature name
+
+        fexes = select_hctsa_features(FEATURE_GROUPS[fexes_group])
+
         with PyMatBridgeEngine() as eng:
             # Matlag engine preparation
             prepare_engine_for_hctsa(eng)
-            for fex in fexes:
+            for fex in fexes_group:
                 set_eng(fex, eng)
             # Copute the fetures for each trajectory...
             for i, traj in enumerate(trajs):
@@ -151,6 +189,7 @@ def hctsa_feats_cache_read(trajs,
             #     # TODO: also check same order...
             #
             # FIXME some of these might just not be relevant (e.g. minpvalue, probably is left out by Ben)
+            #
 
             # To pandas + cache
             df = pd.concat(features, axis=1).T
@@ -162,7 +201,7 @@ def hctsa_feats_cache_read(trajs,
     return pd.read_pickle(feats_file)
 
 
-def compute_all_feats(subset=0):
+def compute_all_feats(subset=0, feats='econometrics'):
 
     trajs, _ = read_preprocess_cache_1()
 
@@ -178,17 +217,8 @@ def compute_all_feats(subset=0):
                          traj.condition() == dcn_conditions_short[cond] and
                          traj.md().genotype() == genotype]
 
-    # for k, v in tasks.iteritems():
-    #     print k, len(v)
-
     prefix, trajs = sorted(tasks.items())[subset]
-    return hctsa_feats_cache_read(trajs, feats_file=hctsa_cache(prefix + '#'))
-
-    # As expected, octave engines suffer with multithreading and multiprocessing
-    # (also trajectories might pose troubles with serialisation)
-    # dfs = Parallel(n_jobs=4, backend='threading')\
-    #     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
-    #      for prefix, trajs in tasks.iteritems())
+    return hctsa_feats_cache_read(trajs, fexes_group=feats, feats_file=hctsa_cache(prefix + '#' + feats))
 
 
 def merge_hctsa_dfs():
@@ -303,3 +333,12 @@ if __name__ == '__main__':
     parser = argh.ArghParser()
     parser.add_commands([cl, compute_all_feats, quick_analysis])
     parser.dispatch()
+
+
+#
+# As expected, octave engines suffer with multithreading and multiprocessing
+# (also trajectories might pose troubles with serialisation)
+# dfs = Parallel(n_jobs=4, backend='threading')\
+#     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
+#      for prefix, trajs in tasks.iteritems())
+#
