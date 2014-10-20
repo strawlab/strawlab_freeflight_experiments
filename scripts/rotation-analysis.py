@@ -21,6 +21,38 @@ import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
 
+def plot_distance_from_path(combine, args, name=None):
+    if name is None:
+        name = '%s_distfrmpath' % combine.fname
+    results,dt = combine.get_results()
+
+    all_dists = {}
+    for i,(current_condition,r) in enumerate(results.iteritems()):
+        if not r['count']:
+            continue
+
+        dists = []
+        for df in r['df']:
+            tdf = df.fillna(method='pad').dropna(subset=['trg_x','trg_y'])
+            x, y = tdf['x'].values, tdf['y'].values
+            tx, ty = tdf['trg_x'].values, tdf['trg_y'].values
+            dx, dy = tx - x, ty - y
+            dist = np.sqrt(dx ** 2 + dy ** 2)
+            dists.append( dist )
+
+        all_dists[current_condition] = np.hstack(dists)
+
+    with aplt.mpl_fig(name,args) as fig:
+        ax = fig.add_subplot(1,1,1)
+        for c in all_dists:
+            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=c,range=(0.1,0.2))
+        ax.legend(numpoints=1,
+                  prop={'size':aplt.LEGEND_TEXT_SML})
+        ax.set_title('distance from path')
+        ax.set_xlabel('distance (m)')
+        ax.set_ylabel('probability')
+
+
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
 
@@ -95,6 +127,8 @@ if __name__=='__main__':
     curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
 
     curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
+
+    plot_distance_from_path(combine, args)
 
     if args.show:
         aplt.show_plots()
