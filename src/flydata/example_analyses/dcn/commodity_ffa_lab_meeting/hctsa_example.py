@@ -102,10 +102,10 @@ def hctsa_feats_cache_read(trajs,
                 set_eng(fex, eng)
             # Copute the fetures for each trajectory...
             for i, traj in enumerate(trajs):
+                print '---- %d of %d ----' % (i, len(trajs))
                 traj_fnames = []
                 traj_fvalues = array('d')
                 for sname in series:
-                    print '---- %d of %d ----' % (i, len(trajs))
                     df = traj.df()
                     x = df[sname].values
                     # These series have missings at the end, get rid of them
