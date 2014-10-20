@@ -21,6 +21,44 @@ import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
 
+def plot_saccades(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s_saccades' % combine.fname
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with aplt.mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add(ax)
+
+            if not r['count']:
+                continue
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            for df in r['df']:
+                xv = df['x'].values
+                yv = df['y'].values
+                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=aplt.RASTERIZE )
+
+                curve.calc_saccades(df, None)
+
+                xs = df['x'].where(df['saccade'].values).dropna()
+                ys = df['y'].where(df['saccade'].values).dropna()
+                ax.plot(xs,ys,'r.')
+
+            ax.set_title(current_condition, fontsize=aplt.TITLE_FONT_SIZE)
+            aplt.make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
+        for ax in axes:
+            aplt.layout_trajectory_plots(ax, arena, False)
+
+        if aplt.WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+
 def plot_distance_from_path(combine, args, name=None):
     if name is None:
         name = '%s_distfrmpath' % combine.fname
@@ -129,6 +167,8 @@ if __name__=='__main__':
     curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
 
     plot_distance_from_path(combine, args)
+
+    #plot_saccades(combine, args, ncond)
 
     if args.show:
         aplt.show_plots()

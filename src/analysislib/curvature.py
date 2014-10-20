@@ -21,6 +21,35 @@ DEBUG = False
 class NotEnoughDataError(Exception):
     pass
 
+def calc_saccades(df, dt, min_dtheta=10, min_consecutive_dtheta=7):
+
+    a = pd.rolling_apply(df['dtheta'],min_consecutive_dtheta,lambda v: np.abs(v).mean() > min_dtheta,center=True)
+    a.fillna(0,inplace=True)
+
+    H = False
+    idxs = []
+    i0 = None
+
+    for idx,r in a.iteritems():
+        if not H and r == 1:
+            i0 = idx
+            H = True
+        elif H and r == 0:
+            H = False
+            if (idx - i0) > min_consecutive_dtheta:
+                idxs.append( (i0,idx) )
+
+    df['saccade'] = False
+
+    for i0,i1 in idxs:
+        i = ((i1-i0) // 2) + i0
+        try:
+            df['saccade'][i] = True
+        except KeyError:
+            df['saccade'][i0] = True
+
+    return ['saccade']
+
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values) / dt
     vy = np.gradient(df['y'].values) / dt
