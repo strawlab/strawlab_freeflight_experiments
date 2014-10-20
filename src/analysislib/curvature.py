@@ -511,7 +511,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
             )
             ax.set_title(h)
             ax.set_xlabel(histogram_options['xlabel'].get(h,h))
-            ax.set_ylabel('normalized counts (n)' if histogram_options['normed'].get(h) else 'counts (n)')
+            ax.set_ylabel('probability' if histogram_options['normed'].get(h) else 'counts (n)')
 
             fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
