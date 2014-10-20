@@ -3,15 +3,21 @@
 Requires pyopy.
 """
 from array import array
+from glob import glob
 from itertools import product
+from operator import itemgetter
 import os.path as op
 
 import numpy as np
 import pandas as pd
+from scipy.stats import mannwhitneyu
+from sklearn import cross_validation
+from sklearn.ensemble import RandomForestClassifier
 
 from flydata.example_analyses.dcn.commodity_ffa_lab_meeting.analysis_example import read_preprocess_cache_1
 from flydata.example_analyses.dcn.dcn_data import DCN_ROTATION_CONDITION, DCN_CONFLICT_CONDITION, DCN_GENOTYPES
 from flydata.misc import home
+from flydata.strawlab.trajectories import FreeflightTrajectory
 from pyopy.hctsa.hctsa_bindings import HCTSA_Categories
 from pyopy.hctsa.hctsa_bindings_gen import HCTSASuper
 from pyopy.hctsa.hctsa_catalog import HCTSACatalog
@@ -144,6 +150,7 @@ def hctsa_feats_cache_read(trajs,
             #         print 'Warning: variable number of output results not supported yet'
             #     # TODO: also check same order...
             #
+            # FIXME some of these might just not be relevant (e.g. minpvalue, probably is left out by Ben)
 
             # To pandas + cache
             df = pd.concat(features, axis=1).T
@@ -183,87 +190,102 @@ def compute_all_feats(subset=0):
     #     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
     #      for prefix, trajs in tasks.iteritems())
 
-#
-# pickle1 = op.join(home(), 'con#ATOxTNTin#hctsa_feats.pickle')
-# pickle2 = op.join(home(), 'con#ATOxTNTin#hctsa_feats.pickle')
-#
-# df1 = pd.read_pickle(pickle1)
-# df2 = pd.read_pickle(pickle2)
-# df = pd.concat((df1, df2))       # recall that if there are two rows with same key, these will be two separate rows
-#                                  # how to avoid? --> merge?
+
+def merge_hctsa_dfs():
+    """Merge the features from parallel HCTSA computations."""
+    return pd.concat(pd.read_pickle(pickle) for pickle in glob(op.join(home(), '*.pickle')))
 
 
+def feats_df():
 
-# def feats_df():
-#
-#     pickle_file = op.join(home(), 'hctsa_feats_df.pickle')
-#
-#     if not op.isfile(pickle_file):
-#
-#         trajs, provenance = read_preprocess_cache_1()
-#
-#         df = FreeflightTrajectory.to_pandas(trajs)
-#
-#         df['length'] = np.array([len(traj.df()) for traj in trajs]) * 0.01
-#
-#         ids = []
-#         fnames = None
-#         fvalues = []
-#         for (traj, x) in izip(trajs, X):
-#             new_fnames, values = flatten_features(x)
-#             fvalues.append(values)
-#             if fnames is not None and new_fnames != fnames:
-#                 raise Exception('Got different number of features!')
-#             fnames = new_fnames
-#             ids.append(traj.id_string())
-#
-#         # feats_df = pd.DataFrame(data=np.array(fvalues), columns=fnames, index=df.index)
-#         # df = pd.concat((df, feats_df), axis=1)
-#         # df.drop('traj', axis=1, inplace=True)
-#         # df.to_pickle(pickle_file)
-#
-#     # FIXME But some of these might just not be relevant (e.g. minpvalue, probably is left out by Ben)
-#
-#     return pd.read_pickle(pickle_file)
-#
-# df = feats_df()
-#
-# print df.groupby('genotype').mean()
-#
-# non_feats = ('uuid',
-#              'oid',
-#              'genotype',
-#              'condition',
-#              'dt',
-#              'start')
-#
-# feats = [col for col in df.columns if col not in non_feats]
-#
-# X = df[feats]
-# y = df['genotype'].apply(lambda x: 'TNTE' in x)
-#
-# print len(y), np.sum(y)
-# feat_score = []
-# for i, feat in enumerate(feats):
-#     if np.sum(~np.isfinite(X[feat])) != 0:
-#         raise Exception('Missing Values in feat!!')
-#     U, p = mannwhitneyu(X[feat][y], X[feat][~y])  # This would make a good example for class, what happens with
-#                                                   # mannwhithneyu([np.nan]*1000, [np.nan]*1000)
-#     # Some more curiusities: http://scipy-user.10969.n7.nabble.com/SciPy-User-Questions-comments-about-scipy-stats-mannwhitneyu-td17845.html
-#     feat_score.append((feat, p))
-#
-# feat_score = sorted(feat_score, key=itemgetter(1))
-# for f, s in feat_score:
-#     print f, s
-#
-# rfc = RandomForestClassifier(n_estimators=100, random_state=0)
-#
-# rfc.fit(X, y)
-#
-# # print rfc.feature_importances_
-#
-# scores = cross_validation.cross_val_score(rfc, X, y, cv=5, scoring='roc_auc')
-# print np.mean(scores)
+    pickle_file = op.join(home(), 'hctsa_feats_df.pickle')
+
+    if not op.isfile(pickle_file):
+
+        trajs, provenance = read_preprocess_cache_1()
+
+        # trajectories df
+        df = FreeflightTrajectory.to_pandas(trajs)
+        df['length'] = np.array([len(traj.df()) for traj in trajs]) * 0.01
+
+        # hctsa features df
+        df = pd.concat((df, merge_hctsa_dfs()), axis=1)
+
+        # we do not want the trajectories here
+        df.drop('traj', axis=1, inplace=True)
+
+        # save
+        df.to_pickle(pickle_file)
+
+    return pd.read_pickle(pickle_file)
+
+
+def quick_analysis(df=None, min_length_secs=None):
+
+    if df is None:
+        df = feats_df()
+
+    non_feats = ('uuid',
+                 'oid',
+                 'genotype',
+                 'condition',
+                 'dt',
+                 'start')
+
+    feats = [col for col in df.columns if col not in non_feats]
+
+    # Labels
+    y = df['genotype'].apply(lambda x: 'TNTE' in x)
+
+    # X (+ remove features with missing values)
+    X = df[feats].dropna(axis=1)
+
+    # Remove trajectores less than 4 seconds long
+    if min_length_secs is not None:
+        y = y[X.length > min_length_secs]
+        X = X[X.length > min_length_secs]
+
+    print 'There are %d trajectories (%d positive)' % (len(y), np.sum(y))
+
+    # Apply a statistical test to each column
+    feat_score = []
+    for i, feat in enumerate(X.columns):
+        if np.sum(~np.isfinite(X[feat])) != 0:
+            raise Exception('Missing Values in feat!!')
+        U, p = mannwhitneyu(X[feat][y], X[feat][~y])
+        # This would make a good example for class
+        # mannwhithneyu([np.nan]*1000, [np.nan]*1000)
+        # Some more curiusities:
+        #  http://scipy-user.10969.n7.nabble.com/
+        # SciPy-User-Questions-comments-about-scipy-stats-mannwhitneyu-td17845.html
+        feat_score.append((feat, p))
+
+    feat_score = sorted(feat_score, key=itemgetter(1))
+    print '-' * 80
+    print 'Mann-Whitney-U ranking (=ROCAUC ranking)'
+    for f, s in feat_score:
+        print f, s
+    print '-' * 80
+
+    # Now, machine learning
+    rfc = RandomForestClassifier(n_estimators=100, random_state=0)
+
+    # Features importances from a random forest
+    rfc.fit(X, y)
+    importances = rfc.feature_importances_
+    order = np.argsort(importances)
+    sorted_feats = X.columns[order]
+    sorted_scores = importances[order]
+    print '-' * 80
+    print 'Random Forests Importances'
+    for f, s in zip(sorted_feats, sorted_scores)[::-1]:
+        print f, s
+    print '-' * 80
+
+    # Cross-validation
+    num_folds = 10
+    scores = cross_validation.cross_val_score(rfc, X, y, cv=num_folds, scoring='roc_auc')
+    print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
 
 
 def cl():
@@ -279,5 +301,5 @@ def cl():
 if __name__ == '__main__':
     import argh
     parser = argh.ArghParser()
-    parser.add_commands([cl, compute_all_feats])
+    parser.add_commands([cl, compute_all_feats, quick_analysis])
     parser.dispatch()
