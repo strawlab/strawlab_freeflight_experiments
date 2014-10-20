@@ -369,6 +369,16 @@ def normalize_genotype_string(genotype):
     raise Exception('Unknown genotype for %s' % genotype)
 
 
+DCN_GENOTYPES = (
+    'ATOxTNTE',
+    'ATOxTNTin',
+    'VT37804xTNTE',
+    'VT37804xTNTin',
+    # 'ULTIMATExTNTE',
+    # 'ULTIMATExTNTin',
+)
+
+
 #################
 # Initial data combination and filtering
 #################
