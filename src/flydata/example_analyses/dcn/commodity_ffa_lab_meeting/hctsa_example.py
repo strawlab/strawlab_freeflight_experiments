@@ -5,7 +5,6 @@ Requires pyopy.
 from array import array
 from itertools import product
 import os.path as op
-from joblib import Parallel, delayed
 
 import numpy as np
 import pandas as pd
@@ -85,7 +84,7 @@ def hctsa_feats_cache_read(trajs,
             fnames = []
             fvalues = array('d')
             for k, v in sorted(fval.items()):
-                fnames.append('out=%s#%s' % (k, fname))
+                fnames.append('out=%s%s' % (k, fname))
                 fvalues.append(v)
         else:
             fnames = [fname]
@@ -94,15 +93,18 @@ def hctsa_feats_cache_read(trajs,
 
     # Compute if not already there
     if not op.isfile(feats_file):
+        ids = []       # The trajectory ids
+        features = []  # pandas series indexed by feature name
         with PyMatBridgeEngine() as eng:
+            # Matlag engine preparation
             prepare_engine_for_hctsa(eng)
             for fex in fexes:
                 set_eng(fex, eng)
-            ids = []      # The trajectory ids
-            fvalues = []  # The feature values
-            fnames = []   # The feature names
-            for sname in series:
-                for i, traj in enumerate(trajs):
+            # Copute the fetures for each trajectory...
+            for i, traj in enumerate(trajs):
+                traj_fnames = []
+                traj_fvalues = array('d')
+                for sname in series:
                     print '---- %d of %d ----' % (i, len(trajs))
                     df = traj.df()
                     x = df[sname].values
@@ -112,8 +114,6 @@ def hctsa_feats_cache_read(trajs,
                     xstd = eng.put('xstd', check_prepare_hctsa_input(matlab_standardize(x)))
                     xraw = eng.put('x', check_prepare_hctsa_input(x))
                     # Result
-                    traj_fnames = []
-                    traj_fvalues = array('d')
                     for name, f in fexes:
                         if isinstance(f, Chain):  # dirty, but needed because of python->octave->python slowness
                             x = xstd
@@ -122,57 +122,66 @@ def hctsa_feats_cache_read(trajs,
                             x = xraw
                         print name, f.what().id()
                         res = f.transform(x)
-                        res_names, res_values = flatten_hctsa_result('#s=%s' % sname, res)
+                        res_names, res_values = flatten_hctsa_result('%s#s=%s' % (name, sname), res)
                         traj_fnames += res_names
                         traj_fvalues.extend(res_values)
-                    ids.append(traj.id_string())
-                    fnames.append(traj_fnames)
-                    fvalues.append(traj_fvalues)
-            # Checks
-            present_features = set(fnames[0])
-            for names in fnames:
-                names = set(names)
-                if len(present_features - names) or len(names - present_features):
-                    raise Exception('Variable number of output results not supported yet')
-                # TODO: also check same order...
+                ids.append(traj.id_string())
+                features.append(pd.Series(data=traj_fvalues, index=traj_fnames))
+
+            #
+            # Checks:
+            # variable output happens a lot actually, so we will need to worry
+            # when optimizing matlab land stuff...
+            # Probably we will have no other option than grabbing a bunch of structs
+            # damn...
+            #
+            # present_features = set(fnames[0])
+            # for names in fnames:
+            #     names = set(names)
+            #     if len(present_features - names) or len(names - present_features):
+            #         print sorted(present_features - names)
+            #         print sorted(names - present_features)
+            #         print 'Warning: variable number of output results not supported yet'
+            #     # TODO: also check same order...
+            #
+
             # To pandas + cache
-            df = pd.DataFrame(data=np.array(fvalues), columns=fnames, index=ids)
+            df = pd.concat(features, axis=1).T
+            df.index = ids
+            # df = pd.DataFrame(data=np.array(fvalues), columns=fnames, index=ids)
             df.to_pickle(feats_file)
 
     # Read from cache
     return pd.read_pickle(feats_file)
 
 
-trajs, _ = read_preprocess_cache_1()
+def compute_all_feats(subset=0):
 
+    trajs, _ = read_preprocess_cache_1()
 
-dcn_conditions_short = {
-    'rot': DCN_ROTATION_CONDITION,
-    'con': DCN_CONFLICT_CONDITION,
-}
+    dcn_conditions_short = {
+        'rot': DCN_ROTATION_CONDITION,
+        'con': DCN_CONFLICT_CONDITION,
+    }
 
-tasks = {}
-for genotype, cond in product(DCN_GENOTYPES, dcn_conditions_short.keys()):
-    prefix = '%s#%s' % (cond, genotype)
-    tasks[prefix] = [traj for traj in trajs if
-                     traj.condition() == dcn_conditions_short[cond] and
-                     traj.md().genotype() == genotype]
+    tasks = {}
+    for genotype, cond in product(DCN_GENOTYPES, dcn_conditions_short.keys()):
+        prefix = '%s#%s' % (cond, genotype)
+        tasks[prefix] = [traj for traj in trajs if
+                         traj.condition() == dcn_conditions_short[cond] and
+                         traj.md().genotype() == genotype]
 
-for k, v in tasks.iteritems():
-    print k, len(v)
+    # for k, v in tasks.iteritems():
+    #     print k, len(v)
 
-import sys
-prefix, trajs = sorted(tasks.items())[int(sys.argv[1])]
-hctsa_feats_cache_read(trajs, feats_file=hctsa_cache(prefix + '#'))
+    prefix, trajs = sorted(tasks.items())[subset]
+    return hctsa_feats_cache_read(trajs, feats_file=hctsa_cache(prefix + '#'))
 
-
-# As expected, octave engines suffer with multithreading and multiprocessing
-# (also trajectories might pose troubles with serialisation)
-# dfs = Parallel(n_jobs=4, backend='threading')\
-#     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
-#      for prefix, trajs in tasks.iteritems())
-
-exit(33)
+    # As expected, octave engines suffer with multithreading and multiprocessing
+    # (also trajectories might pose troubles with serialisation)
+    # dfs = Parallel(n_jobs=4, backend='threading')\
+    #     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
+    #      for prefix, trajs in tasks.iteritems())
 
 
 # def feats_df():
@@ -245,3 +254,20 @@ exit(33)
 #
 # scores = cross_validation.cross_val_score(rfc, X, y, cv=5, scoring='roc_auc')
 # print np.mean(scores)
+
+
+def cl():
+    for exp in xrange(8):
+        print 'PYTHONPATH=/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src:' \
+              '/home/santi/Proyectos/pyopy:' \
+              ':$PYTHONPATH ' \
+              'python2 -u ' \
+              '/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src/' \
+              'flydata/example_analyses/dcn/commodity_ffa_lab_meeting/hctsa_example.py ' \
+              'compute-all-feats --subset %d &>~/hctsapoc_%d.log' % (exp, exp)
+
+if __name__ == '__main__':
+    import argh
+    parser = argh.ArghParser()
+    parser.add_commands([cl, compute_all_feats])
+    parser.dispatch()
