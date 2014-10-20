@@ -183,6 +183,16 @@ def compute_all_feats(subset=0):
     #     (delayed(hctsa_feats_cache_read)(trajs, feats_file=hctsa_cache(prefix + '#'))
     #      for prefix, trajs in tasks.iteritems())
 
+#
+# pickle1 = op.join(home(), 'con#ATOxTNTin#hctsa_feats.pickle')
+# pickle2 = op.join(home(), 'con#ATOxTNTin#hctsa_feats.pickle')
+#
+# df1 = pd.read_pickle(pickle1)
+# df2 = pd.read_pickle(pickle2)
+# df = pd.concat((df1, df2))       # recall that if there are two rows with same key, these will be two separate rows
+#                                  # how to avoid? --> merge?
+
+
 
 # def feats_df():
 #

@@ -215,10 +215,10 @@ if __name__ == '__main__':
         # Total trajectory length (in number of observations)
         Length(),
         # "Attention to rotation stimulus"
-        Mean('out=fly_post_cosine#PostAttention#postx=trg_x#posty=trg_y#ws=20'),
-        Std('out=fly_post_cosine#PostAttention#postx=trg_x#posty=trg_y#ws=20'),
-        Skew('out=fly_post_cosine#PostAttention#postx=trg_x#posty=trg_y#ws=20'),
-        Kurtosis('out=fly_post_cosine#PostAttention#postx=trg_x#posty=trg_y#ws=20'),
+        Mean('out=fly_post_cosine#PostAttention#postx=\'trg_x\'#posty=\'trg_y\'#ws=20'),
+        Std('out=fly_post_cosine#PostAttention#postx=\'trg_x\'#posty=\'trg_y\'#ws=20'),
+        Skew('out=fly_post_cosine#PostAttention#postx=\'trg_x\'#posty=\'trg_y\'#ws=20'),
+        Kurtosis('out=fly_post_cosine#PostAttention#postx=\'trg_x\'#posty=\'trg_y\'#ws=20'),
         # "Attention to post"
         Mean('out=fly_post_cosine#PostAttention#postx=-0.15#posty=0.25#ws=20'),
         Std('out=fly_post_cosine#PostAttention#postx=-0.15#posty=0.25#ws=20'),
@@ -231,9 +231,9 @@ if __name__ == '__main__':
     ]
 
     # df_features will be a pandas dataframe indexed by trajectory and with a column per feature
-    df_features = compute_features(trajs, features)  # BTW, we should also clean and check this matrix...
+    df_features = compute_features(features, trajs)  # BTW, we should also clean and check this matrix...
     # let's just use "long" trajectories
-    df_features = df_features[df_features['Length#column=x'] >= 400]
+    df_features = df_features[df_features['Length#column=\'x\''] >= 400]
     figures = []
     for fname in df_features.columns:
         print 'Plotting:', fname
