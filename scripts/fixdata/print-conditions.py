@@ -117,13 +117,15 @@ if __name__ == "__main__":
              'instead of --db-name --db-prefix and --assay to automatically guess these '
              'values. Can be a comma separated list of assays to process more data')
     parser.add_argument(
-        '-w', '--what', default="condition",
-        help='print what information concerning the experiments')
-    parser.add_argument(
         '-q', '--quiet', action='store_true',
-        help='only print uuids matching')
+        help='only print uuids according to the grouped value')
     parser.add_argument(
-        '-g', '--genotype')
+        '-g', '--groupby', choices=['condition','genotype'],
+        help='print and optionally group by this information in each experiment')
+    parser.add_argument(
+        '-G', '--groupby-value',
+        help='group experiments together by this value (either a genotype or condition string)')
+
 
     args = parser.parse_args()
 
@@ -142,19 +144,33 @@ if __name__ == "__main__":
     if args.assay:
         for assay in args.assay.split(','):
             db_name, db_prefix, arena = guess_details_from_assay(assay)
-            u,r = run_analysis(db_name, db_prefix, arena, analysis_script, args.what.strip(), args)
+            u,r = run_analysis(db_name, db_prefix, arena, analysis_script, args.groupby, args)
             unique += u
             results += r
     else:
-        unique,results = run_analysis(args.db_name, args.db_prefix, args.arena, analysis_script, args)
+        unique,results = run_analysis(args.db_name, args.db_prefix, args.arena, analysis_script, '', args)
 
     if not args.quiet:
         print "\nSUMMARY"
         for k,v in collections.Counter(unique).items():
             print "%d\t%s" % (v,k)
 
-    if args.genotype:
-        gt = args.genotype.lower()
-        uuids = [r.uuid for r in itertools.ifilter(lambda x: x.genotype == gt, results)]
-        print " ".join(map(str,uuids))
+    if args.groupby_value:
+        if not args.quiet:
+            print "\nAGGREGATION"
+
+        v = args.groupby_value.lower()
+        if args.groupby == 'genotype':
+            uuids = [r.uuid for r in itertools.ifilter(lambda x: x.genotype == v, results)]
+            print " ".join(map(str,uuids))
+        elif args.groupby == 'condition':
+            if args.quiet:
+                uuids = [r.uuid for r in itertools.ifilter(lambda x: v in x.conditions, results)]
+                print " ".join(map(str,uuids))
+            else:
+                for r in results:
+                    if v in r.conditions:
+                        print "%s #%s" % (r.uuid, r.genotype)
+
+
 
