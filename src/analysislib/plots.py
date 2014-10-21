@@ -1020,6 +1020,8 @@ def _do_autowrap_text(textobj, renderer):
         #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
         safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
+        if '\n' in safe_txt:
+            raise TypeError('the dumb wrapper works better')
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
     except TypeError, e:
         wrapped_text = _dumb_wrap(safe_txt, wrap_width)
