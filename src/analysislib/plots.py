@@ -58,15 +58,7 @@ def show_plots():
     except NameError:
         plt.show()
 
-@contextlib.contextmanager
-def mpl_fig(fname_base,args,write_svg=None,**kwargs):
-    _perm_check(args)
-    if args and args.outdir:
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
-        fname_base = os.path.join(args.outdir,fname_base)
-    fig = plt.figure( **kwargs )
-    yield fig
+def save_fig(fig,fname_base,write_svg=None):
 
     bbox_extra_artists = []
     for ax in fig.axes:
@@ -85,8 +77,23 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
             fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
 
         print "WROTE",fname_base
-    except:
-        pass
+    except Exception, e:
+        print "ERROR WRITING",fname_base, e
+
+
+@contextlib.contextmanager
+def mpl_fig(fname_base,args,write_svg=None,**kwargs):
+    _perm_check(args)
+    if args and args.outdir:
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        fname_base = os.path.join(args.outdir,fname_base)
+    fig = plt.figure( **kwargs )
+
+    yield fig
+
+    save_fig(fig,fname_base,write_svg=write_svg)
+
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
