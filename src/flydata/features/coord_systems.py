@@ -42,6 +42,15 @@ def change_coor(velx, vely, refvelx, refvely):
     >>> np.allclose(new_coords, expected_coords)
     True
     """
+    # Put scalars into numpy arrays
+    def scalar2array(scalar):
+        if not isinstance(scalar, np.ndarray):
+            return np.array([scalar])
+        return scalar
+    velx = scalar2array(velx)
+    vely = scalar2array(vely)
+    refvelx = scalar2array(refvelx)
+    refvely = scalar2array(refvely)
 
     # Angle of the fly (rad) in world coordinates
     ref_thetas = np.arctan2(refvely, refvelx)
