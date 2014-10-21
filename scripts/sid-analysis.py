@@ -4,6 +4,7 @@ import sys
 import time
 import operator
 import threading
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -318,8 +319,14 @@ if __name__=='__main__':
                     #and also a model based on all the data
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
                     alldata_model.matlab_color = 'g'
-                    extra_models.append(alldata_model)
 
+                    #FIXME: save python obj of all models
+                    py_mdl = alldata_model.get_control_object(mlab)
+                    name = combine.get_plot_filename("py_mdl_individual_data_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    with open(name,'wb') as f:
+                        pickle.dump(py_mdl,f)
+
+                    extra_models.append(alldata_model)
                     extra_desc = 'r=model(mean_perturb),b=merge(individual_models),g=model(individual_data)'
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
