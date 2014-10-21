@@ -17,11 +17,6 @@ import autodata.model
 import autodata.files
 import strawlab.constants
 
-DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
-
-EXCEPT = set()
-
 Exp = collections.namedtuple("Exp","uuid genotype conditions")
 
 def run_analysis(db_name, db_prefix, arena, analysis_script, what, args):
