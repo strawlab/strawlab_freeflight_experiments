@@ -37,6 +37,7 @@ def collect_perturbation_traces(combine, args):
         for _df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
 
             df = _df.fillna(method='ffill')
+            df['condition'] = cond
 
             #find the start of the perturbation (where perturb_progress == 0)
             z = np.where(df['perturb_progress'].values == 0)
