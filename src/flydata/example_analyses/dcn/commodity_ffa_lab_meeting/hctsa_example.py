@@ -61,7 +61,7 @@ def chain_standard(fexes, catalog=HCTSACatalog.catalog()):
 def select_hctsa_features(selector):
     fexes = []
     for name, comp in HCTSA_Categories.all():
-        if selector.select(name, comp):
+        if selector(name, comp):
             fexes += chain_standard([(name, comp)])
     return fexes
 
@@ -102,8 +102,8 @@ FEATURE_GROUPS = {
     'titration': add_noise_selector,
     'pNN': pNN_selector,
     'local_extrema': local_extrema_selector,
-    'acfourier': ac_fourier_selector,
-    'actimedomain': ac_timedomain_selector,
+    'ac_fourier': ac_fourier_selector,
+    'ac_timedomain': ac_timedomain_selector,
 }
 
 
@@ -142,7 +142,7 @@ def hctsa_feats_cache_read(trajs,
         with PyMatBridgeEngine() as eng:
             # Matlag engine preparation
             prepare_engine_for_hctsa(eng)
-            for fex in fexes_group:
+            for fex in fexes:
                 set_eng(fex, eng)
             # Copute the fetures for each trajectory...
             for i, traj in enumerate(trajs):
@@ -165,10 +165,14 @@ def hctsa_feats_cache_read(trajs,
                         else:
                             x = xraw
                         print name, f.what().id()
-                        res = f.transform(x)
-                        res_names, res_values = flatten_hctsa_result('%s#s=%s' % (name, sname), res)
-                        traj_fnames += res_names
-                        traj_fvalues.extend(res_values)
+                        try:
+                            res = f.transform(x)
+                            res_names, res_values = flatten_hctsa_result('%s#s=%s' % (name, sname), res)
+                            traj_fnames += res_names
+                            traj_fvalues.extend(res_values)
+                        except:
+                            print 'Warning: could not compute %s' % name
+                            raise
                 ids.append(traj.id_string())
                 features.append(pd.Series(data=traj_fvalues, index=traj_fnames))
 
@@ -319,14 +323,15 @@ def quick_analysis(df=None, min_length_secs=None):
 
 
 def cl():
-    for exp in xrange(8):
+    for exp, features_group in product(xrange(8), sorted(FEATURE_GROUPS.keys())):
+        comp_id = '%s#%d' % (features_group, exp)
         print 'PYTHONPATH=/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src:' \
               '/home/santi/Proyectos/pyopy:' \
               ':$PYTHONPATH ' \
               'python2 -u ' \
               '/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src/' \
               'flydata/example_analyses/dcn/commodity_ffa_lab_meeting/hctsa_example.py ' \
-              'compute-all-feats --subset %d &>~/hctsapoc_%d.log' % (exp, exp)
+              'compute-all-feats --subset %d --feats %s &>~/%s.log' % (exp, features_group, comp_id)
 
 if __name__ == '__main__':
     import argh
