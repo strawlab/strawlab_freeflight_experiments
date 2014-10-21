@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "simstruc.h"
-
 #include "ekf_fct_model4_switch.h"
 
 #include "helpfunctions.h"

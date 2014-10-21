@@ -1,8 +1,6 @@
 #include <stdlib.h>  // for calloc
 #include <stdio.h>
 
-#include "simstruc.h"
-
 #define _USE_MATH_DEFINES // for pi
 
 #include <math.h>

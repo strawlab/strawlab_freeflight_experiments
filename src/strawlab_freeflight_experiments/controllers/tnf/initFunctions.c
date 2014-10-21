@@ -2,10 +2,9 @@
 // #define _GNU_SOURCE and then use -std=c99 with GCC
 #define _USE_MATH_DEFINES
 
+#include <stdio.h>
 #include <stdlib.h>  // for calloc
 #include <math.h> // for pi and max-function
-
-#include "simstruc.h"
 
 #include "ekf_fct_model4_switch.h"
 #include "contr_fct_TNF_model4.h"

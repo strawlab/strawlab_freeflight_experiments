@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "simstruc.h"
-
 #include "contr_fct_TNF_model4.h"
 
 #include "calculateInput.h"
