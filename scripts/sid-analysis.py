@@ -319,8 +319,8 @@ if __name__=='__main__':
                         merged_model = sfe_sid.SIDResultMerged(mlab.proxy_variable(mom_varname), pm.spec)
                         merged_model.matlab_color = 'b'
                         extra_models.append(merged_model)
-                    except RuntimeError:
-                        print "ERROR MERGING %d %s MODELS" % (len(indmdls),pm.spec)
+                    except RuntimeError,e:
+                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(indmdls),pm.spec,e)
 
                     #also show the model mad on the basis of the mean trajectories
                     pm.matlab_color = 'r'
