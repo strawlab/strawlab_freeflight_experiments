@@ -6,7 +6,7 @@ import numpy.ctypeslib
 import ctypes as ct
 import ctypes.util
 
-lib = numpy.ctypeslib.load_library("libmpc", os.path.abspath(__file__))
+lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.path.abspath(__file__)),'mpc'))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
 Fly = collections.namedtuple('Fly', 'x y obj_id')
