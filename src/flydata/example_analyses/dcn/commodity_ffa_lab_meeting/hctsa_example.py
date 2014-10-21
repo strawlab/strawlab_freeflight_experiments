@@ -96,6 +96,14 @@ def ac_timedomain_selector(name, _):
     return name.startswith('AC') and not name.endswith('Fourier')
 
 
+def forecasting_selector(name, _):
+    return name.startswith('FC_')
+
+
+def entropy_selector(name, _):
+    return name.startswith('EN_')
+
+
 FEATURE_GROUPS = {
     'econometrics': econometrics_selector,
     'wavelet': wavelet_selector,
@@ -104,6 +112,8 @@ FEATURE_GROUPS = {
     'local_extrema': local_extrema_selector,
     'ac_fourier': ac_fourier_selector,
     'ac_timedomain': ac_timedomain_selector,
+    'forecasting': forecasting_selector,
+    'entropy': entropy_selector,
 }
 
 
@@ -114,7 +124,8 @@ def hctsa_cache(prefix):
 def hctsa_feats_cache_read(trajs,
                            feats_file=None,
                            fexes_group='econometrics',
-                           series=(TS_POST_NAME, TS_OPTO_NAME)):
+                           series=(TS_POST_NAME, TS_OPTO_NAME),
+                           reraise=False):
 
     if feats_file is None:
         feats_file = hctsa_cache(fexes_group)
@@ -172,7 +183,8 @@ def hctsa_feats_cache_read(trajs,
                             traj_fvalues.extend(res_values)
                         except:
                             print 'Warning: could not compute %s' % name
-                            raise
+                            if reraise:
+                                raise
                 ids.append(traj.id_string())
                 features.append(pd.Series(data=traj_fvalues, index=traj_fnames))
 
@@ -323,7 +335,7 @@ def quick_analysis(df=None, min_length_secs=None):
 
 
 def cl():
-    for exp, features_group in product(xrange(8), sorted(FEATURE_GROUPS.keys())):
+    for exp, features_group in product(sorted(FEATURE_GROUPS.keys()), xrange(8)):
         comp_id = '%s#%d' % (features_group, exp)
         print 'PYTHONPATH=/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src:' \
               '/home/santi/Proyectos/pyopy:' \
