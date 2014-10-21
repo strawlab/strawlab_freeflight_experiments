@@ -21,6 +21,35 @@ DEBUG = False
 class NotEnoughDataError(Exception):
     pass
 
+def calc_saccades(df, dt, min_dtheta=10, min_consecutive_dtheta=7):
+
+    a = pd.rolling_apply(df['dtheta'],min_consecutive_dtheta,lambda v: np.abs(v).mean() > min_dtheta,center=True)
+    a.fillna(0,inplace=True)
+
+    H = False
+    idxs = []
+    i0 = None
+
+    for idx,r in a.iteritems():
+        if not H and r == 1:
+            i0 = idx
+            H = True
+        elif H and r == 0:
+            H = False
+            if (idx - i0) > min_consecutive_dtheta:
+                idxs.append( (i0,idx) )
+
+    df['saccade'] = False
+
+    for i0,i1 in idxs:
+        i = ((i1-i0) // 2) + i0
+        try:
+            df['saccade'][i] = True
+        except KeyError:
+            df['saccade'][i0] = True
+
+    return ['saccade']
+
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values) / dt
     vy = np.gradient(df['y'].values) / dt
@@ -366,7 +395,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                             label=_current_condition)
 
                 #the maximum of the means is the most correlated shifted latency
-                max_index = ccef_m.index.get_loc(ccef_m.argmax())
+                max_index = ccef_m.index.get_loc(ccef_m.idxmax())
                 max_latencies_shift[_current_condition] = (latencies[max_index], ccef_m.max())
 
             ax.legend(
@@ -482,7 +511,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
             )
             ax.set_title(h)
             ax.set_xlabel(histogram_options['xlabel'].get(h,h))
-            ax.set_ylabel('normalized counts (n)' if histogram_options['normed'].get(h) else 'counts (n)')
+            ax.set_ylabel('probability' if histogram_options['normed'].get(h) else 'counts (n)')
 
             fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 

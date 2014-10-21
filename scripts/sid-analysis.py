@@ -4,6 +4,7 @@ import sys
 import time
 import operator
 import threading
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -106,6 +107,7 @@ def plot_input_output_characteristics(combine, args, perturbations, completed_pe
 
 if __name__=='__main__':
 
+    EPS = False
     DETREND = True
     LOOKBACK = 400
     MODEL_SPECS_TO_TEST = ('tf44','tf33','oe441','oe331','arx441','arx331')
@@ -273,16 +275,25 @@ if __name__=='__main__':
             title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
+            if EPS:
+                with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
 
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Bode: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
+            if EPS:
+                with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Pole Zero Plot: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
+            if EPS:
+                with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
 
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
@@ -308,8 +319,8 @@ if __name__=='__main__':
                         merged_model = sfe_sid.SIDResultMerged(mlab.proxy_variable(mom_varname), pm.spec)
                         merged_model.matlab_color = 'b'
                         extra_models.append(merged_model)
-                    except RuntimeError:
-                        print "ERROR MERGING %d %s MODELS" % (len(indmdls),pm.spec)
+                    except RuntimeError,e:
+                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(indmdls),pm.spec,e)
 
                     #also show the model mad on the basis of the mean trajectories
                     pm.matlab_color = 'r'
@@ -318,20 +329,31 @@ if __name__=='__main__':
                     #and also a model based on all the data
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
                     alldata_model.matlab_color = 'g'
-                    extra_models.append(alldata_model)
 
+                    #FIXME: save python obj of all models
+                    py_mdl = alldata_model.get_control_object(mlab)
+                    name = combine.get_plot_filename("py_mdl_individual_data_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    with open(name,'wb') as f:
+                        pickle.dump(py_mdl,f)
+
+                    extra_models.append(alldata_model)
                     extra_desc = 'r=model(mean_perturb),b=merge(individual_models),g=model(individual_data)'
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
                     title = 'Bode %s (individual): %s->%s\n%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
+                    if EPS:
+                        with mlab.fig(name+'.eps',driver='epsc2') as f:
+                            sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
+
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
                     title = 'Pole Zero Plot %s (individual): %s->%s\n%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
-                    #with mlab.fig(name+'.eps',driver='epsc2') as f:
-                    #    sfe_sid.pzmap_models(mlab,title,True,True,indmdls)
+                    if EPS:
+                        with mlab.fig(name+'.eps',driver='epsc2') as f:
+                            sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
 
     if args.show:
         t = threading.Thread(target=_show_mlab_figures, args=(mlab,))
