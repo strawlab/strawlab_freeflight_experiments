@@ -104,16 +104,31 @@ def entropy_selector(name, _):
     return name.startswith('EN_')
 
 
+def change_points_selector(name, _):
+    return name.startswith('CP_')
+
+
+def remove_points_selector(name, _):
+    return name.startswith('DN_RemovePoints')
+
+
+def nonlinear_ms_selector(name, _):
+    return name.startswith('NL_MS')
+
+
 FEATURE_GROUPS = {
-    'econometrics': econometrics_selector,
-    'wavelet': wavelet_selector,
-    'titration': add_noise_selector,
-    'pNN': pNN_selector,
-    'local_extrema': local_extrema_selector,
-    'ac_fourier': ac_fourier_selector,
-    'ac_timedomain': ac_timedomain_selector,
+    # 'econometrics': econometrics_selector,
+    # 'wavelet': wavelet_selector,
+    # 'titration': add_noise_selector,
+    # 'pNN': pNN_selector,
+    # 'local_extrema': local_extrema_selector,
+    # 'ac_fourier': ac_fourier_selector,
+    # 'ac_timedomain': ac_timedomain_selector,
     'forecasting': forecasting_selector,
     'entropy': entropy_selector,
+    'change_points': change_points_selector,
+    'remove_points': remove_points_selector,
+    'nl_ms':  nonlinear_ms_selector,
 }
 
 
@@ -335,7 +350,7 @@ def quick_analysis(df=None, min_length_secs=None):
 
 
 def cl():
-    for exp, features_group in product(sorted(FEATURE_GROUPS.keys()), xrange(8)):
+    for features_group, exp in product(sorted(FEATURE_GROUPS.keys()), xrange(8)):
         comp_id = '%s#%d' % (features_group, exp)
         print 'PYTHONPATH=/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src:' \
               '/home/santi/Proyectos/pyopy:' \
