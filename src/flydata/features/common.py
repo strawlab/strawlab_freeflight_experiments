@@ -9,7 +9,6 @@ from flydata.strawlab.trajectories import df_or_df_from_traj
 from whatami.config import Configurable
 
 
-
 # TODO: make FeatureExtractor also follow the fit-transform protocol
 # TODO: make SeriesExtractor not to work inplace (at least by default)
 

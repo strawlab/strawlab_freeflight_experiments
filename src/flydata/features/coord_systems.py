@@ -1,6 +1,7 @@
 # coding=utf-8
 """Tools to change between different coordinates systems."""
 from itertools import izip
+import numbers
 from flydata.features.common import SeriesExtractor
 import numpy as np
 
@@ -44,7 +45,7 @@ def change_coor(velx, vely, refvelx, refvely):
     """
     # Put scalars into numpy arrays
     def scalar2array(scalar):
-        if not isinstance(scalar, np.ndarray):
+        if isinstance(scalar, numbers.Number):
             return np.array([scalar])
         return scalar
     velx = scalar2array(velx)
