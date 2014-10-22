@@ -13,6 +13,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 from sklearn import cross_validation
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics.metrics import roc_auc_score
 
 from flydata.example_analyses.dcn.commodity_ffa_lab_meeting.analysis_example import read_preprocess_cache_1
 from flydata.example_analyses.dcn.dcn_data import DCN_ROTATION_CONDITION, DCN_CONFLICT_CONDITION, DCN_GENOTYPES
@@ -117,13 +118,13 @@ def nonlinear_ms_selector(name, _):
 
 
 FEATURE_GROUPS = {
-    # 'econometrics': econometrics_selector,
-    # 'wavelet': wavelet_selector,
-    # 'titration': add_noise_selector,
-    # 'pNN': pNN_selector,
-    # 'local_extrema': local_extrema_selector,
-    # 'ac_fourier': ac_fourier_selector,
-    # 'ac_timedomain': ac_timedomain_selector,
+    'econometrics': econometrics_selector,
+    'wavelet': wavelet_selector,
+    'titration': add_noise_selector,
+    'pNN': pNN_selector,
+    'local_extrema': local_extrema_selector,
+    'ac_fourier': ac_fourier_selector,
+    'ac_timedomain': ac_timedomain_selector,
     'forecasting': forecasting_selector,
     'entropy': entropy_selector,
     'change_points': change_points_selector,
@@ -252,16 +253,25 @@ def compute_all_feats(subset=0, feats='econometrics'):
     return hctsa_feats_cache_read(trajs, fexes_group=feats, feats_file=hctsa_cache(prefix + '#' + feats))
 
 
-def merge_hctsa_dfs():
+def merge_hctsa_dfs(root_dir=home(),
+                    groups=('econometrics',
+                            'wavelet',
+                            'titration',
+                            'pNN',
+                            'local_extrema',
+                            'ac_fourier',
+                            'ac_timedomain')):
     """Merge the features from parallel HCTSA computations."""
-    return pd.concat(pd.read_pickle(pickle) for pickle in glob(op.join(home(), '*.pickle')))
+    dfs = [pd.concat(pd.read_pickle(pickle) for pickle in glob(op.join(root_dir, '*%s.pickle' % group)))
+           for group in groups]
+    return pd.concat(dfs, axis=1)
 
 
-def feats_df():
+def feats_df(root_dir=home(), force=True):
 
-    pickle_file = op.join(home(), 'hctsa_feats_df.pickle')
+    pickle_file = op.join(root_dir, 'hctsa_feats_df.pickle')
 
-    if not op.isfile(pickle_file):
+    if force or not op.isfile(pickle_file):
 
         trajs, provenance = read_preprocess_cache_1()
 
@@ -295,8 +305,29 @@ def quick_analysis(df=None, min_length_secs=None):
 
     feats = [col for col in df.columns if col not in non_feats]
 
-    # Labels
-    y = df['genotype'].apply(lambda x: 'TNTE' in x)
+    # Keep only conflict-stimulus trajectories
+    # df = df[df['condition'] == DCN_CONFLICT_CONDITION]
+    # Keep only rotation-stimulus trajectories
+    df = df[df['condition'] == DCN_ROTATION_CONDITION]
+
+    # Keep only ATO trajectories (ATO = better localisation of TNT to DCN)
+    df = df[df['genotype'].apply(lambda genotype: 'ATO' in genotype)]
+    # Keep only VT trajectories
+    # df = df[df['genotype'].apply(lambda genotype: 'VT3' in genotype)]
+    # Labels: DCNImpaired vs Control
+    y = df['genotype'].apply(lambda genotype: 'TNTE' in genotype)
+
+    # Keep only TNTE trajectories
+    # df = df[df['genotype'].apply(lambda genotype: 'TNTE' in genotype)]
+    # Keep only TNTin trajectories
+    # df = df[df['genotype'].apply(lambda genotype: 'TNTin' in genotype)]
+    # Labels: VT vs ATO
+    # y = df['genotype'].apply(lambda genotype: 'VT3' in genotype)
+
+    # Keep only rot-attention features
+    # feats = [feat for feat in feats if '\'trg_x\'' in feat]
+    # Keep only post-attention features
+    feats = [feat for feat in feats if '0.25' in feat]
 
     # X (+ remove features with missing values)
     X = df[feats].dropna(axis=1)
@@ -306,7 +337,7 @@ def quick_analysis(df=None, min_length_secs=None):
         y = y[X.length > min_length_secs]
         X = X[X.length > min_length_secs]
 
-    print 'There are %d trajectories (%d positive)' % (len(y), np.sum(y))
+    print 'There are %d trajectories (%d positives); %d features' % (len(y), np.sum(y), X.shape[1])
 
     # Apply a statistical test to each column
     feat_score = []
@@ -324,12 +355,12 @@ def quick_analysis(df=None, min_length_secs=None):
     feat_score = sorted(feat_score, key=itemgetter(1))
     print '-' * 80
     print 'Mann-Whitney-U ranking (=ROCAUC ranking)'
-    for f, s in feat_score:
+    for f, s in feat_score[:10]:
         print f, s
     print '-' * 80
 
     # Now, machine learning
-    rfc = RandomForestClassifier(n_estimators=100, random_state=0)
+    rfc = RandomForestClassifier(n_estimators=100, n_jobs=4, random_state=0, oob_score=True)
 
     # Features importances from a random forest
     rfc.fit(X, y)
@@ -339,14 +370,20 @@ def quick_analysis(df=None, min_length_secs=None):
     sorted_scores = importances[order]
     print '-' * 80
     print 'Random Forests Importances'
-    for f, s in zip(sorted_feats, sorted_scores)[::-1]:
+    for f, s in zip(sorted_feats, sorted_scores)[::-1][:10]:
         print f, s
     print '-' * 80
+    print 'OOB AUC: %.2f' % roc_auc_score(y, rfc.oob_decision_function_[:, 1])
+    print 'OOB ACC: %.2f' % rfc.oob_score_
 
     # Cross-validation
     num_folds = 10
     scores = cross_validation.cross_val_score(rfc, X, y, cv=num_folds, scoring='roc_auc')
     print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
+
+
+quick_analysis()
+exit(22)
 
 
 def cl():
