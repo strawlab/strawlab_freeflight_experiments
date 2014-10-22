@@ -8,7 +8,7 @@ from flydata.features.correlations import LaggedCorr, correlatepd
 from flydata.strawlab.contracts import NoMissingValuesContract
 from flydata.strawlab.experiments import load_freeflight_trajectories
 from flydata.strawlab.trajectories import FreeflightTrajectory
-from flydata.strawlab.transformers import ColumnsSelector, MissingImputer
+from flydata.strawlab.transformers import ColumnsSelector, MissingImputer, RowsWithMissingRemover
 
 
 #
@@ -25,14 +25,14 @@ from flydata.strawlab.transformers import ColumnsSelector, MissingImputer
 
 
 TRANSLATIONAL_UUIDS = (
-    # '67521a4e2a0f11e49631bcee7bdac270',
-    # '24ca8464287e11e4ab9ebcee7bdac270',
-    # '3e39ed1e2d3211e491fabcee7bdac270',
+    '67521a4e2a0f11e49631bcee7bdac270',
+    '24ca8464287e11e4ab9ebcee7bdac270',
+    '3e39ed1e2d3211e491fabcee7bdac270',
     'b00fcc162c6911e49afbbcee7bdac270',
-    # 'a5414fbe294711e4a1f5bcee7bdac270',
-    # 'ebbac5d02d3211e49186bcee7bdac428',
-    # '07990bfa2c6a11e4a500bcee7bdac428',
-    # 'a3e403142a0f11e4aa28bcee7bdac428',
+    'a5414fbe294711e4a1f5bcee7bdac270',
+    'ebbac5d02d3211e49186bcee7bdac428',
+    '07990bfa2c6a11e4a500bcee7bdac428',
+    'a3e403142a0f11e4aa28bcee7bdac428',
     # '0736b0a6294811e4bbaebcee7bdac428',
     # '9d01e24c287e11e4b6c3bcee7bdac428',
     # '2a56e23c2a0f11e4b44cd850e6c4a608',
@@ -51,7 +51,8 @@ trajs_df = FreeflightTrajectory.to_pandas(trajs)
 interesting_series = ('velocity', 'vx', 'vy', 'stim_x', 'stim_y', 'dtheta')
 trajs = ColumnsSelector(series_to_keep=interesting_series).fit_transform(trajs)
 # We do not want missing values on the stimuli series
-trajs = MissingImputer(columns=('stim_x', 'stim_y')).fit_transform(trajs)
+trajs = MissingImputer(columns=('stim_x', 'stim_y', 'dtheta')).fit_transform(trajs)
+trajs = RowsWithMissingRemover().fit_transform(trajs)
 
 # contract = NoMissingValuesContract(columns=interesting_series)
 # for traj in trajs:
@@ -74,7 +75,7 @@ for traj in trajs:
     df = traj.df()
     df['stim_velocity'] = np.sqrt(df[trans_x] ** 2 + df[trans_y] ** 2)
 
-# Let's just plot lagged_correlation(vx, trans_y), per condition
+# Let's just plot lagged_correlation(dtheta, trans_y), per condition
 lags = np.arange(200)
 dt = 0.01  # FIXME
 fexes = [LaggedCorr(lag=lag, stimulus=trans_y, response='dtheta') for lag in lags]
