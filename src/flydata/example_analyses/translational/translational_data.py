@@ -48,7 +48,7 @@ trajs_df = FreeflightTrajectory.to_pandas(trajs)
 
 
 # We are interested only in some of the columns
-interesting_series = ('velocity', 'vx', 'vy', 'stim_x', 'stim_y')
+interesting_series = ('velocity', 'vx', 'vy', 'stim_x', 'stim_y', 'dtheta')
 trajs = ColumnsSelector(series_to_keep=interesting_series).fit_transform(trajs)
 # We do not want missing values on the stimuli series
 trajs = MissingImputer(columns=('stim_x', 'stim_y')).fit_transform(trajs)
@@ -74,10 +74,10 @@ for traj in trajs:
     df = traj.df()
     df['stim_velocity'] = np.sqrt(df[trans_x] ** 2 + df[trans_y] ** 2)
 
-# Let's just plot lagged_correlation(vx, stim_x), per condition
+# Let's just plot lagged_correlation(vx, trans_y), per condition
 lags = np.arange(200)
 dt = 0.01  # FIXME
-fexes = [LaggedCorr(lag=lag, stimulus=trans_x, response='vx') for lag in lags]
+fexes = [LaggedCorr(lag=lag, stimulus=trans_y, response='dtheta') for lag in lags]
 conditions = sorted(trajs_df['condition'].unique())
 figure, axes = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
 for condition, ax in zip(conditions, axes):
