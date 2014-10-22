@@ -382,10 +382,6 @@ def quick_analysis(df=None, min_length_secs=None):
     print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
 
 
-quick_analysis()
-exit(22)
-
-
 def cl():
     for features_group, exp in product(sorted(FEATURE_GROUPS.keys()), xrange(8)):
         comp_id = '%s#%d' % (features_group, exp)
