@@ -38,11 +38,9 @@ void mexFunction (
 	
 	double ySystem[2] = {0.25,0}; // fictitious values of the output y of the system
 	
-	double Jout[1], w_out[1], theta_out[1];
+	double Jout[1], w_out[1], theta_out[1], targetPoint_out[2];
 	
-	double *ureturn, *xreturn, *xcoreturn, *Jreturn, *wreturn, *thetareturn, *xestreturn, *omegaereturn;
-	double *Pminusreturn;
-    double targetPoint;
+	double *ureturn, *xreturn, *xcoreturn, *Jreturn, *wreturn, *thetareturn, *xestreturn, *omegaereturn, *Pminusreturn, *targetPointreturn;
 	
 	int i;
 	
@@ -76,7 +74,7 @@ void mexFunction (
 	enableContr[0] = 1.0;
 	
 	// call controller function
-    contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState, &targetPoint);
+    contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState, targetPoint_out);
 	
 	// call function calculating the input value
 	calcInput (&cInputp, &cInpState, &projGrState, &cp, omegae);
@@ -112,6 +110,10 @@ void mexFunction (
 	
 	plhs[8] = (mxCreateDoubleMatrix (5,5, mxREAL));
 	Pminusreturn = mxGetPr(plhs[8]);	
+
+	plhs[9] = (mxCreateDoubleMatrix (2,1, mxREAL));
+	targetPointreturn = mxGetPr(plhs[9]);
+
 	
 	for (i=0;i<(cp.Nu*cp.Nhor);i++) ureturn[i] = projGrState.u[i];
 	for (i=0;i<(cp.Nx*cp.Nhor);i++) xreturn[i] = projGrState.x[i];
@@ -122,7 +124,7 @@ void mexFunction (
 	for (i=0;i<5;i++) xestreturn[i] = ekfState.xest[i];
 	omegaereturn[0] = omegae[0];
 	for (i=0;i<25;i++) Pminusreturn[i] = ekfState.Pminus[i];
-	
+	for (i=0;i<2;i++) targetPointreturn[i] = targetPoint_out[i];
 	
   
 }

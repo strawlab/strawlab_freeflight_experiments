@@ -25,7 +25,8 @@ def test_mpc():
         'Pminus':m._ekf_pminus,
         'xco':m._proj_cox,
         'u':m._proj_u,
-        'x':m._proj_x
+        'x':m._proj_x,
+        'targetPoint':np.array(m.target_point).reshape(2,1)
     }
 
     test = scipy.io.loadmat('test/mpc.mat')
