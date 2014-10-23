@@ -25,14 +25,15 @@ from flydata.strawlab.transformers import ColumnsSelector, MissingImputer, RowsW
 
 
 TRANSLATIONAL_UUIDS = (
-    '67521a4e2a0f11e49631bcee7bdac270',
-    '24ca8464287e11e4ab9ebcee7bdac270',
-    '3e39ed1e2d3211e491fabcee7bdac270',
-    'b00fcc162c6911e49afbbcee7bdac270',
-    'a5414fbe294711e4a1f5bcee7bdac270',
-    'ebbac5d02d3211e49186bcee7bdac428',
-    '07990bfa2c6a11e4a500bcee7bdac428',
-    'a3e403142a0f11e4aa28bcee7bdac428',
+    # UUIDs about z_target study
+    # '67521a4e2a0f11e49631bcee7bdac270',
+    # '24ca8464287e11e4ab9ebcee7bdac270',
+    # '3e39ed1e2d3211e491fabcee7bdac270',
+    # 'b00fcc162c6911e49afbbcee7bdac270',
+    # 'a5414fbe294711e4a1f5bcee7bdac270',
+    # 'ebbac5d02d3211e49186bcee7bdac428',
+    # '07990bfa2c6a11e4a500bcee7bdac428',
+    # 'a3e403142a0f11e4aa28bcee7bdac428',
     # '0736b0a6294811e4bbaebcee7bdac428',
     # '9d01e24c287e11e4b6c3bcee7bdac428',
     # '2a56e23c2a0f11e4b44cd850e6c4a608',
@@ -40,6 +41,15 @@ TRANSLATIONAL_UUIDS = (
     # 'e27c1c4a287c11e4afacd850e6c4a608',
     # '8cf02b4e2d3211e4af64d850e6c4a608',
     # '0f03e5fa2c6911e484c1d850e6c4a608',
+    # UUIDs about T4/T5 study
+    # - Genotype: VT6199-Gal4 x UAS-TNTe, Tsh-Gal80
+    # - Genotype: VT6199-Gal4 x UAS-TNTin, Tsh-Gal80
+    # '301a5fd04f0511e4a8f610bf48d7699b'
+    # '7dc7f5ca516811e49119bcee7bdac44a'
+    # 'b185db0e4fcc11e496b8bcee7bdac44a'
+    # '36b37976509f11e48d50bcee7bdac270'
+    # '6c3388da4fcc11e4844abcee7bdac270'
+     'ea0ae0d24fcc11e48f45bcee7bdac428'
 )
 
 # Get the data from the analysis run
