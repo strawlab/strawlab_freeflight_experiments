@@ -43,13 +43,23 @@ TRANSLATIONAL_UUIDS = (
     # '0f03e5fa2c6911e484c1d850e6c4a608',
     # UUIDs about T4/T5 study
     # - Genotype: VT6199-Gal4 x UAS-TNTe, Tsh-Gal80
+     '5f256600522d11e489ad10bf48d7699b',
+     '217a909c516911e4a35210bf48d7699b',
+     'fe57d25c4fcc11e4be4310bf48d7699b',
+     'bf7cfc66522d11e49b9abcee7bdac44a',
+     'a1f72be2509f11e487d6bcee7bdac44a',
+     'c6ef08304f0411e4b90abcee7bdac44a',
+     '6dcd4fc0516911e48be1bcee7bdac428',
+     'd63027c0509e11e4bd45bcee7bdac428',
+     'fa184a464f0411e48fa9bcee7bdac428',
+     '44f045b8516811e4a64ebcee7bdac270',
     # - Genotype: VT6199-Gal4 x UAS-TNTin, Tsh-Gal80
-    # '301a5fd04f0511e4a8f610bf48d7699b'
-    # '7dc7f5ca516811e49119bcee7bdac44a'
-    # 'b185db0e4fcc11e496b8bcee7bdac44a'
-    # '36b37976509f11e48d50bcee7bdac270'
-    # '6c3388da4fcc11e4844abcee7bdac270'
-     'ea0ae0d24fcc11e48f45bcee7bdac428'
+    # '301a5fd04f0511e4a8f610bf48d7699b',
+    # '7dc7f5ca516811e49119bcee7bdac44a',
+    # 'b185db0e4fcc11e496b8bcee7bdac44a',
+    # '36b37976509f11e48d50bcee7bdac270',
+    # '6c3388da4fcc11e4844abcee7bdac270',
+    # 'ea0ae0d24fcc11e48f45bcee7bdac428',
 )
 
 # Get the data from the analysis run
