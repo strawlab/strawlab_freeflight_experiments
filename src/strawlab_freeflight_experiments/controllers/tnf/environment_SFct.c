@@ -125,7 +125,11 @@ static void mdlInitializeSizes(SimStruct *S)
 
     
     if (!ssSetNumOutputPorts(S, 10)) return;
+#if EKF_V0EST
+    ssSetOutputPortWidth(S, 0, 4); // estimated state of EKF
+#else
     ssSetOutputPortWidth(S, 0, 3); // estimated state of EKF
+#endif
     ssSetOutputPortWidth(S, 1, 1); // omega_e from controller, input to the system
 	ssSetOutputPortWidth(S, 2, 2); // auxiliary states -> path parameter and derivative
 	ssSetOutputPortWidth(S, 3, 1); // input to path parameter system

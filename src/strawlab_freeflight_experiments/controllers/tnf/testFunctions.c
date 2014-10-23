@@ -95,7 +95,11 @@ void mexFunction (
 	plhs[2] = (mxCreateDoubleMatrix (4,1, mxREAL));
 	xireturn = mxGetPr(plhs[2]);
 
+#if EKF_V0EST
+	plhs[3] = (mxCreateDoubleMatrix (4,1, mxREAL));
+#else
 	plhs[3] = (mxCreateDoubleMatrix (3,1, mxREAL));
+#endif
 	xestreturn = mxGetPr(plhs[3]);
 
 	plhs[4] = (mxCreateDoubleMatrix (1,1, mxREAL));
@@ -110,7 +114,11 @@ void mexFunction (
     wreturn[0] = w_out[0];
     for(i=0;i<2;i++) zetareturn[i] = zeta_out[i];
     for(i=0;i<4;i++) xireturn[i] = xi_out[i];
+#if EKF_V0EST
+    for (i=0;i<4;i++) xestreturn[i] = ekfState.xest[i];
+#else
     for (i=0;i<3;i++) xestreturn[i] = ekfState.xest[i];
+#endif
     omegaereturn[0] = omegae[0];
     for (i=0;i<2;i++) intstatereturn[i] = cntrState.intState[i];
     for (i=0;i<2;i++) targetPointreturn[i] = targetPoint_out[i];
