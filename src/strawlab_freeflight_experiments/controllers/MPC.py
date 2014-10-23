@@ -24,7 +24,7 @@ class MPC:
         self._CT_wout = ct.c_double(0) #evolution of path param
         self._CT_thetaout = ct.c_double(0) #value of path param as used in control computation
 
-        self._CT_targetpoint = data = (ct.c_double * 2)() #current target point index of path [x,y]
+        self._CT_targetpoint = (ct.c_double * 2)() #current target point index of path [x,y]
         self._target_x, self._target_y = 0,0
 
         self._CT_cur_fly_pos = np.zeros(2, dtype=ctypes.c_double) #current fly pos [x,y]
@@ -245,4 +245,3 @@ if __name__ == "__main__":
     m.reset()
     print "enabled", m.controller_enabled
 
-#    print lib.init_par_cInpF_decF_ekf_subopt_MPC_model2
