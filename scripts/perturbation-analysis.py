@@ -26,7 +26,9 @@ import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-def plot_perturbation_traces(combine, args, perturbation_options):
+def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False):
+
+    pid = args.only_perturb_start_id
 
     #perturb_obj: {obj_id:Perturbation,...}
     #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
@@ -36,13 +38,26 @@ def plot_perturbation_traces(combine, args, perturbation_options):
 
     for step_obj in perturbations:
         phs = perturbations[step_obj]
+
         cond = perturbation_conditions[step_obj]
+        condn = aplt.get_safe_filename(repr(cond),allowed_spaces=False)
+        if pid is not None:
+            condn = 'p%d_%s' % (pid,condn)
+
         if phs:
-            pool = pd.concat([ph.df for ph in phs.itervalues()],join="outer",axis=0)
+            to_pool = []
+            for ph in phs.itervalues():
+                if pid is None or (ph.df['ratio_range_start_id'].values[0] == pid):
+                    to_pool.append(ph.df)
+
+            pool = pd.concat(to_pool,join="outer",axis=0)
+            pool.to_pickle(
+                    combine.get_plot_filename("pool_%s" % condn) + '.df')
+
             grouped_oid = pool.groupby('obj_id')
 
             #plot x-y trajectories while under perturbation
-            name = combine.get_plot_filename('xy_%s' % aplt.get_safe_filename(cond))
+            name = combine.get_plot_filename('xy_%s' % condn)
             with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
                 ax = fig.add_subplot(1,1,1)
                 ax.set_title("%s" % cond, fontsize=12)
@@ -60,6 +75,13 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                         ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
                         ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
+                    if plot_pre_perturbation:
+                        pdf = _df.iloc[:ph.start_idx]
+                        xv = pdf['x'].values
+                        yv = pdf['y'].values
+                        if len(xv):
+                            ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=aplt.RASTERIZE )
+
                 aplt.layout_trajectory_plots(ax, arena, in3d=False)
 
                 fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
@@ -67,7 +89,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
             #plot timeseries for each requested
             for to_plot in perturbation_options:
 
-                name = combine.get_plot_filename('ts_%s_%s' % (to_plot,aplt.get_safe_filename(repr(cond),allowed_spaces=False)))
+                name = combine.get_plot_filename('ts_%s_%s' % (to_plot,condn))
                 with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
 
                     ax = fig.add_subplot(1,1,1)
@@ -76,7 +98,7 @@ def plot_perturbation_traces(combine, args, perturbation_options):
                     ax.set_title("%s" % cond, fontsize=12)
 
                     ax.text(0.01, 0.99, #top left
-                            "n=%d" % len(phs),
+                            "n=%d" % len(to_pool),
                             fontsize=10,
                             horizontalalignment='left',
                             verticalalignment='top',
@@ -136,7 +158,10 @@ def plot_perturbation_traces(combine, args, perturbation_options):
         f.write("\n")
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser(frames_before=10)
+    parser = analysislib.args.get_parser()
+    parser.add_argument(
+        "--only-perturb-start-id", type=int,
+        help='only plot perturbations that started in this id')
 
     args = parser.parse_args()
 

@@ -21,6 +21,76 @@ import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
 
+def plot_saccades(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s_saccades' % combine.fname
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with aplt.mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add(ax)
+
+            if not r['count']:
+                continue
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            for df in r['df']:
+                xv = df['x'].values
+                yv = df['y'].values
+                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=aplt.RASTERIZE )
+
+                curve.calc_saccades(df, None)
+
+                xs = df['x'].where(df['saccade'].values).dropna()
+                ys = df['y'].where(df['saccade'].values).dropna()
+                ax.plot(xs,ys,'r.')
+
+            ax.set_title(current_condition, fontsize=aplt.TITLE_FONT_SIZE)
+            aplt.make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
+        for ax in axes:
+            aplt.layout_trajectory_plots(ax, arena, False)
+
+        if aplt.WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
+
+def plot_distance_from_path(combine, args, name=None):
+    if name is None:
+        name = '%s_distfrmpath' % combine.fname
+    results,dt = combine.get_results()
+
+    all_dists = {}
+    for i,(current_condition,r) in enumerate(results.iteritems()):
+        if not r['count']:
+            continue
+
+        dists = []
+        for df in r['df']:
+            tdf = df.fillna(method='pad').dropna(subset=['trg_x','trg_y'])
+            x, y = tdf['x'].values, tdf['y'].values
+            tx, ty = tdf['trg_x'].values, tdf['trg_y'].values
+            dx, dy = tx - x, ty - y
+            dist = np.sqrt(dx ** 2 + dy ** 2)
+            dists.append( dist )
+
+        all_dists[current_condition] = np.hstack(dists)
+
+    with aplt.mpl_fig(name,args) as fig:
+        ax = fig.add_subplot(1,1,1)
+        for c in all_dists:
+            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=c,range=(0.1,0.2))
+        ax.legend(numpoints=1,
+                  prop={'size':aplt.LEGEND_TEXT_SML})
+        ax.set_title('distance from path')
+        ax.set_xlabel('distance (m)')
+        ax.set_ylabel('probability')
+
+
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
 
@@ -95,6 +165,10 @@ if __name__=='__main__':
     curve.plot_histograms(args, combine, flat_data, nens, histograms, histogram_options)
 
     curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
+
+    plot_distance_from_path(combine, args)
+
+    #plot_saccades(combine, args, ncond)
 
     if args.show:
         aplt.show_plots()

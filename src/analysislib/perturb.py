@@ -8,7 +8,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed')
+PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio')
 
 def collect_perturbation_traces(combine, args):
     results,dt = combine.get_results()
@@ -37,6 +37,7 @@ def collect_perturbation_traces(combine, args):
         for _df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
 
             df = _df.fillna(method='ffill')
+            df['condition'] = cond
 
             #find the start of the perturbation (where perturb_progress == 0)
             z = np.where(df['perturb_progress'].values == 0)
@@ -66,7 +67,16 @@ def collect_perturbation_traces(combine, args):
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 
-                perturbations[step_obj][obj_id] = PerturbationHolder(df, fidx, lidx, obj_id, completed)
+                #save both the exact value, and an identifier to signify which
+                #part of the arena the perturbation started in. The identifier
+                #is based on the ratio range_funcs, range_chunks magic. A range string
+                #0.4|0.46|0.5|0.8 is the pairs of ranges (0.4->0.46) and (0.5->0.8).
+                #if the fly started its perturbation with a ratio of 0.55 the range
+                #chunk identifier is 1 (the 2nd pair in the range string).
+                start_ratio = df.iloc[fidx]['ratio']
+                df['ratio_range_start_id'] = step_obj.get_perturb_range_identifier(start_ratio)
+
+                perturbations[step_obj][obj_id] = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio)
 
     return perturbations, completed_perturbations, perturbation_conditions
 

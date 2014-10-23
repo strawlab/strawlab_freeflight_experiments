@@ -3,10 +3,10 @@ LIB_SRC=calc_pathAndDer.c calculateInput.c contr_fct_subopt_MPC_model2.c dec_fct
 all: libmpc.so
 
 libmpc.so: $(LIB_SRC)
-	$(CC) -msse2 -O3 -Wall -g -fPIC -shared -o $@ $? -lc -lm
+	$(CC) -msse2 -O3 -Wall -g -fPIC -shared -o $@ $^ -lc -lm
 
 testspeed: testspeed.c $(LIB_SRC)
-	$(CC) -msse2 -O3 -Wall -g -pg -o $@ $? -lc -lm
+	$(CC) -msse2 -O3 -Wall -g -pg -o $@ $^ -lc -lm
 
 clean:
 	rm -f *.pyc *.o *.so testspeed

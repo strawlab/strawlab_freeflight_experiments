@@ -1,3 +1,4 @@
+import sys
 import os.path
 import pickle
 import time
@@ -109,7 +110,10 @@ if __name__ == "__main__":
     M = 'checkerboard16.png/letter_m.svg/+0.3/-10.0/0.1/0.20/0.60'
     P = 'checkerboard16.png/letter_p.svg/+0.3/-10.0/0.1/0.20/0.48'
 
-    dat = "vidtrajs.pkl"
+    try:
+        dat = sys.argv[1]
+    except IndexError:
+        dat = "vidtrajs.pkl"
 
     with open(dat, "r") as f:
         trajs = pickle.load(f)

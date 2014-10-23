@@ -1,5 +1,6 @@
 #python flyfont_prepare.py --uuid 4013ae4848c311e485946c626d3a008a --cached
 
+import tempfile
 import random
 from itertools import tee, izip
 
@@ -90,10 +91,11 @@ if __name__ == "__main__":
     parser = analysislib.args.get_parser(
                     zfilt='trim',
                     rfilt='trim',
+                    outdir=tempfile.mkdtemp()
     )
 
     args = parser.parse_args()
-    analysislib.args.check_args(parser, args, max_uuids=1)
+    analysislib.args.check_args(parser, args)
     combine = autil.get_combiner_for_args(args)
     combine.add_from_args(args)
 
@@ -107,6 +109,8 @@ if __name__ == "__main__":
             
     for condition in trajs:
 
+        print condition, len(trajs[condition])
+
         f = plt.figure(condition)
         ax = f.add_subplot(1,1,1)
         for x,y,z in trajs[condition]:
@@ -117,6 +121,6 @@ if __name__ == "__main__":
 
     plt.show()
 
-    with open('vidtrajs.pkl','w') as f:
+    with open('vidtrajs_%s.pkl' % '_'.join(args.uuid),'w') as f:
         pickle.dump(trajs,f)
 

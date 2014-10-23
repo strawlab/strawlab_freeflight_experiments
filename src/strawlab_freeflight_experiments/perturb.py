@@ -83,6 +83,12 @@ class Perturber:
     def _get_duration_discrete(self, Fs):
         return int(self._get_duration()*Fs)
 
+    def get_perturb_range_identifier(self, v):
+        for i,f in enumerate(self.in_ratio_funcs):
+            if f(v):
+                return i
+        return -1
+
     def completed_perturbation(self, t):
         return t >= self._get_duration()
 
