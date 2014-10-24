@@ -26,7 +26,7 @@ void contr_TNF_fly_model4 (double *wout, double *zetaout, double *xi_out, int en
      *            cntrState->zeta is simulated forwards at the end of the function
      *            and therefore, after this function is called, does not correspond
      *            any more to the value for which omegae and w were calculated for, length 2
-	 *  xi_out: current value of transverse state xi
+	 *  xi_out: current value of transverse state xi, length 4
      *  enable: 0: do nothing, 1: normal operation
      *  cp: struct containing the parameters for the controller
      *  cntrState: struct containing all the internal variables and status of the controller
@@ -259,3 +259,14 @@ void systemData (double *h,double *LFh,double *LF2h,double *LGLFh, double v0, do
 	
 
 }
+
+const double *get_int_state(cntrState_t *cs, int *len) {
+    *len = 2;
+    return cs->intState;
+}
+
+const double *get_path(contrp_t *cp, int *num) {
+    *num = cp->NdesPath;
+    return cp->desiredPath;
+}
+
