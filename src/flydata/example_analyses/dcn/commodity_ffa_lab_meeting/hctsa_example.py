@@ -11,7 +11,6 @@ import os.path as op
 import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu
-from sklearn import cross_validation
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics.metrics import roc_auc_score
 
@@ -73,6 +72,11 @@ def econometrics_selector(name, _):
     # GARCH needs to be reworked after changes to the econometrics toolbox
 
 
+def systemsidentification_selector(name, _):
+    cat = HCTSACatalog.catalog().categories_dict[name]
+    return cat.has_tag('systemidentificationtoolbox')
+
+
 def add_noise_selector(name, _):
     return name.startswith('CO_AddNoise')
 
@@ -130,6 +134,7 @@ FEATURE_GROUPS = {
     'change_points': change_points_selector,
     'remove_points': remove_points_selector,
     'nl_ms':  nonlinear_ms_selector,
+    'sid': systemsidentification_selector,
 }
 
 
@@ -260,7 +265,11 @@ def merge_hctsa_dfs(root_dir=home(),
                             'pNN',
                             'local_extrema',
                             'ac_fourier',
-                            'ac_timedomain')):
+                            'ac_timedomain',
+                            'forecasting',
+                            'nl_ms',
+                            'remove_points',
+                            'entropy')):
     """Merge the features from parallel HCTSA computations."""
     dfs = [pd.concat(pd.read_pickle(pickle) for pickle in glob(op.join(root_dir, '*%s.pickle' % group)))
            for group in groups]
@@ -280,7 +289,7 @@ def feats_df(root_dir=home(), force=True):
         df['length'] = np.array([len(traj.df()) for traj in trajs]) * 0.01
 
         # hctsa features df
-        df = pd.concat((df, merge_hctsa_dfs()), axis=1)
+        df = pd.concat((df, merge_hctsa_dfs(root_dir=root_dir)), axis=1)
 
         # we do not want the trajectories here
         df.drop('traj', axis=1, inplace=True)
@@ -294,7 +303,7 @@ def feats_df(root_dir=home(), force=True):
 def quick_analysis(df=None, min_length_secs=None):
 
     if df is None:
-        df = feats_df()
+        df = feats_df(op.join(home(), '--hctsa-second'))
 
     non_feats = ('uuid',
                  'oid',
@@ -308,12 +317,12 @@ def quick_analysis(df=None, min_length_secs=None):
     # Keep only conflict-stimulus trajectories
     # df = df[df['condition'] == DCN_CONFLICT_CONDITION]
     # Keep only rotation-stimulus trajectories
-    df = df[df['condition'] == DCN_ROTATION_CONDITION]
+    # df = df[df['condition'] == DCN_ROTATION_CONDITION]
 
     # Keep only ATO trajectories (ATO = better localisation of TNT to DCN)
-    df = df[df['genotype'].apply(lambda genotype: 'ATO' in genotype)]
+    # df = df[df['genotype'].apply(lambda genotype: 'ATO' in genotype)]
     # Keep only VT trajectories
-    # df = df[df['genotype'].apply(lambda genotype: 'VT3' in genotype)]
+    df = df[df['genotype'].apply(lambda genotype: 'VT3' in genotype)]
     # Labels: DCNImpaired vs Control
     y = df['genotype'].apply(lambda genotype: 'TNTE' in genotype)
 
@@ -327,10 +336,13 @@ def quick_analysis(df=None, min_length_secs=None):
     # Keep only rot-attention features
     # feats = [feat for feat in feats if '\'trg_x\'' in feat]
     # Keep only post-attention features
-    feats = [feat for feat in feats if '0.25' in feat]
+    # feats = [feat for feat in feats if '0.25' in feat]
 
-    # X (+ remove features with missing values)
-    X = df[feats].dropna(axis=1)
+    # X
+    X = df[feats]
+    # Remove features with  values
+    X = X.replace([np.inf, -np.inf], np.nan)
+    X = X.dropna(axis=1)
 
     # Remove trajectores less than 4 seconds long
     if min_length_secs is not None:
@@ -340,27 +352,32 @@ def quick_analysis(df=None, min_length_secs=None):
     print 'There are %d trajectories (%d positives); %d features' % (len(y), np.sum(y), X.shape[1])
 
     # Apply a statistical test to each column
-    feat_score = []
+    mwu_feat_score = []
+    auc_feat_score = []
     for i, feat in enumerate(X.columns):
         if np.sum(~np.isfinite(X[feat])) != 0:
             raise Exception('Missing Values in feat!!')
         U, p = mannwhitneyu(X[feat][y], X[feat][~y])
-        # This would make a good example for class
-        # mannwhithneyu([np.nan]*1000, [np.nan]*1000)
-        # Some more curiusities:
-        #  http://scipy-user.10969.n7.nabble.com/
-        # SciPy-User-Questions-comments-about-scipy-stats-mannwhitneyu-td17845.html
-        feat_score.append((feat, p))
+        mwu_feat_score.append((feat, p))
+        rocauc = roc_auc_score(y, X[feat])
+        auc_feat_score.append((feat, -np.abs(0.5 - rocauc), rocauc))
 
-    feat_score = sorted(feat_score, key=itemgetter(1))
+    mwu_feat_score = sorted(mwu_feat_score, key=itemgetter(1))
     print '-' * 80
-    print 'Mann-Whitney-U ranking (=ROCAUC ranking)'
-    for f, s in feat_score[:10]:
+    print 'Mann-Whitney-U ranking (should be similar to ROCAUC ranking)'
+    for f, s in mwu_feat_score[:10]:
         print f, s
     print '-' * 80
 
+    auc_feat_score = sorted(auc_feat_score, key=itemgetter(1))
+    print '-' * 80
+    print 'ROCAUC ranking'
+    for f, s, rocauc in auc_feat_score[:10]:
+        print f, s, rocauc
+    print '-' * 80
+
     # Now, machine learning
-    rfc = RandomForestClassifier(n_estimators=100, n_jobs=4, random_state=0, oob_score=True)
+    rfc = RandomForestClassifier(n_estimators=500, n_jobs=4, random_state=0, oob_score=True)
 
     # Features importances from a random forest
     rfc.fit(X, y)
@@ -377,9 +394,9 @@ def quick_analysis(df=None, min_length_secs=None):
     print 'OOB ACC: %.2f' % rfc.oob_score_
 
     # Cross-validation
-    num_folds = 10
-    scores = cross_validation.cross_val_score(rfc, X, y, cv=num_folds, scoring='roc_auc')
-    print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
+    # num_folds = 10
+    # scores = cross_validation.cross_val_score(rfc, X, y, cv=num_folds, scoring='roc_auc')
+    # print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
 
 
 def cl():
@@ -392,6 +409,7 @@ def cl():
               '/home/santi/Proyectos/imp/software/strawlab_freeflight_experiments/src/' \
               'flydata/example_analyses/dcn/commodity_ffa_lab_meeting/hctsa_example.py ' \
               'compute-all-feats --subset %d --feats %s &>~/%s.log' % (exp, features_group, comp_id)
+
 
 if __name__ == '__main__':
     import argh
