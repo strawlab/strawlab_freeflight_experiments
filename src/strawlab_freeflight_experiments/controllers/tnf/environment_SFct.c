@@ -174,18 +174,12 @@ static void mdlInitializeSizes(SimStruct *S)
  */
 static void mdlInitializeSampleTimes(SimStruct *S)
 {
-    double Ts_ekf, Ts_c, Ts_d, Ts_ci;
-    
-    // initialize parameters of decision function, controller, 
-    // calcInput function, and EKF; 
-    // this is already done here because sampling times are needed and 
-    // this function is called by Simulink before mdlSTART:
-    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp);
-    
-    Ts_ekf = ekfp.Ts;
-    Ts_c = cp.Ts;
-    Ts_d = decfp.Ts;
-    Ts_ci = cInputp.Ts;
+    double Ts_d     = 0.01;     //100Hz
+    double Ts_ci    = 0.0125;   //80Hz
+    double Ts_c     = 0.025;    //40Hz
+    double Ts_ekf   = 0.005;    //200Hz
+
+    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, Ts_ekf, Ts_c, Ts_d, Ts_ci);
     
     ssSetSampleTime(S, 0, Ts_ekf);
     ssSetOffsetTime(S, 0, 0.0);

@@ -18,7 +18,8 @@
 #define V0 0.3
 
 
-void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp) {
+void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double ts_ekf, double ts_c, double ts_d, double ts_ci)
+{
 
 	/* the operator -> references to an element of a pointer to a 
      * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
