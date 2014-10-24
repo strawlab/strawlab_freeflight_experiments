@@ -28,6 +28,7 @@ import nodelib.log
 
 from strawlab_freeflight_experiments.topics import *
 from strawlab_freeflight_experiments.controllers import MPC
+from strawlab_freeflight_experiments.controllers.util import Fly
 
 CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -329,7 +330,7 @@ class Node(object):
                     for obj in packet.objects:
                         if self.currently_locked_obj_id == IMPOSSIBLE_OBJ_ID:
                             if self.is_in_trigger_volume(obj):
-                                flies.append( MPC.Fly(obj.position.x, obj.position.y, obj.obj_id) )
+                                flies.append( Fly.from_flydra_object(obj) )
                         elif obj.obj_id == self.currently_locked_obj_id:
                             self.last_seen_time = now
                             self.fly = obj.position

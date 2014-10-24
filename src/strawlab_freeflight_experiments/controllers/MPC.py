@@ -1,5 +1,4 @@
 import os.path
-import collections
 
 import numpy as np
 import numpy.ctypeslib
@@ -8,8 +7,6 @@ import ctypes.util
 
 lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.path.abspath(__file__)),'mpc'))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
-
-Fly = collections.namedtuple('Fly', 'x y obj_id')
 
 class MPC:
     def __init__(self):
@@ -184,12 +181,13 @@ class MPC:
         if x is None:
             x = [f.x for f in flies]
             y = [f.y for f in flies]
+            heading = [f.heading for f in flies]
             ids = [f.obj_id for f in flies]
 
         x = np.array(x, dtype=ctypes.c_double)
         y = np.array(x, dtype=ctypes.c_double)
+        heading = np.zeros_like(heading, dtype=ctypes.c_double)
         ids = np.array(ids, dtype=ctypes.c_int)
-        g = np.zeros_like(x, dtype=ctypes.c_double)
         n = len(x)
 
         fid = self._decfcn(
@@ -201,7 +199,7 @@ class MPC:
                      ct.byref(self._CT_cntrl_enabled), ct.byref(self._CT_ekf_enabled),
                      self._conp, self._ekfp, self._decp, self._decs,
                      self._prjs, self._ekfs,
-                     g.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+                     heading.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
 
         return fid
 
@@ -215,33 +213,4 @@ class MPC:
                      self._conp, self._ekfp, self._decp, self._decs,
                      self._prjs, self._ekfs,
                      ctypes.POINTER(ctypes.c_double)())
-
-
-if __name__ == "__main__":
-
-    m = MPC()
-    m.reset()
-
-    flies = [Fly(x=124,y=-100,obj_id=3),
-             Fly(x=95,y=-0.35,obj_id=4),
-             Fly(x=1.6,y=0.05,obj_id=10),
-             Fly(x=0.05,y=0.05,obj_id=42)]
-    flies = {f.obj_id:f for f in flies}
-
-    print "enabled", m.controller_enabled
-
-    obj_id = m.should_control(flies.values())
-    if obj_id != -1:
-        print "enabled", m.controller_enabled
-        f = flies[obj_id]
-        m.run_ekf(f)
-        m.run_control()
-        m.run_calculate_input()
-
-    print m.target_point
-
-    print m.rotation_rate
-
-    m.reset()
-    print "enabled", m.controller_enabled
 

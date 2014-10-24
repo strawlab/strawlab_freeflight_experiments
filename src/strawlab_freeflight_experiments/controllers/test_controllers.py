@@ -4,6 +4,30 @@ import scipy.io
 from MPC import MPC
 from TNF import TNF
 
+from util import Fly
+
+def _test_should_control(m):
+    m.reset()
+
+    flies = [Fly(x=124,y=-100,obj_id=3,z=0,vx=0,vy=0,vz=0,heading=0),
+             Fly(x=95,y=-0.35,obj_id=4,z=0,vx=0,vy=0,vz=0,heading=0),
+             Fly(x=1.6,y=0.05,obj_id=10,z=0,vx=0,vy=0,vz=0,heading=0),
+             Fly(x=0.05,y=0.05,obj_id=42,z=0,vx=0,vy=0,vz=0,heading=0)]
+    flies_dict = {f.obj_id:f for f in flies}
+
+    assert not m.controller_enabled
+
+    obj_id = m.should_control(flies)
+    if obj_id != -1:
+        print "chose fly %s (enable:%s)" % (obj_id, m.controller_enabled)
+        f = flies_dict[obj_id]
+        m.run_ekf(f)
+        m.run_control()
+        m.run_calculate_input()
+        return True
+
+    assert False
+
 def _prep(m):
 
     m._CT_cur_fly_pos[0] = 0.25
@@ -47,6 +71,8 @@ def test_tnf():
     test = scipy.io.loadmat('test/tnf.mat',squeeze_me=True)
     _compare(result,test)
 
+    _test_should_control(m)
+
 def test_mpc():
     m = MPC()
     _prep(m)
@@ -65,6 +91,8 @@ def test_mpc():
     }
     test = scipy.io.loadmat('test/mpc.mat',squeeze_me=True)
     _compare(result,test)
+
+    _test_should_control(m)
 
 if __name__ == "__main__":
     print "------------------------------TESTING MPC"
