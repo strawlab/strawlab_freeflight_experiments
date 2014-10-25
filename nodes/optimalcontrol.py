@@ -110,7 +110,7 @@ class Node(object):
         #setup the MPC controller
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = MPC.MPC()
+            self.control = MPC.MPC(ts_d=0.01,ts_ci=0.0125,ts_c=0.05,ts_ekf=0.005)
             self.control.reset()
             #rotation_rate = omega
 

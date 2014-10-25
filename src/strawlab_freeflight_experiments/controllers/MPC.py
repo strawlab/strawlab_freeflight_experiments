@@ -9,7 +9,7 @@ lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.pat
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
 class MPC:
-    def __init__(self):
+    def __init__(self, ts_ekf, ts_c, ts_d, ts_ci):
 
         #these values are shared between python and C, and I need to know their
         #value
@@ -64,7 +64,9 @@ class MPC:
         self._cinp = lib.calcinput_new_params()
         self._cins = lib.calcinput_new_state()
 
-        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp)
+        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
+                                                                  ct.c_double, ct.c_double, ct.c_double, ct.c_double]
+        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp, ts_ekf, ts_c, ts_d, ts_ci)
 
         #allocate memory for internal controller variables:
         lib.allocate_memory_controller(self._prjs, self._conp)

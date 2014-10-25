@@ -74,7 +74,8 @@ def test_tnf():
     _test_should_control(m)
 
 def test_mpc():
-    m = MPC()
+    m = MPC(ts_d=0.01,ts_ci=0.0125,ts_c=0.05,ts_ekf=0.005)
+
     _prep(m)
 
     result = {
