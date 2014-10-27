@@ -173,7 +173,11 @@ def read_preprocess_cache_1(uuids=DCN_COMPLETED_EXPERIMENTS,
             writer.write('\n'.join(provenance))
 
     with open(cache_file) as reader_trajs, open(provenance_file) as reader_provenance:
-        trajs = pickle.load(reader_trajs)
+        from pandas.compat.pickle_compat import load
+        try:
+            trajs = pickle.load(reader_trajs)
+        except:
+            trajs = load(reader_trajs)
         provenance = map(str.strip, reader_provenance.readlines())
         return trajs, provenance
 

@@ -27,7 +27,7 @@ from pyopy.matlab_utils import PyMatBridgeEngine
 from whatami import is_iterable
 
 
-# A couple of interesting series
+# A couple of interesting series (rename "post attention" to "move towards")
 TS_POST_NAME = 'out=fly_post_cosine#PostAttention#postx=-0.15#posty=0.25#ws=20'
 TS_OPTO_NAME = 'out=fly_post_cosine#PostAttention#postx=\'trg_x\'#posty=\'trg_y\'#ws=20'
 
@@ -269,6 +269,8 @@ def merge_hctsa_dfs(root_dir=home(),
                             'forecasting',
                             'nl_ms',
                             'remove_points',
+                            'change_points',
+                            'sid',
                             'entropy')):
     """Merge the features from parallel HCTSA computations."""
     dfs = [pd.concat(pd.read_pickle(pickle) for pickle in glob(op.join(root_dir, '*%s.pickle' % group)))
@@ -315,7 +317,7 @@ def quick_analysis(df=None, min_length_secs=None):
     feats = [col for col in df.columns if col not in non_feats]
 
     # Keep only conflict-stimulus trajectories
-    # df = df[df['condition'] == DCN_CONFLICT_CONDITION]
+    df = df[df['condition'] == DCN_CONFLICT_CONDITION]
     # Keep only rotation-stimulus trajectories
     # df = df[df['condition'] == DCN_ROTATION_CONDITION]
 
