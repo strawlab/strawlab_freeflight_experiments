@@ -80,7 +80,7 @@ MAX_ROTATION_RATE = 3
                             
 CONDITIONS = [
               "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.18/justpost1.osg|-0.1|-0.1|0.0",
-              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.7|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",             
               "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.18/",
 #              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
