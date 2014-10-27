@@ -28,7 +28,7 @@ import nodelib.log
 
 from strawlab_freeflight_experiments.topics import *
 from strawlab_freeflight_experiments.controllers import MPC
-from strawlab_freeflight_experiments.controllers.util import Fly
+from strawlab_freeflight_experiments.controllers.util import Fly, Scheduler
 
 CONTROL_RATE        = 80.0      #Hz
 SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
@@ -75,6 +75,13 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","path_theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
 
 class Node(object):
+
+    #from environmentSfct
+    TS_DEC_FCT      = 0.01
+    TS_CALC_INPUT   = 0.0125
+    TS_CONTROL      = 0.05
+    TS_EKF          = 0.005
+
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
@@ -110,7 +117,7 @@ class Node(object):
         #setup the MPC controller
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = MPC.MPC(ts_d=0.01,ts_ci=0.0125,ts_c=0.05,ts_ekf=0.005)
+            self.control = MPC.MPC(ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
             #rotation_rate = omega
 
@@ -205,14 +212,16 @@ class Node(object):
 
     def run(self):
         rospy.loginfo('running stimulus')
-        #stick close to matlab/simulink, so run this loop at the fastest
-        #rate (2.5ms) and do our own scheduling
-        r = rospy.Rate(1000/2.5)
-        i = 0
-        t0 = monotonic_time()
+
+        sched = Scheduler()
+        sched.add_state('decfct', self.TS_DEC_FCT)
+        sched.add_state('calcinput', self.TS_CALC_INPUT)
+        sched.add_state('control', self.TS_CONTROL)
+        sched.add_state('ekf', self.TS_EKF)
+
+        r = rospy.Rate(sched.get_tf())
 
         cthread = None
-
         while not rospy.is_shutdown():
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
@@ -226,56 +235,55 @@ class Node(object):
                 continue
 
             if currently_locked_obj_id != IMPOSSIBLE_OBJ_ID:
-                i += 1
+                states = sched.tick()
 
                 self.log.ekf_en = self.control.ekf_enabled
                 self.log.control_en = self.control.controller_enabled
 
-                #5ms
-                if (i % 2) == 0:
-                    if self.control.ekf_enabled:
-                        self.do_update_ekf(fly_x, fly_y)
+                for state in states:
+                    if state == 'ekf':
+                        if self.control.ekf_enabled:
+                            self.do_update_ekf(fly_x, fly_y)
 
-                        xest = self.control._ekf_xest.flatten()
-                        for _i in range(5):
-                            setattr(self.log, "xest%d"%_i, xest[_i])
+                            xest = self.control._ekf_xest.flatten()
+                            for _i in range(5):
+                                setattr(self.log, "xest%d"%_i, xest[_i])
+                    if state == 'calcinput':
+                        self.do_calculate_input()
 
-                #12.5ms
-                if (i % 5) == 0:
-                    self.do_calculate_input()
+                        #lets do the vertical control here too,
+                        #at the same rate, 80Hz, as old
+                        v_rate = self.get_v_rate(fly_z)
+                        self.log.v_offset_rate = v_rate
+                        self.pub_v_offset_rate.publish(v_rate)
 
-                    #lets do the vertical control here too,
-                    #at the same rate, 80Hz, as old
-                    v_rate = self.get_v_rate(fly_z)
-                    self.log.v_offset_rate = v_rate
-                    self.pub_v_offset_rate.publish(v_rate)
+                        rotation_rate = self.control.rotation_rate
+                        self.log.rotation_rate = rotation_rate
 
-                    rotation_rate = self.control.rotation_rate
-                    self.log.rotation_rate = rotation_rate
+                        trg_x, trg_y = self.control.target_point
+                        self.trg_m_pub.publish(trg_x,trg_y,self.z_target)
 
-                    trg_x, trg_y = self.control.target_point
-                    self.trg_m_pub.publish(trg_x,trg_y,self.z_target)
+                        #print rotation_rate, fly_v, fly_z
 
-                    #print rotation_rate, fly_v, fly_z
+                        if np.isnan(rotation_rate):
+                            with self.controllock:
+                                self.control.reset()
+                        else:
+                            self.pub_rotation_velocity.publish(rotation_rate)
 
-                    if np.isnan(rotation_rate):
-                        with self.controllock:
-                            self.control.reset()
-                    else:
-                        self.pub_rotation_velocity.publish(rotation_rate)
+                        self.src_m_pub.publish(fly_x,fly_y,fly_z)
+                        self.ack_pub.publish(self.control.controller_enabled > 0)
+                    if state == 'control':
+                        if cthread is not None:
+                            cthread.join()
 
-                    self.src_m_pub.publish(fly_x,fly_y,fly_z)
-                    self.ack_pub.publish(self.control.controller_enabled > 0)
+                        cthread = threading.Thread(target=self.do_control)
+                        cthread.start()
+                    if state == 'decfct':
+                        #handled in on_flydra_mainbrain_super_packets
+                        pass
 
-                #50ms
-                if (i % 20) == 0:
-                    if cthread is not None:
-                        cthread.join()
-
-                    cthread = threading.Thread(target=self.do_control)
-                    cthread.start()
-
-                self.log.t2_5ms = i
+                self.log.t2_5ms = sched._i
                 self.log.update()
 
             r.sleep()
