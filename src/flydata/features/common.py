@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from whatami.config import Configurable
+from whatami.what import Whatable
 
 
 # TODO: make FeatureExtractor also follow the fit-transform protocol
 # TODO: make SeriesExtractor not to work inplace (at least by default)
 
-class FeatureExtractor(Configurable):
+class FeatureExtractor(Whatable):
 
     def fnames(self):
         return [self.what().id()]

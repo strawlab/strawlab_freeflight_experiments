@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from whatami.config import Configurable
+from whatami.what import Whatable, WhatableD
 
 
 __all__ = (
@@ -18,7 +18,7 @@ __all__ = (
 )
 
 
-class Transformer(Configurable):
+class Transformer(WhatableD):
     """
     A filter class transform a collection of objects in some way.
     As it is common in data-analysis pipelines, we use a two-phases protocol (the API follows sklearn)
@@ -35,10 +35,6 @@ class Transformer(Configurable):
     __metaclass__ = ABCMeta
 
     __slots__ = ()  # So that we allow subclasses to decide if they want slots or not
-
-    def __init__(self,
-                 add_descriptors=False):
-        super(Transformer, self).__init__(add_descriptors)
 
     def fit(self, X, y=None):
         """Computes anything needed to apply the filter given X and possibly y."""
