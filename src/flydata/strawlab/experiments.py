@@ -143,7 +143,7 @@ def _trajs_from_experiment(experiment):
 
 def trajectories_from_experiments(experiments,
                                   project_root=None,
-                                  n_jobs=cpu_count(),
+                                  n_jobs=1,
                                   with_conditions=None):
     # Read to memory
     trajs = Parallel(n_jobs=n_jobs)(delayed(_trajs_from_experiment)

@@ -148,8 +148,12 @@ def _unpickle_fast(pkl_path):
     #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
     # We are actually just saving protocol=0 pickles, which makes things big.
     # See analysislib/plots.py#save_results
+    from pandas.compat.pickle_compat import load
     with open(pkl_path) as reader:
-        return pickle.load(reader) if not _is_pickle_protocol_over_2(pkl_path) else cPickle.load(reader)
+        try:
+            return pickle.load(reader) if not _is_pickle_protocol_over_2(pkl_path) else cPickle.load(reader)
+        except:
+            return load(reader)
 
 
 def repickle_to_highest_protocol(pkl_path, force=False):
