@@ -16,8 +16,9 @@ FREEFLIGHT_KNOWN_ARENAS = (('freeflight', 'flycave'),
                            ('flycube', 'flycube6'),
                            # ('flycube', 'flycube7'),
                            ('flycube', 'flycube8'),
-                           # ('flycube', 'flycube9'),
+                           ('flycube', 'flycube9'),
                            ('flycube', 'flycube10'),
+                           ('flycube', 'flycube11'),
                            ('fishvr', 'fishtrax'))
 
 
