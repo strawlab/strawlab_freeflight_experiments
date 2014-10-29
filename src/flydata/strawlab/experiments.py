@@ -83,7 +83,8 @@ class FreeflightExperiment(object):
     def trajectories(self, filter_id=None, conditions=None):
         """Returns the list of FreeflightTrajectory objects."""
         if self._trajs_in_memory is None:
-            self._trajs_in_memory = [FreeflightTrajectory(self.md(), oid, framenumber0, time0, condition, df)
+            dt = self.sfff(filter_id=filter_id).dt()
+            self._trajs_in_memory = [FreeflightTrajectory(self.md(), oid, framenumber0, time0, condition, df, dt=dt)
                                      for condition, x0, y0, oid, framenumber0, time0, df in
                                      self.sfff(filter_id=filter_id).trajs(conditions=conditions)]  # N.B. missing dt
             if self._traj_transformers is not None:
