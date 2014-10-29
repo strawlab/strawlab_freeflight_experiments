@@ -62,14 +62,14 @@ TRANSLATIONAL_UUIDS = (
     # 'ea0ae0d24fcc11e48f45bcee7bdac428',
     # UUIDs about HS/VS study
     # - Genotype: VT58487-Gal4 x UAS-TNTe, Tsh-Gal80
-     #'22f2a3645c6411e4925bbcee7bdac5bc',
-     #'87af4bf25df611e49cf1bcee7bdac5bc',
-     #'c3f6cbf85ec311e48224bcee7bdac5bc',
-     #'743bc8125df511e49070bcee7bdac44a',
-     #'5a9d6ca05b9111e49d91bcee7bdac44a',
-     #'3020d82e5df611e4a305bcee7bdac37c',
-     #'8da32ab85d2111e4b1d1bcee7bdac37c',
-     #'bc2a4f0a5b9211e495a8bcee7bdac37c',
+     '22f2a3645c6411e4925bbcee7bdac5bc',
+     '87af4bf25df611e49cf1bcee7bdac5bc',
+     'c3f6cbf85ec311e48224bcee7bdac5bc',
+     '743bc8125df511e49070bcee7bdac44a',
+     '5a9d6ca05b9111e49d91bcee7bdac44a',
+     '3020d82e5df611e4a305bcee7bdac37c',
+     '8da32ab85d2111e4b1d1bcee7bdac37c',
+     'bc2a4f0a5b9211e495a8bcee7bdac37c',
     # - Genotype: VT58487-Gal4 x UAS-TNTin, Tsh-Gal80
     # 'c14d2f505b8f11e4b11610bf48d7699b',
     # '29edb21e5b9011e4b6f8bcee7bdac428',
@@ -83,8 +83,6 @@ TRANSLATIONAL_UUIDS = (
 
 # Get the data from the analysis run
 trajs = load_freeflight_trajectories(TRANSLATIONAL_UUIDS)
-trajs_df = FreeflightTrajectory.to_pandas(trajs)
-
 
 # We are interested only in some of the columns
 interesting_series = ('velocity', 'vx', 'vy', 'stim_x', 'stim_y', 'dtheta')
@@ -114,12 +112,17 @@ for traj in trajs:
     df = traj.df()
     df['stim_velocity'] = np.sqrt(df[trans_x] ** 2 + df[trans_y] ** 2)
 
+# Only now (not before) get the DF for the trajectories
+trajs_df = FreeflightTrajectory.to_pandas(trajs)
+
 # Let's just plot lagged_correlation(dtheta, trans_y), per condition
 lags = np.arange(200)
 dt = 0.01
 fexes = [LaggedCorr(lag=lag, stimulus=trans_y, response='dtheta') for lag in lags]
 conditions = sorted(trajs_df['condition'].unique())
 figure, axes = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
+if not isinstance(axes, (list, tuple)):
+    axes = [axes]
 for condition, ax in zip(conditions, axes):
     print condition
     corrs = compute_features(fexes, trajs_df[trajs_df['condition'] == condition]['traj'])
