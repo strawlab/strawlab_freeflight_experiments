@@ -11,7 +11,7 @@ def permutation_entropy(x, ordd, normalize=False):
 
     NOTE: implementation in matlab land seems buggy to me
 
-    Examples
+    Examples  (from the original paper)
     --------
     >>> x = [4, 7, 9, 10, 6, 11, 3]
     >>> np.abs(permutation_entropy(x, 2) - 0.9183) < 1E-4
@@ -54,13 +54,15 @@ def permutation_entropy(x, ordd, normalize=False):
 
     # populate counts...
     for j in xrange(len(x) - ordd + 1):
-        this_permutation = np.argsort(x[j:j + ordd])  # use numpy slicing tricks should make this much faster
+        this_permutation = np.argsort(x[j:j + ordd])  # use numpy stride tricks should make this much faster
         this_permutation.flags.writeable = False
         counts[this_permutation.data] += 1
     # symbol counts
     alpha_cs = np.array(counts.values())
+
     # Convert to frequencies, do not allow 0 probs
-    p = np.maximum(1. / len(x), alpha_cs / float((len(x) - ordd + 1)))
+    SMALL = 1E-6  # N.B. originally 1. / len(x), which adds a curious prior on symbol absence; study...
+    p = np.maximum(SMALL, alpha_cs / float((len(x) - ordd + 1)))
 
     # permutation entropy
     pen = -np.sum(p * np.log2(p))
@@ -68,7 +70,7 @@ def permutation_entropy(x, ordd, normalize=False):
     # make the value to be in [0, 1]?
     if normalize:
         return pen / np.log2(num_permutations)
-    return pen  # FIXME: figure out if any ts-length normalisation would be needed (in principle not)
+    return pen
 
 
 class PermEn(FeatureExtractor):
@@ -80,7 +82,9 @@ class PermEn(FeatureExtractor):
         self.normalize = normalize
 
     def _compute_from_df(self, df):
-        # .values because of pandas bug: do not respect setting writeable
+        # .values because of pandas bug: do not respect setting writeable to False
         return permutation_entropy(df[self.column].values, self.ordd, normalize=self.normalize)
 
-
+#
+# TODO: figure out if any ts-length normalisation would be needed for PermEn (in principle not, but this is real data)
+#
