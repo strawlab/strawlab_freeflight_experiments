@@ -317,14 +317,14 @@ def quick_analysis(df=None, min_length_secs=None):
     feats = [col for col in df.columns if col not in non_feats]
 
     # Keep only conflict-stimulus trajectories
-    df = df[df['condition'] == DCN_CONFLICT_CONDITION]
+    # df = df[df['condition'] == DCN_CONFLICT_CONDITION]
     # Keep only rotation-stimulus trajectories
-    # df = df[df['condition'] == DCN_ROTATION_CONDITION]
+    df = df[df['condition'] == DCN_ROTATION_CONDITION]
 
     # Keep only ATO trajectories (ATO = better localisation of TNT to DCN)
-    # df = df[df['genotype'].apply(lambda genotype: 'ATO' in genotype)]
+    df = df[df['genotype'].apply(lambda genotype: 'ATO' in genotype)]
     # Keep only VT trajectories
-    df = df[df['genotype'].apply(lambda genotype: 'VT3' in genotype)]
+    # df = df[df['genotype'].apply(lambda genotype: 'VT3' in genotype)]
     # Labels: DCNImpaired vs Control
     y = df['genotype'].apply(lambda genotype: 'TNTE' in genotype)
 
@@ -342,9 +342,11 @@ def quick_analysis(df=None, min_length_secs=None):
 
     # X
     X = df[feats]
-    # Remove features with  values
+    # Remove features with non-finite  values
     X = X.replace([np.inf, -np.inf], np.nan)
     X = X.dropna(axis=1)
+    
+    # print np.sum(np.sum(~np.isfinite(X)))
 
     # Remove trajectores less than 4 seconds long
     if min_length_secs is not None:
@@ -382,6 +384,14 @@ def quick_analysis(df=None, min_length_secs=None):
     rfc = RandomForestClassifier(n_estimators=500, n_jobs=4, random_state=0, oob_score=True)
 
     # Features importances from a random forest
+    X = (X - X.max()) / (X.max() - X.min())
+    X = X.replace([np.inf, -np.inf], np.nan)
+    X = X.dropna(axis=1)
+    print np.max(np.max(X))
+    print np.min(np.min(X))
+    print np.mean(np.mean(X))
+    # X = (X - X.max()) / (X.max() - X.min())
+    # X = X.values.astype(np.float32)
     rfc.fit(X, y)
     importances = rfc.feature_importances_
     order = np.argsort(importances)
@@ -400,6 +410,9 @@ def quick_analysis(df=None, min_length_secs=None):
     # scores = cross_validation.cross_val_score(rfc, X, y, cv=num_folds, scoring='roc_auc')
     # print '%d folds cross-val: %.2f +/- %.2f' % (num_folds, np.mean(scores), np.std(scores))
 
+
+quick_analysis()
+exit(22)
 
 def cl():
     for features_group, exp in product(sorted(FEATURE_GROUPS.keys()), xrange(8)):
