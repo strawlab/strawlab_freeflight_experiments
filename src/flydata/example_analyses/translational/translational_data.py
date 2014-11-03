@@ -1,6 +1,7 @@
 # coding=utf-8
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from flydata.features.common import compute_features
 from flydata.features.coord_systems import Coords2Coords
@@ -9,19 +10,6 @@ from flydata.strawlab.contracts import NoMissingValuesContract
 from flydata.strawlab.experiments import load_freeflight_trajectories
 from flydata.strawlab.trajectories import FreeflightTrajectory
 from flydata.strawlab.transformers import ColumnsSelector, MissingImputer, RowsWithMissingRemover
-
-
-#
-# Hi Santi,
-#
-# Here is the UUID of an experiment with the translational star field:
-#     67521a4e2a0f11e49631bcee7bdac270.
-# Can you let me know when you have implemented my code to the general analysis process to
-# re-run an analysis of this experiment?
-#
-# I already plotted the data (with the current analysis process) for this experiment here:
-#     http://strawcore.imp.univie.ac.at:8080/experiment/flycube_flycube5/67521a4e2a0f11e49631bcee7bdac270
-#
 
 
 TRANSLATIONAL_UUIDS = (
@@ -63,13 +51,13 @@ TRANSLATIONAL_UUIDS = (
     # UUIDs about HS/VS study
     # - Genotype: VT58487-Gal4 x UAS-TNTe, Tsh-Gal80
      '22f2a3645c6411e4925bbcee7bdac5bc',
-     '87af4bf25df611e49cf1bcee7bdac5bc',
-     'c3f6cbf85ec311e48224bcee7bdac5bc',
-     '743bc8125df511e49070bcee7bdac44a',
-     '5a9d6ca05b9111e49d91bcee7bdac44a',
-     '3020d82e5df611e4a305bcee7bdac37c',
-     '8da32ab85d2111e4b1d1bcee7bdac37c',
-     'bc2a4f0a5b9211e495a8bcee7bdac37c',
+    # '87af4bf25df611e49cf1bcee7bdac5bc',
+    # 'c3f6cbf85ec311e48224bcee7bdac5bc',
+    # '743bc8125df511e49070bcee7bdac44a',
+    # '5a9d6ca05b9111e49d91bcee7bdac44a',
+    # '3020d82e5df611e4a305bcee7bdac37c',
+    # '8da32ab85d2111e4b1d1bcee7bdac37c',
+    # 'bc2a4f0a5b9211e495a8bcee7bdac37c',
     # - Genotype: VT58487-Gal4 x UAS-TNTin, Tsh-Gal80
     # 'c14d2f505b8f11e4b11610bf48d7699b',
     # '29edb21e5b9011e4b6f8bcee7bdac428',
@@ -135,6 +123,13 @@ for condition, ax in zip(conditions, axes):
     ax.set_xlabel('lag (s)')
     ax.axhline(y=0, color='k')
     ax.axvline(x=max_corr_at_lag * dt, color='k')
+    
+    # For the lag linked to the max correlation, make a joint plot of dtheta and trans_y
+figure, axe = plt.subplots()
+extracted_data = [LaggedCorr(lag=max_corr_at_lag * dt, stimulus=trans_y, response='dtheta')]
+processed_data = compute_features(extracted_data, trajs_df[trajs_df['condition'] == condition]['traj'])
+sns.joinplot("trans_y", "dtheta", processed_data, kind="hex", color="mediumpurple")
+
 plt.show()
 
 #
