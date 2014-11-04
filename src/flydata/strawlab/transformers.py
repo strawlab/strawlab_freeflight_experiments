@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from whatami.what import Whatable, WhatableD
+from whatami.what import whatable
 
 
 __all__ = (
@@ -18,7 +18,8 @@ __all__ = (
 )
 
 
-class Transformer(WhatableD):
+@whatable
+class Transformer(object):
     """
     A filter class transform a collection of objects in some way.
     As it is common in data-analysis pipelines, we use a two-phases protocol (the API follows sklearn)

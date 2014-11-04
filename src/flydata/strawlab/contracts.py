@@ -4,7 +4,7 @@ from pandas import DatetimeIndex
 from pandas.util.testing import isiterable
 
 from flydata.strawlab.trajectories import df_or_df_from_traj
-from whatami.what import Whatable
+from whatami.what import whatable
 
 
 __all__ = (
@@ -19,7 +19,8 @@ __all__ = (
 )
 
 
-class DataContract(Whatable):
+@whatable
+class DataContract(object):
 
     def __init__(self, fail_message=None):
         super(DataContract, self).__init__()

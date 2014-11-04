@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from flydata.features.common import compute_features
+from flydata.features.common import compute_features, Length
 from flydata.features.coord_systems import Coords2Coords
 from flydata.features.correlations import LaggedCorr, correlatepd
 from flydata.strawlab.contracts import NoMissingValuesContract
@@ -106,29 +106,45 @@ trajs_df = FreeflightTrajectory.to_pandas(trajs)
 # Let's just plot lagged_correlation(dtheta, trans_y), per condition
 lags = np.arange(200)
 dt = 0.01
+# fexes is a list of the things/features I want to compute
 fexes = [LaggedCorr(lag=lag, stimulus=trans_y, response='dtheta') for lag in lags]
+# conditions is a list of the conditions present in our trajectories
 conditions = sorted(trajs_df['condition'].unique())
 figure, axes = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
 if not isinstance(axes, (list, tuple)):
     axes = [axes]
 for condition, ax in zip(conditions, axes):
     print condition
-    corrs = compute_features(fexes, trajs_df[trajs_df['condition'] == condition]['traj'])
-    mean_corrs = corrs.mean(axis=0)
-    max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
-    ax.plot(lags * dt, mean_corrs)
-    ax.set_title(condition + ' (%d trajs, max at %.2fs)' % (len(corrs), max_corr_at_lag * dt))
-    ax.set_ylim((-1, 1))
-    ax.set_ylabel('correlation')
-    ax.set_xlabel('lag (s)')
-    ax.axhline(y=0, color='k')
-    ax.axvline(x=max_corr_at_lag * dt, color='k')
+    # this are the trajectories with this concrete condtion
+    trajs_in_condition = trajs_df[trajs_df['condition'] == condition]['traj']
+    # compute the correlations for the trajectories in the condition
+    corrs = compute_features(fexes, trajs_in_condition)
+
+    # plot of lag vs mean correlation
+    # mean_corrs = corrs.mean(axis=0)
+    # max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
+    # ax.plot(lags * dt, mean_corrs)
+    # ax.set_title(condition + ' (%d trajs, max at %.2fs)' % (len(corrs), max_corr_at_lag * dt))
+    # ax.set_ylim((-1, 1))
+    # ax.set_ylabel('correlation')
+    # ax.set_xlabel('lag (s)')
+    # ax.axhline(y=0, color='k')
+    # ax.axvline(x=max_corr_at_lag * dt, color='k')
     
     # For the lag linked to the max correlation, make a joint plot of dtheta and trans_y
-figure, axe = plt.subplots()
-extracted_data = [LaggedCorr(lag=max_corr_at_lag * dt, stimulus=trans_y, response='dtheta')]
-processed_data = compute_features(extracted_data, trajs_df[trajs_df['condition'] == condition]['traj'])
-sns.joinplot("trans_y", "dtheta", processed_data, kind="hex", color="mediumpurple")
+
+    # A list comprehension for populating a list
+    dthetas = [traj.df().dtheta for traj in trajs_in_condition]
+
+    # A for loop for populating a list
+    trans_ys = []
+    for traj in trajs_in_condition:
+        trans_ys.append(traj.df()[trans_y])
+
+    figure, axe = plt.subplots()
+    mean_corrs = corrs.mean(axis=0)
+    max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
+    sns.jointplot("trans_y", "dtheta", corrs, kind="hex", color="mediumpurple")
 
 plt.show()
 
