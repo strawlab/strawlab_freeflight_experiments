@@ -9,7 +9,7 @@ lib = numpy.ctypeslib.load_library("libtnf", os.path.join(os.path.dirname(os.pat
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
 class TNF:
-    def __init__(self, ts_ekf, ts_c, ts_d, ts_ci):
+    def __init__(self, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci):
 
         #these values are shared between python and C, and I need to know their
         #value
@@ -69,8 +69,9 @@ class TNF:
         self._cins = lib.calcinput_new_state()
 
         lib.init_par_cInpF_decF_ekf_cntr.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
+                                                     ct.c_double, ct.c_double, ct.c_double,
                                                      ct.c_double, ct.c_double, ct.c_double, ct.c_double]
-        lib.init_par_cInpF_decF_ekf_cntr(self._conp, self._ekfp, self._decp, self._cinp, ts_ekf, ts_c, ts_d, ts_ci)
+        lib.init_par_cInpF_decF_ekf_cntr(self._conp, self._ekfp, self._decp, self._cinp, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci)
 
         #allocate memory for internal controller variables:
         lib.allocate_memory_controller(self._cons, self._conp)

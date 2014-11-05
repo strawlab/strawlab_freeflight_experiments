@@ -57,7 +57,12 @@ void mexFunction (
     double Ts_ci    = 0.0125;   //80Hz
     double Ts_c     = 0.025;    //40Hz
     double Ts_ekf   = 0.005;    //200Hz
-    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, Ts_ekf, Ts_c, Ts_d, Ts_ci);
+
+	double k0 = -0.1;
+	double k1 = -1.2;
+	double k2 = -2.1;
+
+    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, k0, k1, k2, Ts_ekf, Ts_c, Ts_d, Ts_ci);
 	
 	// allocate memory for internal controller variables:
 	allocate_memory_controller (&cntrState, &cp);

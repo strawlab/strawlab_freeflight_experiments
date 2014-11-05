@@ -48,15 +48,16 @@ def _compare(result, test):
             print "\tp (shape): %r\n\tm (shape): %r\n\tallclose: %s" % (result[k].shape, test[k].shape, ok)
             if not ok:
                 d = (result[k] - test[k])
-                print "\n\t-----------DIFFER BY", d.sum()
-                print "python:\n",result[k], '\nmatlab:\n', test[k], '\n'
+                print "\n\t!!!!!!!!!!!DIFFER BY", d.sum()
+                print "\tpython:\n\t",result[k], '\n\tmatlab:\n\t', test[k], '\n'
         except AttributeError:
             #scalar
             print "\t",result[k], 'vs', test[k]
 
 
 def test_tnf():
-    m = TNF(ts_d=0.01,ts_ci=0.0125,ts_c=0.025,ts_ekf=0.005)
+
+    m = TNF(k0=-0.1, k1=-1.2, k2=-2.1,ts_d=0.01,ts_ci=0.0125,ts_c=0.025,ts_ekf=0.005)
     _prep(m)
 
     result = {

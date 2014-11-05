@@ -54,15 +54,19 @@ TAU= 2*PI
 MAX_ROTATION_RATE = 1.5
 
 #CONDITION = "cylinder_image/
-#             svg_path(if omitted target = 0,0)/
-#             gain/
+#             path_descriptor/
+#             gain(controller specific)/
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
-#             advance_threshold(m)/
 #             z_gain"
 #
 CONDITIONS = [
-              "checkerboard16.png//nan/-10.0/nan/0.20",
-              "gray.png//nan/-10.0/nan/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-2.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-4.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-6.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-8.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-10.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-20.0/-10.0/0.20",
+              "gray.png//tnf|-0.1|-1.2|-2.1/-10.0/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -112,12 +116,8 @@ class Node(object):
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
         self.log.ratio = 0 #backwards compatibility
 
-        #setup the MPC controller
+        #setup the MPC controller in switch conditions
         self.controllock = threading.Lock()
-        with self.controllock:
-            self.control = TNF.TNF(ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
-            self.control.reset()
-            #rotation_rate = omega
 
         #publish the path
         self.path_m_pub.publish(Polygon(points=[Point32(x,y,0) for x,y in self.control.path]))
@@ -188,14 +188,19 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance,v_gain = self.condition.split('/')
+        img,svg,p,rad,v_gain = self.condition.split('/')
         self.img_fn = str(img)
-        self.p_const = float(p)
+        self.gain = p
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.z_target = 0.7
         self.svg_fn = str(svg)
         self.svg_pub.publish(self.svg_fn)
+
+        with self.controllock:
+            tnf,k0,k1,k2 = p.split('|')
+            self.control = TNF.TNF(k0=float(k0),k1=float(k1),k2=float(k2),ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control.reset()
 
         self.log.trg_z = self.z_target
         self.log.cyl_r = self.rad_locked
@@ -203,7 +208,7 @@ class Node(object):
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked))
+        rospy.loginfo('condition: %s (%s, rad locked=%.1f)' % (self.condition,self.gain,self.rad_locked))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
