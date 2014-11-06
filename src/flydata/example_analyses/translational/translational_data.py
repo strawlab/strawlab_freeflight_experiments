@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 from flydata.features.common import compute_features, Length
 from flydata.features.coord_systems import Coords2Coords
@@ -14,21 +15,21 @@ from flydata.strawlab.transformers import ColumnsSelector, MissingImputer, RowsW
 
 TRANSLATIONAL_UUIDS = (
     # UUIDs about z_target study
-     #'67521a4e2a0f11e49631bcee7bdac270',
-     #'24ca8464287e11e4ab9ebcee7bdac270',
-     #'3e39ed1e2d3211e491fabcee7bdac270',
-     #'b00fcc162c6911e49afbbcee7bdac270',
-     #'a5414fbe294711e4a1f5bcee7bdac270',
-     #'ebbac5d02d3211e49186bcee7bdac428',
-     #'07990bfa2c6a11e4a500bcee7bdac428',
-     #'a3e403142a0f11e4aa28bcee7bdac428',
-     #'0736b0a6294811e4bbaebcee7bdac428',
-     #'9d01e24c287e11e4b6c3bcee7bdac428',
-     #'2a56e23c2a0f11e4b44cd850e6c4a608',
-     #'6c3ba674294711e4a3fcd850e6c4a608',
-     #'e27c1c4a287c11e4afacd850e6c4a608',
-     #'8cf02b4e2d3211e4af64d850e6c4a608',
-     #'0f03e5fa2c6911e484c1d850e6c4a608',
+    # '67521a4e2a0f11e49631bcee7bdac270',
+    # '24ca8464287e11e4ab9ebcee7bdac270',
+    # '3e39ed1e2d3211e491fabcee7bdac270',
+    # 'b00fcc162c6911e49afbbcee7bdac270',
+    # 'a5414fbe294711e4a1f5bcee7bdac270',
+    # 'ebbac5d02d3211e49186bcee7bdac428',
+    # '07990bfa2c6a11e4a500bcee7bdac428',
+    # 'a3e403142a0f11e4aa28bcee7bdac428',
+    # '0736b0a6294811e4bbaebcee7bdac428',
+    # '9d01e24c287e11e4b6c3bcee7bdac428',
+    # '2a56e23c2a0f11e4b44cd850e6c4a608',
+    # '6c3ba674294711e4a3fcd850e6c4a608',
+    # 'e27c1c4a287c11e4afacd850e6c4a608',
+    # '8cf02b4e2d3211e4af64d850e6c4a608',
+    # '0f03e5fa2c6911e484c1d850e6c4a608',
     # UUIDs about T4/T5 study
     # - Genotype: VT6199-Gal4 x UAS-TNTe, Tsh-Gal80
     # '5f256600522d11e489ad10bf48d7699b',
@@ -50,14 +51,14 @@ TRANSLATIONAL_UUIDS = (
     # 'ea0ae0d24fcc11e48f45bcee7bdac428',
     # UUIDs about HS/VS study
     # - Genotype: VT58487-Gal4 x UAS-TNTe, Tsh-Gal80
-     '22f2a3645c6411e4925bbcee7bdac5bc',
+     #'22f2a3645c6411e4925bbcee7bdac5bc',
     # '87af4bf25df611e49cf1bcee7bdac5bc',
     # 'c3f6cbf85ec311e48224bcee7bdac5bc',
     # '743bc8125df511e49070bcee7bdac44a',
     # '5a9d6ca05b9111e49d91bcee7bdac44a',
     # '3020d82e5df611e4a305bcee7bdac37c',
     # '8da32ab85d2111e4b1d1bcee7bdac37c',
-    # 'bc2a4f0a5b9211e495a8bcee7bdac37c',
+     'bc2a4f0a5b9211e495a8bcee7bdac37c',
     # - Genotype: VT58487-Gal4 x UAS-TNTin, Tsh-Gal80
     # 'c14d2f505b8f11e4b11610bf48d7699b',
     # '29edb21e5b9011e4b6f8bcee7bdac428',
@@ -106,45 +107,49 @@ trajs_df = FreeflightTrajectory.to_pandas(trajs)
 # Let's just plot lagged_correlation(dtheta, trans_y), per condition
 lags = np.arange(200)
 dt = 0.01
-# fexes is a list of the things/features I want to compute
+# fexes is a list of the features I want to compute
 fexes = [LaggedCorr(lag=lag, stimulus=trans_y, response='dtheta') for lag in lags]
 # conditions is a list of the conditions present in our trajectories
 conditions = sorted(trajs_df['condition'].unique())
-figure, axes = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
-if not isinstance(axes, (list, tuple)):
-    axes = [axes]
-for condition, ax in zip(conditions, axes):
+
+figure1, axes1 = plt.subplots(nrows=1, ncols=len(conditions), sharex=True, sharey=True)
+
+if not isinstance(axes1, (list, tuple, np.ndarray)):
+    axes1 = [axes1]
+
+for condition, ax1 in zip(conditions, axes1):
     print condition
-    # this are the trajectories with this concrete condtion
+
+    # These are the trajectories with this concrete condition
     trajs_in_condition = trajs_df[trajs_df['condition'] == condition]['traj']
-    # compute the correlations for the trajectories in the condition
+    # Compute the correlations for the trajectories in the condition
     corrs = compute_features(fexes, trajs_in_condition)
+    mean_corrs = corrs.mean(axis=0)
+    max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
 
-    # plot of lag vs mean correlation
-    # mean_corrs = corrs.mean(axis=0)
-    # max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
-    # ax.plot(lags * dt, mean_corrs)
-    # ax.set_title(condition + ' (%d trajs, max at %.2fs)' % (len(corrs), max_corr_at_lag * dt))
-    # ax.set_ylim((-1, 1))
-    # ax.set_ylabel('correlation')
-    # ax.set_xlabel('lag (s)')
-    # ax.axhline(y=0, color='k')
-    # ax.axvline(x=max_corr_at_lag * dt, color='k')
+    # Plot of lags vs mean correlation
+    ax1.plot(lags * dt, mean_corrs)
+    ax1.set_title(condition + ' (%d trajs, max at %.2fs)' % (len(corrs), max_corr_at_lag * dt))
+    ax1.set_ylim((-1, 1))
+    ax1.set_ylabel('correlation')
+    ax1.set_xlabel('lag (s)')
+    ax1.axhline(y=0, color='lightslategray')
+    ax1.axvline(x=max_corr_at_lag * dt, color='mediumvioletred')
     
-    # For the lag linked to the max correlation, make a joint plot of dtheta and trans_y
+    # For the lag linked to the max correlation, make a joint plot (Pearson correlation) of dtheta and trans_y
 
-    # A list comprehension for populating a list
-    dthetas = [traj.df().dtheta for traj in trajs_in_condition]
+    lagged_dthetas = [traj.df().dtheta.shift(-max_corr_at_lag)
+                      for traj in trajs_in_condition]
 
-    # A for loop for populating a list
     trans_ys = []
     for traj in trajs_in_condition:
         trans_ys.append(traj.df()[trans_y])
 
-    figure, axe = plt.subplots()
-    mean_corrs = corrs.mean(axis=0)
-    max_corr_at_lag = int(mean_corrs.argmax().partition('lag=')[2].partition('#')[0])
-    sns.jointplot("trans_y", "dtheta", corrs, kind="hex", color="mediumpurple")
+    paired_dfs = [pd.concat((lagged_dtheta, transy),axis=1) for lagged_dtheta, transy in zip(lagged_dthetas,trans_ys)]
+    paired_dfs = [paired_df.dropna(axis=0) for paired_df in paired_dfs]
+    all_paired_df = pd.concat(paired_dfs)
+
+    sns.jointplot(trans_y, "dtheta", all_paired_df, kind="hex", color="darkmagenta", space=0, xlim=(-1, 1))
 
 plt.show()
 
