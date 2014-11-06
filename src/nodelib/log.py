@@ -12,7 +12,7 @@ import std_msgs.msg
 class NoDataError(Exception):
     pass
 
-class CsvLogger:
+class CsvLogger(object):
 
     STATE =         tuple()
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
@@ -31,6 +31,9 @@ class CsvLogger:
         self._exp_uuid = ''
         self._enable_warn = warn
         self._enable_debug = debug
+
+        self._condition = ''
+        self._pub_condition = None
 
         self._use_rostime = use_rostime
 
@@ -107,6 +110,7 @@ class CsvLogger:
             rospy.Subscriber('experiment_uuid',
                              std_msgs.msg.String,
                              self._on_experiment_uuid)
+            self._pub_condition = rospy.Publisher('condition', std_msgs.msg.String)
 
             if wait:
                 self._debug("waiting for flydra_mainbrain/data_file")
@@ -140,6 +144,17 @@ class CsvLogger:
 
     def _on_experiment_uuid(self, msg):
         self._exp_uuid = msg.data
+
+
+    @property
+    def condition(self):
+        return self._condition
+
+    @condition.setter
+    def condition(self, v):
+        self._condition = v
+        if self._pub_condition is not None:
+            self._pub_condition.publish(v)
 
     @property
     def filename(self):
