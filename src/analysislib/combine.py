@@ -71,7 +71,7 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
-        self._configdict = {'v':4,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':5,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -130,6 +130,7 @@ class _Combine(object):
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump({"results":self._results,
+                          "trajs":self._trajs,
                           "dt":self._dt,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -810,6 +811,7 @@ class CombineH5WithCSV(_Combine):
             d = self._get_cache_file()
             if d is not None:
                 self._results = d['results']
+                self._trajs = d['trajs']
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
 
