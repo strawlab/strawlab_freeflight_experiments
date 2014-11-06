@@ -17,8 +17,8 @@
 // Nominal parameters of fly
 #define V0 0.3
 
-
-void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp) {
+void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double k0, double k1, double k2, double ts_ekf, double ts_c, double ts_d, double ts_ci)
+{
 
 	/* the operator -> references to an element of a pointer to a 
      * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
@@ -47,12 +47,9 @@ void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, c
 	cp->Ts = 0.025;
 	cp->zeta0[0] = 0.5;
 	cp->zeta0[1] = 0;
-	/*cp->Ktransv[0] = 0.0;
-	cp->Ktransv[1] = -1.0;
-	cp->Ktransv[2] = -2.0;*/
-	cp->Ktransv[0] = -0.1;
-	cp->Ktransv[1] = -1.2;
-	cp->Ktransv[2] = -2.1;
+	cp->Ktransv[0] = k0;
+	cp->Ktransv[1] = k1;
+	cp->Ktransv[2] = k2;
 	
 		
 	// geometric parameters for path ellipse

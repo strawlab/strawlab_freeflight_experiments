@@ -676,7 +676,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, f
     n_plot_axes = len(_plot_axes)
 
     if ylimits is None:
-        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1),"rotation_rate":(-10,10)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 

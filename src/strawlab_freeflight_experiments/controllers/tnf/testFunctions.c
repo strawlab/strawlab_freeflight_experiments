@@ -53,9 +53,16 @@ void mexFunction (
 		mexErrMsgTxt ("testFunctions requires 0 input arguments.");
 	} 
 	  
-	// initialize parameters of decision function, controller, 
-    // calcInput function, and EKF; 
-    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp); 
+    double Ts_d     = 0.01;     //100Hz
+    double Ts_ci    = 0.0125;   //80Hz
+    double Ts_c     = 0.025;    //40Hz
+    double Ts_ekf   = 0.005;    //200Hz
+
+	double k0 = -0.1;
+	double k1 = -1.2;
+	double k2 = -2.1;
+
+    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, k0, k1, k2, Ts_ekf, Ts_c, Ts_d, Ts_ci);
 	
 	// allocate memory for internal controller variables:
 	allocate_memory_controller (&cntrState, &cp);
@@ -95,7 +102,11 @@ void mexFunction (
 	plhs[2] = (mxCreateDoubleMatrix (4,1, mxREAL));
 	xireturn = mxGetPr(plhs[2]);
 
+#if EKF_V0EST
+	plhs[3] = (mxCreateDoubleMatrix (4,1, mxREAL));
+#else
 	plhs[3] = (mxCreateDoubleMatrix (3,1, mxREAL));
+#endif
 	xestreturn = mxGetPr(plhs[3]);
 
 	plhs[4] = (mxCreateDoubleMatrix (1,1, mxREAL));
@@ -110,7 +121,11 @@ void mexFunction (
     wreturn[0] = w_out[0];
     for(i=0;i<2;i++) zetareturn[i] = zeta_out[i];
     for(i=0;i<4;i++) xireturn[i] = xi_out[i];
+#if EKF_V0EST
+    for (i=0;i<4;i++) xestreturn[i] = ekfState.xest[i];
+#else
     for (i=0;i<3;i++) xestreturn[i] = ekfState.xest[i];
+#endif
     omegaereturn[0] = omegae[0];
     for (i=0;i<2;i++) intstatereturn[i] = cntrState.intState[i];
     for (i=0;i<2;i++) targetPointreturn[i] = targetPoint_out[i];

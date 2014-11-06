@@ -125,7 +125,11 @@ static void mdlInitializeSizes(SimStruct *S)
 
     
     if (!ssSetNumOutputPorts(S, 10)) return;
+#if EKF_V0EST
+    ssSetOutputPortWidth(S, 0, 4); // estimated state of EKF
+#else
     ssSetOutputPortWidth(S, 0, 3); // estimated state of EKF
+#endif
     ssSetOutputPortWidth(S, 1, 1); // omega_e from controller, input to the system
 	ssSetOutputPortWidth(S, 2, 2); // auxiliary states -> path parameter and derivative
 	ssSetOutputPortWidth(S, 3, 1); // input to path parameter system
@@ -170,18 +174,16 @@ static void mdlInitializeSizes(SimStruct *S)
  */
 static void mdlInitializeSampleTimes(SimStruct *S)
 {
-    double Ts_ekf, Ts_c, Ts_d, Ts_ci;
-    
-    // initialize parameters of decision function, controller, 
-    // calcInput function, and EKF; 
-    // this is already done here because sampling times are needed and 
-    // this function is called by Simulink before mdlSTART:
-    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp);
-    
-    Ts_ekf = ekfp.Ts;
-    Ts_c = cp.Ts;
-    Ts_d = decfp.Ts;
-    Ts_ci = cInputp.Ts;
+    double Ts_d     = 0.01;     //100Hz
+    double Ts_ci    = 0.0125;   //80Hz
+    double Ts_c     = 0.025;    //40Hz
+    double Ts_ekf   = 0.005;    //200Hz
+
+	double k0 = -0.1;
+	double k1 = -1.2;
+	double k2 = -2.1;
+
+    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, k0, k1, k2, Ts_ekf, Ts_c, Ts_d, Ts_ci);
     
     ssSetSampleTime(S, 0, Ts_ekf);
     ssSetOffsetTime(S, 0, 0.0);

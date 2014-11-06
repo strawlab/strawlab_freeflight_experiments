@@ -46,6 +46,10 @@ void calculate_control_inputs (double *utnext, double *xi, contrp_t *cp, cntrSta
 
 void systemData (double *h,double *LFh,double *LF2h,double *LGLFh, double v0, double *xt);
 
+const double *get_int_state(cntrState_t *cs, int *len);
+
+const double *get_path(contrp_t *cp, int *num);
+
 #endif
 
 

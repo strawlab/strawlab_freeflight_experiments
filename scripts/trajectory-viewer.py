@@ -106,8 +106,14 @@ if __name__=='__main__':
             title = "%s: obj_id %s (condition %s)" % (uuid, obj_id, current_condition)
             filename = os.path.join(basedir,filename + ".mp4")
             print "WRITING MP4:",filename
-            writer = Writer(fps=15, metadata=dict(title=title), bitrate=1800)
-            anim.save(filename, writer=writer)
+            try:
+                writer = Writer(fps=15, metadata=dict(title=title), extra_args=['-vcodec', 'h264', '-pix_fmt', 'yuv420p'])
+                anim.save(filename, writer=writer)
+                print "WROTE h264"
+            except RuntimeError:
+                writer = Writer(fps=15, metadata=dict(title=title), bitrate=1800)
+                anim.save(filename, writer=writer)
+                print "WROTE mp4v"
 
     if (not args.save_animation) and args.show:
         aplt.show_plots()

@@ -49,9 +49,11 @@ void mexFunction (
 		mexErrMsgTxt ("testFunctions requires 0 input arguments.");
 	} 
 	  
-	// initialize parameters of decision function, controller, 
-    // calcInput function, and EKF; 
-    init_par_cInpF_decF_ekf_subopt_MPC_model2 (&cp, &ekfp, &decfp, &cInputp);
+    double Ts_d     = 0.01;     //100Hz
+    double Ts_ci    = 0.0125;   //80Hz
+    double Ts_c     = 0.05;     //20Hz
+    double Ts_ekf   = 0.005;    //200Hz
+    init_par_cInpF_decF_ekf_subopt_MPC_model2 (&cp, &ekfp, &decfp, &cInputp, Ts_ekf, Ts_c, Ts_d, Ts_ci);
 	
 	// allocate memory for internal controller variables:
 	allocate_memory_controller (&projGrState, &cp);
