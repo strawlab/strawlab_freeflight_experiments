@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     if args.groupby_value:
         if not args.quiet:
-            print "\nAGGREGATION"
+            print "\nAGGREGATION BY %s=%s" % (args.groupby,args.groupby_value)
 
         v = args.groupby_value.lower()
         if args.groupby == 'genotype':
