@@ -66,8 +66,8 @@ def get_parser(*only_these_options, **defaults):
             help='show obj_ids on plots where appropriate')
     if not only_these_options or "reindex" in only_these_options:
         parser.add_argument(
-            '--reindex', action='store_true',
-            default=defaults.get('reindex', False),
+            '--no-reindex', action='store_false', dest='reindex',
+            default=defaults.get('no_reindex') if 'no_reindex' in defaults else not defaults.get('reindex', False),
             help='reindex simple_flydra h5 file')
     if not only_these_options or "show" in only_these_options:
         parser.add_argument(
@@ -76,8 +76,8 @@ def get_parser(*only_these_options, **defaults):
             help='show plots')
     if not only_these_options or "cached" in only_these_options:
         parser.add_argument(
-            '--cached', action='store_true',
-            default=defaults.get('cached',False),
+            '--no-cached', action='store_false', dest='cached',
+            default=defaults.get('no_cached') if 'no_cached' in defaults else not defaults.get('cached',False),
             help='load cached analysis pkl file')
     if not only_these_options or "ignore-permission-errors" in only_these_options:
         parser.add_argument(
