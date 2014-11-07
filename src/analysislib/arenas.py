@@ -1,5 +1,9 @@
 import numpy as np
 
+import roslib
+roslib.load_manifest('strawlab_freeflight_experiments')
+import analysislib.filters
+
 def get_arena_from_args(args):
     if args.arena=='flycave':
         arena = FlyCaveCylinder(radius=0.5)
@@ -26,7 +30,37 @@ class ArenaBase(object):
     def plot_mpl_3d(self, ax, *args, **kwargs):
         pass
 
-class FlyCaveCylinder(ArenaBase):
+class _CylinderFilterMixin:
+    def args_filter(self, x, y, z, args):
+        if args.surface_filt:
+            rmax = self.radius - args.surface_dist
+            rtype = args.surface_filt
+            zmin = 0.0 + args.surface_dist
+            zmax = self.height - args.surface_dist
+            ztype = rtype
+        else:
+            rmax = args.rfilt_max
+            rtype = args.rfilt
+
+        if args.zfilt:
+            zmin = args.zfilt_min
+            zmax = args.zfilt_max
+            ztype = args.zfilt
+
+        #filter based on radius
+        valid_r_cond = analysislib.filters.filter_radius(
+                                    rtype,
+                                    x,y,
+                                    rmax)
+        #filter the trajectories based on Z value
+        valid_z_cond = analysislib.filters.filter_z(
+                                    ztype,
+                                    z,
+                                    zmin, zmax)
+
+        return valid_z_cond & valid_r_cond
+
+class FlyCaveCylinder(ArenaBase, _CylinderFilterMixin):
     def __init__(self,radius=0.5,height=1.0):
         self.radius = radius
         self.height = height
@@ -51,7 +85,7 @@ class FlyCaveCylinder(ArenaBase):
     def get_ztick_locations(self):
         return [self.height/2.0,self.height]
 
-class FishBowl(ArenaBase):
+class FishBowl(ArenaBase, _CylinderFilterMixin):
     def __init__(self,radius=0.175,height=0.08):
         self.radius = radius
         self.height = height
@@ -107,4 +141,21 @@ class FlyCube(ArenaBase):
         return [-y, y]
     def get_ztick_locations(self):
         return [self.zdim/2.0,self.zdim]
+    def args_filter(self, x, y, z, args):
+        if args.surface_filt:
+            zmin = 0.0 + args.surface_dist
+            zmax = self.zdim - args.surface_dist
+            ztype = args.surface_filt
+
+        if args.zfilt:
+            zmin = args.zfilt_min
+            zmax = args.zfilt_max
+            ztype = args.zfilt
+
+        valid_z_cond = analysislib.filters.filter_z(
+                                    ztype,
+                                    z,
+                                    zmin, zmax)
+
+        return valid_z_cond
 

@@ -25,6 +25,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 import nodelib.log
 
+import analysislib.arenas
 import analysislib.fixes
 import analysislib.filters
 import analysislib.args
@@ -894,6 +895,8 @@ class CombineH5WithCSV(_Combine):
         if self._fix.active:
             self._debug("IO:     fixing data %s" % self._fix)
 
+        arena = analysislib.arenas.get_arena_from_args(args)
+
         #record_iterator in the csv_file returns all defined cols by default.
         #those specified in csv_cols are float()'d and put into the dataframe
         infile = nodelib.log.CsvLogger(csv_fname, "r", warn=self._enable_warn, debug=self._enable_debug)
@@ -1016,18 +1019,7 @@ class CombineH5WithCSV(_Combine):
 
                         valid = trajectories.readWhere(query)
 
-                        #filter the trajectories based on Z value
-                        valid_z_cond = analysislib.filters.filter_z(
-                                                    args.zfilt,
-                                                    valid['z'],
-                                                    args.zfilt_min, args.zfilt_max)
-                        #filter based on radius
-                        valid_r_cond = analysislib.filters.filter_radius(
-                                                    args.rfilt,
-                                                    valid['x'],valid['y'],
-                                                    args.rfilt_max)
-
-                        valid_cond = valid_z_cond & valid_r_cond
+                        valid_cond = arena.args_filter(valid['x'],valid['y'],valid['z'],args)
 
                         validx = valid['x'][valid_cond]
                         validy = valid['y'][valid_cond]
@@ -1129,6 +1121,8 @@ class CombineH5WithCSV(_Combine):
         if fix.active:
             self._debug("IO:     fixing data %s" % fix)
 
+        arena = analysislib.arenas.get_arena_from_args(args)
+
         #open the csv file as a dataframe
         try:
             csv = pd.read_csv(self.csv_file,na_values=('None',),
@@ -1218,18 +1212,7 @@ class CombineH5WithCSV(_Combine):
 
             valid = trajectories.readWhere(query)
 
-            #filter the trajectories based on Z value
-            valid_z_cond = analysislib.filters.filter_z(
-                                        args.zfilt,
-                                        valid['z'],
-                                        args.zfilt_min, args.zfilt_max)
-            #filter based on radius
-            valid_r_cond = analysislib.filters.filter_radius(
-                                        args.rfilt,
-                                        valid['x'],valid['y'],
-                                        args.rfilt_max)
-
-            valid_cond = valid_z_cond & valid_r_cond
+            valid_cond = arena.args_filter(valid['x'],valid['y'],valid['z'],args)
 
             validframenumber = valid['framenumber'][valid_cond]
 

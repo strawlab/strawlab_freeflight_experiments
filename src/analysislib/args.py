@@ -31,6 +31,7 @@ DATA_MODIFYING_ARGS = [
     'uuid',
     'zfilt','zfilt_min','zfilt_max',
     'rfilt','rfilt_max',
+    'surface_filt','surface_dist',
     'arena',
     'idfilt',
     'lenfilt',
@@ -92,8 +93,6 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,
-            required=False if 'zfilt' in defaults else True,
-            default=defaults.get('zfilt', 'trim'),
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
@@ -105,6 +104,15 @@ def get_parser(*only_these_options, **defaults):
             '--zfilt-max', type=float,
             default=defaults.get('zfilt_max', 0.90),
             help='maximum z, metres')
+    if not only_these_options or "surface_filt" in only_these_options:
+        parser.add_argument(
+            '--surface-filt', type=str, choices=filt_choices,
+            help='method to filter trajectory data based on distance to surface(s) of arena')
+    if not only_these_options or "surface_dist" in only_these_options:
+        parser.add_argument(
+            '--surface-dist', type=float,
+            default=defaults.get('surface_dist', 0.1),
+            help='min distance from surface, cm')
     if not only_these_options or "uuid" in only_these_options:
         parser.add_argument(
             '--uuid', type=str, nargs='*',
@@ -124,8 +132,6 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
             '--rfilt', type=str, choices=filt_choices,
-            required=False if 'rfilt' in defaults else True,
-            default=defaults.get('rfilt', 'trim'),
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
@@ -162,6 +168,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str,
+            required=True,
             default=defaults.get('arena', 'flycave'),
             help='name of arena type')
     if not only_these_options or "tfilt" in only_these_options:
@@ -196,6 +203,12 @@ def check_args(parser, args, max_uuids=1000):
     else:
         if None in (args.csv_file, args.h5_file):
             parser.error("either --uuid or both --csv-file and --h5-file are required")
+
+    if args.surface_filt and args.rfilt:
+        parser.error("if --surface-filt is specified --rfilt is not required")
+    elif not args.surface_filt:
+        if not (args.rfilt and args.zfilt):
+            parser.error("--rfilt and --zfilt, or --surface-filt required")
 
     for f in ("tfilt_before", "tfilt_after"):
         v = getattr(args, f, None)
