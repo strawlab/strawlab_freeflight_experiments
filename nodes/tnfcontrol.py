@@ -118,6 +118,9 @@ class Node(object):
 
         #setup the MPC controller in switch conditions
         self.controllock = threading.Lock()
+        with self.controllock:
+            self.control = TNF.TNF(k0=-0.1, k1=-1.2, k2=-2.1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control.reset()
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -196,7 +199,7 @@ class Node(object):
 
         with self.controllock:
             tnf,k0,k1,k2 = p.split('|')
-            self.control = TNF.TNF(k0=float(k0),k1=float(k1),k2=float(k2),ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control.reinit(k0=float(k0),k1=float(k1),k2=float(k2),ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
 
         #publish the path

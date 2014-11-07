@@ -135,6 +135,14 @@ class TNF:
     def target_point(self):
         return self._target_x, self._target_y
 
+    def reinit(self, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci):
+        lib.init_par_cInpF_decF_ekf_cntr(self._conp, self._ekfp, self._decp, self._cinp, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci)
+        lib.allocate_memory_controller(self._cons, self._conp)
+        lib.initEKF (self._ekfs, self._ekfp)
+        lib.initController (self._cons, self._conp)
+        lib.initCalcInput (self._cinp, self._cins)
+        lib.initDecFct (self._decp, self._decs)
+
     def run_control(self):
         #void contr_TNF_fly_model4 (double *wout, double *zetaout, double *xi_out, int enable, contrp_t *cp, cntrState_t *cntrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint, double *xreal_debug, double *zetadebug);
         self._ctrfcn(self._CT_wout, self._CT_zetaout, self._CT_xiout,
