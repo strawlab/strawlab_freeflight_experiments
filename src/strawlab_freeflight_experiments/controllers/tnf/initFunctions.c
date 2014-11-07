@@ -21,21 +21,22 @@ void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, c
 {
 
 	/* the operator -> references to an element of a pointer to a 
-     * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
-     * it is not common
+	 * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
+	 * it is not common
 	 */
 
 	int i;
 	double deltaTheta;
 	double LFpyDummy[2];
 	double LF2pyDummy[2], LGLFpyDummy[4];
+
+	cInputp->Ts = 0.0125; // sample time, 80Hz
 	
-    
-    // parameters directly related to decision function
-    decfp->Ts = 0.01; // sample time
-    
-    // parameters directly related to the function for calculating the values of the input
-    cInputp->Ts = 0.0125; // sample time, 80Hz
+	// parameters directly related to decision function
+	decfp->Ts = 0.01; // sample time
+	
+	// parameters directly related to the function for calculating the values of the input
+	cInputp->Ts = 0.0125; // sample time, 80Hz
 
 	// system parameters for controller
 	cp->cntr_flyparams.v0 = V0;
@@ -51,7 +52,7 @@ void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, c
 	cp->Ktransv[1] = k1;
 	cp->Ktransv[2] = k2;
 	
-		
+	
 	// geometric parameters for path ellipse
 	cp->a = 0.2;
 	cp->b = 0.15;
@@ -65,15 +66,15 @@ void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, c
 	// index of path to be followed
 	cp->path_type = 1;
 	
-    // TEST
-    /*cp->a = 0.55;
+	// TEST
+	/*cp->a = 0.55;
 	cp->b = 0.25;
 	cp->delta = 0.15;
 	cp->xme = 1.05;
 	cp->yme = 0;*/
 	
-    
-    
+	
+	
 	// parameters directly related to the EKF
 	
 	if (EKF_V0EST) {
@@ -139,13 +140,12 @@ void init_par_cInpF_decF_ekf_cntr (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, c
 		
 	}
 	//for (i=0;i<cp->NdesPath;i++) printf("%g %g\n",cp->desiredPath[i*2],cp->desiredPath[i*2+1]);
-    
+	
 }
 
 void allocate_memory_controller (cntrState_t *cntrState, contrp_t *cp) {
 
 	// allocate memory for the controller
 	// executed as separate function because it only needs to be called once
-	
 }
 
