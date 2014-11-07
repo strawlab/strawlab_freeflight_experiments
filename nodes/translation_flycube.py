@@ -75,8 +75,8 @@ MAX_ROTATION_RATE = 3
 #             z_target
 
 CONDITIONS = [
-              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.15",
-              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.10",
+              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.12",
+#              "infinity07.svg/+0.0/0.1/+0.0/20.0/0.12",
 ]
 
 START_CONDITION = CONDITIONS[0]
@@ -380,7 +380,7 @@ class Node(object):
         if (self.ratio_total > 2) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 if self.n_cool < MAX_COOL:
-                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+#                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                     self.pub_save.publish(old_id)
                     self.n_cool += 1
 
