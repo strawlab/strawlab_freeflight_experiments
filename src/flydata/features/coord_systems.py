@@ -6,7 +6,7 @@ from flydata.features.common import SeriesExtractor
 import numpy as np
 
 
-def change_coor(velx, vely, refvelx, refvely):
+def change_coor(velx, vely, refvelx, refvely, substraction=True):
     """
     Changes the coordinates system of a velocities vectors (velx, vely) in world coordinates
     to the reference coordinates system.
@@ -27,20 +27,28 @@ def change_coor(velx, vely, refvelx, refvely):
       vector of instantaneous velocities in the x dimension of the fly
     refvely: vector of dimension num_obs
       vector of instantaneous velocities in the y dimension of the fly
+    substraction: compute a substraction step (if True) to take into account the movement of the fly for the
+      perception of the stimulus
 
     Returns
     -------
-    An array (num_obs, 2) of transformed stimulus observations, from world coordinates to "fly coordinates".
+    An array (num_obs, 2) of transformed stimulus observations, from world coordinates to "fly coordinates",
+    if substraction is True. If substraction is False, return the transformed fly velocity vectors from world
+    coordinates to "fly coordinates" (consequence: x is positive, y component should be equal to zero).
 
-    Examples
+    Examples (with 
     --------
     >>> stim_vel_x = np.array([3, -3, 0])
     >>> stim_vel_y = np.array([0, -3, 3])
     >>> fly_vel_x = np.array([2, 3, -3])
     >>> fly_vel_y = np.array([0, 3, -3])
-    >>> new_coords = change_coor(stim_vel_x, stim_vel_y, fly_vel_x, fly_vel_y)
-    >>> expected_coords = np.array([[1, 0], [-2*np.sqrt(18), 0], [-np.sqrt(18)-(3/2.)*np.sqrt(2), -(3/2.)*np.sqrt(2)]])
-    >>> np.allclose(new_coords, expected_coords)
+    >>> new_coords_trans = change_coor(stim_vel_x, stim_vel_y, fly_vel_x, fly_vel_y, substraction=True)
+    >>> new_coords_flies = change_coor(stim_vel_x, stim_vel_y, fly_vel_x, fly_vel_y, substraction=False)
+    >>> expected_coords_trans = np.array([[1, 0], [-2*np.sqrt(18), 0], [-np.sqrt(18)-(3/2.)*np.sqrt(2), -(3/2.)*np.sqrt(2)]])
+    >>> expected_coords_flies = np.array([[2, 0], [np.sqrt(18), 0], [np.sqrt(18), 0]])
+    >>> np.allclose(new_coords_trans, expected_coords_trans)
+    True
+    >>> np.allclose(new_coords_flies, expected_coords_flies)
     True
     """
     # Put scalars into numpy arrays
@@ -62,7 +70,10 @@ def change_coor(velx, vely, refvelx, refvely):
                                   [np.sin(ref_thetas), np.cos(ref_thetas)]]).T
 
     # Translation relative to the moving fly, in world coordinates
-    translations = np.array([velx - refvelx, vely - refvely]).T
+    if substraction:
+        velocities = np.array([velx - refvelx, vely - refvely]).T
+    else:
+        velocities = np.array([refvelx, refvely]).T
 
     # Return a list of x and y couples for the velocities values of the translation in the fly coordinates.
     # results = []
@@ -71,7 +82,7 @@ def change_coor(velx, vely, refvelx, refvely):
     # return np.array(results)
     # We can do better than this python-land loop...
 
-    return np.einsum('nkm,nm->nk', rotation_matrices, translations)
+    return np.einsum('nkm,nm->nk', rotation_matrices, velocities)
 
 
 class Coords2Coords(SeriesExtractor):
@@ -92,16 +103,18 @@ class Coords2Coords(SeriesExtractor):
     >>> np.allclose(df[sext.fnames()], expected)
     True
     """
-    def __init__(self, refvelx='vx', refvely='vy', stimvelx='stim_vel_x', stimvely='stim_vel_y'):
+    def __init__(self, refvelx='vx', refvely='vy', stimvelx='stim_vel_x', stimvely='stim_vel_y', substraction=True):
         super(Coords2Coords, self).__init__()
         self.refvelx = refvelx
         self.refvely = refvely
         self.stimvelx = stimvelx
         self.stimvely = stimvely
+        self.substraction = substraction
 
     def _compute_from_df(self, df):
         resxy = change_coor(df[self.stimvelx], df[self.stimvely],
-                            df[self.refvelx], df[self.refvely])
+                            df[self.refvelx], df[self.refvely],
+                            self.substraction)
         for name, res in izip(self.fnames(), resxy.T):
             df[name] = res
 
