@@ -5,3 +5,5 @@ case
 *~
 msg_new/
 src/strawlab_freeflight_experiments/msg_new/
+msg_gen/
+src/strawlab_freeflight_experiments/msg/
