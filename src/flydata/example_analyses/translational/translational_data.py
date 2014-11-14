@@ -49,16 +49,34 @@ TRANSLATIONAL_UUIDS = (
     # '36b37976509f11e48d50bcee7bdac270',
     # '6c3388da4fcc11e4844abcee7bdac270',
     # 'ea0ae0d24fcc11e48f45bcee7bdac428',
+    # - Genotype: GMR42F06-Gal4 x UAS-TNTe
+    # 'fc31ec9e62a311e4bba4bcee7bdac270',
+    # '0537122e650b11e4885ebcee7bdac37c',
+    # 'e08fb576637411e4885abcee7bdac37c',
+    # '7cb1b5f0669d11e4a656bcee7bdac44a',
+    # '1c45e9ec65d611e48ce5bcee7bdac44a',
+    # 'd3e4140865d511e49b47bcee7bdac5bc',
+    # '3ef90bee644211e48447bcee7bdac5bc',
+    # '7ceeed9061e711e48233bcee7bdac5bc',
+    # - Genotype: GMR42F06-Gal4 x UAS-TNTin
+    # '66a5c7da650b11e4b939bcee7bdac5bc',
+    # '52c0a3f262a411e49a14bcee7bdac5bc',
+    # 'b30c04a4650b11e4abbbbcee7bdac44a',
+    # 'a19afb3865d511e4b99fbcee7bdac37c',
+    # '055c3712644211e48644bcee7bdac37c',
+    # '4c59260061e711e48273bcee7bdac37c',
+    # '58968762637411e4a194bcee7bdac270',
+    # 'c0f24b2261e711e4a168bcee7bdac270',
     # UUIDs about HS/VS study
     # - Genotype: VT58487-Gal4 x UAS-TNTe, Tsh-Gal80
-     #'22f2a3645c6411e4925bbcee7bdac5bc',
+    # '22f2a3645c6411e4925bbcee7bdac5bc',
     # '87af4bf25df611e49cf1bcee7bdac5bc',
     # 'c3f6cbf85ec311e48224bcee7bdac5bc',
     # '743bc8125df511e49070bcee7bdac44a',
     # '5a9d6ca05b9111e49d91bcee7bdac44a',
     # '3020d82e5df611e4a305bcee7bdac37c',
     # '8da32ab85d2111e4b1d1bcee7bdac37c',
-     'bc2a4f0a5b9211e495a8bcee7bdac37c',
+    # 'bc2a4f0a5b9211e495a8bcee7bdac37c',
     # - Genotype: VT58487-Gal4 x UAS-TNTin, Tsh-Gal80
     # 'c14d2f505b8f11e4b11610bf48d7699b',
     # '29edb21e5b9011e4b6f8bcee7bdac428',
@@ -68,6 +86,18 @@ TRANSLATIONAL_UUIDS = (
     # '1fda0c6e5ec411e49305bcee7bdac44a',
     # '6fe00ad45ec311e49ec4bcee7bdac37c',
     # '6ae5933e5c6411e495f9bcee7bdac37c',
+    # - Genotype: VT58487-Gal4, Tsh-Gal80 x CS
+    # 'a4c29748605911e4a8fcbcee7bdac5bc',
+    # '0115a6d661e811e4a879bcee7bdac44a',
+    # '95f2696a611b11e492aebcee7bdac44a',
+    # 'b0c0f9ae605911e4a68bbcee7bdac37c',
+    # '869a059262a411e4b020bcee7bdac37c',
+    # - Genotype: UAS-Kir2.1 x CS
+     '54507dca611c11e4bfc9bcee7bdac37c',
+     '23ce62925f8d11e49ad6bcee7bdac44a',
+     'a43346b4605a11e49ca3bcee7bdac44a',
+     '785bbdd2611d11e49916bcee7bdac5bc',
+     '69b6680e5f8d11e4b7d9bcee7bdac5bc',
 )
 
 # Get the data from the analysis run
@@ -130,7 +160,7 @@ for condition, ax1 in zip(conditions, axes1):
     # Plot of lags vs mean correlation
     ax1.plot(lags * dt, mean_corrs)
     ax1.set_title(condition + ' (%d trajs, max at %.2fs)' % (len(corrs), max_corr_at_lag * dt))
-    ax1.set_ylim((-1, 1))
+    ax1.set_ylim((-0.1, 0.4))
     ax1.set_ylabel('correlation')
     ax1.set_xlabel('lag (s)')
     ax1.axhline(y=0, color='lightslategray')
