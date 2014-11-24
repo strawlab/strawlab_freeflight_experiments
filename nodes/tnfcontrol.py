@@ -27,7 +27,7 @@ import flyflypath.model
 import nodelib.log
 
 from strawlab_freeflight_experiments.topics import *
-from strawlab_freeflight_experiments.controllers import MPC
+from strawlab_freeflight_experiments.controllers import TNF
 from strawlab_freeflight_experiments.controllers.util import Fly, Scheduler
 
 CONTROL_RATE        = 80.0      #Hz
@@ -53,18 +53,20 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
-CONTROL_IN_PARALLEL = True
-
 #CONDITION = "cylinder_image/
-#             svg_path(if omitted target = 0,0)/
-#             gain/
+#             path_descriptor/
+#             gain(controller specific)/
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
-#             advance_threshold(m)/
 #             z_gain"
 #
 CONDITIONS = [
-              "checkerboard16.png//nan/-10.0/nan/0.20",
-              "gray.png//nan/-10.0/nan/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-2.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-4.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-6.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-8.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-10.0/-10.0/0.20",
+              "checkerboard16.png//tnf|+0.0|-1.0|-20.0/-10.0/0.20",
+              "gray.png//tnf|-0.1|-1.2|-2.1/-10.0/0.20",
 ]
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
@@ -72,14 +74,14 @@ START_CONDITION = CONDITIONS[0]
 COOL_CONDITIONS = set()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","path_theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","w","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4","zeta0","zeta1","xi0","xi1","xi2","xi3","intstate0","intstate1")
 
 class Node(object):
 
     #from environmentSfct
     TS_DEC_FCT      = 0.01
     TS_CALC_INPUT   = 0.0125
-    TS_CONTROL      = 0.05
+    TS_CONTROL      = 0.0125
     TS_EKF          = 0.005
 
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
@@ -112,17 +114,13 @@ class Node(object):
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
         self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
-        self.log.ratio = 0 #backwards compatibility - see path_theta for mpc path parameter
+        self.log.ratio = 0 #backwards compatibility
 
-        #setup the MPC controller
+        #setup the MPC controller in switch conditions
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = MPC.MPC(ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control = TNF.TNF(k0=-0.1, k1=-1.2, k2=-2.1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
-            #rotation_rate = omega
-
-        #publish the path
-        self.path_m_pub.publish(Polygon(points=[Point32(x,y,0) for x,y in self.control.path]))
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -156,28 +154,28 @@ class Node(object):
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_control(self):
-        if CONTROL_IN_PARALLEL:
+        with self.controllock:
             self.control.run_control()
-        else:
-            with self.controllock:
-                self.control.run_control()
-        self.log.j = self.control._CT_jout.value
         self.log.w = self.control._CT_wout.value
-        self.log.path_theta = self.control._CT_thetaout.value
+        for i,v in enumerate(self.control._CT_zetaout):
+            setattr(self.log, "zeta%d"%i, v)
+        for i,v in enumerate(self.control._CT_xiout):
+            setattr(self.log, "xi%d"%i, v)
+        for i,v in enumerate(self.control._ctr_intstate.flatten()):
+            setattr(self.log, "intstate%d"%i, v)
         self.log.trg_x, self.log.trg_y = self.control.target_point
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_update_ekf(self, x,y):
-        self.control.run_ekf(None,x,y)
-        #FIXME: log x here for martin
+        with self.controllock:
+            self.control.run_ekf(None,x,y)
+        for i,x in enumerate(self.control._ekf_xest.flatten()):
+            setattr(self.log, "xest%d"%i, x)
 
     @timecall(stats=1000, immediate=False, timer=monotonic_time)
     def do_calculate_input(self):
-        if CONTROL_IN_PARALLEL:
+        with self.controllock:
             self.control.run_calculate_input()
-        else:
-            with self.controllock:
-                self.control.run_calculate_input()
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -190,14 +188,22 @@ class Node(object):
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance,v_gain = self.condition.split('/')
+        img,svg,p,rad,v_gain = self.condition.split('/')
         self.img_fn = str(img)
-        self.p_const = float(p)
+        self.gain = p
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.z_target = 0.7
         self.svg_fn = str(svg)
         self.svg_pub.publish(self.svg_fn)
+
+        with self.controllock:
+            tnf,k0,k1,k2 = p.split('|')
+            self.control.reinit(k0=float(k0),k1=float(k1),k2=float(k2),ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control.reset()
+
+        #publish the path
+        self.path_m_pub.publish(Polygon(points=[Point32(x,y,0) for x,y in self.control.path]))
 
         self.log.trg_z = self.z_target
         self.log.cyl_r = self.rad_locked
@@ -205,7 +211,7 @@ class Node(object):
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked))
+        rospy.loginfo('condition: %s (%s, rad locked=%.1f)' % (self.condition,self.gain,self.rad_locked))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
@@ -221,7 +227,6 @@ class Node(object):
 
         r = rospy.Rate(sched.get_tf())
 
-        cthread = None
         while not rospy.is_shutdown():
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
@@ -244,10 +249,6 @@ class Node(object):
                     if state == 'ekf':
                         if self.control.ekf_enabled:
                             self.do_update_ekf(fly_x, fly_y)
-
-                            xest = self.control._ekf_xest.flatten()
-                            for _i in range(5):
-                                setattr(self.log, "xest%d"%_i, xest[_i])
                     if state == 'calcinput':
                         self.do_calculate_input()
 
@@ -265,20 +266,18 @@ class Node(object):
 
                         #print rotation_rate, fly_v, fly_z
 
-                        if np.isnan(rotation_rate):
+                        if np.isnan(rotation_rate) or np.isinf(rotation_rate):
                             with self.controllock:
                                 self.control.reset()
                         else:
-                            self.pub_rotation_velocity.publish(rotation_rate)
+                            finfo = np.finfo(np.float32)
+                            safe_rr = min(max(finfo.min,rotation_rate), finfo.max)
+                            self.pub_rotation_velocity.publish(safe_rr)
 
                         self.src_m_pub.publish(fly_x,fly_y,fly_z)
                         self.ack_pub.publish(self.control.controller_enabled > 0)
                     if state == 'control':
-                        if cthread is not None:
-                            cthread.join()
-
-                        cthread = threading.Thread(target=self.do_control)
-                        cthread.start()
+                        self.do_control()
                     if state == 'decfct':
                         #handled in on_flydra_mainbrain_super_packets
                         pass

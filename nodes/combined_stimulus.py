@@ -22,8 +22,10 @@ import flyflypath.model
 import flyflypath.transform
 import nodelib.log
 import strawlab_freeflight_experiments.replay as sfe_replay
+import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 from strawlab_freeflight_experiments.topics import *
+from strawlab_freeflight_experiments import INVALID_VALUE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -32,16 +34,30 @@ SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. expe
 
 ADVANCE_RATIO       = 1/100.0
 
-FLY_DIST_CHECK_TIME = 5.0
-FLY_DIST_MIN_DIST   = 0.2
+FLY_DIST_CHECK_TIME = 0.2       # time interval in seconds to check fly movement
+FLY_DIST_MIN_DIST   = 0.0005    # minimum distance fly must move in above interval to not be ignored
 
-START_RADIUS    = 0.35
-START_ZDIST     = 0.4
-START_Z         = 0.5
+# start volume defined as cube
+X_MIN = -0.30
+X_MAX =  0.30
+Y_MIN = -0.15
+Y_MAX =  0.15
+Z_MIN =  0.01
+Z_MAX =  0.38
+
+# time interval in seconds to check fly movement after lock on
+FLY_HEIGHT_CHECK_TIME = 0.5       
 
 # z range for fly tracking (dropped outside)
-Z_MINIMUM = 0.00
-Z_MAXIMUM = 0.95
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Z_MINIMUM = 0.01
+Z_MAXIMUM = 0.38
+
+# y range for fly tracking (dropped outside)
+# this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
+Y_MINIMUM = -0.18
+Y_MAXIMUM = 0.18
+
 
 GRAY_FN = "gray.png"
 
@@ -51,52 +67,41 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 10
-
-REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                            colname="rotation_rate")
-REPLAY_ARGS_Z = dict(filename=os.path.join(pkg_dir,
-                                              "data","replay_experiments",
-                                              "9b97392ebb1611e2a7e46c626d3a008a_9.df"),
-                     colname="v_offset_rate")
+MAX_ROTATION_RATE = 3
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
-#             z_gain"
-#
-# if you set nan for either gain then you get a replay experiment on the
-# corresponding bias term
-#
+#             z_gain/
+#             perturb_or_post_desc (PERTURABTION:perturbation_descriptor" or POST:model_filename+x,y,z)
+
+                            
 CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20",
-#              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20",
-              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
-              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+              "checkerboard16.png/infinity07.svg/+0.3/-10.0/0.1/0.18/justpost1.osg|-0.1|-0.1|0.0",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.7|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",             
+              "gray.png/infinity07.svg/+0.3/-10.0/0.1/0.18/",
+#              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",
+          #    "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 ]
+
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set()
 
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","model_x","model_y","model_z","model_filename")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusCylinder')
+            'StimulusCylinderAndModel')
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -106,6 +111,8 @@ class Node(object):
         self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
+        self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
+        self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
@@ -136,8 +143,10 @@ class Node(object):
 
             self.ratio_total = 0
 
-            self.replay_rotation = sfe_replay.ReplayStimulus(**REPLAY_ARGS_ROTATION)
-            self.replay_z = sfe_replay.ReplayStimulus(**REPLAY_ARGS_Z)
+            self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
+            self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
+
+            self.blacklist = {}
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
@@ -158,6 +167,10 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
+    
+    @property
+    def is_perturbation_experiment(self):
+        return not isinstance(self.perturber, sfe_perturb.NoPerturb)
     @property
     def is_replay_experiment_rotation(self):
         return np.isnan(self.p_const)
@@ -175,29 +188,69 @@ class Node(object):
         self.log.condition = self.condition
 
         self.drop_lock_on()
+      
+        try:
+            img,svg,p,rad,advance,v_gain,perturb_or_post_desc = self.condition.split('/')
+        except ValueError:
+            #no perturbation defined
+            perturb_or_post_desc = None
+            img,svg,p,rad,advance,v_gain = self.condition.split('/')
 
-        img,svg,p,rad,advance,v_gain = self.condition.split('/')
         self.img_fn = str(img)
         self.p_const = float(p)
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
+        self.z_target = 0.2
 
         self.log.cyl_r = self.rad_locked
 
-        if str(svg):
-            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
+        #default to no perturb
+        self.perturber = sfe_perturb.NoPerturb()
+
+        self.svg_fn = ''        
+        ssvg = str(svg)
+        if ssvg:
+            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
-        else:
-            self.svg_fn = ''
+
+            self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        rospy.loginfo('perturbation: %r' % self.perturber)       
 
+        #try and get details of the conflict post
+        if ".osg" in perturb_or_post_desc:
+             model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
+        #and the perturber
+        elif perturb_or_post_desc is not None:
+ 
+        #default to no conflict
+            model_filename = '/dev/null'
+            model_x = model_y = model_z = INVALID_VALUE
+
+         #set the model in all cases
+        self.model_filename = str(model_filename)
+        self.model_x = float(model_x)
+        self.model_y = float(model_y)
+        self.model_z = float(model_z)
+
+        msg = Pose()
+        msg.position.x = self.model_x
+        msg.position.y = self.model_y
+        msg.position.z = self.model_z
+        msg.orientation.w = 1.0
+        self.pub_model_centre.publish(msg)
+
+        self.log.model_filename = self.model_filename
+        self.log.model_x = self.model_x
+        self.log.model_y = self.model_y
+        self.log.model_z = self.model_z
+        
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
         if self.is_replay_experiment_z:
@@ -205,17 +258,45 @@ class Node(object):
 
         return self.v_gain*(fly_z-self.z_target)
 
-    def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
+    def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        could_perturb = False
         if self.svg_fn and (not self.is_replay_experiment_rotation):
+            could_perturb = self.is_perturbation_experiment
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
                 if segment.length < self.advance_px:
-                    self.log.ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
+                    new_ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
                     self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
                     self.ratio_total += ADVANCE_RATIO
+                    self.log.ratio = new_ratio
         else:
             self.trg_x = self.trg_y = 0.0
+
+        #return early if open loop
+        if could_perturb:
+            if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             self.model.ratio, self.ratio_total,
+                                             now, framenumber, currently_locked_obj_id):
+            
+                rate,state = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
+
+                print 'perturbation progress: %s' % self.perturber.progress
+ 
+                if state=='finished':
+                    self.drop_lock_on(blacklist=True)
+
+                    rospy.loginfo('perturbation finished')
+
+                    if self.condition in COOL_CONDITIONS:
+                        #fly is still flying
+                        if abs(fly_z-self.z_target) < 0.1:
+                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+                            self.pub_save.publish(currently_locked_obj_id)
+
+                return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
         if self.is_replay_experiment_rotation:
@@ -272,8 +353,13 @@ class Node(object):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
+                # check if fly is in an acceptable z range after a given interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM)):
                     self.drop_lock_on()
+                    if (fly_z > Z_MAXIMUM):
+                        rospy.loginfo('MAXIMUM: too high (Z = %.2f > Z_MAXIMUM %.2f )' % (fly_z, Z_MAXIMUM))
+                    else:
+                        rospy.loginfo('MINIMUM: too low (Z = %.2f < Z_MINIMUM %.2f )' % (fly_z, Z_MINIMUM))
                     continue
 
                 if np.isnan(fly_x):
@@ -281,6 +367,17 @@ class Node(object):
                     continue
 
                 active = True
+
+                # check if fly is in an acceptable y range after a given interval after lock_on
+                if ((now - self.first_seen_time) > FLY_HEIGHT_CHECK_TIME) and ((fly_y > Y_MAXIMUM) or (fly_y < Y_MINIMUM)):
+                    self.drop_lock_on()
+                    if (fly_y > Y_MAXIMUM):
+                        rospy.loginfo('WALL: Wall (Y = %.2f > Y_MAXIMUM %.2f )' % (fly_y, Y_MAXIMUM))
+                    else:
+                        rospy.loginfo('WALL: Wall (Y = %.2f < Z_MINIMUM %.2f )' % (fly_y, Y_MINIMUM))
+                    continue
+
+              
 
                 #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
@@ -298,7 +395,7 @@ class Node(object):
                         rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
-                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
+                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
                 v_rate = self.get_v_rate(fly_z)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -308,6 +405,8 @@ class Node(object):
 
                 self.log.cyl_x = fly_x; self.log.cyl_y = fly_y;
                 self.log.trg_x = trg_x; self.log.trg_y = trg_y; self.log.trg_z = self.z_target
+
+                self.log.perturb_progress = self.perturber.progress
 
                 self.log.rotation_rate = rate
                 self.pub_rotation_velocity.publish(rate)
@@ -330,12 +429,13 @@ class Node(object):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def is_in_trigger_volume(self,pos):
-        c = np.array( (self.x0,self.y0) )
-        p = np.array( (pos.x, pos.y) )
-        dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < START_RADIUS) and (abs(pos.z-START_Z) < START_ZDIST):
-            return True
+    def should_lock_on(self, obj):
+        if obj.obj_id in self.blacklist:
+            return False
+
+        pos = obj.position
+        if ((pos.x>X_MIN) and (pos.x<X_MAX) and (pos.y>Y_MIN) and (pos.y<Y_MAX) and (pos.z>Z_MIN) and (pos.z<Z_MAX)):
+             return True
         return False
 
     def on_flydra_mainbrain_super_packets(self,data):
@@ -349,7 +449,7 @@ class Node(object):
                         self.flyv = obj.velocity
                         self.framenumber = packet.framenumber
                 else:
-                    if self.is_in_trigger_volume(obj.position):
+                    if self.should_lock_on(obj):
                         self.lock_on(obj,packet.framenumber)
 
     def update(self):
@@ -378,21 +478,24 @@ class Node(object):
 
             self.ratio_total = 0
 
+            self.perturber.reset()
             self.replay_rotation.reset()
             self.replay_z.reset()
 
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
+        self.pub_model_filename.publish(self.model_filename)
+
         self.update()
 
-    def drop_lock_on(self):
+    def drop_lock_on(self, blacklist=False):
         with self.trackinglock:
             old_id = self.currently_locked_obj_id
             now = rospy.get_time()
             dt = now - self.first_seen_time
 
-            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s (tracked for %.1f, %.1f loops)' % (old_id, dt, self.ratio_total))
 
             self.currently_locked_obj_id = None
 
@@ -407,12 +510,15 @@ class Node(object):
             self.log.cyl_x = 0
             self.log.cyl_y = 0
 
+            if blacklist:
+                self.blacklist[old_id] = True
+
         self.pub_image.publish(GRAY_FN)
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
-        if (self.ratio_total > 2) and (old_id is not None):
+        if (self.ratio_total > 3) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)
@@ -420,7 +526,7 @@ class Node(object):
         self.update()
 
 def main():
-    rospy.init_node("rotation")
+    rospy.init_node("combined_stimulus")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,

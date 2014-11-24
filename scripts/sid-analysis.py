@@ -110,16 +110,20 @@ if __name__=='__main__':
     EPS = False
     DETREND = True
     LOOKBACK = 400
-    MODEL_SPECS_TO_TEST = ('tf44','tf33','oe441','oe331','arx441','arx331')
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
         "--min-fit-pct", type=float, default=40,
         help='minimum model fit percentage')
+    parser.add_argument(
+        "--models", type=str, default="tf44,tf33,oe441,oe331,arx441,arx331",
+        help='model specs to test')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
+
+    MODEL_SPECS_TO_TEST = args.models.split(',')
 
     mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
     mlab.start()

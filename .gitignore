@@ -2,4 +2,6 @@ build
 lib
 *.pyc
 case
-*.ipynb_checkpoints*
+msg_gen/
+src/strawlab_freeflight_experiments/msg/
+*~

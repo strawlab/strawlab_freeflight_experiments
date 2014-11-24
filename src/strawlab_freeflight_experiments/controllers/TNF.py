@@ -5,11 +5,11 @@ import numpy.ctypeslib
 import ctypes as ct
 import ctypes.util
 
-lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.path.abspath(__file__)),'mpc'))
+lib = numpy.ctypeslib.load_library("libtnf", os.path.join(os.path.dirname(os.path.abspath(__file__)),'tnf'))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
-class MPC:
-    def __init__(self, ts_ekf, ts_c, ts_d, ts_ci):
+class TNF:
+    def __init__(self, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci):
 
         #these values are shared between python and C, and I need to know their
         #value
@@ -17,11 +17,14 @@ class MPC:
         self._CT_cntrl_enabled = ct.c_double(0)
         self._CT_omegae = ct.c_double(0)
 
-        self._CT_jout = ct.c_double(0) #cost functional
         self._CT_wout = ct.c_double(0) #evolution of path param
-        self._CT_thetaout = ct.c_double(0) #value of path param as used in control computation
+        self._CT_zetaout = (ct.c_double * 2)() #current value of path parameter and derivative
+        self._CT_xiout =  (ct.c_double * 4)() #current value of transverse state xi
 
-        self._CT_targetpoint = (ct.c_double * 2)() #current target point index of path [x,y]
+        self._CT_zetadebug = (ct.c_double * 2)()
+        self._CT_xrealdebug =  (ct.c_double * 3)()
+
+        self._CT_targetpoint = data = (ct.c_double * 2)() #current target point index of path [x,y]
         self._target_x, self._target_y = 0,0
 
         self._CT_cur_fly_pos = np.zeros(2, dtype=ctypes.c_double) #current fly pos [x,y]
@@ -29,7 +32,7 @@ class MPC:
 #        int decFct (double *xpos, double *ypos, int *id, int arrayLen, int reset,
 #                double *enableCntr, double *enableEKF,  
 #            contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, decfState_t *decfState,  
-#            projGrState_t *projGrState, ekfState_t *ekfState, double *gammaEstimate) {
+#            cntrState_t *contrState, ekfState_t *ekfState, double *gammaEstimate) {
         self._decfcn = lib.decFct
         self._decfcn.restype = ct.c_int
         self._decfcn.argtypes = [ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_int), ct.c_int, ct.c_int,
@@ -37,18 +40,19 @@ class MPC:
                                  ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
                                  ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_double)]
 
-        # void ekf_fly_model2 (int enable, ekfState_t *ekfState, double omegae, double *sysOut, ekfp_t *ekfp)
-        self._ekffcn = lib.ekf_fly_model2
+        # void ekf_fly_model4 (int enable, ekfState_t *ekfState, double omegae, double *sysOut, ekfp_t *ekfp);
+        self._ekffcn = lib.ekf_fly_model4
         self._ekffcn.argtypes = [ct.c_int, ct.c_void_p, ct.c_double, ct.POINTER(ct.c_double), ct.c_void_p]
 
-        #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint)
-        self._ctrfcn = lib.contr_subopt_MPC_fly_model2
+        #void contr_TNF_fly_model4 (double *wout, double *zetaout, double *xi_out, int enable, contrp_t *cp, cntrState_t *cntrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint, double *xreal_debug, double *zetadebug);
+        self._ctrfcn = lib.contr_TNF_fly_model4
         self._ctrfcn.argtypes = [ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_double),
                                  ct.c_int, ct.c_void_p, ct.c_void_p, ct.c_void_p,
                                  ct.c_int, ct.c_void_p,
-                                 ct.POINTER(ct.c_double)]
+                                 ct.POINTER(ct.c_double),
+                                 ct.POINTER(ct.c_double), ct.POINTER(ct.c_double)]
 
-        #void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, projGrState_t *projGrState, contrp_t *cp, double *omegae) {
+        #void calcInput (cInputp_t *cInputp, cInpState_t *cInpState, cntrState_t *cntrState, contrp_t *cp, double *omegae);
         self._cinfcn = lib.calcInput
         self._cinfcn.argtype = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_double)]
 
@@ -59,23 +63,24 @@ class MPC:
         self._decs = lib.decfct_new_state()
 
         self._conp = lib.contr_new_params()
-        self._prjs = lib.contr_new_state()
+        self._cons = lib.contr_new_state()
 
         self._cinp = lib.calcinput_new_params()
         self._cins = lib.calcinput_new_state()
 
-        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
-                                                                  ct.c_double, ct.c_double, ct.c_double, ct.c_double]
-        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp, ts_ekf, ts_c, ts_d, ts_ci)
+        lib.init_par_cInpF_decF_ekf_cntr.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
+                                                     ct.c_double, ct.c_double, ct.c_double,
+                                                     ct.c_double, ct.c_double, ct.c_double, ct.c_double]
+        lib.init_par_cInpF_decF_ekf_cntr(self._conp, self._ekfp, self._decp, self._cinp, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci)
 
         #allocate memory for internal controller variables:
-        lib.allocate_memory_controller(self._prjs, self._conp)
+        lib.allocate_memory_controller(self._cons, self._conp)
 
         #initialize EKF: 
         lib.initEKF (self._ekfs, self._ekfp)
 
         #initialize controller
-        lib.initProjGradMethod (self._prjs, self._conp)
+        lib.initController (self._cons, self._conp)
 
         #initialize function calculating the input to the system
         lib.initCalcInput (self._cinp, self._cins)
@@ -87,26 +92,10 @@ class MPC:
         n = ct.c_int(0)
         m = ct.c_int(0)
 
-        lib.get_proj_state.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
-        lib.get_proj_state.restype = ct.POINTER(ct.c_double)
-        x = lib.get_proj_state(self._conp, self._prjs, m, n)
-        #trick numpy into making a zero-copy view of a fortran (colum major) 
-        #hunk of matlab owned memory. The reshape dance is needed because as_array
-        #does not support a strides argumemt
-        self._proj_x = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
-        self._proj_x = np.reshape(self._proj_x, (m.value,n.value), order='F')
-
-        lib.get_proj_costate.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
-        lib.get_proj_costate.restype = ct.POINTER(ct.c_double)
-        x = lib.get_proj_costate(self._conp, self._prjs, m, n)
-        self._proj_cox = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
-        self._proj_cox = np.reshape(self._proj_cox, (m.value,n.value), order='F')
-
-        lib.get_proj_input.argtypes = [ct.c_void_p, ct.c_void_p, ct.POINTER(ct.c_int), ct.POINTER(ct.c_int)]
-        lib.get_proj_input.restype = ct.POINTER(ct.c_double)
-        x = lib.get_proj_input(self._conp, self._prjs, m, n)
-        self._proj_u = numpy.ctypeslib.as_array(x, shape=(m.value*n.value, 1))
-        self._proj_u = np.reshape(self._proj_u, (m.value,n.value), order='F')
+        lib.get_int_state.argtypes = [ct.c_void_p, ct.POINTER(ct.c_int)]
+        lib.get_int_state.restype = ct.POINTER(ct.c_double)
+        x = lib.get_int_state(self._cons, n)
+        self._ctr_intstate = numpy.ctypeslib.as_array(x, shape=(n.value,1))
 
         lib.ekf_get_state_estimate.argtypes = [ct.c_void_p, ct.POINTER(ct.c_int)]
         lib.ekf_get_state_estimate.restype = ct.POINTER(ct.c_double)
@@ -146,15 +135,24 @@ class MPC:
     def target_point(self):
         return self._target_x, self._target_y
 
+    def reinit(self, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci):
+        lib.init_par_cInpF_decF_ekf_cntr(self._conp, self._ekfp, self._decp, self._cinp, k0, k1, k2, ts_ekf, ts_c, ts_d, ts_ci)
+        lib.allocate_memory_controller(self._cons, self._conp)
+        lib.initEKF (self._ekfs, self._ekfp)
+        lib.initController (self._cons, self._conp)
+        lib.initCalcInput (self._cinp, self._cins)
+        lib.initDecFct (self._decp, self._decs)
+
     def run_control(self):
-        #void contr_subopt_MPC_fly_model2 (double *Jout, double *wout, double *thetaout, int enable, contrp_t *cp, projGrState_t *projGrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState)
-        self._ctrfcn(self._CT_jout, self._CT_wout, self._CT_thetaout,
+        #void contr_TNF_fly_model4 (double *wout, double *zetaout, double *xi_out, int enable, contrp_t *cp, cntrState_t *cntrState, ekfState_t *ekfState, int enableEKF, cInpState_t *cInpState, double *targetPoint, double *xreal_debug, double *zetadebug);
+        self._ctrfcn(self._CT_wout, self._CT_zetaout, self._CT_xiout,
                      int(self.controller_enabled),
-                     self._conp, self._prjs,
+                     self._conp, self._cons,
                      self._ekfs,
                      int(self.ekf_enabled),
                      self._cins,
-                     self._CT_targetpoint)
+                     self._CT_targetpoint,
+                     self._CT_xrealdebug,self._CT_zetadebug)
         self._target_x, self._target_y = self._CT_targetpoint
 
     def run_ekf(self, fly, x=None, y=None):
@@ -175,11 +173,11 @@ class MPC:
     def run_calculate_input(self):
         self._cinfcn(self._cinp,
                      self._cins,
-                     self._prjs,
+                     self._cons,
                      self._conp,
                      ct.byref(self._CT_omegae))
 
-    def should_control(self, flies, x=None, y=None, ids=None):
+    def should_control(self, flies, x=None, y=None, heading=None, ids=None):
         if x is None:
             x = [f.x for f in flies]
             y = [f.y for f in flies]
@@ -200,7 +198,7 @@ class MPC:
                      0,
                      ct.byref(self._CT_cntrl_enabled), ct.byref(self._CT_ekf_enabled),
                      self._conp, self._ekfp, self._decp, self._decs,
-                     self._prjs, self._ekfs,
+                     self._cons, self._ekfs,
                      heading.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
 
         return fid
@@ -213,6 +211,6 @@ class MPC:
                      1, #reset=1
                      ct.byref(self._CT_cntrl_enabled), ct.byref(self._CT_ekf_enabled),
                      self._conp, self._ekfp, self._decp, self._decs,
-                     self._prjs, self._ekfs,
+                     self._cons, self._ekfs,
                      ctypes.POINTER(ctypes.c_double)())
 
