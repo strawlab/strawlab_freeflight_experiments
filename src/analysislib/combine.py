@@ -34,7 +34,7 @@ import analysislib.curvature as acurve
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
 
-from whatami.config import Configuration, MAX_EXT4_FN_LENGTH
+from whatami import What, MAX_EXT4_FN_LENGTH
 
 #results = {
 #   condition:{
@@ -87,8 +87,8 @@ class _Combine(object):
         self._index = index
         self._configdict['index'] = self._index
 
-    def who(self):
-        return Configuration(self.__class__.__name__,self._configdict)
+    def what(self):
+        return What(self.__class__.__name__,self._configdict)
 
     def _args_to_configuration(self, args):
         for k,v in args._get_kwargs():
