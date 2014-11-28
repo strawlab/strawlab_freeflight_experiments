@@ -251,13 +251,13 @@ public:
     virtual void setVelocity( const osg::Vec3& v );
     virtual void setRotationRate( const double& rate );
     virtual void setObserverPosition( const osg::Vec3& v );
+    virtual void setPixelSize( float size );
 private:
     particleDataType* _pd;
+    osg::ref_ptr<osg::Uniform> _pixelsize;
 };
 
 ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
-    //std::string textureFile = get_plugin_data_path("blackstar.png");
-
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
@@ -291,7 +291,8 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 11.0f ) );
+    _pixelsize = new osg::Uniform( "pixelsize", 101.0f );
+    geode->getOrCreateStateSet()->addUniform( _pixelsize );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
@@ -320,6 +321,10 @@ void ParticleNode::setObserverPosition( const osg::Vec3& v ) {
     if (_pd->_move) {
         _pd->_move->setObserverPosition(v);
     }
+}
+
+void ParticleNode::setPixelSize( float size ) {
+    _pixelsize->set(size);
 }
 
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
@@ -443,6 +448,7 @@ std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const 
     std::vector<std::string> result;
     result.push_back("star_velocity");
     result.push_back("star_rotation_rate");
+    result.push_back("star_size");
     result.push_back("model_pose");
     return result;
 }
@@ -467,6 +473,11 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     } else if (topic_name=="star_rotation_rate") {
         float rate = parse_float(root);
         setRotationRate(rate);
+    } else if (topic_name=="star_size") {
+        float size = parse_float(root);
+        if (pn_white) {
+            pn_white->setPixelSize(size);
+        }
     } else if (topic_name=="model_pose") {
         json_t *data_json;
 
@@ -504,6 +515,8 @@ std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& t
     if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
     } else if (topic_name=="star_rotation_rate") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="star_size") {
         result = "std_msgs/Float32";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";

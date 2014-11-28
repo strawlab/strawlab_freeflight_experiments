@@ -8,5 +8,5 @@ void main(void)
 {
   vec4 eyePos = gl_ModelViewMatrix * gl_Vertex;
   gl_Position = gl_ProjectionMatrix * eyePos;
-  gl_PointSize = pixelsize;
+  gl_PointSize = pixelsize/gl_Position.w;
 }
