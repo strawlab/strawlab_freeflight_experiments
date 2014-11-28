@@ -124,7 +124,11 @@ class _Combine(object):
                         if next(pickletools.genops(reader))[0].proto >= 2:
                             return cPickle.load(f)
                         return pickle.load(f)
-                return unpickle_fast()
+                try:
+                    return unpickle_fast()
+                except Exception, e:
+                    self._warn('Could not unpickle %s, recombining and recaching' % pkl)
+                    self._warn('The error was %s' % str(e))
         return None
 
     def _save_cache_file(self):
