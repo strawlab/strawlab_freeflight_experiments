@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import numpy.random
 import scipy.signal
@@ -5,6 +6,7 @@ import scipy.signal.waveforms as waveforms
 import scipy.interpolate as interp
 
 import matplotlib.gridspec
+import pandas as pd
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -43,6 +45,8 @@ def get_perturb_class(perturb_descriptor, debug=False):
             return  PerturberMultiTone
         elif name == 'tone':
             return PerturberTone
+        elif name == 'prbs':
+            return PerturberPRBS
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
@@ -112,15 +116,18 @@ class Perturber:
                 should |= f(ratio)
 
             if not self._started and should:
-                self.now = now
-                self.oid = currently_locked_obj_id
-                self._started = True
-                self._frame0 = framenumber
+                self._start(now, framenumber, currently_locked_obj_id)
 
         if should:
             return (now - self.now) < self.duration
 
         return False
+
+    def _start(self, now, framenumber, currently_locked_obj_id):
+        self.now = now
+        self.oid = currently_locked_obj_id
+        self._started = True
+        self._frame0 = framenumber
 
     def _plot_ylabel(self, ax, ylabel, **plot_kwargs):
         if ylabel:
@@ -160,7 +167,7 @@ class NoPerturb(Perturber):
         Perturber.__init__(self, '', 0, 0, self.DEFAULT_DESC)
     def __repr__(self):
         return "<NoPerturb>"
-    def step(self, *args):
+    def step(self, *args, **kwargs):
         return 0,'ongoing'
     def get_perturb_vs_time(self, t0, t1, fs=100):
         return [],[]
@@ -507,6 +514,102 @@ class PerturberMultiTone(_PerturberInterpolation):
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
 
+class PerturberPRBS(Perturber):
+
+    DEFAULT_DESC = "pbrs_WHAT|-0.4|0.4|0.03|3|"
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'pbrs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
+
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+
+        value is the magnitude of the step
+
+        duration is the duration of the step.
+
+        ratio_min is the minimum amount of the path the target must have flown
+
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        name,value_min,value_max,bw,duration,seed,ratio_min,chunks = descriptor.split('|', 7)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what = '_'.join(name_parts[1:])
+        if me != 'pbrs':
+            raise Exception("Incorrect PerturberPRBS configuration")
+
+        self.seed = str(seed) if seed else None
+        self.value_min = float(value_min)
+        self.value_max = float(value_max)
+        self.bw = float(bw)
+
+        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
+
+        #build a dataframe that we can resample or index into while maintaining
+        #the correct seed
+        t = np.arange(0,self.duration,self.bw)
+        r = numpy.random.RandomState(self.seed)
+
+        #create a PRBS
+        vmask = np.array([r.choice((True,False)) for _ in t])
+
+        #use the PBRS bool array to set the true values
+        #(respecting min/max) in a new array of the correct type
+        v = np.ones_like(vmask,dtype=float)
+        v[vmask] = self.value_max
+        v[~vmask] = self.value_min
+
+        self._df = pd.DataFrame({"v":v},index=pd.to_datetime(t,unit='s'))
+
+    def __repr__(self):
+        return "<PerturberPRBS what=%s val=%.1f/%.1f dur=%.1fs (bw=%.2fs)>" % (self.what, self.value_min, self.value_max,self.duration,self.bw)
+
+    def get_perturb_vs_time(self, t0, t1, fs=100):
+        t = []
+        v = []
+        if t0 < 0:
+            num = int(abs(t0)*fs)
+            t.extend( np.linspace(t0,0,num=num) )
+            v.extend( np.zeros(num) )
+
+        #get a new resampled dataframe
+        ts_ms = int(1000./fs)
+        ts_s = ts_ms/1000.0
+        df = self._df.resample('%dL'%ts_ms,how='last',closed='right',fill_method='pad')
+
+        t.extend( np.arange(0,len(df)*ts_s,ts_s) )
+        v.extend( df['v'].values )
+
+        if t1 > self.duration:
+            num = int(t1*fs)
+            t.extend( np.linspace(self.duration,t1,num=num) )
+            v.extend( np.zeros(num) )
+
+        return t,v
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        self.progress = framenumber - self._frame0
+        finished = (now - self.now) >= (0.99*self.duration)
+        if framenumber==self._frame0:
+            state='starting'
+        elif finished:
+            state='finished'
+        else:
+            state='ongoing'
+
+        idx = self._df.index.asof(pd.to_datetime(now - self.now,unit='s'))
+        value = self._df.loc[idx]
+
+        return value, state
+
+
+    def get_time_limits(self):
+        return 0,self.duration
+
+    def get_value_limits(self):
+        return min(self.value_min,0),max(self.value_max,0)
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
@@ -544,7 +647,7 @@ def plot_perturbation_frequency_characteristics(fig,obj):
     ax = fig.add_subplot(gs[1,1])
     plot_amp_spectrum(ax, obj)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone)
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberPRBS)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -575,5 +678,8 @@ if __name__ == "__main__":
             obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
             f = plt.figure(repr(obj), figsize=(8,8))
             _plot(f,obj)
+
+            obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
+            print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1)
 
     plt.show()
