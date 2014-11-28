@@ -36,8 +36,8 @@ from whatami import What, MAX_EXT4_FN_LENGTH
 #results = {
 #   condition:{
 #       df:[dataframe,...],
-#       start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...]
-#       count:[n_frames,...],
+#       start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...],
+#       count:n_frames
 #   }
 #}
 
@@ -329,8 +329,8 @@ class _Combine(object):
             results = {
                condition:{
                    df:[dataframe,...],
-                   start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...]
-                   count:[n_frames,...],
+                   start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...],
+                   count:n_frames
                }
 
             The second is dt
