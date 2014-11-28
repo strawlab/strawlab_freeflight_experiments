@@ -652,12 +652,16 @@ class CombineCSV(_Combine):
             #check the new csv file was recorded with the same timebase
             assert abs(dt-self._dt) < 1e-4
 
-        for cond,dfc in df.groupby('condition'):  # SANTI FIXME: here use block grouping
+        for obj_id, ldfo in df.groupby('lock_object'):
 
-            if cond not in self._results:
-                self._results[cond] = {'df':[],'start_obj_ids':[],'count':0}
+            # Continuous grouping, see CombineH5WithCSV
+            for _, dfo in ldfo.groupby((ldfo['condition'] != ldfo['condition'].shift()).cumsum()):
 
-            for obj_id,dfo in dfc.groupby('lock_object'):
+                cond = dfo['condition'].iloc[0]
+
+                if cond not in self._results:
+                    self._results[cond] = {'df':[],'start_obj_ids':[],'count':0}
+
 
                 if obj_id == 0:
                     continue
