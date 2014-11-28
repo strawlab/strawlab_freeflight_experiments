@@ -85,7 +85,7 @@ class _Combine(object):
         self._index = index
         self._configdict['index'] = self._index
 
-    def configuration(self):
+    def what(self):
         return What(self.__class__.__name__, self._configdict)
 
     def _args_to_configuration(self, args):
@@ -98,7 +98,7 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
-        s = self.configuration().as_string()
+        s = self.what().as_string()
         if len(s) > (MAX_EXT4_FN_LENGTH - 4): #4=.pkl
             fn = hashlib.sha224(s).hexdigest() + '.pkl'
         else:
