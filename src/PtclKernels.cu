@@ -102,13 +102,23 @@ void moveKernel( unsigned int numPtcls,
                  float centerx, float centery)
 {
     unsigned int ptclIdx = thIdx();
-    float4 p1;
+    float4 p1, p2;
 
     if( ptclIdx < numPtcls )
     {
-      // perform a euler step
       p1 = ptcls[ptclIdx];
-      ptcls[ptclIdx] = p1 + make_float4(dx,dy,dz,0);
+
+      // translate so observer is in middle of coordinate system
+      p1 = make_float4( p1.x - centerx, p1.y - centery, p1.z, p1.w );
+
+      // rotate
+      p2 = make_float4( (rot_mat_00*p1.x + rot_mat_01*p1.y), (rot_mat_10*p1.x + rot_mat_11*p1.y), p1.z, p1.w );
+
+      // reverse the translation
+      p2 = make_float4( p2.x + centerx, p2.y + centery, p2.z, p2.w );
+
+      // perform a euler step
+      ptcls[ptclIdx] = p2 + make_float4(dx,dy,dz,0);
     }
 }
 
