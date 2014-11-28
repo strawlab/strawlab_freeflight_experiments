@@ -44,6 +44,10 @@ from whatami import What, MAX_EXT4_FN_LENGTH
 def safe_condition_string(s):
     return "".join([c for c in s if re.match(r'\w', c)])
 
+
+# We will use this to relax the requirement that we know the UUID
+UNKNOWN_UUID = None
+
 class _Combine(object):
 
     calc_linear_stats = True
@@ -634,8 +638,9 @@ class CombineCSV(_Combine):
         df = pd.DataFrame.from_csv(self.csv_file,index_col="framenumber")
         assert 'lock_object' in df.columns
 
-        # uuid
-        assert 'exp_uuid' in df.columns, 'exp_uuid not in CSV, cannot infer the UUID'
+        # uuids from CSV
+        if 'exp_uuid' not in df.columns:
+            self._warn('exp_uuid not in %s, cannot infer the UUID' % self.csv_file)
 
         df = df.fillna(method="pad")
         df['time'] = df['t_sec'] + (df['t_nsec'] * 1e-9)
@@ -655,6 +660,7 @@ class CombineCSV(_Combine):
                 self._results[cond] = {'df':[],'start_obj_ids':[],'count':0}
 
             for obj_id,dfo in dfc.groupby('lock_object'):
+
                 if obj_id == 0:
                     continue
 
@@ -673,14 +679,18 @@ class CombineCSV(_Combine):
                 if self.calc_turn_stats:
                     acurve.calc_curvature(dfo, dt, 10, 'leastsq', clip=(0,1))
 
-                assert dfo['exp_uuid'].nunique() == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, obj_id)
-                uuid = dfo['exp_uuid'].unique()[0]
-
                 self._results[cond]['df'].append(dfo)
                 self._results[cond]['start_obj_ids'].append(self._get_result(dfo))
                 self._results[cond]['count'] += 1
-                self._uuids[cond].append(uuid)
 
+                # save uuid
+                uuid = UNKNOWN_UUID
+                if 'exp_uuid' in dfo:
+                    if dfo['exp_uuid'].nunique() != 1:
+                        self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
+                    else:
+                        uuid = dfo['exp_uuid'].unique()[0]
+                self._uuids[cond].append(uuid)
 
         if self._df is None:
             self._df = df
@@ -935,8 +945,9 @@ class CombineH5WithCSV(_Combine):
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
 
-        # uuid from csv
-        assert 'exp_uuid' in csv.columns, 'exp_uuid not in CSV, cannot infer the UUID'
+        # uuids from CSV
+        if 'exp_uuid' not in csv.columns:
+            self._warn('exp_uuid not in %s, cannot infer the UUID' % self.csv_file)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -959,8 +970,6 @@ class CombineH5WithCSV(_Combine):
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
 
-            assert odf['exp_uuid'].nunique() == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, oid)
-            uuid = odf['exp_uuid'].unique()[0]
 
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
@@ -1209,7 +1218,15 @@ class CombineH5WithCSV(_Combine):
                 r['count'] += 1
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
-                self._uuids.append(uuid)
+
+                # save uuid
+                uuid = UNKNOWN_UUID
+                if 'exp_uuid' in odf:
+                    if odf['exp_uuid'].nunique() != 1:
+                        self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
+                    else:
+                        uuid = odf['exp_uuid'].unique()[0]
+                self._uuids[cond].append(uuid)
 
         h5.close()
 
