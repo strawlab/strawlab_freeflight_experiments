@@ -33,6 +33,12 @@
 
 #include <jansson.h>
 
+/*
+
+ See also PtclKernels.cu for the particle kernels this code uses.
+
+ */
+
 //////////////////
 // COMPUTATIONS //
 //////////////////
@@ -40,6 +46,9 @@ extern "C" void move(
                      unsigned int numPtcls,
                      void* ptcls,
                      float velx, float vely, float velz,
+                     float rot_mat_00, float rot_mat_01,
+                     float rot_mat_10, float rot_mat_11,
+                     float centerx, float centery,
                      float etime );
 
 class MovePtcls : public osgCompute::Computation
@@ -73,10 +82,17 @@ public:
 
         _timer->start();
 
+        float rot_mat_00, rot_mat_01, rot_mat_10, rot_mat_11, centerx, centery;
+        rot_mat_00 = 1.0f;
+        rot_mat_11 = 1.0f;
+
         move(
             _ptcls->getNumElements(),
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
             _vel[0], _vel[1], _vel[2],
+            rot_mat_00, rot_mat_01,
+            rot_mat_10, rot_mat_11,
+            centerx, centery,
             elapsedtime  );
 
         _timer->stop();
@@ -84,6 +100,10 @@ public:
 
     virtual void setVelocity( const osg::Vec3& v ) {
         _vel = v;
+    }
+
+    virtual void setRotationRate( const double& rate ) {
+        _rate = rate;
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
@@ -99,6 +119,7 @@ private:
     osg::ref_ptr<const osg::FrameStamp>       _fs;
     osg::ref_ptr<osgCompute::Memory>    _ptcls;
     osg::Vec3 _vel;
+    double _rate;
 };
 
 
@@ -218,6 +239,7 @@ class ParticleNode : public osg::Group {
 public:
     ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
     virtual void setVelocity( const osg::Vec3& v );
+    virtual void setRotationRate( const double& rate );
 private:
     particleDataType* _pd;
 };
@@ -277,6 +299,12 @@ void ParticleNode::setVelocity( const osg::Vec3& v ) {
     }
 }
 
+void ParticleNode::setRotationRate( const double& rate ) {
+    if (_pd->_move) {
+        _pd->_move->setRotationRate(rate);
+    }
+}
+
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
 public:
@@ -294,6 +322,7 @@ public:
     std::string get_message_type(const std::string& topic_name) const;
 
     void setVelocity(double x, double y, double z);
+    void setRotationRate(double rate);
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
 
@@ -360,6 +389,7 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
 
     _group->addChild( pn_white.get() );
     setVelocity( 0.0, 0.0, 0.0);
+    setRotationRate(0.0);
 
     /////////////////////////
     // CREATE BOUNDING BOX //
@@ -387,6 +417,7 @@ osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
 std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("star_velocity");
+    result.push_back("star_rotation_rate");
     result.push_back("model_pose");
     return result;
 }
@@ -408,6 +439,9 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
         setVelocity(vel[0],vel[1],vel[2]);
+    } else if (topic_name=="star_rotation_rate") {
+        float rate = parse_float(root);
+        setRotationRate(rate);
     } else if (topic_name=="model_pose") {
         json_t *data_json;
 
@@ -431,11 +465,21 @@ void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
     }
 }
 
+void StimulusCUDAStarFieldAndModel::setRotationRate(double rate) {
+    if (pn_white) {
+          pn_white->setRotationRate(rate);
+    }
+}
+
+
+
 std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
 
     if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
+    } else if (topic_name=="star_rotation_rate") {
+        result = "std_msgs/Float32";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
     } else {

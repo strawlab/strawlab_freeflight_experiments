@@ -97,13 +97,19 @@ __global__
 void moveKernel( unsigned int numPtcls,
                  float4* ptcls,
                  float velx, float vely, float velz,
+                 float rot_mat_00, float rot_mat_01,
+                 float rot_mat_10, float rot_mat_11,
+                 float centerx, float centery,
                  float dt )
 {
     unsigned int ptclIdx = thIdx();
+    float4 p1;
+
     if( ptclIdx < numPtcls )
     {
-        // perform a euler step
-        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(velx*dt,vely*dt,velz*dt,0);
+      // perform a euler step
+      p1 = ptcls[ptclIdx];
+      ptcls[ptclIdx] = p1 + make_float4(velx*dt,vely*dt,velz*dt,0);
     }
 }
 
@@ -139,6 +145,9 @@ void move( unsigned int numPtcls,
            float velx,
            float vely,
            float velz,
+           float rot_mat_00, float rot_mat_01,
+           float rot_mat_10, float rot_mat_11,
+           float centerx, float centery,
            float dt )
 {
     dim3 blocks( (numPtcls / 128)+1, 1, 1 );
@@ -148,5 +157,8 @@ void move( unsigned int numPtcls,
         numPtcls,
         (float4*)ptcls,
         velx, vely, velz,
+        rot_mat_00, rot_mat_01,
+        rot_mat_10, rot_mat_11,
+        centerx, centery,
         dt );
 }

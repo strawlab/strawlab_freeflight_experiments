@@ -8,6 +8,7 @@ TOPIC_CYL_RADIUS        = "cylinder_radius"
 TOPIC_CYL_HEIGHT        = "cylinder_height"
 
 TOPIC_STAR_VELOCITY     = "star_velocity"
+TOPIC_STAR_ROTATION_RATE= "star_rotation_rate"
 TOPIC_STAR_SIZE         = "star_size"
 
 TOPIC_MODEL_SCALE       = "model_scale"
