@@ -1339,7 +1339,7 @@ format '%Y-%m-%d_%H:%M:%S.%f'
 
 ** mat files **
 The mat files will also contain a variable 'index' which is an integer
-for 'framenumber' and 'none' types. If If the index type is 'time' then the values
+for 'framenumber' and 'none' types. If the index type is 'time' then the values
 are nanoseconds since unix epoch.
 
 ** df files **
