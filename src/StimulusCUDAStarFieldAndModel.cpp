@@ -345,8 +345,6 @@ public:
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
     std::string get_message_type(const std::string& topic_name) const;
 
-    void setVelocity(double x, double y, double z);
-    void setRotationRate(double rate);
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
 
@@ -412,8 +410,6 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
     pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
 
     _group->addChild( pn_white.get() );
-    setVelocity( 0.0, 0.0, 0.0);
-    setRotationRate(0.0);
 
     /////////////////////////
     // CREATE BOUNDING BOX //
@@ -469,10 +465,14 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
-        setVelocity(vel[0],vel[1],vel[2]);
+        if (pn_white) {
+            pn_white->setVelocity(vel);
+        }
     } else if (topic_name=="star_rotation_rate") {
         float rate = parse_float(root);
-        setRotationRate(rate);
+        if (pn_white) {
+            pn_white->setRotationRate(rate);
+        }
     } else if (topic_name=="star_size") {
         float size = parse_float(root);
         if (pn_white) {
@@ -493,21 +493,6 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
     json_decref(root);
 }
-
-void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
-    osg::Vec3 v = osg::Vec3(x,y,z);
-    if (pn_white) {
-        pn_white->setVelocity(v);
-    }
-}
-
-void StimulusCUDAStarFieldAndModel::setRotationRate(double rate) {
-    if (pn_white) {
-          pn_white->setRotationRate(rate);
-    }
-}
-
-
 
 std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
