@@ -666,12 +666,13 @@ class CombineCSV(_Combine):
                 if self.calc_turn_stats:
                     acurve.calc_curvature(dfo, dt, 10, 'leastsq', clip=(0,1))
 
-                assert dfo['exp_uuid'].nunique == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, obj_id)
+                assert dfo['exp_uuid'].nunique() == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, obj_id)
+                uuid = dfo['exp_uuid'].unique()[0]
 
                 self._results[cond]['df'].append(dfo)
                 self._results[cond]['start_obj_ids'].append(self._get_result(dfo))
                 self._results[cond]['count'] += 1
-                self._uuids[cond].append(dfo['exp_uuid'].iloc[0])
+                self._uuids[cond].append(uuid)
 
 
         if self._df is None:
@@ -947,8 +948,8 @@ class CombineH5WithCSV(_Combine):
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
 
-            assert odf['exp_uuid'].nunique == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, oid)
-            uuid = odf['exp_uuid'].iloc[0]
+            assert odf['exp_uuid'].nunique() == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, oid)
+            uuid = odf['exp_uuid'].unique()[0]
 
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
