@@ -281,8 +281,8 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     rsrc.load_shader_source( StarFieldVertObj, "starfield.vert" );
     rsrc.load_shader_source( StarFieldFragObj, "starfield.frag" );
 
-    osg::Vec4 f4 = rsrc.get_clear_color();
-    osg::Vec3 fog_color = osg::Vec3( f4[0], f4[1], f4[2] );
+    //osg::Vec4 f4 = rsrc.get_clear_color();
+    //osg::Vec3 fog_color = osg::Vec3( f4[0], f4[1], f4[2] );
 
     program->addShader( StarFieldVertObj );
     program->addShader( StarFieldFragObj );
@@ -294,7 +294,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     _pixelsize = new osg::Uniform( "pixelsize", 101.0f );
     geode->getOrCreateStateSet()->addUniform( _pixelsize );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
+    //geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
 
     this->addChild( geode.get() );
