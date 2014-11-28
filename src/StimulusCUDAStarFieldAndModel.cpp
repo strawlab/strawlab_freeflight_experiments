@@ -82,11 +82,15 @@ public:
         _timer->start();
 
         float rot_mat_00, rot_mat_01, rot_mat_10, rot_mat_11;
-        rot_mat_00 = 1.0f;
-        rot_mat_11 = 1.0f;
-        float centerx;
-        float centery;
+
+        // Rotation is just about Z axis - we don't care about
+        // observer Z or complex 3D rotation.
+        float centerx = _observer_pos[0];
+        float centery = _observer_pos[1];
         osg::Vec3 dpos = _vel*elapsedtime;
+        float psi = _rotation_rate*elapsedtime;
+        rot_mat_00 = cosf(psi);   rot_mat_01 = -sinf(psi);
+        rot_mat_10 = sinf(psi);   rot_mat_11 =  cosf(psi);
 
         move(
             _ptcls->getNumElements(),
@@ -104,7 +108,11 @@ public:
     }
 
     virtual void setRotationRate( const double& rate ) {
-        _rate = rate;
+        _rotation_rate = rate;
+    }
+
+    virtual void setObserverPosition( const osg::Vec3& pos ) {
+        _observer_pos = pos;
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
@@ -120,7 +128,8 @@ private:
     osg::ref_ptr<const osg::FrameStamp>       _fs;
     osg::ref_ptr<osgCompute::Memory>    _ptcls;
     osg::Vec3 _vel;
-    double _rate;
+    double _rotation_rate;
+    osg::Vec3 _observer_pos;
 };
 
 
@@ -241,6 +250,7 @@ public:
     ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
     virtual void setVelocity( const osg::Vec3& v );
     virtual void setRotationRate( const double& rate );
+    virtual void setObserverPosition( const osg::Vec3& v );
 private:
     particleDataType* _pd;
 };
@@ -306,6 +316,12 @@ void ParticleNode::setRotationRate( const double& rate ) {
     }
 }
 
+void ParticleNode::setObserverPosition( const osg::Vec3& v ) {
+    if (_pd->_move) {
+        _pd->_move->setObserverPosition(v);
+    }
+}
+
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
 public:
@@ -317,6 +333,8 @@ public:
     osg::ref_ptr<osg::Group> get_3d_world() {return _group; }
 
     virtual osg::Vec4 get_clear_color() const;
+
+    void update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation );
 
     std::vector<std::string> get_topic_names() const;
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
@@ -413,6 +431,12 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
 
 osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
     return osg::Vec4(0.0,0.0,0.0,1); // black
+}
+
+void StimulusCUDAStarFieldAndModel::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation ) {
+    if (pn_white) {
+          pn_white->setObserverPosition(observer_position);
+    }
 }
 
 std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const {
