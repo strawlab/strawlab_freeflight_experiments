@@ -45,11 +45,10 @@
 extern "C" void move(
                      unsigned int numPtcls,
                      void* ptcls,
-                     float velx, float vely, float velz,
+                     float dx, float dy, float dz,
                      float rot_mat_00, float rot_mat_01,
                      float rot_mat_10, float rot_mat_11,
-                     float centerx, float centery,
-                     float etime );
+                     float centerx, float centery);
 
 class MovePtcls : public osgCompute::Computation
 {
@@ -82,18 +81,20 @@ public:
 
         _timer->start();
 
-        float rot_mat_00, rot_mat_01, rot_mat_10, rot_mat_11, centerx, centery;
+        float rot_mat_00, rot_mat_01, rot_mat_10, rot_mat_11;
         rot_mat_00 = 1.0f;
         rot_mat_11 = 1.0f;
+        float centerx;
+        float centery;
+        osg::Vec3 dpos = _vel*elapsedtime;
 
         move(
             _ptcls->getNumElements(),
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
-            _vel[0], _vel[1], _vel[2],
+            dpos[0], dpos[1], dpos[2],
             rot_mat_00, rot_mat_01,
             rot_mat_10, rot_mat_11,
-            centerx, centery,
-            elapsedtime  );
+            centerx, centery);
 
         _timer->stop();
     }
