@@ -158,10 +158,11 @@ void move( unsigned int numPtcls,
            float rot_mat_10, float rot_mat_11,
            float centerx, float centery)
 {
-    dim3 blocks( (numPtcls / 128)+1, 1, 1 );
-    dim3 threads( 128, 1, 1 );
+    int threadCount = (numPtcls / 128)+1;
+    dim3 GridDim = dim3( threadCount, 1, 1 );
+    dim3 BlockDim( 128, 1, 1 );
 
-    moveKernel<<< blocks, threads >>>(
+    moveKernel<<< GridDim, BlockDim >>>(
         numPtcls,
         (float4*)ptcls,
         dx, dy, dz,
