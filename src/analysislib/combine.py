@@ -9,6 +9,7 @@ import operator
 import hashlib
 import datetime
 import calendar
+from collections import defaultdict
 
 import tables
 import pandas as pd
@@ -57,7 +58,7 @@ class _Combine(object):
         self._idfilt = []
         self._skipped = {}
         self._results = {}
-        self._uuids = {}
+        self._uuids = defaultdict(list)
         self._custom_filter = None
         self._custom_filter_min = None
         self._tzname = 'Europe/Vienna'
@@ -128,6 +129,7 @@ class _Combine(object):
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump({"results":self._results,
+                          'uuids': self._uuids,
                           "dt":self._dt,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -315,7 +317,6 @@ class _Combine(object):
     def disable_warn(self):
         self._enable_warn = False
 
-
     def get_results(self):
         """Returns all data for all conditions that passed the configured filters
 
@@ -336,6 +337,20 @@ class _Combine(object):
 
         """
         return self._results, self._dt
+
+    def get_uuids(self):
+        """Returns the uuid for each trial in results.
+
+        Returns a dictionary {condition: [uuid,...]}.
+
+        Historical note:
+          This was added after get_results, where it would belong.
+          Adding uuids allow to uniquelly identify a trajectory, playing well
+          with metadata retrieval, the flydata package and generally completing
+          the information provided by combine, while not breaking the many dependents
+          of the get_results method.
+        """
+        return self._uuids
 
     def get_one_result(self, obj_id, condition=None):
         """
@@ -462,6 +477,7 @@ class _CombineFakeInfinity(_Combine):
                 self._results[cond]["start_obj_ids"].append(
                         (first['x'],first['y'],obj_id,f0,self._t0 + (f0 * self._dt))
                 )
+                self._results[cond].append('FAKEUUID')
 
                 obj_id += 1
                 framenumber += len(df)
@@ -611,6 +627,9 @@ class CombineCSV(_Combine):
         df = pd.DataFrame.from_csv(self.csv_file,index_col="framenumber")
         assert 'lock_object' in df.columns
 
+        # uuid
+        assert 'exp_uuid' in df.columns, 'exp_uuid not in CSV, cannot infer the UUID'
+
         df = df.fillna(method="pad")
         df['time'] = df['t_sec'] + (df['t_nsec'] * 1e-9)
 
@@ -623,7 +642,7 @@ class CombineCSV(_Combine):
             #check the new csv file was recorded with the same timebase
             assert abs(dt-self._dt) < 1e-4
 
-        for cond,dfc in df.groupby('condition'):
+        for cond,dfc in df.groupby('condition'):  # SANTI FIXME: here use block grouping
 
             if cond not in self._results:
                 self._results[cond] = {'df':[],'start_obj_ids':[],'count':0}
@@ -647,9 +666,12 @@ class CombineCSV(_Combine):
                 if self.calc_turn_stats:
                     acurve.calc_curvature(dfo, dt, 10, 'leastsq', clip=(0,1))
 
+                assert dfo['exp_uuid'].nunique == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, obj_id)
+
                 self._results[cond]['df'].append(dfo)
                 self._results[cond]['start_obj_ids'].append(self._get_result(dfo))
                 self._results[cond]['count'] += 1
+                self._uuids[cond].append(dfo['exp_uuid'].iloc[0])
 
 
         if self._df is None:
@@ -726,6 +748,7 @@ class CombineH5(_Combine):
 
         self._trajectory_start_times = h5.root.trajectory_start_times
         tzname = h5.root.trajectory_start_times.attrs['timezone']
+        # N.B. uuid is also stored in the h5file, in case we ever need it
 
         if self._dt is None:
             self._dt = dt
@@ -807,6 +830,7 @@ class CombineH5WithCSV(_Combine):
             d = self._get_cache_file()
             if d is not None:
                 self._results = d['results']
+                self._uuids = d['uuids']
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
 
@@ -899,6 +923,9 @@ class CombineH5WithCSV(_Combine):
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
 
+        # uuid from csv
+        assert 'exp_uuid' in csv.columns, 'exp_uuid not in CSV, cannot infer the UUID'
+
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
         dt = 1.0/trajectories.attrs['frames_per_second']
@@ -919,7 +946,9 @@ class CombineH5WithCSV(_Combine):
         skipped = self._skipped
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
-            df = None
+
+            assert odf['exp_uuid'].nunique == 1, 'cond=%s, oid=%d has no unique UUID !?!?' % (cond, oid)
+            uuid = odf['exp_uuid'].iloc[0]
 
             if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
@@ -1168,6 +1197,7 @@ class CombineH5WithCSV(_Combine):
                 r['count'] += 1
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
+                self._uuids.append(uuid)
 
         h5.close()
 
