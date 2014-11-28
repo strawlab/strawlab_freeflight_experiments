@@ -1,6 +1,5 @@
 import os.path
 import sys
-import Queue
 import random
 import time
 import cPickle
@@ -8,22 +7,20 @@ import pickle
 import re
 import operator
 import hashlib
+import datetime
+import calendar
 
 import tables
 import pandas as pd
 import numpy as np
 import pytz
-import datetime
-import calendar
 import scipy.io
-from flydata.strawlab.metadata import FreeflightExperimentMetadata
-from flydata.strawlab.trajectories import FreeflightTrajectory
 
 import roslib
+
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
-import nodelib.log
 
 import analysislib.fixes
 import analysislib.filters
@@ -134,7 +131,6 @@ class _Combine(object):
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump({"results":self._results,
-                          "trajs":self._trajs,
                           "dt":self._dt,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -798,7 +794,6 @@ class CombineH5WithCSV(_Combine):
         #use this for keeping track of results that span multiple conditions
         self._results_by_condition = {}
 
-        self._trajs = None
 
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
@@ -823,7 +818,6 @@ class CombineH5WithCSV(_Combine):
             d = self._get_cache_file()
             if d is not None:
                 self._results = d['results']
-                self._trajs = d['trajs']
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
 
@@ -934,16 +928,6 @@ class CombineH5WithCSV(_Combine):
 
         results = self._results
         skipped = self._skipped
-
-        # Container for "FreeflightTrajectory" objects
-        trajs = []
-        # Metadata
-        if uuid is not None:
-            metadata = FreeflightExperimentMetadata(uuid=uuid)
-        else:
-            metadata = None  # FIXME: We need a "unknown metadata" object,
-                             # which we could use also if we fail to fetch MD
-                             # Also we might want to remove the constraint that we need to know the UUID
 
         for (oid,cond),odf in csv.groupby(('lock_object','condition')):
             df = None
@@ -1196,16 +1180,8 @@ class CombineH5WithCSV(_Combine):
                 r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
                 r['df'].append( df )
 
-                # Let's instantiate a FreeflightTrajectory too, as it is cheap. Alternative: do on demand
-                trajs.append(FreeflightTrajectory(metadata, oid, start_framenumber, start_time, cond, df, dt=dt))
-
-        self._trajs = trajs
-
         h5.close()
 
-    def get_trajs(self):
-        """Returns the combined trajectories as a list of FreeflightTrajectory objects."""
-        return self._trajs
 
 FORMAT_DOCS = """
 Exported Data Formats
