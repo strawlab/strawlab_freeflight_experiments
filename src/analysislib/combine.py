@@ -57,6 +57,7 @@ class _Combine(object):
         self._idfilt = []
         self._skipped = {}
         self._results = {}
+        self._uuids = {}
         self._custom_filter = None
         self._custom_filter_min = None
         self._tzname = 'Europe/Vienna'
@@ -68,7 +69,7 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
-        self._configdict = {'v':5,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':6,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
