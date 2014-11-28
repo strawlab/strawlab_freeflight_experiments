@@ -1229,7 +1229,7 @@ class CombineH5WithCSV(_Combine):
                     uuid = UNKNOWN_UUID
                     if 'exp_uuid' in odf:
                         if odf['exp_uuid'].nunique() != 1:
-                            self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
+                            self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, oid))
                         else:
                             uuid = odf['exp_uuid'].unique()[0]
                     self._uuids[cond].append(uuid)
