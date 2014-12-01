@@ -125,6 +125,8 @@ class TestCombine(unittest.TestCase):
 
         self._assert_two_equal(a,b)
 
+        combine2.close()
+
         parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
