@@ -126,9 +126,17 @@ class _Combine(object):
                         return pickle.load(f)
                 try:
                     return unpickle_fast()
-                except Exception, e:
-                    self._warn('Could not unpickle %s, recombining and recaching' % pkl)
-                    self._warn('The error was %s' % str(e))
+                except:
+                    try:
+                        # This is inefficient, as it tries first to use cpickle again and only
+                        # fallsback to compat pickle on failing.
+                        # However, it is the recommended pandas way of keeping backwards compat
+                        #   http://pandas.pydata.org/pandas-docs/stable/io.html#io-pickle
+                        # So let's treat it as a black box and do not directly use pandas compat pickle.
+                        return pd.read_pickle(pkl)
+                    except Exception, e:
+                        self._warn('Could not unpickle %s, recombining and recaching' % pkl)
+                        self._warn('The error was %s' % str(e))
         return None
 
     def _save_cache_file(self):
