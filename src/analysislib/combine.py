@@ -634,12 +634,14 @@ class CombineCSV(_Combine):
             #check the new csv file was recorded with the same timebase
             assert abs(dt-self._dt) < 1e-4
 
-        for obj_id, ldfo in df.groupby('lock_object'):
+        for obj_id, lodf in df.groupby('lock_object'):
 
             # Continuous grouping, see CombineH5WithCSV
-            for _, dfo in ldfo.groupby((ldfo['condition'] != ldfo['condition'].shift()).cumsum()):
+            for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
-                cond = dfo['condition'].iloc[0]
+                assert odf['condition'].nunique() == 0, 'A single trial must not span more than one condition'
+
+                cond = odf['condition'].iloc[0]
 
                 if cond not in self._results:
                     self._results[cond] = {'df':[],'start_obj_ids':[],'count':0, 'uuids':[]}
@@ -648,7 +650,7 @@ class CombineCSV(_Combine):
                 if obj_id == 0:
                     continue
 
-                if not self._df_ok(dfo):
+                if not self._df_ok(odf):
                     continue
 
                 if self._idfilt and (obj_id not in self._idfilt):
@@ -656,24 +658,24 @@ class CombineCSV(_Combine):
 
                 dt = self._dt
                 if self.calc_linear_stats:
-                    acurve.calc_velocities(dfo, dt)
-                    acurve.calc_accelerations(dfo, dt)
+                    acurve.calc_velocities(odf, dt)
+                    acurve.calc_accelerations(odf, dt)
                 if self.calc_angular_stats:
-                    acurve.calc_angular_velocities(dfo, dt)
+                    acurve.calc_angular_velocities(odf, dt)
                 if self.calc_turn_stats:
-                    acurve.calc_curvature(dfo, dt, 10, 'leastsq', clip=(0,1))
+                    acurve.calc_curvature(odf, dt, 10, 'leastsq', clip=(0,1))
 
-                self._results[cond]['df'].append(dfo)
-                self._results[cond]['start_obj_ids'].append(self._get_result(dfo))
+                self._results[cond]['df'].append(odf)
+                self._results[cond]['start_obj_ids'].append(self._get_result(odf))
                 self._results[cond]['count'] += 1
 
                 # save uuid
                 uuid = None
-                if 'exp_uuid' in dfo:
-                    if dfo['exp_uuid'].nunique() != 1:
+                if 'exp_uuid' in odf:
+                    if odf['exp_uuid'].nunique() != 1:
                         self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
                     else:
-                        uuid = dfo['exp_uuid'].unique()[0]
+                        uuid = odf['exp_uuid'].unique()[0]
                 self._results[cond]['uuids'].append(uuid)
 
         if self._df is None:
@@ -959,6 +961,8 @@ class CombineH5WithCSV(_Combine):
             # (not that hard, just recall what a cumulative distributuion does...)
             #
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
+
+                assert odf['condition'].nunique() == 0, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
 
