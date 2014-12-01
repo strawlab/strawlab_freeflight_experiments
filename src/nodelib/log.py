@@ -154,7 +154,13 @@ class CsvLogger(object):
     def condition(self, v):
         self._condition = v
         if self._pub_condition is not None:
-            self._pub_condition.publish(v)
+            try:
+                self._pub_condition.publish(v)
+            except rospy.ROSException:
+                #node not yet initialized, which is usually just in test cases,
+                #in any case, this is not fatal even in practice and publishing
+                #condition is only for the operator-console anyway
+                pass
 
     @property
     def filename(self):

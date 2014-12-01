@@ -38,7 +38,7 @@ class TestCombineAPI(unittest.TestCase):
     def _get_combine(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
-        combine.add_from_uuid(self._uuid)
+        combine.add_from_uuid(self._uuid, reindex=False)
         return combine
 
     def test_auto_combine(self):
