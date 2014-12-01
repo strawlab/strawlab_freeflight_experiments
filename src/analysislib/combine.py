@@ -10,7 +10,6 @@ import operator
 import hashlib
 import datetime
 import calendar
-from collections import defaultdict
 
 import tables
 import pandas as pd
@@ -38,16 +37,14 @@ from whatami import What, MAX_EXT4_FN_LENGTH
 #   condition:{
 #       df:[dataframe,...],
 #       start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...],
-#       count:n_frames
+#       count:n_frames,
+#       uuids:[uuid,...],
 #   }
 #}
 
 def safe_condition_string(s):
     return "".join([c for c in s if re.match(r'\w', c)])
 
-
-# We will use this to relax the requirement that we know the UUID
-UNKNOWN_UUID = None
 
 class _Combine(object):
 
@@ -63,7 +60,6 @@ class _Combine(object):
         self._idfilt = []
         self._skipped = {}
         self._results = {}
-        self._uuids = defaultdict(list)
         self._custom_filter = None
         self._custom_filter_min = None
         self._tzname = 'Europe/Vienna'
@@ -141,7 +137,6 @@ class _Combine(object):
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump({"results":self._results,
-                          'uuids': self._uuids,
                           "dt":self._dt,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -342,27 +337,14 @@ class _Combine(object):
                condition:{
                    df:[dataframe,...],
                    start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...],
-                   count:n_frames
+                   count:n_frames,
+                   uuids:[uuid,...],
                }
 
             The second is dt
 
         """
         return self._results, self._dt
-
-    def get_uuids(self):
-        """Returns the uuid for each trial in results.
-
-        Returns a dictionary {condition: [uuid,...]}.
-
-        Historical note:
-          This was added after get_results, where it would belong.
-          Adding uuids allow to uniquelly identify a trajectory, playing well
-          with metadata retrieval, the flydata package and generally completing
-          the information provided by combine, while not breaking the many dependents
-          of the get_results method.
-        """
-        return self._uuids
 
     def get_one_result(self, obj_id, condition=None):
         """
@@ -441,7 +423,7 @@ class _CombineFakeInfinity(_Combine):
             try:
                 self._results[cond]
             except KeyError:
-                self._results[cond] = {"df":[],"start_obj_ids":[],"count":0}
+                self._results[cond] = {"df":[],"start_obj_ids":[],"count":0, 'uuids':[]}
                 self._skipped[cond] = 0
 
             for t in range(self._ntrials):
@@ -492,7 +474,7 @@ class _CombineFakeInfinity(_Combine):
                 self._results[cond]["start_obj_ids"].append(
                         (first['x'],first['y'],obj_id,f0,self._t0 + (f0 * self._dt))
                 )
-                self._results[cond].append('FAKEUUID')
+                self._results[cond]['uuids'].append(None)
 
                 obj_id += 1
                 framenumber += len(df)
@@ -666,7 +648,7 @@ class CombineCSV(_Combine):
                 cond = dfo['condition'].iloc[0]
 
                 if cond not in self._results:
-                    self._results[cond] = {'df':[],'start_obj_ids':[],'count':0}
+                    self._results[cond] = {'df':[],'start_obj_ids':[],'count':0, 'uuids':[]}
 
 
                 if obj_id == 0:
@@ -692,13 +674,13 @@ class CombineCSV(_Combine):
                 self._results[cond]['count'] += 1
 
                 # save uuid
-                uuid = UNKNOWN_UUID
+                uuid = None
                 if 'exp_uuid' in dfo:
                     if dfo['exp_uuid'].nunique() != 1:
                         self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
                     else:
                         uuid = dfo['exp_uuid'].unique()[0]
-                self._uuids[cond].append(uuid)
+                self._results[cond]['uuids'].append(uuid)
 
         if self._df is None:
             self._df = df
@@ -860,7 +842,6 @@ class CombineH5WithCSV(_Combine):
             d = self._get_cache_file()
             if d is not None:
                 self._results = d['results']
-                self._uuids = d['uuids']
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
 
@@ -1002,8 +983,9 @@ class CombineH5WithCSV(_Combine):
 
                 if cond not in results:
                     results[cond] = dict(count=0,
-                                          start_obj_ids=[],
-                                          df=[])
+                                         start_obj_ids=[],
+                                         df=[],
+                                         uuids=[])
                     skipped[cond] = 0
 
                 r = results[cond]
@@ -1240,13 +1222,13 @@ class CombineH5WithCSV(_Combine):
                     r['df'].append( df )
 
                     # save uuid
-                    uuid = UNKNOWN_UUID
+                    uuid = None
                     if 'exp_uuid' in odf:
                         if odf['exp_uuid'].nunique() != 1:
                             self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, oid))
                         else:
                             uuid = odf['exp_uuid'].unique()[0]
-                    self._uuids[cond].append(uuid)
+                    self._results[cond]['uuids'].append(uuid)
 
         h5.close()
 
