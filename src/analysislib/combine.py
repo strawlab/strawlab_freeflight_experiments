@@ -110,6 +110,9 @@ class _Combine(object):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
+        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+            return None
+
         pkl = self._get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
@@ -126,6 +129,7 @@ class _Combine(object):
                             return cPickle.load(f)
                         return pickle.load(f)
                 return unpickle_fast()
+
         return None
 
     def _save_cache_file(self):
