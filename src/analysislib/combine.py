@@ -653,7 +653,7 @@ class CombineCSV(_Combine):
             # Continuous grouping, see CombineH5WithCSV
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
-                assert odf['condition'].nunique() == 0, 'A single trial must not span more than one condition'
+                assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
 
@@ -689,7 +689,7 @@ class CombineCSV(_Combine):
                     if odf['exp_uuid'].nunique() != 1:
                         self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
                     else:
-                        uuid = odf['exp_uuid'].unique()[0]
+                        uuid = odf['exp_uuid'].dropna().unique()[0]
                 self._results[cond]['uuids'].append(uuid)
 
         if self._df is None:
@@ -980,7 +980,7 @@ class CombineH5WithCSV(_Combine):
             #
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
-                assert odf['condition'].nunique() == 0, 'A single trial must not span more than one condition'
+                assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
 
@@ -1239,7 +1239,7 @@ class CombineH5WithCSV(_Combine):
                         if odf['exp_uuid'].nunique() != 1:
                             self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, oid))
                         else:
-                            uuid = odf['exp_uuid'].unique()[0]
+                            uuid = odf['exp_uuid'].dropna().unique()[0]
                     self._results[cond]['uuids'].append(uuid)
 
         h5.close()
