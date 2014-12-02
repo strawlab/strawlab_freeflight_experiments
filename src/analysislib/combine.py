@@ -1382,16 +1382,3 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
                'mat' if to_mat else '')
 
     return "%s.{%s}" % (dest, ','.join(filter(len,formats)))
-
-if __name__ == '__main__':
-    from analysislib.util import get_combiner_for_uuid
-    MAX_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
-    # get args
-    combine = get_combiner_for_uuid(MAX_UUID)
-    combine.add_from_uuid(MAX_UUID, rfilt='none', zfilt='none')  # improve this...
-    results, dt = combine.get_results()
-    for cond, condtrials in results.iteritems():
-        print cond
-        print condtrials['uuids']
-        if condtrials['uuids'][0] is None:
-            print 'here'
