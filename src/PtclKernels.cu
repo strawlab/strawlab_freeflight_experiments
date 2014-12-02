@@ -96,14 +96,29 @@ void emitKernel( unsigned int numPtcls,
 __global__
 void moveKernel( unsigned int numPtcls,
                  float4* ptcls,
-                 float velx, float vely, float velz,
-                 float dt )
+                 float dx, float dy, float dz,
+                 float rot_mat_00, float rot_mat_01,
+                 float rot_mat_10, float rot_mat_11,
+                 float centerx, float centery)
 {
     unsigned int ptclIdx = thIdx();
+    float4 p1, p2;
+
     if( ptclIdx < numPtcls )
     {
-        // perform a euler step
-        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(velx*dt,vely*dt,velz*dt,0);
+      p1 = ptcls[ptclIdx];
+
+      // translate so observer is in middle of coordinate system
+      p1 = make_float4( p1.x - centerx, p1.y - centery, p1.z, p1.w );
+
+      // rotate
+      p2 = make_float4( (rot_mat_00*p1.x + rot_mat_01*p1.y), (rot_mat_10*p1.x + rot_mat_11*p1.y), p1.z, p1.w );
+
+      // reverse the translation
+      p2 = make_float4( p2.x + centerx, p2.y + centery, p2.z, p2.w );
+
+      // perform a euler step
+      ptcls[ptclIdx] = p2 + make_float4(dx,dy,dz,0);
     }
 }
 
@@ -136,17 +151,22 @@ void emit(unsigned int numPtcls,
 extern "C" __host__
 void move( unsigned int numPtcls,
            void* ptcls,
-           float velx,
-           float vely,
-           float velz,
-           float dt )
+           float dx,
+           float dy,
+           float dz,
+           float rot_mat_00, float rot_mat_01,
+           float rot_mat_10, float rot_mat_11,
+           float centerx, float centery)
 {
-    dim3 blocks( (numPtcls / 128)+1, 1, 1 );
-    dim3 threads( 128, 1, 1 );
+    int threadCount = (numPtcls / 128)+1;
+    dim3 GridDim = dim3( threadCount, 1, 1 );
+    dim3 BlockDim( 128, 1, 1 );
 
-    moveKernel<<< blocks, threads >>>(
+    moveKernel<<< GridDim, BlockDim >>>(
         numPtcls,
         (float4*)ptcls,
-        velx, vely, velz,
-        dt );
+        dx, dy, dz,
+        rot_mat_00, rot_mat_01,
+        rot_mat_10, rot_mat_11,
+        centerx, centery);
 }

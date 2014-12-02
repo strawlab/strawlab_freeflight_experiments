@@ -81,7 +81,7 @@ CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|3.6|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
               "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
@@ -95,7 +95,7 @@ CONDITIONS = [
 START_CONDITION = CONDITIONS[-1]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set()#CONDITIONS)
 
 XFORM = flyflypath.transform.SVGTransform()
 

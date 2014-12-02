@@ -33,14 +33,22 @@
 
 #include <jansson.h>
 
+/*
+
+ See also PtclKernels.cu for the particle kernels this code uses.
+
+ */
+
 //////////////////
 // COMPUTATIONS //
 //////////////////
 extern "C" void move(
                      unsigned int numPtcls,
                      void* ptcls,
-                     float velx, float vely, float velz,
-                     float etime );
+                     float dx, float dy, float dz,
+                     float rot_mat_00, float rot_mat_01,
+                     float rot_mat_10, float rot_mat_11,
+                     float centerx, float centery);
 
 class MovePtcls : public osgCompute::Computation
 {
@@ -73,17 +81,38 @@ public:
 
         _timer->start();
 
+        float rot_mat_00, rot_mat_01, rot_mat_10, rot_mat_11;
+
+        // Rotation is just about Z axis - we don't care about
+        // observer Z or complex 3D rotation.
+        float centerx = _observer_pos[0];
+        float centery = _observer_pos[1];
+        osg::Vec3 dpos = _vel*elapsedtime;
+        float psi = _rotation_rate*elapsedtime;
+        rot_mat_00 = cosf(psi);   rot_mat_01 = -sinf(psi);
+        rot_mat_10 = sinf(psi);   rot_mat_11 =  cosf(psi);
+
         move(
             _ptcls->getNumElements(),
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
-            _vel[0], _vel[1], _vel[2],
-            elapsedtime  );
+            dpos[0], dpos[1], dpos[2],
+            rot_mat_00, rot_mat_01,
+            rot_mat_10, rot_mat_11,
+            centerx, centery);
 
         _timer->stop();
     }
 
     virtual void setVelocity( const osg::Vec3& v ) {
         _vel = v;
+    }
+
+    virtual void setRotationRate( const double& rate ) {
+        _rotation_rate = rate;
+    }
+
+    virtual void setObserverPosition( const osg::Vec3& pos ) {
+        _observer_pos = pos;
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
@@ -99,6 +128,8 @@ private:
     osg::ref_ptr<const osg::FrameStamp>       _fs;
     osg::ref_ptr<osgCompute::Memory>    _ptcls;
     osg::Vec3 _vel;
+    double _rotation_rate;
+    osg::Vec3 _observer_pos;
 };
 
 
@@ -218,13 +249,15 @@ class ParticleNode : public osg::Group {
 public:
     ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
     virtual void setVelocity( const osg::Vec3& v );
+    virtual void setRotationRate( const double& rate );
+    virtual void setObserverPosition( const osg::Vec3& v );
+    virtual void setPixelSize( float size );
 private:
     particleDataType* _pd;
+    osg::ref_ptr<osg::Uniform> _pixelsize;
 };
 
 ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
-    //std::string textureFile = get_plugin_data_path("blackstar.png");
-
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
@@ -248,8 +281,8 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     rsrc.load_shader_source( StarFieldVertObj, "starfield.vert" );
     rsrc.load_shader_source( StarFieldFragObj, "starfield.frag" );
 
-    osg::Vec4 f4 = rsrc.get_clear_color();
-    osg::Vec3 fog_color = osg::Vec3( f4[0], f4[1], f4[2] );
+    //osg::Vec4 f4 = rsrc.get_clear_color();
+    //osg::Vec3 fog_color = osg::Vec3( f4[0], f4[1], f4[2] );
 
     program->addShader( StarFieldVertObj );
     program->addShader( StarFieldFragObj );
@@ -258,9 +291,10 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", 11.0f ) );
+    _pixelsize = new osg::Uniform( "pixelsize", 101.0f );
+    geode->getOrCreateStateSet()->addUniform( _pixelsize );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
+    //geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
 
     this->addChild( geode.get() );
@@ -277,6 +311,22 @@ void ParticleNode::setVelocity( const osg::Vec3& v ) {
     }
 }
 
+void ParticleNode::setRotationRate( const double& rate ) {
+    if (_pd->_move) {
+        _pd->_move->setRotationRate(rate);
+    }
+}
+
+void ParticleNode::setObserverPosition( const osg::Vec3& v ) {
+    if (_pd->_move) {
+        _pd->_move->setObserverPosition(v);
+    }
+}
+
+void ParticleNode::setPixelSize( float size ) {
+    _pixelsize->set(size);
+}
+
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
 public:
@@ -289,11 +339,12 @@ public:
 
     virtual osg::Vec4 get_clear_color() const;
 
+    void update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation );
+
     std::vector<std::string> get_topic_names() const;
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
     std::string get_message_type(const std::string& topic_name) const;
 
-    void setVelocity(double x, double y, double z);
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
 
@@ -359,7 +410,6 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
     pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
 
     _group->addChild( pn_white.get() );
-    setVelocity( 0.0, 0.0, 0.0);
 
     /////////////////////////
     // CREATE BOUNDING BOX //
@@ -384,9 +434,17 @@ osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
     return osg::Vec4(0.0,0.0,0.0,1); // black
 }
 
+void StimulusCUDAStarFieldAndModel::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation ) {
+    if (pn_white) {
+          pn_white->setObserverPosition(observer_position);
+    }
+}
+
 std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const {
     std::vector<std::string> result;
     result.push_back("star_velocity");
+    result.push_back("star_rotation_rate");
+    result.push_back("star_size");
     result.push_back("model_pose");
     return result;
 }
@@ -407,7 +465,19 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
-        setVelocity(vel[0],vel[1],vel[2]);
+        if (pn_white) {
+            pn_white->setVelocity(vel);
+        }
+    } else if (topic_name=="star_rotation_rate") {
+        float rate = parse_float(root);
+        if (pn_white) {
+            pn_white->setRotationRate(rate);
+        }
+    } else if (topic_name=="star_size") {
+        float size = parse_float(root);
+        if (pn_white) {
+            pn_white->setPixelSize(size);
+        }
     } else if (topic_name=="model_pose") {
         json_t *data_json;
 
@@ -424,18 +494,15 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     json_decref(root);
 }
 
-void StimulusCUDAStarFieldAndModel::setVelocity(double x, double y, double z) {
-    osg::Vec3 v = osg::Vec3(x,y,z);
-    if (pn_white) {
-        pn_white->setVelocity(v);
-    }
-}
-
 std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& topic_name) const {
     std::string result;
 
     if (topic_name=="star_velocity") {
         result = "geometry_msgs/Vector3";
+    } else if (topic_name=="star_rotation_rate") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="star_size") {
+        result = "std_msgs/Float32";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
     } else {

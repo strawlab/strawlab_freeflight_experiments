@@ -145,6 +145,12 @@ if __name__=='__main__':
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
     }
     histograms = ("velocity","dtheta","rcurve","rotation_rate","v_offset_rate")
+
+    if 'tnfcontrol' in combine.csv_file:
+        rrate_lim = (-15,15)
+    else:
+        rrate_lim = (-1.55,1.55)
+
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
                                    "rcurve":True,
@@ -154,7 +160,7 @@ if __name__=='__main__':
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
                                   "rcurve":(0,1),
-                                  "rotation_rate":(-1.55,1.55)},
+                                  "rotation_rate":rrate_lim},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)",
                                    "rcurve":"radius of curvature (m)",

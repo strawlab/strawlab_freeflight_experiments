@@ -8,8 +8,14 @@ combine = analysislib.util.get_combiner_for_uuid(UUID)
 combine.disable_debug()
 combine.add_from_uuid(UUID)
 
+#### analyse the data the old way (john's API)
 #get the results of one flight (by object id)
 df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(4984)
 
 #get all results (se the docs for the structure of the results dictionary)
 results, dt = combine.get_results()
+
+#analyse the data the new way (Santi's API)
+for exp in combine.get_trajs():
+    print exp.uuid(), exp.md().description()
+    break #only print one

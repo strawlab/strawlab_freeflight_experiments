@@ -405,7 +405,7 @@ class Node(object):
         self.update_lock_on_off()
 
 def main():
-    rospy.init_node("rotation")
+    rospy.init_node("optimalcontrol")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
