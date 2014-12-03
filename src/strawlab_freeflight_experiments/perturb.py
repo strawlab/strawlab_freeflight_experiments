@@ -516,12 +516,12 @@ class PerturberMultiTone(_PerturberInterpolation):
 
 class PerturberPRBS(Perturber):
 
-    DEFAULT_DESC = "pbrs_WHAT|-0.4|0.4|0.03|3|"
+    DEFAULT_DESC = "prbs_WHAT|-0.4|0.4|0.03|3|"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'pbrs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
+        'prbs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
@@ -537,10 +537,10 @@ class PerturberPRBS(Perturber):
         name_parts = name.split('_')
         me = name_parts[0]
         self.what = '_'.join(name_parts[1:])
-        if me != 'pbrs':
+        if me != 'prbs':
             raise Exception("Incorrect PerturberPRBS configuration")
 
-        self.seed = str(seed) if seed else None
+        self.seed = int(seed) if seed else None
         self.value_min = float(value_min)
         self.value_max = float(value_max)
         self.bw = float(bw)
@@ -555,7 +555,7 @@ class PerturberPRBS(Perturber):
         #create a PRBS
         vmask = np.array([r.choice((True,False)) for _ in t])
 
-        #use the PBRS bool array to set the true values
+        #use the prbs bool array to set the true values
         #(respecting min/max) in a new array of the correct type
         v = np.ones_like(vmask,dtype=float)
         v[vmask] = self.value_max
@@ -602,7 +602,7 @@ class PerturberPRBS(Perturber):
         idx = self._df.index.asof(pd.to_datetime(now - self.now,unit='s'))
         value = self._df.loc[idx]
 
-        return value, state
+        return value['v'], state
 
 
     def get_time_limits(self):
