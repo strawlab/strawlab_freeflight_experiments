@@ -1239,6 +1239,7 @@ class CombineH5WithCSV(_Combine):
                         else:
                             uuid = odf['exp_uuid'].dropna().unique()[0]
                     self._results[cond]['uuids'].append(uuid)
+                    # TODO: if needed, for performance, "uniquify" UUID objects (so pickles are smaller)
 
         h5.close()
 
