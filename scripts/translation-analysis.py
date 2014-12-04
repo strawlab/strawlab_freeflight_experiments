@@ -4,7 +4,6 @@ import sys
 import operator
 import numpy as np
 import itertools
-from flydata.strawlab.transformers import MissingImputer
 
 if not os.environ.get('DISPLAY'):
     print "DISPLAY NOT SET: USING AGG BACKEND"
@@ -21,9 +20,6 @@ import analysislib.args
 import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
-
-from flydata.features.coord_systems import Coords2Coords
-
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -42,53 +38,42 @@ if __name__=='__main__':
     print "files saved as", fname
     ncond = combine.get_num_conditions()
 
-    # aplt.save_args(combine, args)
-    # aplt.save_results(combine, args)
-    #
-    # aplt.save_most_loops(combine, args)
-    #
-    # aplt.plot_trial_times(combine, args)
-    #
-    # aplt.plot_traces(combine, args,
-    #             figncols=ncond,
-    #             in3d=False,
-    #             show_starts=True,
-    #             show_ends=True)
-    #
-    # aplt.plot_traces(combine, args,
-    #             figncols=ncond,
-    #             in3d=True)
-    #
-    # aplt.plot_histograms(combine, args,
-    #             figncols=ncond)
-    #
-    # aplt.plot_nsamples(combine, args)
-    #
-    # if args.plot_tracking_stats and len(args.uuid) == 1:
-    #     fplt = autodata.files.FileView(
-    #               autodata.files.FileModel(show_progress=True,filepath=combine.h5_file))
-    #     with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
-    #         fplt.plot_tracking_data(
-    #                     f.add_subplot(1,2,1),
-    #                     f.add_subplot(1,2,2))
+    aplt.save_args(combine, args)
+    aplt.save_results(combine, args)
+
+    aplt.save_most_loops(combine, args)
+
+    aplt.plot_trial_times(combine, args)
+
+    aplt.plot_traces(combine, args,
+                figncols=ncond,
+                in3d=False,
+                show_starts=True,
+                show_ends=True)
+
+    aplt.plot_traces(combine, args,
+                figncols=ncond,
+                in3d=True)
+
+    aplt.plot_histograms(combine, args,
+                figncols=ncond)
+
+    aplt.plot_nsamples(combine, args)
+
+    if args.plot_tracking_stats and len(args.uuid) == 1:
+        fplt = autodata.files.FileView(
+                  autodata.files.FileModel(show_progress=True,filepath=combine.h5_file))
+        with aplt.mpl_fig("%s.tracking" % fname,args,figsize=(10,5)) as f:
+            fplt.plot_tracking_data(
+                        f.add_subplot(1,2,1),
+                        f.add_subplot(1,2,2))
 
     #correlation and histogram plots
-
-    # Compute fly-coordinate-system stim_x and stim_y
-    # trajs = combine.get_trajs()  # obviously not working if analysis was run in an out-of-date freeflight analysis
-    trajs = list(itertools.chain(*[res['df'] for res in results.itervalues()]))
-    c2c = Coords2Coords(stimvelx='stim_x', stimvely='stim_y')
-    trajs = c2c.compute(trajs)
-    trans_x, trans_y = c2c.fnames()
-    for traj in trajs:  # These are awful names, rename them
-        traj.rename(columns={trans_x: 'stim_trans_x', trans_y: 'stim_trans_y'}, inplace=True)
-    # Note how we added the correlation with the new series here..
-    correlations = (('stim_x','vx'),('stim_trans_x','vx')) #('stim_z','vz'))
-    histograms = ("velocity","dtheta","stim_x","vx", 'stim_trans_x', 'stim_trans_y')
+    correlations = (('stim_x','vx'),)#('stim_z','vz'))
+    histograms = ("velocity","dtheta","stim_x","vx")
     correlation_options = {"stim_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
-                           "stim_trans_x:vx":{"range":[[-1,1],[-0.3,0.3]]},
-                           "latencies":range(200),
-                           "latencies_to_plot":range(150),
+                           "latencies":range(0,150,5),
+                           "latencies_to_plot":(0,5,10,15,25,50,75,100,125),
     }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True},
