@@ -8,6 +8,7 @@ import tempfile
 import random
 import itertools
 from pandas.core.groupby import GroupBy
+from autodata.files import FileModel
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -57,6 +58,8 @@ class TestCombineFake(unittest.TestCase):
         self.assertEqual(time0, self.combine._t0 + self.combine._dt)
 
     def test_custom_filter(self):
+        # FIXME: this tests some stuff that should not be used, as create holes in trajectories
+        #        just remove custom_filt
         c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
         c1.add_custom_filter("df[(df['ratio']>0.2)&(df['ratio']<0.8)]", 2.0)
         c1.add_from_args(self.args)
@@ -424,7 +427,6 @@ def combine2h5csv(combine,
 
 
 #
-#
 # 1. Write simple flydra
 # 2. Write simple csv
 #
@@ -438,13 +440,38 @@ def combine2h5csv(combine,
 #
 
 if __name__ == '__main__':
-    from analysislib.util import get_combiner_for_uuid
+
+    from analysislib.util import get_combiner_for_uuid, get_combiner_for_csv
+    import os.path as op
+    import glob
+
+    # Use FileModel here would make this somehow easier?
     MAX_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
-    # get args
-    combine = get_combiner_for_uuid(MAX_UUID)
-    combine.add_from_uuid(MAX_UUID, rfilt='none', zfilt='none')  # improve this...
-    results, dt = combine.get_results()
-    combine2h5csv(combine, tempdir='/home/santi', columns_for_csv=('vx',))
+    DATA_ROOT = op.join(op.expanduser('~'), 'data-analysis', 'strawlab', 'combine', 'max-long', MAX_UUID)
+    csv = glob.glob(op.join(DATA_ROOT, '*.csv'))[0]
+    h5 = glob.glob(op.join(DATA_ROOT, '*.simple*'))[0]
+
+    parser, args = analysislib.args.get_default_args(rfilt='none',
+                                                     zfilt='none')
+    combine = get_combiner_for_csv(csv)
+    # TODO: calc_turn_stats and friends should be configurable by CL or documented
+    # calc_turn_stats is time consuming, tell Max to disable (+look at memory +look at SMB/NFS bottlenecks with time)
+    combine.calc_turn_stats = False
+    combine.calc_linear_stats = False
+    combine.calc_angular_stats = False
+    combine.add_csv_and_h5_file(csv_fname=csv,
+                                h5_file=h5,
+                                args=args)
+
+    # Adding from UUID
+    # combine = get_combiner_for_uuid(MAX_UUID)
+    # combine.add_from_uuid(MAX_UUID, rfilt='none', zfilt='none')  # improve this...
+
+    combine2h5csv(combine,
+                  tempdir=op.expanduser('~'),
+                  columns_for_csv=('stim_x',))
+
+    # results, dt = combine.get_results()
     # for cond, condtrials in results.iteritems():
     #     uuids = condtrials['uuids']
     #     meta = condtrials['start_obj_ids']
