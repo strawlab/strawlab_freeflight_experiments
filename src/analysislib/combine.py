@@ -409,6 +409,22 @@ class _Combine(object):
     def close(self):
         pass
 
+    def _calc_other_series(self, df, dt):
+        """Computes other time series for the trial.
+        In particular:
+          - velocities and accelerations
+          - angular velocities
+          - turn stats (careful, time consuming!)
+        """
+        if self.calc_linear_stats:
+            acurve.calc_velocities(df, dt)
+            acurve.calc_accelerations(df, dt)
+        if self.calc_angular_stats:
+            acurve.calc_angular_velocities(df, dt)
+        if self.calc_turn_stats:
+            acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0, 1))
+
+
 class _CombineFakeInfinity(_Combine):
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
@@ -457,13 +473,7 @@ class _CombineFakeInfinity(_Combine):
                     continue
 
                 dt = self._dt
-                if self.calc_linear_stats:
-                    acurve.calc_velocities(df, dt)
-                    acurve.calc_accelerations(df, dt)
-                if self.calc_angular_stats:
-                    acurve.calc_angular_velocities(df, dt)
-                if self.calc_turn_stats:
-                    acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
+                self._calc_other_series(df, dt)
 
                 if self._custom_filter is not None:
                     df = eval(self._custom_filter)
@@ -671,13 +681,7 @@ class CombineCSV(_Combine):
                     continue
 
                 dt = self._dt
-                if self.calc_linear_stats:
-                    acurve.calc_velocities(odf, dt)
-                    acurve.calc_accelerations(odf, dt)
-                if self.calc_angular_stats:
-                    acurve.calc_angular_velocities(odf, dt)
-                if self.calc_turn_stats:
-                    acurve.calc_curvature(odf, dt, 10, 'leastsq', clip=(0,1))
+                self._calc_other_series(df, dt)
 
                 self._results[cond]['df'].append(odf)
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
@@ -790,13 +794,7 @@ class CombineH5(_Combine):
         )
 
         dt = self._dt
-        if self.calc_linear_stats:
-            acurve.calc_velocities(df, dt)
-            acurve.calc_accelerations(df, dt)
-        if self.calc_angular_stats:
-            acurve.calc_angular_velocities(df, dt)
-        if self.calc_turn_stats:
-            acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
+        self._calc_other_series(df, dt)
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
 
@@ -1066,13 +1064,7 @@ class CombineH5WithCSV(_Combine):
 
                 try:
                     dt = self._dt
-                    if self.calc_linear_stats:
-                        acurve.calc_velocities(df, dt)
-                        acurve.calc_accelerations(df, dt)
-                    if self.calc_angular_stats:
-                        acurve.calc_angular_velocities(df, dt)
-                    if self.calc_turn_stats:
-                        acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
+                    self._calc_other_series(df, dt)
 
                     if self._custom_filter is not None:
                         df = eval(self._custom_filter)
