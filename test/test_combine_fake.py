@@ -54,9 +54,31 @@ def combine2h5csv(combine,
     """
     Generates ".simple.flydra.h5" and ".csv" files from combine objects.
 
-    This could be called too "uncombine".
-
     Heavily inspired by "TestCombineFake2._create_h5".
+
+    Parameters
+    ----------
+    combine: combine.CombineH5WithCSV object
+      where to get the data from
+
+    trim_trajs_to: int, default 10
+      only the first trim_trajs_to of each trial is stored
+
+    columns_for_csv: string list-like, default ('rotation_rate', 'ratio')
+      the extra columns that will be saved from each trial into the CSV file
+
+    tempdir: path, default None
+      directory where to save the two files, if not a tempdir will be created
+
+    file_prefix: string, default 'data'
+      how csv and h5 files will be named
+
+    fps: int, default 100
+      sampling speed for this fake experiment
+
+    Returns
+    -------
+    (csv_path, h5_path).
     """
     # There is danger of creating unrealistic csv/h5 files.
     # That is why, even if writing them directly is not a big deal,
@@ -367,7 +389,6 @@ class TestCombineFake2(unittest.TestCase):
             dfn,dt,(x0,y0,obj_id,framenumber0,time0) = cn.get_one_result(1)
 
             self.assertEqual(obj_id,1)
-
 
 #
 # Test:
