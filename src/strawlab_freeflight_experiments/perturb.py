@@ -84,7 +84,10 @@ class Perturber:
         return int(self._get_duration()*Fs)
 
     def completed_perturbation(self, t):
-        return t >= (0.98*self.duration)
+        return t >= self._get_duration()
+
+    def completed_perturbation_discrete(self, lidx, fidx, Fs):
+        return (lidx > fidx) and ((lidx - fidx) > self._get_duration_discrete(Fs))
 
     def reset(self):
         self.progress = -1
