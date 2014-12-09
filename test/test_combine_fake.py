@@ -1,24 +1,27 @@
 #!/usr/bin/env python
 import os.path
-import sys
-import numpy as np
+import os.path as op
 import unittest
-import collections
 import tempfile
 import random
 import itertools
-from pandas.core.groupby import GroupBy
-from autodata.files import FileModel
+import sys
+
+import numpy as np
+import pandas as pd
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+
+from analysislib.util import get_combiner_for_csv
+from analysislib.util import get_combiner_for_uuid
 import analysislib.combine
 import analysislib.args
 import analysislib.util
 import nodelib.log
 
-from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
+from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
 
 
 # --- test data generation utils
@@ -102,6 +105,7 @@ def combine2h5csv(combine,
     # fake h5 file
     traj_datatypes, traj_start_datatypes = simple_flydra_datatypes()
     traj_data = {k[0]: [] for k in traj_datatypes}
+    oid_starts = {}
     traj_starts_data = {k[0]: [] for k in traj_start_datatypes}
 
     # populate and write
@@ -117,12 +121,12 @@ def combine2h5csv(combine,
             # prepare the csv logger
             log.condition = cond
             log.lock_object = obj_id
-            log.framenumber = framenumber0
             log._exp_uuid = uuid  # dirty
             # write the csv rows for this trial
-            for _, row in df.iterrows():
+            for framenumber, row in df.iterrows():
                 for col in columns_for_csv:
                     setattr(log, col, row[col])
+                log.framenumber = framenumber
                 log.update()
 
             # accummulate the data to write the h5 at the end
@@ -130,9 +134,14 @@ def combine2h5csv(combine,
                 traj_data[col].extend(df[col].values)
             traj_data['framenumber'].extend(df.index.values)  # this could be easily generalized to other index types
             traj_data['obj_id'].extend(itertools.repeat(obj_id, len(df)))
-            traj_starts_data["obj_id"].append(obj_id)
-            traj_starts_data["first_timestamp_secs"].append(log.last_tsecs)  # N.B. not time0
-            traj_starts_data["first_timestamp_nsecs"].append(log.last_tnsecs)
+            oid_starts[obj_id] = min((log.last_tsecs, log.last_tnsecs),
+                                     oid_starts.get(obj_id, (np.inf, np.inf)))
+
+    # write too the start of each object lock
+    for obj_id, (tsecs, tnsecs) in sorted(oid_starts.items()):
+        traj_starts_data["obj_id"].append(obj_id)
+        traj_starts_data["first_timestamp_secs"].append(tsecs)
+        traj_starts_data["first_timestamp_nsecs"].append(tnsecs)
 
     # flatten all the data lists into numpy arrays
 
@@ -153,6 +162,11 @@ def combine2h5csv(combine,
                         {"trajectories": traj_arr, "trajectory_start_times": traj_start_arr},
                         "US/Pacific",
                         fps)
+
+    # combine expects a CSV sorted by framenumber, which is not the case
+    # (objects have been shuffled in the result dictionary)
+    # this is the easiest way of getting there...
+    pd.read_csv(csv_fname).sort('framenumber').to_csv(csv_fname, index=False, na_rep='nan')
     log.close()
 
     return csv_fname, h5_fname
@@ -390,57 +404,59 @@ class TestCombineFake2(unittest.TestCase):
 
             self.assertEqual(obj_id,1)
 
-#
-# Test:
-#    - uuids storage
-#    - pickle
-#    - contiguous-condition trajectories
-#
-# Need to install:
-#    - python-whatami
-#
+
+class TestCombineNonContiguous(unittest.TestCase):
+    """
+    Tests that combine separates correctly trajectories where  the same object_id
+    contains trials with the same condition appearing several times.
+    These happen when trials are long, for example within fish experiments
+    """
+
+    def _combine_for_test(self):
+        """Returns a combine object useful for testing proper splitting of non-contiguous condition blocks
+        within the same trial.
+        """
+
+        MAX_TEST_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
+        DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
+        csv = op.join(DATA_ROOT, 'data.csv')
+        h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
+
+        # generate small-test-data from real data
+        if not op.isfile(csv) or not op.isfile(h5):
+            # generate smaller test files we can fit in our repo
+            combine = get_combiner_for_uuid(MAX_TEST_UUID)
+            combine.calc_turn_stats = False
+            combine.calc_linear_stats = False
+            combine.calc_angular_stats = False
+            combine.add_from_uuid(MAX_TEST_UUID, rfilt='none', zfilt='none')
+            combine2h5csv(combine,
+                          tempdir=DATA_ROOT,
+                          columns_for_csv=('stim_x',))
+
+        # combine the test csv/h5
+        combine = get_combiner_for_csv(csv)
+        combine.calc_turn_stats = False
+        combine.calc_linear_stats = False
+        combine.calc_angular_stats = False
+        _, args = analysislib.args.get_default_args(rfilt='none',
+                                                    zfilt='none',
+                                                    lenfilt=0)
+
+        combine.add_csv_and_h5_file(csv_fname=csv,
+                                    h5_file=h5,
+                                    args=args)
+        return combine
+
+    def test_correct_noncontiguous_split(self):
+        combine = self._combine_for_test()
+        results, dt = combine.get_results()
+        self.assertAlmostEqual(dt, 0.01)
+        self.assertEqual(len(results), 6)
+        for cond, condtrials in results.iteritems():
+            for df in condtrials['df']:
+                self.assertTrue(np.all(1 == df['framenumber'].diff().iloc[1:]))
+
 
 if __name__ == '__main__':
-
-    from analysislib.util import get_combiner_for_uuid, get_combiner_for_csv
-    import os.path as op
-    import glob
-
-    # Use FileModel here would make this somehow easier?
-    MAX_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
-    DATA_ROOT = op.join(op.expanduser('~'), 'data-analysis', 'strawlab', 'combine', 'max-long', MAX_UUID)
-    csv = glob.glob(op.join(DATA_ROOT, '*.csv'))[0]
-    h5 = glob.glob(op.join(DATA_ROOT, '*.simple*'))[0]
-
-    parser, args = analysislib.args.get_default_args(rfilt='none',
-                                                     zfilt='none')
-    combine = get_combiner_for_csv(csv)
-    # TODO: calc_turn_stats and friends should be configurable by CL or documented
-    # calc_turn_stats is time consuming, tell Max to disable (+look at memory +look at SMB/NFS bottlenecks with time)
-    combine.calc_turn_stats = False
-    combine.calc_linear_stats = False
-    combine.calc_angular_stats = False
-    combine.add_csv_and_h5_file(csv_fname=csv,
-                                h5_file=h5,
-                                args=args)
-
-    # Adding from UUID
-    # combine = get_combiner_for_uuid(MAX_UUID)
-    # combine.add_from_uuid(MAX_UUID, rfilt='none', zfilt='none')  # improve this...
-
-    combine2h5csv(combine,
-                  tempdir=op.expanduser('~'),
-                  columns_for_csv=('stim_x',))
-
-    # results, dt = combine.get_results()
-    # for cond, condtrials in results.iteritems():
-    #     uuids = condtrials['uuids']
-    #     meta = condtrials['start_obj_ids']
-    #     dfs = condtrials['df']
-    #     for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, meta, dfs):
-    #         print cond, uuid, obj_id, framenumber0, len(df) * dt
-
-
-if __name__=='__main__':
     unittest.main()
-
