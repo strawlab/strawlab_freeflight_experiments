@@ -45,8 +45,8 @@ def get_perturb_class(perturb_descriptor, debug=False):
             return  PerturberMultiTone
         elif name == 'tone':
             return PerturberTone
-        elif name == 'prbs':
-            return PerturberPRBS
+        elif name == 'rbs':
+            return PerturberRBS
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
@@ -514,14 +514,14 @@ class PerturberMultiTone(_PerturberInterpolation):
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
 
-class PerturberPRBS(Perturber):
+class PerturberRBS(Perturber):
 
-    DEFAULT_DESC = "prbs_WHAT|-0.4|0.4|0.03|3|"
+    DEFAULT_DESC = "rbs_WHAT|-0.4|0.4|0.03|3|"
 
     def __init__(self, descriptor):
         """
         descriptor is
-        'prbs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
+        'rbs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
 
@@ -537,8 +537,8 @@ class PerturberPRBS(Perturber):
         name_parts = name.split('_')
         me = name_parts[0]
         self.what = '_'.join(name_parts[1:])
-        if me != 'prbs':
-            raise Exception("Incorrect PerturberPRBS configuration")
+        if me != 'rbs':
+            raise Exception("Incorrect PerturberRBS configuration")
 
         self.seed = int(seed) if seed else None
         self.value_min = float(value_min)
@@ -552,10 +552,10 @@ class PerturberPRBS(Perturber):
         t = np.arange(0,self.duration,self.bw)
         r = numpy.random.RandomState(self.seed)
 
-        #create a PRBS
+        #create a RBS
         vmask = np.array([r.choice((True,False)) for _ in t])
 
-        #use the prbs bool array to set the true values
+        #use the rbs bool array to set the true values
         #(respecting min/max) in a new array of the correct type
         v = np.ones_like(vmask,dtype=float)
         v[vmask] = self.value_max
@@ -564,7 +564,7 @@ class PerturberPRBS(Perturber):
         self._df = pd.DataFrame({"v":v},index=pd.to_datetime(t,unit='s'))
 
     def __repr__(self):
-        return "<PerturberPRBS what=%s val=%.1f/%.1f dur=%.1fs (bw=%.2fs)>" % (self.what, self.value_min, self.value_max,self.duration,self.bw)
+        return "<PerturberRBS what=%s val=%.1f/%.1f dur=%.1fs (bw=%.2fs)>" % (self.what, self.value_min, self.value_max,self.duration,self.bw)
 
     def get_perturb_vs_time(self, t0, t1, fs=100):
         t = []
@@ -647,7 +647,7 @@ def plot_perturbation_frequency_characteristics(fig,obj):
     ax = fig.add_subplot(gs[1,1])
     plot_amp_spectrum(ax, obj)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberPRBS)
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberRBS)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

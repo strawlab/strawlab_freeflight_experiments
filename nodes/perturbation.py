@@ -87,7 +87,7 @@ CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro|0.1|4|1|10||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
                "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro2|0.1|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/prbs_rotation_rate|-0.9|0.9|0.05|3|42|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/rbs_rotation_rate|-0.9|0.9|0.05|3|42|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
