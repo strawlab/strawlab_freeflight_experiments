@@ -77,12 +77,12 @@ TAU= 2*PI
 #
 CONDITIONS = [
 
-                "infinity04.svg/2.0/0.05/1/5.0/-0.01",
-                "infinity04.svg/10.0/0.05/1/5.0/-0.01",# main condition
-                "infinity04.svg/40.0/0.05/1/5.0/-0.01",
-                "infinity04.svg/10.0/0.05/1/1.0/-0.01",
-                "infinity04.svg/10.0/0.05/1/20.0/-0.01",
-                "infinity04.svg/10.0/0.05/10/5.0/-0.03",# main condition
+                "infinity03.svg/4.0/0.05/1/20.0/-0.01",
+                "infinity03.svg/6.0/0.05/1/16.0/-0.01",# main condition
+                "infinity03.svg/8.0/0.05/1/12.0/-0.01",
+                "infinity03.svg/10.0/0.05/1/10.0/-0.01",
+                "infinity03.svg/16.0/0.05/1/8.0/-0.01",
+                "infinity03.svg/20.0/0.05/1/4.0/-0.01",# main condition
 ]
 
 START_CONDITION = CONDITIONS[0]

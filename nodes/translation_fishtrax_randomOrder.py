@@ -5,6 +5,7 @@ import numpy as np
 import threading
 import argparse
 import os.path
+from random import shuffle
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -84,6 +85,9 @@ CONDITIONS = [
                 "infinity04.svg/10.0/0.05/1/20.0/-0.01",
                 "infinity04.svg/10.0/0.05/10/5.0/-0.03",# main condition
 ]
+
+# shufle list to avoid preferation for first condition
+shuffle(CONDITIONS)
 
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
