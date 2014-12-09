@@ -21,7 +21,7 @@
 #define VZ 1e-10
 
 
-void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp) {
+void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double ts_ekf, double ts_c, double ts_d, double ts_ci) {
 
 	/* the operator -> references to an element of a pointer to a 
      * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
@@ -33,10 +33,10 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	double deltaTheta;
     
     // parameters directly related to decision function
-    decfp->Ts = 0.01; // sample time
+    decfp->Ts = ts_d;
     
     // parameters directly related to the function for calculating the values of the input
-    cInputp->Ts = 0.0125; // sample time, 80Hz
+    cInputp->Ts = ts_ci;
 
 	// system parameters for controller
 	cp->cntr_flyparams.Ifzz = IFZZ;
@@ -53,7 +53,7 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	ekfp->ekf_flyparams.Vz = VZ;
 	
 	// parameters directly related to controller
-	cp->Ts = 0.05;
+	cp->Ts = ts_c;
 	cp->theta0 = 0;
 	cp->Tp = 2;
 	cp->Qy[0] = 10000;
@@ -115,7 +115,7 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	ekfp->x0[3] = 0.0;
 	ekfp->x0[4] = 0.0;
 	
-	ekfp->Ts = 0.005;
+	ekfp->Ts = ts_ekf;
 	
 	// calculate points of desiredPath
 	cp->NdesPath = 100; // number of points calculated for desired path

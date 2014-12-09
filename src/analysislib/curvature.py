@@ -21,6 +21,35 @@ DEBUG = False
 class NotEnoughDataError(Exception):
     pass
 
+def calc_saccades(df, dt, min_dtheta=10, min_consecutive_dtheta=7):
+
+    a = pd.rolling_apply(df['dtheta'],min_consecutive_dtheta,lambda v: np.abs(v).mean() > min_dtheta,center=True)
+    a.fillna(0,inplace=True)
+
+    H = False
+    idxs = []
+    i0 = None
+
+    for idx,r in a.iteritems():
+        if not H and r == 1:
+            i0 = idx
+            H = True
+        elif H and r == 0:
+            H = False
+            if (idx - i0) > min_consecutive_dtheta:
+                idxs.append( (i0,idx) )
+
+    df['saccade'] = False
+
+    for i0,i1 in idxs:
+        i = ((i1-i0) // 2) + i0
+        try:
+            df['saccade'][i] = True
+        except KeyError:
+            df['saccade'][i0] = True
+
+    return ['saccade']
+
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values) / dt
     vy = np.gradient(df['y'].values) / dt
@@ -299,6 +328,8 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
     results,dt = combine.get_results()
     fname = combine.fname
 
+    cols = combine.get_result_columns()
+
     hist2d = correlation_options.get('hist2d', True)
     latencies = sorted(correlation_options.get('latencies',range(0,40,2)+[5,15,40,80]))
     latencies_to_plot = sorted(correlation_options.get('latencies_to_plot',(0,2,5,8,10,15,20,40,80)))
@@ -307,6 +338,10 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
     corr_latencies = {k:{} for k in combine.get_conditions()}
 
     for corra,corrb in correlations:
+        if (corra not in cols) or (corrb not in cols):
+            print "ERROR: no %s:%s data to correlate" % (corra,corrb)
+            continue
+
         #backwards compatible file extensions
         fsuffix = "" if ((corra == 'rotation_rate') and (corrb == 'dtheta')) else "_%s_%s" % (corra,corrb)
 
@@ -330,10 +365,19 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                     if len(df) < min(latencies):
                         continue
 
+                    # correlation for constant series (e.g. all 0s stimulus) is undefined
+                    if df[corra].nunique() < 2 or df[corrb].nunique() < 2:
+                        continue
+
                     #calculate correlation coefficients for all latencies
                     ccefs = [ _correlate(df,corra,corrb,l) for l in latencies ]
 
+
                     series.append( pd.Series(ccefs,index=latencies,name=_obj_id) )
+
+                # correlation was undefined for all series, nothing to do
+                if not series:
+                    continue
 
                 #plot the means for each latency
                 df = pd.concat(series, axis=1)
@@ -351,7 +395,8 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                             label=_current_condition)
 
                 #the maximum of the means is the most correlated shifted latency
-                max_latencies_shift[_current_condition] = (latencies[ccef_m.argmax()], ccef_m.max())
+                max_index = ccef_m.index.get_loc(ccef_m.idxmax())
+                max_latencies_shift[_current_condition] = (latencies[max_index], ccef_m.max())
 
             ax.legend(
                 loc='upper center' if OUTSIDE_LEGEND else 'upper right',
@@ -432,7 +477,14 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
     results,dt = combine.get_results()
     fname = combine.fname
 
+    #make sure the cols exist
+    data_cols = combine.get_result_columns()
+
     for h in histograms:
+        if h not in data_cols:
+            print "ERROR: no %s data to histogram" % h
+            continue
+
         with aplt.mpl_fig("%s_%s" % (fname,h), args) as fig:
             ax = fig.gca()
             for current_condition in sorted(nens):
@@ -459,7 +511,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
             )
             ax.set_title(h)
             ax.set_xlabel(histogram_options['xlabel'].get(h,h))
-            ax.set_ylabel('normalized counts (n)' if histogram_options['normed'].get(h) else 'counts (n)')
+            ax.set_ylabel('probability' if histogram_options['normed'].get(h) else 'counts (n)')
 
             fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
@@ -468,6 +520,10 @@ def flatten_data(args, combine, flatten_columns):
     REPLACE = {"checkerboard16.png/infinity.svg/0.3/0.5/0.1/0.20":"checkerboard16.png/infinity.svg/0.3/-0.5/0.1/0.20"}
 
     results,dt = combine.get_results()
+
+    #make sure the cols exist
+    data_cols = combine.get_result_columns()
+    flatten_columns = [f for f in flatten_columns if f in data_cols]
 
     flat_data = {i:{} for i in flatten_columns}
     nens = {}

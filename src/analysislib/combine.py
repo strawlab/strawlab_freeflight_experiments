@@ -71,9 +71,13 @@ class _Combine(object):
         self._index = 'framenumber'
         self._warn_cache = {}
 
-        self._configdict = {'v':2,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':5,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
+
+        ##FIXME: hack to allow caching to work with old combine (for Max)
+        if os.environ.get('FLYDRA_OLD_COMBINE'):
+            self._configdict['v'] = -self._configdict['v']
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -106,6 +110,9 @@ class _Combine(object):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
+        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+            return None
+
         pkl = self._get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
@@ -122,6 +129,7 @@ class _Combine(object):
                             return cPickle.load(f)
                         return pickle.load(f)
                 return unpickle_fast()
+
         return None
 
     def _save_cache_file(self):
@@ -129,7 +137,11 @@ class _Combine(object):
         WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
-            cPickle.dump({"results":self._results,"dt":self._dt}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            cPickle.dump({"results":self._results,
+                          "trajs":self._trajs,
+                          "dt":self._dt,
+                          "csv_file":self.csv_file},
+                         f, protocol=pickle.HIGHEST_PROTOCOL)
 
         #if the string has been truncted to a hash then also write a text file with
         #the calibration string
@@ -256,9 +268,13 @@ class _Combine(object):
         """the framerate of the data"""
         return 1.0 / self._dt
 
-    def get_plot_filename(self, name):
+    def get_plot_filename(self, name, subdir=''):
         """return a full path to the autodata directory to save any plots"""
-        return os.path.join(self.plotdir,name)
+        if subdir:
+            pd = os.path.join(self.plotdir,subdir)
+            if not os.path.isdir(pd):
+                os.makedirs(pd)
+        return os.path.join(self.plotdir,subdir,name)
 
     def get_num_skipped(self, condition):
         """returns the number of skipped trials for the given condition.
@@ -383,6 +399,9 @@ class _Combine(object):
             raise Exception("filter minimum must be given")
         self._custom_filter = s
         self._custom_filter_min = post_filter_min
+
+    def close(self):
+        pass
 
 class _CombineFakeInfinity(_Combine):
     def __init__(self, **kwargs):
@@ -684,6 +703,7 @@ class CombineH5(_Combine):
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
         self._dt = None
+        self._h5 = None
 
     def add_from_args(self, args):
         self._args_to_configuration(args)
@@ -714,13 +734,13 @@ class CombineH5(_Combine):
 
         self.h5_file = h5_file
 
-        h5 = tables.openFile(h5_file, mode='r')
+        self._h5 = tables.openFile(h5_file, mode='r')
 
-        self._trajectories = self._get_trajectories(h5)
+        self._trajectories = self._get_trajectories(self._h5)
         dt = 1.0/self._trajectories.attrs['frames_per_second']
 
-        self._trajectory_start_times = h5.root.trajectory_start_times
-        tzname = h5.root.trajectory_start_times.attrs['timezone']
+        self._trajectory_start_times = self._h5.root.trajectory_start_times
+        tzname = self._h5.root.trajectory_start_times.attrs['timezone']
 
         if self._dt is None:
             self._dt = dt
@@ -753,6 +773,10 @@ class CombineH5(_Combine):
             acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
+
+    def close(self):
+        if self._h5 is not None:
+            self._h5.close()
 
 class CombineH5WithCSV(_Combine):
     """
@@ -808,7 +832,9 @@ class CombineH5WithCSV(_Combine):
             d = self._get_cache_file()
             if d is not None:
                 self._results = d['results']
+                self._trajs = d['trajs']
                 self._dt = d['dt']
+                self.csv_file = d['csv_file']   #for plot names
 
                 if len(args.uuid) > 1:
                     self.plotdir = args.outdir
@@ -864,7 +890,7 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def add_csv_and_h5_file_old(self, csv_fname, h5_file, args):
+    def add_csv_and_h5_file_old(self, csv_fname, h5_file, args, uuid=None):
         """Add a single csv and h5 file"""
 
         warnings = {}
@@ -910,6 +936,16 @@ class CombineH5WithCSV(_Combine):
         this_row = {}
 
         skipped = self._skipped
+
+        # Container for "FreeflightTrajectory" objects
+        trajs = []
+        # Metadata
+        if uuid is not None:
+            metadata = FreeflightExperimentMetadata(uuid=uuid)
+        else:
+            metadata = None  # FIXME: We need a "unknown metadata" object,
+                             # which we could use also if we fail to fetch MD
+                             # Also we might want to remove the constraint that we need to know the UUID
 
         for r in infile.record_iterator():
 
@@ -1064,6 +1100,9 @@ class CombineH5WithCSV(_Combine):
                             r['start_obj_ids'].append( (first['x'], first['y'], query_id, first.name, start_time) )
                             r['df'].append( df )
 
+                            # Let's instantiate a FreeflightTrajectory too, as it is cheap. Alternative: do on demand
+                            trajs.append(FreeflightTrajectory(metadata, query_id, first.name, start_time, query_cond, df, dt=dt))
+
                     this_id = _id
                     this_cond = _cond
                     csv_results = {k:[] for k in self._cols}
@@ -1084,6 +1123,8 @@ class CombineH5WithCSV(_Combine):
             except ValueError, e:
                 self._warn("ERROR: %s\n\t%r" % (e,row))
 
+        self._trajs = trajs
+
         h5.close()
 
     def add_csv_and_h5_file_new(self, csv_fname, h5_file, args, uuid=None):
@@ -1101,7 +1142,25 @@ class CombineH5WithCSV(_Combine):
             self._debug("IO:     fixing data %s" % fix)
 
         #open the csv file as a dataframe
-        csv = pd.read_csv(self.csv_file,na_values=('None',),error_bad_lines=False)
+        try:
+            csv = pd.read_csv(self.csv_file,na_values=('None',),
+                              error_bad_lines=False,
+                              dtype={'framenumber':int,
+                                     'condition':str,
+                                     'exp_uuid':str,
+                                     'flydra_data_file':str})
+        except:
+            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
+            #protect against rubbish in the framenumber column
+            csv = pd.read_csv(self.csv_file,na_values=('None',),
+                              error_bad_lines=False,
+                              low_memory=False,
+                              dtype={'framenumber':float,
+                                     'condition':str,
+                                     'exp_uuid':str,
+                                     'flydra_data_file':str})
+            csv = csv.dropna(subset=['framenumber'])
+            csv['framenumber'] = csv['framenumber'].astype(int)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1156,9 +1215,6 @@ class CombineH5WithCSV(_Combine):
             #causing there to be multiple rows with the same framenumber.
             #find the last index for all unique framenumbers for this trial
             fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
-            #for later joins, and because its logical, framenumber must be
-            #an integer
-            fdf['framenumber'] = fdf['framenumber'].astype(int)
             trial_framenumbers = fdf['framenumber'].values
 
             #get the comparible range of data from flydra

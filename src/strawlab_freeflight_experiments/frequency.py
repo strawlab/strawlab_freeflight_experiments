@@ -28,7 +28,14 @@ def plot_amp_spectrum(ax, y, fs, **kwargs):
     Y = scipy.fft(y)/n # fft computing and normalization
     Y = Y[range(n//2)]
 
-    ax.plot(frq,abs(Y),'ro',**kwargs)
+    if 'color' not in kwargs:
+        kwargs['color'] = 'r'
+    if 'marker' not in kwargs:
+        kwargs['marker'] = 'o'
+    if 'linestyle' not in kwargs:
+        kwargs['linestyle'] = 'none'
+
+    ax.plot(frq,abs(Y),**kwargs)
     ax.set_xlabel('Frequency')
     ax.set_ylabel('|Y(freq)|')
 
@@ -140,6 +147,10 @@ def _get_phases(N, N0, method, randomstate):
         phase = -np.pi*_rudinshapiro(N)
         phase[phase == -np.pi] = 0
         return phase
+    elif method == "rudinshapiro2":
+        phase = -np.pi*_rudinshapiro(N)
+        phase[phase == -np.pi] = 0
+        return phase - (np.pi/2.0)
     elif method == "newman":
         k = np.arange(N) + N0
         phase = (np.pi*(k-1)**2)/N

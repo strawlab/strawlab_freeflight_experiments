@@ -273,5 +273,7 @@ if __name__ == "__main__":
             doit(combine, fmf_fname, obj_id, args.condition, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
+        except ValueError, e:
+            print "missing data", e
 
 

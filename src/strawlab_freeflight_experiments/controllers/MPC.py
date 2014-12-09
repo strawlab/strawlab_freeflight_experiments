@@ -1,18 +1,15 @@
 import os.path
-import collections
 
 import numpy as np
 import numpy.ctypeslib
 import ctypes as ct
 import ctypes.util
 
-lib = numpy.ctypeslib.load_library("libmpc", os.path.abspath(__file__))
+lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.path.abspath(__file__)),'mpc'))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
-Fly = collections.namedtuple('Fly', 'x y obj_id')
-
 class MPC:
-    def __init__(self):
+    def __init__(self, ts_ekf, ts_c, ts_d, ts_ci):
 
         #these values are shared between python and C, and I need to know their
         #value
@@ -24,7 +21,7 @@ class MPC:
         self._CT_wout = ct.c_double(0) #evolution of path param
         self._CT_thetaout = ct.c_double(0) #value of path param as used in control computation
 
-        self._CT_targetpoint = data = (ct.c_double * 2)() #current target point index of path [x,y]
+        self._CT_targetpoint = (ct.c_double * 2)() #current target point index of path [x,y]
         self._target_x, self._target_y = 0,0
 
         self._CT_cur_fly_pos = np.zeros(2, dtype=ctypes.c_double) #current fly pos [x,y]
@@ -67,7 +64,9 @@ class MPC:
         self._cinp = lib.calcinput_new_params()
         self._cins = lib.calcinput_new_state()
 
-        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp)
+        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
+                                                                  ct.c_double, ct.c_double, ct.c_double, ct.c_double]
+        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp, ts_ekf, ts_c, ts_d, ts_ci)
 
         #allocate memory for internal controller variables:
         lib.allocate_memory_controller(self._prjs, self._conp)
@@ -184,12 +183,13 @@ class MPC:
         if x is None:
             x = [f.x for f in flies]
             y = [f.y for f in flies]
+            heading = [f.heading for f in flies]
             ids = [f.obj_id for f in flies]
 
         x = np.array(x, dtype=ctypes.c_double)
         y = np.array(x, dtype=ctypes.c_double)
+        heading = np.zeros_like(heading, dtype=ctypes.c_double)
         ids = np.array(ids, dtype=ctypes.c_int)
-        g = np.zeros_like(x, dtype=ctypes.c_double)
         n = len(x)
 
         fid = self._decfcn(
@@ -201,7 +201,7 @@ class MPC:
                      ct.byref(self._CT_cntrl_enabled), ct.byref(self._CT_ekf_enabled),
                      self._conp, self._ekfp, self._decp, self._decs,
                      self._prjs, self._ekfs,
-                     g.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+                     heading.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
 
         return fid
 
@@ -216,33 +216,3 @@ class MPC:
                      self._prjs, self._ekfs,
                      ctypes.POINTER(ctypes.c_double)())
 
-
-if __name__ == "__main__":
-
-    m = MPC()
-    m.reset()
-
-    flies = [Fly(x=124,y=-100,obj_id=3),
-             Fly(x=95,y=-0.35,obj_id=4),
-             Fly(x=1.6,y=0.05,obj_id=10),
-             Fly(x=0.05,y=0.05,obj_id=42)]
-    flies = {f.obj_id:f for f in flies}
-
-    print "enabled", m.controller_enabled
-
-    obj_id = m.should_control(flies.values())
-    if obj_id != -1:
-        print "enabled", m.controller_enabled
-        f = flies[obj_id]
-        m.run_ekf(f)
-        m.run_control()
-        m.run_calculate_input()
-
-    print m.target_point
-
-    print m.rotation_rate
-
-    m.reset()
-    print "enabled", m.controller_enabled
-
-#    print lib.init_par_cInpF_decF_ekf_subopt_MPC_model2

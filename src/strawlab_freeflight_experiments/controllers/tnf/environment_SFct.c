@@ -17,9 +17,9 @@
 
 #include "initFunctions.h"
 
-#include "contr_fct_subopt_MPC_model2.h"
+#include "contr_fct_TNF_model4.h"
 
-#include "ekf_fct_model2.h"
+#include "ekf_fct_model4_switch.h"
 
 #include "dec_fct.h"
 
@@ -74,7 +74,7 @@
 ekfp_t ekfp;
 ekfState_t ekfState;
 contrp_t cp;
-projGrState_t projGrState;
+cntrState_t cntrState;
 decfp_t decfp;
 decfState_t decfState;
 cInputp_t cInputp;
@@ -103,19 +103,19 @@ static void mdlInitializeSizes(SimStruct *S)
 
     if (!ssSetNumInputPorts(S, 4)) return;
         // output of the system (position of fly)
-		// for debug purposes: input to the fly externally given
-        // for debug purposes: estimated state of external EKF
-        // for debug purposes: state theta of aux. system
+		// for debug purposes: real state of system
+        // for debug purposes: state of auxiliary system, externally given
+        // for debug purposes: 
     
     ssSetInputPortWidth(S, 0, 2); 
     ssSetInputPortDirectFeedThrough(S, 0, 1);
     ssSetInputPortRequiredContiguous(S, 0, 1);
 	
-	ssSetInputPortWidth(S, 1, 1); 
+	ssSetInputPortWidth(S, 1, 3); 
     ssSetInputPortDirectFeedThrough(S, 1, 1);
     ssSetInputPortRequiredContiguous(S, 1, 1);
 
-    ssSetInputPortWidth(S, 2, 5); 
+    ssSetInputPortWidth(S, 2, 2); 
     ssSetInputPortDirectFeedThrough(S, 2, 1);
     ssSetInputPortRequiredContiguous(S, 2, 1);
     
@@ -124,19 +124,26 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortRequiredContiguous(S, 3, 1);
 
     
-    if (!ssSetNumOutputPorts(S, 8)) return;
-    ssSetOutputPortWidth(S, 0, 5); // estimated state of EKF
+    if (!ssSetNumOutputPorts(S, 10)) return;
+#if EKF_V0EST
+    ssSetOutputPortWidth(S, 0, 4); // estimated state of EKF
+#else
+    ssSetOutputPortWidth(S, 0, 3); // estimated state of EKF
+#endif
     ssSetOutputPortWidth(S, 1, 1); // omega_e from controller, input to the system
-	ssSetOutputPortWidth(S, 2, 1); // cost from controller
-	ssSetOutputPortWidth(S, 3, 1); // path parameter evolution
-	ssSetOutputPortWidth(S, 4, 1); // input to path parameter system
-    ssSetOutputPortWidth(S, 5, 1); // enable flag for controller
-    ssSetOutputPortWidth(S, 6, 1); // enable flag for EKF
-	ssSetOutputPortWidth(S, 7, 2); // current target point on the desired path
+	ssSetOutputPortWidth(S, 2, 2); // auxiliary states -> path parameter and derivative
+	ssSetOutputPortWidth(S, 3, 1); // input to path parameter system
+    ssSetOutputPortWidth(S, 4, 4); // state xi of transverse dynamics
+	ssSetOutputPortWidth(S, 5, 2); // integrated errors	
+	ssSetOutputPortWidth(S, 6, 1); // estimated forward-velocity of the fly, if this is not estimated, then a dummy
+								   // value of -10 is assigned to this output
+	ssSetOutputPortWidth(S, 7, 1); // enable flag for controller
+    ssSetOutputPortWidth(S, 8, 1); // enable flag for EKF
+	ssSetOutputPortWidth(S, 9, 2); // current target point on the desired path
 		
 
     ssSetNumSampleTimes(S, 4); 
-        // first sampling time for EKF, second for the controller (suboptimal MPC)
+        // first sampling time for EKF, second for the controller
         // third for the decision function whether or not to activate the controller, 
         // fourth for the function calculating the actual input to the system
     
@@ -167,18 +174,16 @@ static void mdlInitializeSizes(SimStruct *S)
  */
 static void mdlInitializeSampleTimes(SimStruct *S)
 {
-    double Ts_ekf, Ts_c, Ts_d, Ts_ci;
-    
-    // initialize parameters of decision function, controller, 
-    // calcInput function, and EKF; 
-    // this is already done here because sampling times are needed and 
-    // this function is called by Simulink before mdlSTART:
-    init_par_cInpF_decF_ekf_subopt_MPC_model2 (&cp, &ekfp, &decfp, &cInputp);
-    
-    Ts_ekf = ekfp.Ts;
-    Ts_c = cp.Ts;
-    Ts_d = decfp.Ts;
-    Ts_ci = cInputp.Ts;
+    double Ts_d     = 0.01;     //100Hz
+    double Ts_ci    = 0.0125;   //80Hz
+    double Ts_c     = 0.025;    //40Hz
+    double Ts_ekf   = 0.005;    //200Hz
+
+	double k0 = -0.1;
+	double k1 = -1.2;
+	double k2 = -2.1;
+
+    init_par_cInpF_decF_ekf_cntr (&cp, &ekfp, &decfp, &cInputp, k0, k1, k2, Ts_ekf, Ts_c, Ts_d, Ts_ci);
     
     ssSetSampleTime(S, 0, Ts_ekf);
     ssSetOffsetTime(S, 0, 0.0);
@@ -214,13 +219,13 @@ static void mdlStart(SimStruct *S)
     omegae[0] = 0.0;
     	
 	// allocate memory for internal controller variables:
-	allocate_memory_controller (&projGrState, &cp);
+	allocate_memory_controller (&cntrState, &cp);
     
     // initialize EKF: 
     initEKF (&ekfState, &ekfp);
     
     // initialize controller
-    initProjGradMethod (&projGrState, &cp);
+    initController (&cntrState, &cp);
     
     // initialize function calculating the input to the system
     initCalcInput (&cInputp, &cInpState);
@@ -259,16 +264,18 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 {
     real_T         *xhat_out   = ssGetOutputPortRealSignal(S,0);
     real_T         *omegae_out = ssGetOutputPortRealSignal(S,1);
-	real_T         *Jout       = ssGetOutputPortRealSignal(S,2);
-	real_T         *theta_out  = ssGetOutputPortRealSignal(S,3);
-	real_T         *w_out       = ssGetOutputPortRealSignal(S,4);
-    real_T         *en_cntr_out = ssGetOutputPortRealSignal(S,5);
-    real_T         *en_ekf_out  = ssGetOutputPortRealSignal(S,6);
-	real_T    *targetPoint_out  = ssGetOutputPortRealSignal(S,7);
-    
+	real_T         *zeta_out   = ssGetOutputPortRealSignal(S,2);
+	real_T         *w_out      = ssGetOutputPortRealSignal(S,3);
+	real_T         *xi_out     = ssGetOutputPortRealSignal(S,4);
+	real_T         *inte_out   = ssGetOutputPortRealSignal(S,5);    
+	real_T         *v0est_out  = ssGetOutputPortRealSignal(S,6);    
+	real_T         *en_cntr_out = ssGetOutputPortRealSignal(S,7);
+    real_T         *en_ekf_out  = ssGetOutputPortRealSignal(S,8);
+	real_T    *targetPoint_out  = ssGetOutputPortRealSignal(S,9);
+	    
 	real_T            *y     = (real_T*)ssGetInputPortSignal(S,0);
-	real_T            *udebug     = (real_T*)ssGetInputPortSignal(S,1);
-    real_T            *xestdebug     = (real_T*)ssGetInputPortSignal(S,2);
+	real_T            *xrealdebug     = (real_T*)ssGetInputPortSignal(S,1);
+    real_T            *zetadebug      = (real_T*)ssGetInputPortSignal(S,2);
     real_T            *thetadebug     = (real_T*)ssGetInputPortSignal(S,3);
     
     double *rworkVector = ssGetRWork(S);
@@ -278,7 +285,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     	
 	int i;
 	
-	double est_gamma_dummy[1]; // dummy variable, could contain an estimate for gamma
+	double est_gamma[1]; // estimate of gamma for initializing the EKF
     
     int indexFlyToBeCntr;
     
@@ -314,7 +321,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         }
 	    
         // call controller function
-        contr_subopt_MPC_fly_model2 (Jout, w_out, theta_out, (int)enableContr[0], &cp, &projGrState, &ekfState, (int)enableEKF[0], &cInpState, targetPoint_out);
+        contr_TNF_fly_model4 (w_out, zeta_out, xi_out, (int)enableContr[0], &cp, &cntrState, &ekfState, (int)enableEKF[0], &cInpState, targetPoint_out, xrealdebug, zetadebug);
+		
+		//omegae_out[0] = cntrState.input[0];
         
         if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );
@@ -324,8 +333,11 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
             printf( "time controller in ms: %g \n", (time_after-time_bef)*1000);
         }
+		
+		inte_out[0] = cntrState.intState[0];
+		inte_out[1] = cntrState.intState[1];
         
-    }	
+    }
     
     if (ssIsSampleHit(S, 3, tid)) { // sampling instant of function calculating the
                                     // input for the system is hit
@@ -334,7 +346,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_bef );
         }
 		
-        calcInput (&cInputp, &cInpState, &projGrState, &cp, omegae);
+        calcInput (&cInputp, &cInpState, &cntrState, &cp, omegae);
         
 		if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );
@@ -357,7 +369,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         }
         
         // call EKF-function
-		ekf_fly_model2 ((int)enableEKF[0], &ekfState, omegae[0], y, &ekfp);
+		ekf_fly_model4 ((int)enableEKF[0], &ekfState, omegae[0], y, &ekfp);
         
         if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );
@@ -369,10 +381,17 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         }
 		
         // assign output
-		for (i=0;i<5;i++) xhat_out[i] = ekfState.xest[i];
+		for (i=0;i<3;i++) xhat_out[i] = ekfState.xest[i];
         
         en_cntr_out[0] = enableContr[0];
         en_ekf_out[0] = enableEKF[0];
+		
+		if (EKF_V0EST) {
+			v0est_out[0] = ekfState.xest[3];
+		} else {
+			// dummy-value
+			v0est_out[0] = -10;
+		}
         
     }
 	
@@ -387,7 +406,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_bef );
         }
                 
-        indexFlyToBeCntr = decFct (xFlyPos, yFlyPos, flyIDs, arrayLen, resetDecFct, enableContr, enableEKF, &cp, &ekfp, &decfp, &decfState, &projGrState, &ekfState, est_gamma_dummy);
+		est_gamma[0] = xrealdebug[2]*0.9; // estimate for gamma
+		
+        indexFlyToBeCntr = decFct (xFlyPos, yFlyPos, flyIDs, arrayLen, resetDecFct, enableContr, enableEKF, &cp, &ekfp, &decfp, &decfState, &cntrState, &ekfState, est_gamma);
         
         if (doTimeMeasurement) {
             QueryPerformanceCounter( (LARGE_INTEGER *)&val_after );
@@ -425,12 +446,13 @@ static void mdlDerivatives(SimStruct *S)
  */
 static void mdlTerminate(SimStruct *S)
 {
-    mxArray *parOut, *pm1, *pm2, *pm3, *pm4, *pm5;
-    const char *field_names[] = {"a", "b", "xme", "yme", "delta"}; // Variable needed for generating the output-struct
+    mxArray *parOut, *pm1, *pm2, *pm3, *pm4, *pm5, *pm6, *pm7;
+    // Variable needed for generating the output-struct
+	const char *field_names[] = {"a", "b", "xme", "yme", "delta", "R", "path_type"}; 
     mwSize dims[2] = {1, 1}; // Variable needed for generating the output-struct
-    double *pm1_val,*pm2_val,*pm3_val,*pm4_val,*pm5_val;
+    double *pm1_val,*pm2_val,*pm3_val,*pm4_val,*pm5_val,*pm6_val,*pm7_val;
     
-    parOut = mxCreateStructArray(2, dims, 5, field_names);
+    parOut = mxCreateStructArray(2, dims, 7, field_names);
     
     pm1 = mxCreateDoubleMatrix (1,1, mxREAL); 
     pm1_val = mxGetPr(pm1); 
@@ -442,18 +464,26 @@ static void mdlTerminate(SimStruct *S)
     pm4_val = mxGetPr(pm4); 
     pm5 = mxCreateDoubleMatrix (1,1, mxREAL); 
     pm5_val = mxGetPr(pm5); 
+	pm6 = mxCreateDoubleMatrix (1,1, mxREAL); 
+    pm6_val = mxGetPr(pm6); 
+	pm7 = mxCreateDoubleMatrix (1,1, mxREAL); 
+    pm7_val = mxGetPr(pm7); 
   
     pm1_val[0] = cp.a;
     pm2_val[0] = cp.b;
     pm3_val[0] = cp.xme;
     pm4_val[0] = cp.yme;
     pm5_val[0] = cp.delta;
+	pm6_val[0] = cp.R;
+	pm7_val[0] = cp.path_type;
     
     mxSetFieldByNumber(parOut, 0, 0, pm1);
     mxSetFieldByNumber(parOut, 0, 1, pm2);
     mxSetFieldByNumber(parOut, 0, 2, pm3);
     mxSetFieldByNumber(parOut, 0, 3, pm4);
     mxSetFieldByNumber(parOut, 0, 4, pm5);
+	mxSetFieldByNumber(parOut, 0, 5, pm6);
+	mxSetFieldByNumber(parOut, 0, 6, pm7);
     
     mexPutVariable("base", "cntrParSim", parOut);
     

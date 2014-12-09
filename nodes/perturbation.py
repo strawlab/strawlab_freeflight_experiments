@@ -52,7 +52,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 10
 
 REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
                                               "data","replay_experiments",
@@ -81,10 +81,13 @@ CONDITIONS = [
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.3|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.6|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|0.9|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|5|1|12||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro|0.1|4|1|10||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|1.8|5|1|12||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro|0.1|4|1|10||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+               "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/multitone_z|rudinshapiro2|0.1|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
+#              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/prbs_rotation_rate|-0.9|0.9|0.05|3|42|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
 #              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00",
 #              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
 ]
@@ -92,7 +95,7 @@ CONDITIONS = [
 START_CONDITION = CONDITIONS[-1]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+COOL_CONDITIONS = set()#CONDITIONS)
 
 XFORM = flyflypath.transform.SVGTransform()
 

@@ -58,15 +58,7 @@ def show_plots():
     except NameError:
         plt.show()
 
-@contextlib.contextmanager
-def mpl_fig(fname_base,args,write_svg=None,**kwargs):
-    _perm_check(args)
-    if args and args.outdir:
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
-        fname_base = os.path.join(args.outdir,fname_base)
-    fig = plt.figure( **kwargs )
-    yield fig
+def save_fig(fig,fname_base,write_svg=None):
 
     bbox_extra_artists = []
     for ax in fig.axes:
@@ -85,8 +77,23 @@ def mpl_fig(fname_base,args,write_svg=None,**kwargs):
             fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
 
         print "WROTE",fname_base
-    except:
-        pass
+    except Exception, e:
+        print "ERROR WRITING",fname_base, e
+
+
+@contextlib.contextmanager
+def mpl_fig(fname_base,args,write_svg=None,**kwargs):
+    _perm_check(args)
+    if args and args.outdir:
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        fname_base = os.path.join(args.outdir,fname_base)
+    fig = plt.figure( **kwargs )
+
+    yield fig
+
+    save_fig(fig,fname_base,write_svg=write_svg)
+
 
 def fmt_date_xaxes(ax):
     for tl in ax.get_xaxis().get_majorticklabels():
@@ -186,7 +193,43 @@ def layout_trajectory_plots(ax, arena, in3d):
     if not in3d:
         ax.yaxis.set_ticks_position('left')
 
-def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False):
+def plot_saccades(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s_saccades' % combine.fname
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add(ax)
+
+            if not r['count']:
+                continue
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            for df in r['df']:
+                xv = df['x'].values
+                yv = df['y'].values
+                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=RASTERIZE )
+
+                xs = df['x'].where(df['saccade'].values).dropna()
+                ys = df['y'].where(df['saccade'].values).dropna()
+                ax.plot(xs,ys,'r.')
+
+            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
+        for ax in axes:
+            layout_trajectory_plots(ax, arena, False)
+
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
+
+def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -635,7 +678,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, f
     n_plot_axes = len(_plot_axes)
 
     if ylimits is None:
-        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
+        ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1),"rotation_rate":(-10,10)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -764,8 +807,10 @@ def _calculate_nloops(df):
 
 def save_most_loops(combine, args, maxn=1e6, name="LOOPS.md"):
 
-    name = combine.get_plot_filename(name)
+    if 'ratio' not in combine.get_result_columns():
+        return
 
+    name = combine.get_plot_filename(name)
     results,dt = combine.get_results()
 
     best = {}
@@ -1013,6 +1058,8 @@ def _do_autowrap_text(textobj, renderer):
         #so replace space and "-" with placeholders, then replace "/" with " "
         #so it breaks words there
         safe_txt = textobj.get_text().replace(" ","%").replace("-","!").replace("/"," ")
+        if '\n' in safe_txt:
+            raise TypeError('the dumb wrapper works better')
         wrapped_text = textwrap.fill(safe_txt, wrap_width)
     except TypeError, e:
         wrapped_text = _dumb_wrap(safe_txt, wrap_width)

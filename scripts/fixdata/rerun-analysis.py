@@ -16,7 +16,7 @@ import autodata.files
 import strawlab.constants
 
 DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --arena %s'
+DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --arena %s'
 
 EXCEPT = set()
 
@@ -92,12 +92,18 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
             else:
                 argslist = ["strawlab_freeflight_experiments", analysis_script]
             for opt in opts.split(' '):
-                if opt.strip() == '--reindex':
-                    if args.reindex:
-                        argslist.append(opt)
+                if opt.strip() == '--no-reindex':
+                    if args.no_reindex:
+                        argslist.append('--no-reindex')
                 elif opt.strip() == '--cached':
-                    pass
+                    if args.no_cached:
+                        argslist.append('--no-cached')
                 elif opt.strip() == '--show':
+                    pass
+                #don't retain backwards compat, its too hard and not worthwhile
+                elif opt.strip() == '--reindex':
+                    pass
+                elif opt.strip() == '--cached':
                     pass
                 else:
                     argslist.append(opt)
@@ -121,7 +127,7 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
             dt = time.time() - t
             print "succeeded (%.1fs)" % dt, " ".join(argslist)
         except Exception, e:
-            print "failed", opts
+            print "failed", opts, e
 
     model.close()
 
@@ -166,8 +172,11 @@ if __name__ == "__main__":
         '-P', '--db-prefix', default="/flycave/",
         help='database prefix (assay name) for listing experiments')
     parser.add_argument(
-        '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
+        '-n', '--no-reindex', action='store_true',
         help='dont reindex h5 file')
+    parser.add_argument(
+        '-c', '--no-cached', action='store_true',
+        help='dont used cached data')
     parser.add_argument(
         '-S','--assay',
         help='the name of the assay (flycave, flycube4, fishtrax, etc). Pass this '
