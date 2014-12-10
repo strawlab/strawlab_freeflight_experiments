@@ -130,7 +130,7 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
 
             if args.open:
                 try:
-                    webbrowser.open_new_tab(strawlab.constants.get_experiment_result_url(uuid))
+                    webbrowser.open(strawlab.constants.get_experiment_result_url(uuid))
                 except:
                     pass
 
