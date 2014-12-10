@@ -7,6 +7,7 @@ import re
 import time
 import shlex
 import json
+import webbrowser
 
 import sh
 
@@ -126,6 +127,13 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
 
             dt = time.time() - t
             print "succeeded (%.1fs)" % dt, " ".join(argslist)
+
+            if args.open:
+                try:
+                    webbrowser.open_new_tab(strawlab.constants.get_experiment_result_url(uuid))
+                except:
+                    pass
+
         except Exception, e:
             print "failed", opts, e
 
@@ -184,6 +192,9 @@ if __name__ == "__main__":
              'values. Can be a comma separated list of assays to process more data')
     parser.add_argument(
         '-r', '--no-rosrun', action='store_true', default=False)
+    parser.add_argument(
+        '-o', '--open', action='store_true',
+        help='open results in webbrowser when analysis completes successfully')
 
     args = parser.parse_args()
 
