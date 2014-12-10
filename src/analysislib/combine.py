@@ -1012,7 +1012,7 @@ class CombineH5WithCSV(_Combine):
                 else:
                     start_frame = trial_framenumbers[0]
 
-                query = "(obj_id == %d) & (framenumber >= %d) & (framenumber < %d)" % (
+                query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % (
                                 oid,
                                 start_frame,
                                 trial_framenumbers[-1])

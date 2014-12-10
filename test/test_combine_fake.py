@@ -446,17 +446,22 @@ class TestCombineNonContiguous(unittest.TestCase):
         combine.add_csv_and_h5_file(csv_fname=csv,
                                     h5_file=h5,
                                     args=args)
-        return combine
+        return combine, csv, h5
 
     def test_correct_noncontiguous_split(self):
-        combine = self._combine_for_test()
+        combine, csv, h5 = self._combine_for_test()
         results, dt = combine.get_results()
         self.assertAlmostEqual(dt, 0.01)
         self.assertEqual(len(results), 6)
+        dfs = []
         for cond, condtrials in results.iteritems():
             for df in condtrials['df']:
                 self.assertTrue(np.all(1 == df['framenumber'].diff().iloc[1:]))
-
+                dfs.append(df)
+        # there must be 20 trajectories
+        self.assertEquals(20, len(dfs))
+        # there must be 200 observations
+        self.assertEquals(sum(map(len, dfs)), 200)
 
 if __name__ == '__main__':
     unittest.main()
