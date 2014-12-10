@@ -73,7 +73,7 @@ TAU= 2*PI
 #             advance_threshold(m)/
 #             z_gain/
 #             star_size
-#             z_target#
+#             z_target
 #
 CONDITIONS = [
 
