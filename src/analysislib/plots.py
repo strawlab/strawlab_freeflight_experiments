@@ -229,7 +229,7 @@ def plot_saccades(combine, args, figncols, name=None):
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
-def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
+def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.4):
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -256,12 +256,12 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
                     xv = df['x'].values
                     yv = df['y'].values
                     zv = df['z'].values
-                    ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+                    ax.plot( xv, yv, zv, 'k-', lw=0.5, alpha=alpha, rasterized=RASTERIZE )
             else:
                 for df in r['df']:
                     xv = df['x'].values
                     yv = df['y'].values
-                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+                    ax.plot( xv, yv, 'k-', lw=0.5, alpha=alpha, rasterized=RASTERIZE )
                     if show_starts:
                         ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
                     if show_ends:
