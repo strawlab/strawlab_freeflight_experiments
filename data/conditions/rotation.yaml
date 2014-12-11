@@ -1,0 +1,21 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+rotation_zero_gain_control:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.0
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.0
+rotation_zero_texture_control:
+    cylinder_image: gray.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
