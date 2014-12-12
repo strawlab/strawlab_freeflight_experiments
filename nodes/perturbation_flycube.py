@@ -75,14 +75,14 @@ MAX_ROTATION_RATE = 3
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
 #             z_gain/
-#             perturb_or_post_desc (PERTURABTION:perturbation_descriptor" or POST:model_filename+x,y,z)
-
-                            
+#             perturbation_descriptor"
+#
+# if you set nan for either gain then you get a replay experiment on the
+# corresponding bias term
+#
 CONDITIONS = [
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|1.8|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
-              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/step_rotation_rate|1.8|2|0.4|0.47|0.53|0.97|1.0|0.0|0.03",
-              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/step_rotation_rate|0.9|2|0.4|0.47|0.53|0.97|1.0|0.0|0.03",
-              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/step_rotation_rate|0.5|2|0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",
 ]
 
 START_CONDITION = CONDITIONS[-1]
@@ -93,13 +93,13 @@ COOL_CONDITIONS = set()
 XFORM = flyflypath.transform.SVGTransform()
 
 class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","model_x","model_y","model_z","model_filename")
+    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress")
 
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusCylinderAndModel')
+            'StimulusCylinder')
 
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
@@ -109,8 +109,6 @@ class Node(object):
         self.pub_cyl_centre = rospy.Publisher(TOPIC_CYL_CENTRE, Vector3, latch=True, tcp_nodelay=True)
         self.pub_cyl_radius = rospy.Publisher(TOPIC_CYL_RADIUS, Float32, latch=True, tcp_nodelay=True)
         self.pub_cyl_height = rospy.Publisher(TOPIC_CYL_HEIGHT, Float32, latch=True, tcp_nodelay=True)
-        self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
-        self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
         self.pub_pushover = rospy.Publisher('note', String)
         self.pub_save = rospy.Publisher('save_object', UInt32)
@@ -165,16 +163,16 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    
-    @property
-    def is_perturbation_experiment(self):
-        return not isinstance(self.perturber, sfe_perturb.NoPerturb)
-    @property
-    def is_replay_experiment_rotation(self):
-        return np.isnan(self.p_const)
-    @property
-    def is_replay_experiment_z(self):
-        return np.isnan(self.v_gain)
+    def is_perturbation_experiment(self, what):
+        return (not isinstance(self.perturber, sfe_perturb.NoPerturb)) and self.perturber.what == what
+
+    def is_replay_experiment(self, what):
+        if what == 'rotation_rate':
+            return np.isnan(self.p_const)
+        elif what == 'z':
+            return np.isnan(self.v_gain)
+        else:
+            raise Exception("Unsupported replay configuration")
 
     def switch_conditions(self,event,force=''):
         if force:
@@ -186,12 +184,12 @@ class Node(object):
         self.log.condition = self.condition
 
         self.drop_lock_on()
-      
+
         try:
-            img,svg,p,rad,advance,v_gain,perturb_or_post_desc = self.condition.split('/')
+            img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
         except ValueError:
             #no perturbation defined
-            perturb_or_post_desc = None
+            perturb_desc = None
             img,svg,p,rad,advance,v_gain = self.condition.split('/')
 
         self.img_fn = str(img)
@@ -199,67 +197,54 @@ class Node(object):
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.2
+        self.z_target = 0.12
 
         self.log.cyl_r = self.rad_locked
 
         #default to no perturb
         self.perturber = sfe_perturb.NoPerturb()
 
-        self.svg_fn = ''        
+        self.svg_fn = ''
         ssvg = str(svg)
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-            self.perturber = sfe_perturb.get_perturb_class(perturb_or_post_desc)(perturb_or_post_desc)
+            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
-        rospy.loginfo('perturbation: %r' % self.perturber)       
+        rospy.loginfo('perturbation: %r' % self.perturber)
 
-        #try and get details of the conflict post
-        if ".osg" in perturb_or_post_desc:
-             model_filename,model_x,model_y,model_z = perturb_or_post_desc.split('|')
-        #and the perturber
-        elif perturb_or_post_desc is not None:
- 
-        #default to no conflict
-            model_filename = '/dev/null'
-            model_x = model_y = model_z = INVALID_VALUE
+    def get_v_rate(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        #return early if open loop
+        if self.is_perturbation_experiment('z'):
+            if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             self.model.ratio, self.ratio_total,
+                                             now, framenumber, currently_locked_obj_id):
+                rate,state = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
 
-         #set the model in all cases
-        self.model_filename = str(model_filename)
-        self.model_x = float(model_x)
-        self.model_y = float(model_y)
-        self.model_z = float(model_z)
+                if state=='finished':
+                    self.drop_lock_on(blacklist=True)
+                    rospy.loginfo("'z' perturbation finished")
 
-        msg = Pose()
-        msg.position.x = self.model_x
-        msg.position.y = self.model_y
-        msg.position.z = self.model_z
-        msg.orientation.w = 1.0
-        self.pub_model_centre.publish(msg)
+                return rate
 
-        self.log.model_filename = self.model_filename
-        self.log.model_x = self.model_x
-        self.log.model_y = self.model_y
-        self.log.model_z = self.model_z
-        
-    def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
-        if self.is_replay_experiment_z:
+        if self.is_replay_experiment('z'):
             return self.replay_z.next()
 
         return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         could_perturb = False
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
-            could_perturb = self.is_perturbation_experiment
+        if self.svg_fn and (not self.is_replay_experiment('rotation_rate')):
+            could_perturb = self.is_perturbation_experiment('rotation_rate')
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -276,17 +261,13 @@ class Node(object):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
 
-                print 'perturbation progress: %s' % self.perturber.progress
- 
                 if state=='finished':
                     self.drop_lock_on(blacklist=True)
-
-                    rospy.loginfo('perturbation finished')
+                    rospy.loginfo("'rotation_rate' perturbation finished")
 
                     if self.condition in COOL_CONDITIONS:
                         #fly is still flying
@@ -297,7 +278,7 @@ class Node(object):
                 return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
-        if self.is_replay_experiment_rotation:
+        if self.is_replay_experiment('rotation_rate'):
             return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
@@ -394,7 +375,7 @@ class Node(object):
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
-                v_rate = self.get_v_rate(fly_z)
+                v_rate = self.get_v_rate(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
@@ -483,8 +464,6 @@ class Node(object):
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
-        self.pub_model_filename.publish(self.model_filename)
-
         self.update()
 
     def drop_lock_on(self, blacklist=False):
@@ -524,7 +503,7 @@ class Node(object):
         self.update()
 
 def main():
-    rospy.init_node("combined_stimulus")
+    rospy.init_node("perturbation")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
