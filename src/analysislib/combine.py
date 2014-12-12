@@ -72,10 +72,11 @@ class _Combine(object):
         self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
+        self._debug_cache = {}
         self._conditions = {}
         self._condition_names = {}
 
-        self._configdict = {'v':7,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':8,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -207,6 +208,12 @@ class _Combine(object):
     def _debug(self, m):
         if self._enable_debug:
             print m
+
+    def _debug_once(self, m):
+        if m not in self._debug_cache:
+            self._debug(m)
+            self._debug_cache[m] = 0
+        self._debug_cache[m] += 1
 
     def _warn(self, m):
         if self._enable_warn:
@@ -696,6 +703,7 @@ class CombineCSV(_Combine):
                 assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
+                cond = analysislib.fixes.normalize_condition_string(cond)
 
                 if cond not in self._results:
                     self._results[cond] = {'df':[],'start_obj_ids':[],'count':0, 'uuids':[]}
@@ -946,7 +954,7 @@ class CombineH5WithCSV(_Combine):
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
         if fix.active:
-            self._debug("IO:     fixing data %s" % fix)
+            self._debug("FIX:     fixing data %s" % fix)
 
         #try and open the experiment and condition metadata files
         path,fname = os.path.split(csv_fname)
@@ -1028,9 +1036,13 @@ class CombineH5WithCSV(_Combine):
                 assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
+                original_condition = cond
 
+                #fix and normalise condition strings
                 if fix.active:
                     cond = fix.fix_condition(cond)
+                cond = analysislib.fixes.normalize_condition_string(cond)
+                fixed_condition = cond
 
                 if cond not in results:
                     results[cond] = dict(count=0,
@@ -1050,6 +1062,12 @@ class CombineH5WithCSV(_Combine):
                 #find the last index for all unique framenumbers for this trial
                 fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
                 trial_framenumbers = fdf['framenumber'].values
+
+                if original_condition != fixed_condition:
+                    self._debug_once("FIX:    condition string %s -> %s" % (original_condition,fixed_condition))
+                    #copy the df otherwise we set on the copy of the view of odf
+                    fdf = fdf.copy()
+                    fdf['condition'].replace(original_condition,fixed_condition,inplace=True)
 
                 #get the comparible range of data from flydra
                 if args.frames_before != 0:

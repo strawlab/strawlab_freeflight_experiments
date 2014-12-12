@@ -6,6 +6,7 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.conditions as sfe_conditions
+import analysislib.fixes as afixes
 
 class TestConditions(unittest.TestCase):
 
@@ -40,6 +41,20 @@ rotation_infinity:
         c2 = c.next_condition(c1)
 
         self.assertEqual(c1,c2)
+
+    def test_normalise(self):
+        orig = "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20"
+        fix = afixes.normalize_condition_string(orig)
+
+        self.assertNotEqual(orig, fix)
+        self.assertEqual(fix, "checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2")
+
+    def test_normalise_props(self):
+        self.assertEqual(afixes.normalize_condition_string("+3"),"3")
+        self.assertEqual(afixes.normalize_condition_string("-3"),"-3")
+        self.assertEqual(afixes.normalize_condition_string("-3.0"),"-3.0")
+        self.assertEqual(afixes.normalize_condition_string("+3.0"),"3.0")
+        self.assertEqual(afixes.normalize_condition_string("+3.00"),"3.0")
 
 if __name__ == '__main__':
     unittest.main()

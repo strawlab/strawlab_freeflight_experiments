@@ -22,6 +22,7 @@ import nodelib.log
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
+from strawlab_freeflight_experiments.conditions import Condition
 
 
 # --- test data generation utils
@@ -119,7 +120,8 @@ def combine2h5csv(combine,
                 df = df.head(n=trim_trajs_to)
 
             # prepare the csv logger
-            log.condition = cond
+
+            log.condition = combine.get_condition_configuration(cond)
             log.lock_object = obj_id
             log._exp_uuid = uuid  # dirty
             # write the csv rows for this trial
@@ -297,7 +299,11 @@ class TestCombineFake2(unittest.TestCase):
         log = nodelib.log.CsvLogger(fname=csv_fname,
                                     wait=False, debug=False, warn=False,
                                     state=log_state)
-        log.condition = 'test'
+
+        cond_obj = Condition(value=1)
+        cond_obj.name = 'test'
+
+        log.condition = cond_obj
         log.lock_object = IMPOSSIBLE_OBJ_ID
         log.framenumber = 0
 
