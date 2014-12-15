@@ -1,0 +1,19 @@
+translation_infinity_1:
+    svg_path: infinity.svg
+    gain: 5.0
+    advance_threshold: 0.1
+    z_gain: 5.0
+    star_size: 10.0
+translation_infinity_2:
+    svg_path: infinity.svg
+    gain: 5.0
+    advance_threshold: 0.1
+    z_gain: 5.0
+    star_size: 20.0
+translation_infinity_3:
+    svg_path: infinity.svg
+    gain: 5.0
+    advance_threshold: 0.1
+    z_gain: 5.0
+    star_size: 5.0
+

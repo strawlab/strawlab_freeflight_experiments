@@ -22,6 +22,7 @@ import flyflypath.model
 import flyflypath.transform
 import nodelib.log
 import strawlab_freeflight_experiments.replay as sfe_replay
+import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
 
@@ -49,21 +50,6 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-#CONDITION =  svg_path(if omitted target = 0,0)/
-#             gain/
-#             advance_threshold(m)/
-#             z_gain/
-#             star_size
-#
-CONDITIONS = [
-              "infinity.svg/+5.0/0.1/+5.0/10.0",
-              "infinity.svg/+5.0/0.1/+5.0/20.0",
-              "infinity.svg/+5.0/0.1/+5.0/5.0",
-]
-START_CONDITION = CONDITIONS[0]
-#If there is a considerable flight in these conditions then a pushover
-#message is sent and a video recorded
-COOL_CONDITIONS = set(CONDITIONS[0:3])
 MAX_COOL = 10
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -72,7 +58,7 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","stim_x","stim_y","stim_z")
 
 class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
+    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing, conditions, start_condition, cool_conditions):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusStarField')
@@ -124,7 +110,10 @@ class Node(object):
         self.trg_pub = rospy.Publisher("target", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.switch_conditions(None,force=START_CONDITION)
+        self.condition = None
+        self.conditions = sfe_conditions.Conditions(conditions)
+        self.switch_conditions(force=start_condition)
+        self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
 
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
@@ -140,33 +129,33 @@ class Node(object):
     def is_replay_experiment_z(self):
         return np.isnan(self.v_gain)
 
-    def switch_conditions(self,event,force=''):
+    def switch_conditions(self,event=None,force=''):
         if force:
-            self.condition = force
+            self.condition = self.conditions[force]
         else:
-            i = CONDITIONS.index(self.condition)
-            j = (i+1) % len(CONDITIONS)
-            self.condition = CONDITIONS[j]
+            self.condition = self.conditions.next_condition(self.condition)
+
         self.log.condition = self.condition
 
         self.drop_lock_on()
 
-        svg,p,advance,v_gain,star_size = self.condition.split('/')
-        self.p_const = float(p)
-        self.v_gain = float(v_gain)
-        self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
+        ssvg            = str(self.condition['svg_path'])
+        self.p_const    = float(self.condition['gain'])
+        self.v_gain     = float(self.condition['z_gain'])
+        self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
+        self.star_size  = float(self.condition['star_size'])
+        self.z_target   = 0.7
 
-        if str(svg):
-            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
+        if ssvg:
+            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
         else:
             self.svg_fn = ''
 
-        self.pub_size.publish(float(star_size))
+        self.pub_size.publish(self.star_size)
 
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition.name,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
 
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
@@ -337,7 +326,7 @@ class Node(object):
         self.pub_velocity.publish(0,0,0)
 
         if (self.ratio_total > 2) and (old_id is not None):
-            if self.condition in COOL_CONDITIONS:
+            if self.condition.name in self.cool_conditions:
                 if self.n_cool < MAX_COOL:
                     self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                     self.pub_save.publish(old_id)
@@ -347,6 +336,7 @@ class Node(object):
 
 def main():
     rospy.init_node("translation")
+    argv = rospy.myargv()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
@@ -355,13 +345,22 @@ def main():
                         help="store logfile in tmpdir")
     parser.add_argument('--continue-existing', type=str, default=None,
                         help="path to a logfile to continue")
-    argv = rospy.myargv()
+    parser.add_argument('--conditions', default=sfe_conditions.get_default_condition_filename(argv),
+                        help="path to yaml file experimental conditions")
+    parser.add_argument('--start-condition', type=str,
+                        help="name of condition to start the experiment with")
+    parser.add_argument('--cool-conditions', type=str,
+                        help="comma separated list of cool conditions (those for which "\
+                             "a video of the trajectory is saved)")
     args = parser.parse_args(argv[1:])
 
     node = Node(
             wait_for_flydra=not args.no_wait,
             use_tmpdir=args.tmpdir,
-            continue_existing=args.continue_existing)
+            continue_existing=args.continue_existing,
+            conditions=open(args.conditions).read(),
+            start_condition=args.start_condition,
+            cool_conditions=args.cool_conditions)
     return node.run()
 
 if __name__=='__main__':
