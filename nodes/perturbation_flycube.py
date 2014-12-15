@@ -67,7 +67,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 3
+MAX_ROTATION_RATE = 10
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
@@ -82,6 +82,8 @@ MAX_ROTATION_RATE = 3
 #
 CONDITIONS = [
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|1.8|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.9|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.45|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
               "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",
 ]
 
