@@ -67,16 +67,18 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 3
 
-#CONDITION =  svg_path(if omitted target = 0,0)/
-#             gain/ ..."force" to direct fly on the svg_path (speed of the stars passing)
-#             advance_threshold(m)/ ...determins the point on the svg_path where the fly should go. a low value sets it close to the fly, a high value sets it farther away
-#             z_gain/ ..."force" to direct fly to the target z level (param below z_target) @john: could we include it here?
+#CONDITION =  svg_path (if omitted target = 0,0)/
+#             gain (speed which "forces" the fly to follow the svg_path)
+#             advance_threshold (m) (minimal distance between the fly and the point on the svg_path where the fly should go)
+#             z_gain (speed which "forces" the fly to reach the z_target altitude
 #             star_size
+#             z_target
 #
 CONDITIONS = [
-              "infinity.svg/+10.0/0.1/+10.0/50.0",
-              "infinity.svg/+10.0/0.1/+10.0/50.0",
+              "infinity.svg/+5.0/0.1/+5.0/20.0/0.12",
+              "infinity.svg/+5.0/0.1/+5.0/20.0/0.12",
 ]
+
 START_CONDITION = CONDITIONS[0]
 #If there is a considerable flight in these conditions then a pushover
 #message is sent and a video recorded
@@ -170,11 +172,11 @@ class Node(object):
 
         self.drop_lock_on()
 
-        svg,p,advance,v_gain,star_size = self.condition.split('/')
+        svg,p,advance,v_gain,star_size,z_target = self.condition.split('/')
         self.p_const = float(p)
         self.v_gain = float(v_gain)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
+        self.z_target = float(z_target)
 
         if str(svg):
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
@@ -378,7 +380,7 @@ class Node(object):
         if (self.ratio_total > 2) and (old_id is not None):
             if self.condition in COOL_CONDITIONS:
                 if self.n_cool < MAX_COOL:
-                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+#                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                     self.pub_save.publish(old_id)
                     self.n_cool += 1
 
