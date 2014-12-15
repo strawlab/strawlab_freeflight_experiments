@@ -15,7 +15,7 @@ roslib.load_manifest(PACKAGE)
 import rospy
 import flyvr.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
-from geometry_msgs.msg import Vector3, Pose
+from geometry_msgs.msg import Vector3
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.model
@@ -48,8 +48,6 @@ IMPOSSIBLE_OBJ_ID   = 0
 
 PI = np.pi
 TAU= 2*PI
-
-MAX_ROTATION_RATE = 1.5
 
 #CONDITION =  svg_path(if omitted target = 0,0)/
 #             gain/
