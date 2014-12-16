@@ -75,8 +75,8 @@ MAX_ROTATION_RATE = 3
 #             z_target
 #
 CONDITIONS = [
-              "infinity.svg/+5.0/0.1/+5.0/20.0/0.12",
-              "infinity.svg/+5.0/0.1/+5.0/20.0/0.12",
+              "infinity07.svg/+5.0/0.1/+5.0/20.0/0.12",
+#              "infinity07.svg/+5.0/0.1/+5.0/0.000001/0.12",
 ]
 
 START_CONDITION = CONDITIONS[0]
