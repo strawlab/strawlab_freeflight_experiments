@@ -30,7 +30,7 @@ class TestDataStore(unittest.TestCase):
         self.combine = autil.get_combiner_for_uuid(self.uuid)
         self.combine.disable_debug()
         self.combine.disable_warn()
-        self.combine.add_from_uuid(self.uuid)
+        self.combine.add_from_uuid(self.uuid, reindex=False)
 
     def testLoad(self):
         n = self.combine.get_total_trials()
@@ -39,7 +39,7 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(len(df), 1908)
 
     def testSingleLoad(self):
-        df,dt = autil.get_one_trajectory(self.uuid, 5, disable_debug=True, disable_warn=True)
+        df,dt = autil.get_one_trajectory(self.uuid, 5, disable_debug=True, disable_warn=True, reindex=False)
         self.assertEqual(len(df), 1908)
 
     def testFilenames(self):
@@ -54,10 +54,10 @@ class TestDataStore(unittest.TestCase):
 
     def testCache(self):
         combine = autil.get_combiner_for_uuid(self.uuid)
-        combine.add_from_uuid(self.uuid, cached=False)
+        combine.add_from_uuid(self.uuid, cached=False, reindex=False)
         self.assertTrue(os.path.exists(combine._get_cache_name()))
         combine = autil.get_combiner_for_uuid(self.uuid)
-        combine.add_from_uuid(self.uuid, cached=True)
+        combine.add_from_uuid(self.uuid, cached=True, reindex=False)
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
         self.assertEqual(len(df), 1908)
 
@@ -65,7 +65,8 @@ class TestDataStore(unittest.TestCase):
         combine = autil.get_combiner_for_uuid(self.uuid)
         parser,args = analysislib.args.get_default_args(
                     uuid=[self.uuid for i in range(10)],
-                    outdir='/tmp/'
+                    outdir='/tmp/',
+                    reindex=False,
         )
         combine = autil.get_combiner_for_args(args)
         combine.add_from_args(args)

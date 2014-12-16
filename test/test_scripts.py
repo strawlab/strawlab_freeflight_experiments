@@ -27,7 +27,7 @@ class TestScript(unittest.TestCase):
         proc = subprocess.Popen(
                 "./rotation-analysis.py --uuid 0b813e6435ac11e3944b10bf48d76973 "\
                 "--zfilt trim --zfilt-max 0.45 --rfilt trim --rfilt-max 0.5 "\
-                "--arena flycube --reindex --outdir %s --idfilt 4200" % self._tdir,
+                "--arena flycube --outdir %s --idfilt 4200" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -39,7 +39,7 @@ class TestScript(unittest.TestCase):
     def test_rotation_analysis_flycave(self):
         proc = subprocess.Popen(
                 "./rotation-analysis.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --reindex "\
+                "--zfilt trim --rfilt trim --lenfilt 1 "\
                 "--outdir %s --idfilt 9" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -65,7 +65,7 @@ class TestScript(unittest.TestCase):
     def test_conflict_analysis(self):
         proc = subprocess.Popen(
                 "./conflict-analysis.py --uuid 74bb2ece2f6e11e395fa6c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --reindex --outdir %s" % self._tdir,
+                "--zfilt trim --rfilt trim --lenfilt 1 --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -77,7 +77,7 @@ class TestScript(unittest.TestCase):
     def test_confinement_analysis(self):
         proc = subprocess.Popen(
                 "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
-                "--zfilt trim --rfilt trim --reindex --outdir %s" % self._tdir,
+                "--zfilt trim --rfilt trim --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,

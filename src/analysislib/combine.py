@@ -110,6 +110,9 @@ class _Combine(object):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
+        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+            return None
+
         pkl = self._get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
@@ -126,6 +129,7 @@ class _Combine(object):
                             return cPickle.load(f)
                         return pickle.load(f)
                 return unpickle_fast()
+
         return None
 
     def _save_cache_file(self):
@@ -395,6 +399,9 @@ class _Combine(object):
             raise Exception("filter minimum must be given")
         self._custom_filter = s
         self._custom_filter_min = post_filter_min
+
+    def close(self):
+        pass
 
 class _CombineFakeInfinity(_Combine):
     def __init__(self, **kwargs):
@@ -696,6 +703,7 @@ class CombineH5(_Combine):
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
         self._dt = None
+        self._h5 = None
 
     def add_from_args(self, args):
         self._args_to_configuration(args)
@@ -726,13 +734,13 @@ class CombineH5(_Combine):
 
         self.h5_file = h5_file
 
-        h5 = tables.openFile(h5_file, mode='r')
+        self._h5 = tables.openFile(h5_file, mode='r')
 
-        self._trajectories = self._get_trajectories(h5)
+        self._trajectories = self._get_trajectories(self._h5)
         dt = 1.0/self._trajectories.attrs['frames_per_second']
 
-        self._trajectory_start_times = h5.root.trajectory_start_times
-        tzname = h5.root.trajectory_start_times.attrs['timezone']
+        self._trajectory_start_times = self._h5.root.trajectory_start_times
+        tzname = self._h5.root.trajectory_start_times.attrs['timezone']
 
         if self._dt is None:
             self._dt = dt
@@ -765,6 +773,10 @@ class CombineH5(_Combine):
             acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0,1))
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
+
+    def close(self):
+        if self._h5 is not None:
+            self._h5.close()
 
 class CombineH5WithCSV(_Combine):
     """

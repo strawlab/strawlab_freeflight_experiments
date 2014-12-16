@@ -25,6 +25,7 @@ import strawlab_freeflight_experiments.replay as sfe_replay
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 from strawlab_freeflight_experiments.topics import *
+from strawlab_freeflight_experiments import INVALID_VALUE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -66,23 +67,24 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 3
+MAX_ROTATION_RATE = 10
 
 #CONDITION = "cylinder_image/
 #             svg_path(if omitted target = 0,0)/
 #             gain/
 #             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
 #             advance_threshold(m)/
-#             z_gain,
+#             z_gain/
 #             perturbation_descriptor"
-
+#
+# if you set nan for either gain then you get a replay experiment on the
+# corresponding bias term
+#
 CONDITIONS = [
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20",
-#              "checkerboard16.png/infinity05.svg/+0.0/-5.0/0.1/0.00",              
-#              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/chirp_rotation_rate|linear|0.7|2|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_rotation_rate|rudinshapiro|0.7|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-              "checkerboard16.png/infinity05.svg/+0.3/-5.0/0.1/0.20/multitone_z|rudinshapiro|0.1|2|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06",
-#              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|1.8|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.9|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/multitone_rotation_rate|rudinshapiro2|0.45|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03",
+              "checkerboard16.png/infinity07.svg/+0.3/-5.0/0.1/0.18/",
 ]
 
 START_CONDITION = CONDITIONS[-1]
@@ -139,7 +141,6 @@ class Node(object):
 
             self.ratio_total = 0
 
-            #disable replay experiments for the moment
             self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
             self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
 
@@ -198,7 +199,7 @@ class Node(object):
         self.v_gain = float(v_gain)
         self.rad_locked = float(rad)
         self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.18
+        self.z_target = 0.12
 
         self.log.cyl_r = self.rad_locked
 
@@ -272,8 +273,8 @@ class Node(object):
 
                     if self.condition in COOL_CONDITIONS:
                         #fly is still flying
-#                        if abs(fly_z-self.z_target) < 0.1:
-#                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
+                        if abs(fly_z-self.z_target) < 0.1:
+                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
                             self.pub_save.publish(currently_locked_obj_id)
 
                 return rate, self.trg_x,self.trg_y

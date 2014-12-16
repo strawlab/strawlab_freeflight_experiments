@@ -73,10 +73,10 @@ MAX_ROTATION_RATE = 3
 #             z_gain (speed which "forces" the fly to reach the z_target altitude
 #             star_size
 #             z_target
-
+#
 CONDITIONS = [
               "infinity07.svg/+5.0/0.1/+5.0/20.0/0.12",
-#              "infinity07.svg/+0.0/0.1/+0.0/20.0/0.12",
+#              "infinity07.svg/+5.0/0.1/+5.0/0.000001/0.12",
 ]
 
 START_CONDITION = CONDITIONS[0]
