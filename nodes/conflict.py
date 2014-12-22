@@ -21,6 +21,7 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 import flyflypath.model
 import flyflypath.transform
 import nodelib.log
+import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
 from strawlab_freeflight_experiments import INVALID_VALUE
@@ -51,34 +52,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
-
-#CONDITION = "cylinder_image/
-#             svg_path(if omitted target = 0,0)/
-#             gain/
-#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
-#             advance_threshold(m)/
-#             z_gain/
-#             model_filename+x+y+z"
-#
-# if you set nan for either gain then you get a replay experiment on the
-# corresponding bias term
-#
-CONDITIONS = [
-#              "checkerboard16.png/infinity.svg/+0.3/+0.2/0.1/0.20/",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/justpost1.osg|-0.15|0.25|0.0",
-              "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/",
-#              "checkerboard16.png/infinity.svg/+0.3/-5.0/0.1/0.20/",
-#              "checkerboard16.png/infinity.svg/+0.3/-2.0/0.1/0.20/",
-#              "checkerboard16.png/infinity.svg/+0.3/-1.0/0.1/0.20/",
-#              "checkerboard16.png/infinity.svg/+0.3/-0.5/0.1/0.20/",
-#              "checkerboard16.png/infinity.svg/+0.0/-10.0/0.1/0.00/",
-#              "gray.png/infinity.svg/+0.3/-10.0/0.1/0.20/",
-]
-START_CONDITION = CONDITIONS[0]
-#If there is a considerable flight in these conditions then a pushover
-#message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
+MAX_ROTATION_RATE = 10
 
 XFORM = flyflypath.transform.SVGTransform()
 
@@ -86,7 +60,7 @@ class Logger(nodelib.log.CsvLogger):
     STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","phase","model_x","model_y","model_z","model_filename")
 
 class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
+    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing, conditions, start_condition, cool_conditions):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinderAndModel')
@@ -142,7 +116,10 @@ class Node(object):
         self.trg_pub = rospy.Publisher("target", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.switch_conditions(None,force=START_CONDITION)
+        self.condition = None
+        self.conditions = sfe_conditions.Conditions(conditions)
+        self.switch_conditions(force=start_condition)
+        self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
 
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
@@ -151,29 +128,34 @@ class Node(object):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    def switch_conditions(self,event,force=''):
+    def switch_conditions(self,event=None,force=''):
         if force:
-            self.condition = force
+            self.condition = self.conditions[force]
         else:
-            i = CONDITIONS.index(self.condition)
-            j = (i+1) % len(CONDITIONS)
-            self.condition = CONDITIONS[j]
+            self.condition = self.conditions.next_condition(self.condition)
+
         self.log.condition = self.condition
 
         self.drop_lock_on()
 
-        img,svg,p,rad,advance,v_gain,model_filename = self.condition.split('/')
-        self.img_fn = str(img)
-        self.p_const = float(p)
-        self.v_gain = float(v_gain)
-        self.rad_locked = float(rad)
-        self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
+        ssvg            = str(self.condition['svg_path'])
+        self.img_fn     = str(self.condition['cylinder_image'])
+        self.p_const    = float(self.condition['gain'])
+        self.v_gain     = float(self.condition['z_gain'])
+        self.rad_locked = float(self.condition['radius_when_locked'])
+        self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
+        self.z_target   = 0.7
+        if self.condition.is_type('conflict'):
+            model_descriptor = str(self.condition['model_descriptor'])
+            model_filename,model_x,model_y,model_z = model_descriptor.split('|')
+        else:
+            model_filename = '/dev/null'
+            model_x = model_y = model_z = INVALID_VALUE
 
         self.log.cyl_r = self.rad_locked
 
-        if str(svg):
-            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', str(svg))
+        if ssvg:
+            self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
         else:
@@ -181,12 +163,6 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-
-        if not model_filename:
-            model_filename = '/dev/null'
-            model_x = model_y = model_z = INVALID_VALUE
-        else:
-            model_filename,model_x,model_y,model_z = model_filename.split('|')
 
         self.model_filename = str(model_filename)
         self.model_x = float(model_x)
@@ -205,7 +181,7 @@ class Node(object):
         self.log.model_y = self.model_y
         self.log.model_z = self.model_z
         
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition.name,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
@@ -296,7 +272,7 @@ class Node(object):
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
                         self.drop_lock_on()
-                        rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
+                        rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
@@ -415,7 +391,7 @@ class Node(object):
         self.pub_model_filename.publish('/dev/null')
 
         if (self.ratio_total > 2) and (old_id is not None):
-            if self.condition in COOL_CONDITIONS:
+            if self.condition.name in self.cool_conditions:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)
 
@@ -423,6 +399,7 @@ class Node(object):
 
 def main():
     rospy.init_node("conflict")
+    argv = rospy.myargv()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
@@ -431,13 +408,22 @@ def main():
                         help="store logfile in tmpdir")
     parser.add_argument('--continue-existing', type=str, default=None,
                         help="path to a logfile to continue")
-    argv = rospy.myargv()
+    parser.add_argument('--conditions', default=sfe_conditions.get_default_condition_filename(argv),
+                        help="path to yaml file experimental conditions")
+    parser.add_argument('--start-condition', type=str,
+                        help="name of condition to start the experiment with")
+    parser.add_argument('--cool-conditions', type=str,
+                        help="comma separated list of cool conditions (those for which "\
+                             "a video of the trajectory is saved)")
     args = parser.parse_args(argv[1:])
 
     node = Node(
             wait_for_flydra=not args.no_wait,
             use_tmpdir=args.tmpdir,
-            continue_existing=args.continue_existing)
+            continue_existing=args.continue_existing,
+            conditions=open(args.conditions).read(),
+            start_condition=args.start_condition,
+            cool_conditions=args.cool_conditions)
     return node.run()
 
 if __name__=='__main__':
