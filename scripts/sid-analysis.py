@@ -167,7 +167,7 @@ if __name__=='__main__':
                     any_completed_perturbations = True
 
                     #take out the perturbation period only (for the mean response)
-                    print ph.end_idx - ph.start_idx,perturbation_obj._get_duration_discrete(100)
+                    print "completed perturbation", ph.end_idx - ph.start_idx,perturbation_obj._get_duration_discrete(100)
 
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
                     system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
@@ -218,6 +218,7 @@ if __name__=='__main__':
             #over the perturbation period (as that data is less noisy)
             for spec in MODEL_SPECS_TO_TEST:
                 result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec)
+                print "testing model order on mean of trajectories", result_obj
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
@@ -270,10 +271,12 @@ if __name__=='__main__':
                 ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
                 ax.set_title(title)
 
+            print "perturbation", perturbation_obj, len(possible_models), "passed min fit critiera"
 
             #MATLAB PLOTTING FROM HERE
             if not possible_models:
                 continue
+
 
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
