@@ -1,0 +1,35 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+perturbation_mtrs2_07_2s_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: multitone_rotation_rate|rudinshapiro2|0.7|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03
+conflict_post:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+    model_descriptor: justpost1.osg|-0.1|-0.1|0.0
+rotation_zero_texture_control:
+    cylinder_image: gray.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+
