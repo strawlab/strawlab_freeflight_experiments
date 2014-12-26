@@ -109,9 +109,6 @@ class CsvLogger(object):
             rospy.Subscriber('flydra_mainbrain/data_file',
                              std_msgs.msg.String,
                              self._on_flydra_mainbrain_start_saving)
-            rospy.Subscriber('experiment_uuid',
-                             std_msgs.msg.String,
-                             self._on_experiment_uuid)
 
             self._pub_condition_s = rospy.Publisher('condition_slash', std_msgs.msg.String)
             self._pub_condition_y = rospy.Publisher('condition_yaml', std_msgs.msg.String)
@@ -147,9 +144,8 @@ class CsvLogger(object):
     def _on_flydra_mainbrain_start_saving(self, msg):
         self._flydra_data_file = msg.data
 
-    def _on_experiment_uuid(self, msg):
-        self._exp_uuid = msg.data
-
+    def set_experiment_uuid(self, uuid):
+        self._exp_uuid = uuid
 
     @property
     def condition(self):
