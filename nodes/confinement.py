@@ -19,7 +19,7 @@ from geometry_msgs.msg import Vector3, Pose, Polygon
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.transform
-import nodelib.log
+import nodelib.node
 import nodelib.visualization
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
@@ -46,11 +46,10 @@ TIMEOUT             = 0.5
 
 XFORM = flyflypath.transform.SVGTransform()
 
-class Logger(nodelib.log.CsvLogger):
-    STATE = ("stimulus_filename","startr")
-
-class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing, conditions, start_condition, cool_conditions):
+class Node(nodelib.node.Experiment):
+    def __init__(self, args):
+        super(Node, self).__init__(args=args,
+                                   state=("stimulus_filename","startr"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
@@ -66,8 +65,6 @@ class Node(object):
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
-
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -88,10 +85,7 @@ class Node(object):
         self.src_pub = rospy.Publisher("source", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.condition = None
-        self.conditions = sfe_conditions.Conditions(conditions)
-        self.switch_conditions(force=start_condition)
-        self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
+        self.switch_conditions(force=True)
 
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
@@ -108,9 +102,9 @@ class Node(object):
         msg.orientation.w = 1
         return msg
 
-    def switch_conditions(self,event=None,force=''):
+    def switch_conditions(self,event=None,force=False):
         if force:
-            self.condition = self.conditions[force]
+            self.condition = self.conditions[self.start_condition]
         else:
             self.condition = self.conditions.next_condition(self.condition)
 
@@ -261,31 +255,8 @@ class Node(object):
 
 def main():
     rospy.init_node("confinement")
-    argv = rospy.myargv()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--no-wait', action='store_true', default=False,
-                        help="dont't start unless flydra is saving data")
-    parser.add_argument('--tmpdir', action='store_true', default=False,
-                        help="store logfile in tmpdir")
-    parser.add_argument('--continue-existing', type=str, default=None,
-                        help="path to a logfile to continue")
-    parser.add_argument('--conditions', default=sfe_conditions.get_default_condition_filename(argv),
-                        help="path to yaml file experimental conditions")
-    parser.add_argument('--start-condition', type=str,
-                        help="name of condition to start the experiment with")
-    parser.add_argument('--cool-conditions', type=str,
-                        help="comma separated list of cool conditions (those for which "\
-                             "a video of the trajectory is saved)")
-    args = parser.parse_args(argv[1:])
-
-    node = Node(
-            wait_for_flydra=not args.no_wait,
-            use_tmpdir=args.tmpdir,
-            continue_existing=args.continue_existing,
-            conditions=open(args.conditions).read(),
-            start_condition=args.start_condition,
-            cool_conditions=args.cool_conditions)
+    parser, args = nodelib.node.get_and_parse_commandline()
+    node = Node(args)
     return node.run()
 
 if __name__=='__main__':
