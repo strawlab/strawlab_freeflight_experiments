@@ -25,6 +25,7 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 
 import flyflypath.model
 import nodelib.log
+import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
 from strawlab_freeflight_experiments.controllers import TNF
@@ -53,25 +54,6 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
-#CONDITION = "cylinder_image/
-#             path_descriptor/
-#             gain(controller specific)/
-#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
-#             z_gain"
-#
-CONDITIONS = [
-              "checkerboard16.png//tnf|+0.0|-1.0|-2.0/-10.0/0.20",
-              "checkerboard16.png//tnf|+0.0|-1.0|-4.0/-10.0/0.20",
-              "checkerboard16.png//tnf|+0.0|-1.0|-6.0/-10.0/0.20",
-              "checkerboard16.png//tnf|+0.0|-1.0|-8.0/-10.0/0.20",
-              "checkerboard16.png//tnf|+0.0|-1.0|-10.0/-10.0/0.20",
-              "checkerboard16.png//tnf|+0.0|-1.0|-20.0/-10.0/0.20",
-              "gray.png//tnf|-0.1|-1.2|-2.1/-10.0/0.20",
-]
-START_CONDITION = CONDITIONS[0]
-#If there is a considerable flight in these conditions then a pushover
-#message is sent and a video recorded
-COOL_CONDITIONS = set()
 
 class Logger(nodelib.log.CsvLogger):
     STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","w","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4","zeta0","zeta1","xi0","xi1","xi2","xi3","intstate0","intstate1")
@@ -84,7 +66,7 @@ class Node(object):
     TS_CONTROL      = 0.0125
     TS_EKF          = 0.005
 
-    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
+    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing, conditions, start_condition, cool_conditions):
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinder')
@@ -143,7 +125,10 @@ class Node(object):
 
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.switch_conditions(None,force=START_CONDITION)
+        self.condition = None
+        self.conditions = sfe_conditions.Conditions(conditions)
+        self.switch_conditions(force=start_condition)
+        self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
 
         self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
                                   self.switch_conditions)
@@ -177,24 +162,23 @@ class Node(object):
         with self.controllock:
             self.control.run_calculate_input()
 
-    def switch_conditions(self,event,force=''):
+    def switch_conditions(self,event=None,force=''):
         if force:
-            self.condition = force
+            self.condition = self.conditions[force]
         else:
-            i = CONDITIONS.index(self.condition)
-            j = (i+1) % len(CONDITIONS)
-            self.condition = CONDITIONS[j]
+            self.condition = self.conditions.next_condition(self.condition)
+
         self.log.condition = self.condition
 
         self.drop_lock_on()
 
-        img,svg,p,rad,v_gain = self.condition.split('/')
-        self.img_fn = str(img)
-        self.gain = p
-        self.v_gain = float(v_gain)
-        self.rad_locked = float(rad)
+        self.img_fn     = str(self.condition['cylinder_image'])
+        self.gain       = str(self.condition['gain'])
+        self.v_gain     = float(self.condition['z_gain'])
+        self.rad_locked = float(self.condition['radius_when_locked'])
         self.z_target = 0.7
-        self.svg_fn = str(svg)
+
+        self.svg_fn = ''
         self.svg_pub.publish(self.svg_fn)
 
         with self.controllock:
@@ -211,7 +195,7 @@ class Node(object):
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
-        rospy.loginfo('condition: %s (%s, rad locked=%.1f)' % (self.condition,self.gain,self.rad_locked))
+        rospy.loginfo('condition: %s (%s, rad locked=%.1f)' % (self.condition.name,self.gain,self.rad_locked))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
@@ -405,6 +389,7 @@ class Node(object):
 
 def main():
     rospy.init_node("tnfcontrol")
+    argv = rospy.myargv()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-wait', action='store_true', default=False,
@@ -413,13 +398,22 @@ def main():
                         help="store logfile in tmpdir")
     parser.add_argument('--continue-existing', type=str, default=None,
                         help="path to a logfile to continue")
-    argv = rospy.myargv()
+    parser.add_argument('--conditions', default=sfe_conditions.get_default_condition_filename(argv),
+                        help="path to yaml file experimental conditions")
+    parser.add_argument('--start-condition', type=str,
+                        help="name of condition to start the experiment with")
+    parser.add_argument('--cool-conditions', type=str,
+                        help="comma separated list of cool conditions (those for which "\
+                             "a video of the trajectory is saved)")
     args = parser.parse_args(argv[1:])
 
     node = Node(
             wait_for_flydra=not args.no_wait,
             use_tmpdir=args.tmpdir,
-            continue_existing=args.continue_existing)
+            continue_existing=args.continue_existing,
+            conditions=open(args.conditions).read(),
+            start_condition=args.start_condition,
+            cool_conditions=args.cool_conditions)
     return node.run()
 
 if __name__=='__main__':
