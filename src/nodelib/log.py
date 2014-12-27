@@ -18,7 +18,7 @@ class CsvLogger(object):
 
     STATE =         tuple()
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
-    FLY_STATE =     ("condition","lock_object","framenumber")
+    FLY_STATE =     ("condition","condition_name","lock_object","framenumber")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False, warn=True, debug=True):
@@ -35,6 +35,8 @@ class CsvLogger(object):
         self._enable_debug = debug
 
         self._condition = ''
+        self._condition_name = ''
+
         self._pub_condition = None
 
         self._use_rostime = use_rostime
@@ -148,9 +150,15 @@ class CsvLogger(object):
         self._exp_uuid = uuid
 
     @property
+    def condition_name(self):
+        return self._condition_name
+    @condition_name.setter
+    def condition_name(self, v):
+        self._condition_name = v
+
+    @property
     def condition(self):
         return self._condition
-
     @condition.setter
     def condition(self, v):
         if v is None:
@@ -163,8 +171,10 @@ class CsvLogger(object):
         y = v.to_yaml()
         n = v.name
 
-        #still write the slash separated to the csv
-        self._condition = s
+        with self._wlock:
+            #still write the slash separated to the csv
+            self._condition = s
+            self._condition_name = n
 
         for val,pub in zip((s,y,n),(self._pub_condition_s,self._pub_condition_y,self._pub_condition_n)):
             if pub is not None:
