@@ -32,7 +32,6 @@ from strawlab_freeflight_experiments.controllers import TNF
 from strawlab_freeflight_experiments.controllers.util import Fly, Scheduler
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST   = 0.2
@@ -124,10 +123,7 @@ class Node(nodelib.node.Experiment):
 
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.switch_conditions(force=True)
-
-        self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
-                                  self.switch_conditions)
+        self.switch_conditions()
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
@@ -158,13 +154,7 @@ class Node(nodelib.node.Experiment):
         with self.controllock:
             self.control.run_calculate_input()
 
-    def switch_conditions(self,event=None,force=False):
-        if force:
-            self.condition = self.conditions[self.start_condition]
-        else:
-            self.condition = self.conditions.next_condition(self.condition)
-
-        self.log.condition = self.condition
+    def switch_conditions(self):
 
         self.drop_lock_on()
 

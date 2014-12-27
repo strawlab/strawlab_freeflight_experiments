@@ -26,6 +26,10 @@ def get_and_parse_commandline():
     parser.add_argument('--cool-conditions', type=str,
                         help="comma separated list of cool conditions (those for which "\
                              "a video of the trajectory is saved)")
+    parser.add_argument('--switch-time', type=int, default=300,
+                        help='time in seconds for each condition')
+    parser.add_argument('--switch-random', action='store_true', default=False,
+                        help='cycle conditions in random order (default is sequential)')
 
     args = parser.parse_args(argv[1:])
 
@@ -35,15 +39,21 @@ class Experiment(object):
     def __init__(self, args, state):
         cool_conditions = args.cool_conditions
 
-        self.condition = None
-        self.conditions = sfe_conditions.Conditions(open(args.conditions).read())
+        self._switch_random = args.switch_random
+
+        self.conditions = sfe_conditions.Conditions(open(args.conditions))
         self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
-        self.start_condition = args.start_condition if args.start_condition else self.conditions.keys()[0]
+
+        start_condition = args.start_condition if args.start_condition else self.conditions.keys()[0]
+        self.condition = self.conditions[start_condition]
 
         self.log = nodelib.log.CsvLogger(
                           state=state,
                           wait=not args.no_wait, use_tmpdir=args.tmpdir,
                           continue_existing=args.continue_existing)
+
+        self.timer = rospy.Timer(rospy.Duration(args.switch_time),
+                                  self._switch_conditions)
 
         rospy.Subscriber('experiment_uuid',
                          std_msgs.msg.String,
@@ -58,4 +68,17 @@ class Experiment(object):
 
     def switch_conditions(self):
         raise NotImplementedError
+
+    def _switch_conditions(self,event=None):
+        if self._switch_random:
+            condition = self.conditions.random_condition()
+        else:
+            condition = self.conditions.next_condition(self.condition)
+
+        rospy.loginfo('condition: %s' % condition.name)
+
+        self.log.condition = condition
+        self.condition = condition
+
+        self.switch_conditions()
 

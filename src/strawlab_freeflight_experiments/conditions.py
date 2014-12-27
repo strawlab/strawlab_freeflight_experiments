@@ -1,5 +1,6 @@
 import os.path
 import itertools
+import random
 
 import yaml
 import yaml.constructor
@@ -110,6 +111,9 @@ class Conditions(OrderedDict, _YamlMixin):
 
     def first_condition(self):
         return self[self.keys()[0]]
+
+    def random_condition(self):
+        return self[random.choice(self.keys())]
 
 def _yaml_ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
