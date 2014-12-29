@@ -853,7 +853,9 @@ class CombineH5WithCSV(_Combine):
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
 
-                if len(args.uuid) > 1:
+                if args.uuid is None:
+                    self.plotdir = args.outdir if args.outdir else os.getcwd()
+                elif len(args.uuid) > 1:
                     self.plotdir = args.outdir
                 else:
                     fm = autodata.files.FileModel(basedir=args.basedir)
