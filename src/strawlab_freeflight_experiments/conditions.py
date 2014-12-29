@@ -93,6 +93,8 @@ class Conditions(OrderedDict, _YamlMixin):
 
         OrderedDict.__init__(self)
         for k,v in d.iteritems():
+            if k.startswith('_') or k == 'uuid':
+                continue
             c = Condition(v)
             c.name = k
             self[k] = c

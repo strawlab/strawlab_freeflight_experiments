@@ -1,13 +1,17 @@
+import os.path
+import argparse
+import yaml
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+roslib.load_manifest('flycave')
 
 import rospy
 import std_msgs.msg
+import flycave.msg
 
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 import nodelib.log
-
-import argparse
 
 def get_and_parse_commandline():
     argv = rospy.myargv()
@@ -55,13 +59,28 @@ class Experiment(object):
         self.timer = rospy.Timer(rospy.Duration(args.switch_time),
                                   self._switch_conditions)
 
-        rospy.Subscriber('experiment_uuid',
-                         std_msgs.msg.String,
-                         self._on_experiment_uuid)
+        rospy.Subscriber('experiment',
+                         flycave.msg.Experiment,
+                         self._on_experiment)
 
-    def _on_experiment_uuid(self, msg):
-        self.log.set_experiment_uuid(msg.data)
-        #save the condition yaml here
+    def _on_experiment(self, msg):
+        self.log.set_experiment_uuid(msg.uuid)
+        path,fname = os.path.split(self.log._fname)
+        date_fname = fname.split('.')[0]
+
+        #save the condition yaml
+        with open(os.path.join(path,date_fname)+'.condition.yaml','w') as f:
+            f.write(self.conditions.to_yaml())
+            f.write("uuid: %s\n" % msg.uuid)
+
+        exp = {}
+        for i in msg.__slots__:
+            v = getattr(msg,i)
+            if not isinstance(v,(int,str,bool,float,unicode)):
+                v = str(v)
+            exp[i] = v
+        with open(os.path.join(path,date_fname)+'.experiment.yaml','w') as f:
+            yaml.dump(exp, f, default_flow_style=False)
 
     def run(self):
         raise NotImplementedError
