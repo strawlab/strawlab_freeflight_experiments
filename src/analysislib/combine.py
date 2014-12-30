@@ -140,6 +140,9 @@ class _Combine(object):
         return None
 
     def _save_cache_file(self):
+        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+            return
+
         pkl,s = self._get_cache_name_and_config_string()
         WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
         with open(pkl,"w+b") as f:
