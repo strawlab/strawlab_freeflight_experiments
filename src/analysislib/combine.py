@@ -983,15 +983,19 @@ class CombineH5WithCSV(_Combine):
             #
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
-                assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
-
-                cond = odf['condition'].iloc[0]
+                #start of file
+                if odf['condition'].count() == 0:
+                    continue
 
                 if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                     continue
 
                 if args.idfilt and (oid not in args.idfilt):
                     continue
+
+                assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
+
+                cond = odf['condition'].iloc[0]
 
                 if fix.active:
                     cond = fix.fix_condition(cond)
