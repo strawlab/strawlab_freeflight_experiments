@@ -162,6 +162,7 @@ class TestCombine(unittest.TestCase):
         _quiet(combine)
 
         parser,args = analysislib.args.get_default_args(
+                h5_file='/dev/null',
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
         )

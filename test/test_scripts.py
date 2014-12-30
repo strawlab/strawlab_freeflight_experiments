@@ -40,7 +40,7 @@ class TestScript(unittest.TestCase):
         proc = subprocess.Popen(
                 "./rotation-analysis.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
                 "--zfilt trim --rfilt trim --lenfilt 1 "\
-                "--outdir %s --idfilt 9" % self._tdir,
+                "--arena flycave --outdir %s --idfilt 9" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -52,7 +52,7 @@ class TestScript(unittest.TestCase):
     def test_trajectory_viewer(self):
         proc = subprocess.Popen(
                 "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 "\
+                "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 --arena flycave "\
                 "--outdir %s --save-data" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -65,7 +65,7 @@ class TestScript(unittest.TestCase):
     def test_conflict_analysis(self):
         proc = subprocess.Popen(
                 "./conflict-analysis.py --uuid 74bb2ece2f6e11e395fa6c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --outdir %s" % self._tdir,
+                "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -77,7 +77,7 @@ class TestScript(unittest.TestCase):
     def test_confinement_analysis(self):
         proc = subprocess.Popen(
                 "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
-                "--zfilt trim --rfilt trim --outdir %s" % self._tdir,
+                "--zfilt trim --rfilt trim --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,

@@ -25,6 +25,8 @@ class ArenaBase(object):
         pass
     def plot_mpl_3d(self, ax, *args, **kwargs):
         pass
+    def get_geometry_filter_properties(self):
+        return {}
 
 class FlyCaveCylinder(ArenaBase):
     def __init__(self,radius=0.5,height=1.0):
@@ -50,6 +52,8 @@ class FlyCaveCylinder(ArenaBase):
         return [-self.radius,0.0,self.radius]
     def get_ztick_locations(self):
         return [self.height/2.0,self.height]
+    def get_geometry_filter_properties(self):
+        return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.42}
 
 class FishBowl(ArenaBase):
     def __init__(self,radius=0.175,height=0.08):
@@ -62,6 +66,8 @@ class FishBowl(ArenaBase):
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
+    def get_geometry_filter_properties(self):
+        return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.17}
 
 class FlyCube(ArenaBase):
     def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
@@ -107,4 +113,6 @@ class FlyCube(ArenaBase):
         return [-y, y]
     def get_ztick_locations(self):
         return [self.zdim/2.0,self.zdim]
+    def get_geometry_filter_properties(self):
+        return {"zfilt_max":0.365,"zfilt_min":0.05,"rfilt_max":0.42}
 

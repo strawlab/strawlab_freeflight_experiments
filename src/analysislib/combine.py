@@ -836,12 +836,11 @@ class CombineH5WithCSV(_Combine):
         """
         if 'args' in kwargs:
             args = kwargs['args']
+            args.uuid = [uuid]
         else:
-            parser,args = analysislib.args.get_default_args()
-            for k in kwargs:
-                setattr(args,k,kwargs[k])
+            kwargs['uuid'] = uuid
+            parser,args = analysislib.args.get_default_args(**kwargs)
 
-        args.uuid = [uuid]
         self.add_from_args(args, csv_suffix=csv_suffix)
 
     def add_from_args(self, args, csv_suffix=None):
