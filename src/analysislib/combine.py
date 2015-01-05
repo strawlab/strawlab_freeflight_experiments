@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import pytz
 import scipy.io
+import yaml
 
 import roslib
 
@@ -70,8 +71,10 @@ class _Combine(object):
         self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
+        self._conditions = {}
+        self._condition_names = {}
 
-        self._configdict = {'v':6,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':7,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -149,6 +152,8 @@ class _Combine(object):
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump({"results":self._results,
                           "dt":self._dt,
+                          "conditions":self._conditions,
+                          "condition_names":self._condition_names,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -311,6 +316,14 @@ class _Combine(object):
         """returns a list of the names of the experimental conditions"""
         return self._results.keys()
 
+    def get_condition_name(self, cond):
+        """return a printable human readable condition name"""
+        return self._condition_names.get(cond,cond)
+
+    def get_condition_configuration(self, cond):
+        """returns the full dictionary that defines the experimental condition"""
+        return self._conditions.get(cond,{})
+
     def get_num_frames(self, seconds):
         """returns the number of frames that should be recorded for the given seconds"""
         return seconds / self._dt
@@ -452,6 +465,7 @@ class _CombineFakeInfinity(_Combine):
             except KeyError:
                 self._results[cond] = {"df":[],"start_obj_ids":[],"count":0, 'uuids':[]}
                 self._skipped[cond] = 0
+                self._condition_names[cond] = "tex%d" % c
 
             for t in range(self._ntrials):
                 if obj_id == 1:
@@ -666,22 +680,29 @@ class CombineCSV(_Combine):
             # Continuous grouping, see CombineH5WithCSV
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
+                #start of file
+                if odf['condition'].count() == 0:
+                    continue
+
+                if obj_id in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+                    continue
+
+                if self._idfilt and (obj_id not in self._idfilt):
+                    continue
+
+                if not self._df_ok(odf):
+                    continue
+
                 assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
 
                 cond = odf['condition'].iloc[0]
 
                 if cond not in self._results:
                     self._results[cond] = {'df':[],'start_obj_ids':[],'count':0, 'uuids':[]}
-
-
-                if obj_id == 0:
-                    continue
-
-                if not self._df_ok(odf):
-                    continue
-
-                if self._idfilt and (obj_id not in self._idfilt):
-                    continue
+                    try:
+                        self._condition_names[cond] = odf['condition_name'].iloc[0]
+                    except:
+                        pass
 
                 dt = self._dt
                 self._calc_other_series(df, dt)
@@ -854,6 +875,8 @@ class CombineH5WithCSV(_Combine):
                 self._results = d['results']
                 self._dt = d['dt']
                 self.csv_file = d['csv_file']   #for plot names
+                self._conditions = d['conditions']
+                self._condition_names = d['condition_names']
 
                 if args.uuid is None:
                     self.plotdir = args.outdir if args.outdir else os.getcwd()
@@ -924,6 +947,16 @@ class CombineH5WithCSV(_Combine):
         self._debug("IO:     reading %s" % h5_file)
         if fix.active:
             self._debug("IO:     fixing data %s" % fix)
+
+        #try and open the experiment and condition metadata files
+        path,fname = os.path.split(csv_fname)
+        try:
+            fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
+            with open(fn) as f:
+                self._conditions = yaml.load(f)
+                self._debug("IO:     reading %s" % fn)
+        except:
+            self._conditions = {}
 
         #open the csv file as a dataframe
         try:
@@ -1005,6 +1038,10 @@ class CombineH5WithCSV(_Combine):
                                          df=[],
                                          uuids=[])
                     skipped[cond] = 0
+                    try:
+                        self._condition_names[cond] = odf['condition_name'].iloc[0]
+                    except:
+                        pass
 
                 r = results[cond]
 
