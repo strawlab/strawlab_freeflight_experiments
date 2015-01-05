@@ -10,6 +10,7 @@ import operator
 import hashlib
 import datetime
 import calendar
+import collections
 
 import tables
 import pandas as pd
@@ -364,7 +365,10 @@ class _Combine(object):
             The second is dt
 
         """
-        return self._results, self._dt
+        r = collections.OrderedDict()
+        for c in sorted(self._results, key=self.get_condition_name):
+            r[c] = self._results[c]
+        return r, self._dt
 
     def get_one_result(self, obj_id, condition=None):
         """
