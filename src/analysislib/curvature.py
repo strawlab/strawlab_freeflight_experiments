@@ -388,11 +388,11 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                     ccef_s = df.std(axis=1)
                     ax.errorbar(t, ccef_m.values, yerr=ccef_s.values,
                             marker='+',
-                            label=_current_condition)
+                            label=combine.get_condition_name(_current_condition))
                 else:
                     ax.plot(t, ccef_m.values,
                             marker='+',
-                            label=_current_condition)
+                            label=combine.get_condition_name(_current_condition))
 
                 #the maximum of the means is the most correlated shifted latency
                 max_index = ccef_m.index.get_loc(ccef_m.idxmax())
@@ -421,7 +421,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                 plot_hist_corra_vs_corrb_pooled(
                         all_corra,all_corrb,corra,corrb,
                         fig.gca(),
-                        title=_current_condition,
+                        title=combine.get_condition_name(_current_condition),
                         note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens),
                         correlation_options=correlation_options
                 )
@@ -467,7 +467,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
 
                 fig.subplots_adjust(wspace=0.1,hspace=0.1,top=0.92)
                 fig.suptitle('Correlation between %s and %s per latency correction \n%s' % (
-                                    NAMES.get(corra,corra), NAMES.get(corrb,corrb), _current_condition),
+                                    NAMES.get(corra,corra), NAMES.get(corrb,corrb), combine.get_condition_name(_current_condition)),
                              fontsize=12,
                 )
 
@@ -501,7 +501,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                                       normed=histogram_options['normed'].get(h,True),
                                       range=histogram_options['range'].get(h),
                                       log=histogram_options.get('ylogscale',{h:False}).get(h,False),
-                                      histtype='step', alpha=0.75, label=current_condition
+                                      histtype='step', alpha=0.75, label=combine.get_condition_name(current_condition),
                 )
             ax.legend(
                 loc='upper center' if OUTSIDE_LEGEND else 'upper right',

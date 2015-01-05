@@ -109,7 +109,6 @@ def plot_trial_times(combine, args, name=None):
         starts = {}
         lengths = {}
         for i,(current_condition,r) in enumerate(results.iteritems()):
-
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
                 continue
@@ -127,7 +126,7 @@ def plot_trial_times(combine, args, name=None):
             ax.plot_date(
                     mdates.epoch2num(starts[condition]),
                     lengths[condition],
-                    label=condition,marker='o',color=colors[i],
+                    label=combine.get_condition_name(condition),marker='o',color=colors[i],
                     tz=combine.timezone)
 
         ax.set_xlabel("start")
@@ -220,7 +219,7 @@ def plot_saccades(combine, args, figncols, name=None):
                 ys = df['y'].where(df['saccade'].values).dropna()
                 ax.plot(xs,ys,'r.')
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
         for ax in axes:
@@ -274,7 +273,7 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             if not in3d:
                 make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
@@ -319,13 +318,15 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
             mean_r = np.mean(r)
             std_r = np.std(r)
 
+            cc_name = combine.get_condition_name(current_condition)
+
             means.append( mean_r )
             stds.append( std_r )
-            labels.append( current_condition )
+            labels.append( cc_name )
             x.append(i)
             lens.append( len(r) )
             allr.extend( list(r) )
-            allcond.extend( [current_condition]*len(r) )
+            allcond.extend( [cc_name]*len(r) )
 
         df = pandas.DataFrame({'radius':allr,'condition':allcond})
         df.to_pickle('dist_df.pkl')
@@ -333,12 +334,6 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
         stds = np.array( stds )
         lens = np.array( lens )
 
-        print '*'*100
-        print 'dist means',means
-        print 'dist stds',stds
-        print 'labels',labels
-        print 'lens',lens
-        print '*'*100
         ax.plot( x, means )
         ax.plot( x, means+stds )
         ax.plot( x, means-stds )
@@ -412,7 +407,7 @@ def plot_histograms(combine, args, figncols, name=None, colorbar=False):
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
             ax.set_aspect('equal')
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
             ax.set_ylabel( 'y (m)' )
@@ -473,7 +468,7 @@ def plot_tracking_length(combine, args, figncols, name=None):
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 'n=%d' % r['count'])
 
         if WRAP_TEXT:
@@ -507,8 +502,10 @@ def plot_nsamples(combine, args, name=None):
             n_samples = [len(df) for df in r['df']]
             hist,edges = np.histogram(n_samples,bins=bins)
 
-            ax.plot(bin_centers, hist, '-x', label=current_condition)
-            ax_outliers.plot(0, combine.get_num_trials(current_condition), 'o', clip_on=False, label=current_condition)
+            cc_name = combine.get_condition_name(current_condition)
+
+            ax.plot(bin_centers, hist, '-x', label=cc_name)
+            ax_outliers.plot(0, combine.get_num_trials(current_condition), 'o', clip_on=False, label=cc_name)
 
             nconds += 1
 
@@ -571,7 +568,7 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
                 try:
                     val = df[valname].values
                 except KeyError:
-                    if valname == "radius":
+                    if (valname == "radius") and combine.has_positional_information:
                         val = np.sqrt(df['x'].values**2 + df['y'].values**2)
                     else:
                         raise
@@ -598,7 +595,7 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
             ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
             ax.set_xlabel('frame (n)')
 
-            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,current_condition))
+            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,combine.get_condition_name(current_condition)))
             make_note(ax, 'n=%d' % nsamples)
 
             df = pandas.DataFrame(series)
