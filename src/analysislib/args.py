@@ -25,7 +25,7 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
         try:
             arena = get_arena_from_args(args)
         except ValueError, e:
-            parser.error(e.message)
+            self.error(e.message)
 
         rad = set(REQUIRED_ARENA_DEFAULTS)
         if set(arena.get_filter_properties().keys()) != rad:
