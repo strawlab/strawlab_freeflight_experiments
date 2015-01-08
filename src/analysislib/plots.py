@@ -238,6 +238,8 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
     ----------
     - combine: Combine object
       carries information about trials (in this case we need just x, y and possibly z)
+      Also:
+        combine.fname: to construct the default file name
       :type combine: analysislib.combine.CombineH5WithCSV
     - args: dictionary-like from argparse blah
       carries some of the configuration for the plots from command line
