@@ -1,3 +1,4 @@
+from itertools import izip
 import os.path
 import os.path
 import sys
@@ -11,6 +12,7 @@ import hashlib
 import datetime
 import calendar
 import collections
+import copy
 
 import tables
 import pandas as pd
@@ -435,6 +437,43 @@ class _Combine(object):
             raise Exception("filter minimum must be given")
         self._custom_filter = s
         self._custom_filter_min = post_filter_min
+
+    def filter_trials(self, filter_func=lambda trial: True):
+        """Returns a new combine object, filtering out trials that do not meet the filtering condition.
+        Makes a best-effort to keep everything else the same.
+
+        Parameters
+        ----------
+        filter_func: function (df, start_obj_id, uuid, dt) -> True, default _ -> True (keep all)
+          The predicate to evaluate on each trial data; only trials that evaluate to True are kept
+
+        Returns
+        -------
+        A shallow-copy of the combine object, but keeping only the trials
+        (be careful if changing any other mutable member, as changes would propagate to the original Combine object)
+        """
+        # Copy
+        filtered = copy.copy(self)
+        filtered._results = {}
+        # Filter
+        results = self._results  # warning, do not use get_results, it renames conds
+        for cond_name, cond_trials in results:
+            dfs = []
+            start_obj_ids = []
+            uuids = []
+            for df, soid, uuid in izip(
+                    cond_trials['df'], cond_trials['start_obj_ids'], cond_trials['uuids']):
+                if filter_func(df, soid, uuid, self._dt):
+                    dfs.append(df)
+                    start_obj_ids.append(soid)
+                    uuids.append(uuid)
+            filtered._results[cond_name] = {
+                'df': dfs,
+                'start_obj_ids': start_obj_ids,
+                'count': len(dfs),
+                'uuids': uuids
+            }
+        return filtered
 
     def close(self):
         pass
