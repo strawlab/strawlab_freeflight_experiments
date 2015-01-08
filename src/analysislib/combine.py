@@ -772,6 +772,9 @@ class CombineCSV(_Combine):
                         self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
                     else:
                         uuid = odf['exp_uuid'].dropna().unique()[0]
+                # FIXME: some csvs lack the exp_uuid for some initial observations:
+                #        e.g. cdb7a1ac94f711e4bb6cbcee7bdac270
+                #        diagnose why (race condition?) and write defensive uuid readers...
                 self._results[cond]['uuids'].append(uuid)
 
         if self._df is None:
