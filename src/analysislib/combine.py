@@ -457,7 +457,7 @@ class _Combine(object):
         filtered._results = {}
         # Filter
         results = self._results  # warning, do not use get_results, it renames conds
-        for cond_name, cond_trials in results:
+        for cond_name, cond_trials in results.iteritems():
             dfs = []
             start_obj_ids = []
             uuids = []
