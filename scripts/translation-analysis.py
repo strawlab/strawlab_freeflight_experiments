@@ -3,9 +3,6 @@ import os.path
 import sys
 from datetime import datetime, timedelta
 
-from autodata.model import find_experiment
-
-
 if not os.environ.get('DISPLAY'):
     print "DISPLAY NOT SET: USING AGG BACKEND"
     import matplotlib
@@ -14,6 +11,7 @@ if not os.environ.get('DISPLAY'):
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
+from autodata.model import find_experiment
 import autodata.files
 import analysislib.filters
 import analysislib.combine
