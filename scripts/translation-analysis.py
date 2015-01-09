@@ -86,7 +86,7 @@ if __name__=='__main__':
     #   - add a new filter to the command line of combine scripts
     #   - create a script that will just do this
     #   - ...
-    combine_before = filter_trials_after_start(combine, delta=timedelta(hours=1))
+    combine_before = filter_trials_after_start(combine, delta=timedelta(hours=6)) #change delta here
 
     aplt.plot_traces(combine_before, args,
                      name='combine-before',  # FIXME: name does not respect per-script directory, writes in root
