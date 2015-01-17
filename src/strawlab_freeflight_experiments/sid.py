@@ -85,7 +85,6 @@ end""", self.sid_model, nout=2)
 
     @staticmethod
     def run_tfest(mlab,iddata,np,nz):
-        print repr(iddata)
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts)
