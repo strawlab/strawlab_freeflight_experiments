@@ -30,27 +30,35 @@ def get_and_parse_commandline():
     parser.add_argument('--cool-conditions', type=str,
                         help="comma separated list of cool conditions (those for which "\
                              "a video of the trajectory is saved)")
-    parser.add_argument('--switch-time', type=int, default=300,
-                        help='time in seconds for each condition')
-    parser.add_argument('--switch-random', action='store_true', default=False,
-                        help='cycle conditions in random order (default is sequential)')
     parser.add_argument('--max-number-cool-conditions', type=int, default=0,
                         help='collect a maximum number of cool conditions (0 disables)')
+    parser.add_argument('--switch-time', type=int, default=300,
+                        help='time in seconds for each condition')
+    parser.add_argument('--switch-order', nargs='?', choices=['seq', 'randstart', 'fullrand'], default='seq',
+                        help='Controls the order of condition switch during the experiment. Options:\n'
+                             ' - seq: keep keep the order in the yaml file\n'
+                             ' - randstart: use always the same, randomized order\n'
+                             ' - rand: randomize the order continuously\n')
+    parser.add_argument('--switch-seed', type=int, default=42,
+                        help='The random seed used to control condition order randomization.'
+                             'If negative, then randomization is based on the system clock.')
 
     args = parser.parse_args(argv[1:])
 
     return parser, args
 
+
 class Experiment(object):
     def __init__(self, args, state):
         cool_conditions = args.cool_conditions
 
-        self._switch_random = args.switch_random
-
+        # N.B. randomisation info can be queried at a later time in self.conditions
+        self.conditions = sfe_conditions.Conditions(open(args.conditions),
+                                                    rng_seed=args.switch_seed,
+                                                    switch_order=args.switch_order)
+        
         self._n_cool = 0
         self._max_cool = args.max_number_cool_conditions
-
-        self.conditions = sfe_conditions.Conditions(open(args.conditions))
         self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
 
         for c in self.cool_conditions:
@@ -111,11 +119,9 @@ class Experiment(object):
 
                 rospy.loginfo('cool: %s' % note)
 
-    def _switch_conditions(self,event=None):
-        if self._switch_random:
-            condition = self.conditions.random_condition()
-        else:
-            condition = self.conditions.next_condition(self.condition)
+    def _switch_conditions(self,event=None):        
+
+        condition = self.conditions.next_condition(self.condition)
 
         rospy.loginfo('condition: %s' % condition.name)
 
@@ -123,4 +129,3 @@ class Experiment(object):
         self.condition = condition
 
         self.switch_conditions()
-

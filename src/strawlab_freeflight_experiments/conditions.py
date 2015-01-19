@@ -81,9 +81,13 @@ class Condition(OrderedDict, _YamlMixin):
     def is_type(self, *names):
         return any(name in self.name for name in names)
 
+
 class Conditions(OrderedDict, _YamlMixin):
 
-    def __init__(self, text_or_file_like):
+    def __init__(self, text_or_file_like, switch_order='seq', rng_seed=42):
+
+        OrderedDict.__init__(self)
+
         try:
             txt = text_or_file_like.read()
         except AttributeError:
@@ -91,8 +95,19 @@ class Conditions(OrderedDict, _YamlMixin):
 
         d = yaml.load(txt, _OrderedDictYAMLLoader)
 
-        OrderedDict.__init__(self)
-        for k,v in d.iteritems():
+        # provenance
+        self.rng_seed = rng_seed
+        self.switch_order = switch_order
+        keys = d.keys()
+        if self.switch_order != 'seq':
+            self.rng = random.Random(rng_seed if rng_seed >= 0 else None)
+            if self.switch_order == 'randstart':
+                self.rng.shuffle(keys)
+        else:
+            self.rng = None
+
+        for k in keys:
+            v = d[k]
             if k.startswith('_') or k == 'uuid':
                 continue
             c = Condition(v)
@@ -101,21 +116,22 @@ class Conditions(OrderedDict, _YamlMixin):
 
     @staticmethod
     def from_base64(txt):
-         return Conditions(txt.decode('base64_codec').decode('zlib_codec'))
+        return Conditions(txt.decode('base64_codec').decode('zlib_codec'))
 
     def next_condition(self, last_condition):
-        d = itertools.cycle(self)
-        for c in d:
-            if last_condition is None:
-                return self[c]
-            if self[c] == last_condition:
-                return self[d.next()]
+        if self.switch_order == 'fullrand':
+            return self[self.rng.choice(self.keys())]
+        else:
+            d = itertools.cycle(self)
+            for c in d:
+                if last_condition is None:
+                    return self[c]
+                if self[c] == last_condition:
+                    return self[d.next()]
 
     def first_condition(self):
         return self[self.keys()[0]]
 
-    def random_condition(self):
-        return self[random.choice(self.keys())]
 
 def _yaml_ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
