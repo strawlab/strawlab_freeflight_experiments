@@ -53,6 +53,10 @@ class Experiment(object):
         self.conditions = sfe_conditions.Conditions(open(args.conditions))
         self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
 
+        for c in self.cool_conditions:
+            if c not in self.conditions:
+                rospy.logwarn("cool condition %s does not exist" % c)
+
         start_condition = args.start_condition if args.start_condition else self.conditions.keys()[0]
         self.condition = self.conditions[start_condition]
 
@@ -104,6 +108,8 @@ class Experiment(object):
                 self.pub_pushover.publish(note)
                 self.pub_save.publish(obj_id)
                 self._n_cool += 1
+
+                rospy.loginfo('cool: %s' % note)
 
     def _switch_conditions(self,event=None):
         if self._switch_random:
