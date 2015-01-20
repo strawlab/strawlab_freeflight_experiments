@@ -123,7 +123,7 @@ class Experiment(object):
 
         condition = self.conditions.next_condition(self.condition)
 
-        rospy.loginfo('condition: %s' % condition.name)
+        rospy.logdebug('condition: %s' % condition.name)
 
         self.log.condition = condition
         self.condition = condition
