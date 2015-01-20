@@ -16,7 +16,7 @@ import nodelib.log
 def get_and_parse_commandline():
     argv = rospy.myargv()
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--no-wait', action='store_true', default=False,
                         help="dont't start unless flydra is saving data")
     parser.add_argument('--tmpdir', action='store_true', default=False,
@@ -34,6 +34,8 @@ def get_and_parse_commandline():
                         help='time in seconds for each condition')
     parser.add_argument('--switch-random', action='store_true', default=False,
                         help='cycle conditions in random order (default is sequential)')
+    parser.add_argument('--max-number-cool-conditions', type=int, default=0,
+                        help='collect a maximum number of cool conditions (0 disables)')
 
     args = parser.parse_args(argv[1:])
 
@@ -44,6 +46,9 @@ class Experiment(object):
         cool_conditions = args.cool_conditions
 
         self._switch_random = args.switch_random
+
+        self._n_cool = 0
+        self._max_cool = args.max_number_cool_conditions
 
         self.conditions = sfe_conditions.Conditions(open(args.conditions))
         self.cool_conditions = cool_conditions.split(',') if cool_conditions else set()
@@ -62,6 +67,9 @@ class Experiment(object):
         rospy.Subscriber('experiment',
                          flycave.msg.Experiment,
                          self._on_experiment)
+
+        self.pub_pushover = rospy.Publisher('note', std_msgs.msg.String)
+        self.pub_save = rospy.Publisher('save_object', std_msgs.msg.UInt32)
 
     def _on_experiment(self, msg):
         self.log.set_experiment_uuid(msg.uuid)
@@ -87,6 +95,15 @@ class Experiment(object):
 
     def switch_conditions(self):
         raise NotImplementedError
+
+    def save_cool_condition(self, obj_id, note=''):
+        if self.condition.name in self.cool_conditions:
+            if self._n_cool < self._max_cool:
+                if not note:
+                    note = "Subject %d met cool condition"
+                self.pub_pushover.publish(note)
+                self.pub_save.publish(obj_id)
+                self._n_cool += 1
 
     def _switch_conditions(self,event=None):
         if self._switch_random:

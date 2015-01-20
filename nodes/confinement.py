@@ -59,9 +59,6 @@ class Node(nodelib.node.Experiment):
 
         self.trigarea_pub = rospy.Publisher('trigger_area', Polygon, latch=True, tcp_nodelay=True)
 
-        self.pushover_pub = rospy.Publisher('note', String)
-        self.save_pub = rospy.Publisher('save_object', UInt32)
-
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
@@ -236,9 +233,7 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = 0
 
         if (dt > 30) and (old_id is not None):
-            if self.condition.name in self.cool_conditions:
-                self.pushover_pub.publish("Fly %s flew for %.1fs" % (old_id, dt))
-                self.save_pub.publish(old_id)
+            self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
 
         self.pub_stimulus.publish( HOLD_COND )
         self.update()        

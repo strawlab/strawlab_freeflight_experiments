@@ -90,9 +90,6 @@ class Node(nodelib.node.Experiment):
         self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
         self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
-        self.pub_pushover = rospy.Publisher('note', String)
-        self.pub_save = rospy.Publisher('save_object', UInt32)
-
         self.pub_rotation.publish(0)
         self.pub_v_offset_value.publish(0)
 
@@ -242,14 +239,8 @@ class Node(nodelib.node.Experiment):
  
                 if state=='finished':
                     self.drop_lock_on(blacklist=True)
-
+                    self.save_cool_condition(currently_locked_obj_id, note="Fly %s completed perturbation" % currently_locked_obj_id)
                     rospy.loginfo('perturbation finished')
-
-                    if self.condition in COOL_CONDITIONS:
-                        #fly is still flying
-                        if abs(fly_z-self.z_target) < 0.1:
-                            self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
-                            self.pub_save.publish(currently_locked_obj_id)
 
                 return rate, self.trg_x,self.trg_y
 
@@ -474,9 +465,7 @@ class Node(nodelib.node.Experiment):
         self.pub_cyl_centre.publish(0,0,0)
 
         if (self.ratio_total > 3) and (old_id is not None):
-            if self.condition.name in self.cool_conditions:
-                self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
-                self.pub_save.publish(old_id)
+            self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
 
         self.update()
 

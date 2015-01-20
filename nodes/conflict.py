@@ -75,9 +75,6 @@ class Node(nodelib.node.Experiment):
         self.pub_model_centre = rospy.Publisher("model_pose", Pose, latch=True, tcp_nodelay=True)
         self.pub_model_filename = rospy.Publisher("model_filename", String, latch=True, tcp_nodelay=True)
 
-        self.pub_pushover = rospy.Publisher('note', String)
-        self.pub_save = rospy.Publisher('save_object', UInt32)
-
         self.pub_rotation.publish(0)
         self.pub_v_offset_value.publish(0)
 
@@ -377,9 +374,7 @@ class Node(nodelib.node.Experiment):
         self.pub_model_filename.publish('/dev/null')
 
         if (self.ratio_total > 2) and (old_id is not None):
-            if self.condition.name in self.cool_conditions:
-                self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
-                self.pub_save.publish(old_id)
+            self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
 
         self.update()
 

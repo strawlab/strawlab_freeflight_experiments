@@ -65,8 +65,6 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_COOL = 10
-
 XFORM = flyflypath.transform.SVGTransform()
 
 class Node(nodelib.node.Experiment):
@@ -79,9 +77,6 @@ class Node(nodelib.node.Experiment):
 
         self.pub_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
         self.pub_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
-
-        self.pub_pushover = rospy.Publisher('note', String)
-        self.pub_save = rospy.Publisher('save_object', UInt32)
 
         self.pub_velocity.publish(0,0,0)
         self.pub_size.publish(5.0)
@@ -111,8 +106,6 @@ class Node(nodelib.node.Experiment):
             self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
 
             self.blacklist = {}
-
-        self.n_cool = 0
 
         #start criteria for experiment
         self.x0 = self.y0 = 0
@@ -348,11 +341,7 @@ class Node(nodelib.node.Experiment):
         self.pub_velocity.publish(0,0,0)
 
         if (self.ratio_total > 2) and (old_id is not None):
-            if self.condition.name in self.cool_conditions:
-                if self.n_cool < MAX_COOL:
-#                    self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
-                    self.pub_save.publish(old_id)
-                    self.n_cool += 1
+            self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
 
         self.update()
 
