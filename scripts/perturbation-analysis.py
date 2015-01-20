@@ -60,7 +60,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
             name = combine.get_plot_filename('xy_%s' % condn)
             with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
                 ax = fig.add_subplot(1,1,1)
-                ax.set_title("%s" % cond, fontsize=12)
+                ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
                 for oid,_df in grouped_oid:
 
@@ -95,7 +95,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                     ax = fig.add_subplot(1,1,1)
                     ax2 = ax.twinx()
 
-                    ax.set_title("%s" % cond, fontsize=12)
+                    ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
                     ax.text(0.01, 0.99, #top left
                             "n=%d" % len(to_pool),
@@ -143,7 +143,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         i = None
         for cond in sorted(completed_perturbations.keys()):
             #make condition markdown table safe
-            scond = cond.replace('|','&#124;')
+            scond = combine.get_condition_name(cond)
             for i,(perturb_obj,oid,pl,tl) in enumerate(completed_perturbations[cond]):
                 if i == 0:
                     #first row
