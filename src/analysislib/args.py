@@ -12,7 +12,7 @@ import autodata.files
 
 from strawlab.constants import DATE_FMT
 
-from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
+from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL
 from .arenas import get_arena_from_args
 
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
@@ -53,6 +53,7 @@ DATA_MODIFYING_ARGS = [
     'lenfilt',
     'trajectory_start_offset',
     'custom_filt','custom_filt_len',
+    'filter_interval'
 ]
 
 def get_parser(*only_these_options, **defaults):
@@ -63,7 +64,7 @@ def get_parser(*only_these_options, **defaults):
     :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_args`
     """
 
-    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
+    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL)
 
     parser = _ArenaAwareArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     if not only_these_options or "csv-file" in only_these_options:
@@ -179,6 +180,12 @@ def get_parser(*only_these_options, **defaults):
                  '(i.e. from the csv) trajectory from which to keep data. if negative '\
                  'this means include data before the trial began. if positive this '\
                  'ignores data at the start of a trajectory')
+    if not only_these_options or "filter-interval" in only_these_options:
+        parser.add_argument(
+            '--filter-interval', type=float,
+            default=defaults.get('filter_interval',0.3),
+            help="when using 'triminterval' filter methods, the length over "\
+                 "which the filter must match in order for data to be trimmed. ")
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str,

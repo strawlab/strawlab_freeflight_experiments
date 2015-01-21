@@ -76,7 +76,7 @@ class _Combine(object):
         self._conditions = {}
         self._condition_names = {}
 
-        self._configdict = {'v':8,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':9,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -1020,6 +1020,7 @@ class CombineH5WithCSV(_Combine):
         skipped = self._skipped
 
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
+        filter_kwargs = {"filter_interval_frames":int(args.filter_interval/self._dt)}
 
         for oid, lodf in csv.groupby('lock_object'):
 
@@ -1097,12 +1098,15 @@ class CombineH5WithCSV(_Combine):
                 valid_z_cond = analysislib.filters.filter_z(
                                             args.zfilt,
                                             valid['z'],
-                                            args.zfilt_min, args.zfilt_max)
+                                            args.zfilt_min, args.zfilt_max,
+                                            **filter_kwargs)
+
                 #filter based on radius
                 valid_r_cond = analysislib.filters.filter_radius(
                                             args.rfilt,
                                             valid['x'],valid['y'],
-                                            args.rfilt_max)
+                                            args.rfilt_max,
+                                            **filter_kwargs)
 
                 valid_cond = valid_z_cond & valid_r_cond
 
