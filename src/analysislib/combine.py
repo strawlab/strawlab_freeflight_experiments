@@ -933,7 +933,8 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-        self._save_cache_file()
+        if args.cached:
+            self._save_cache_file()
 
     def get_spanned_results(self):
         spanned = {}
