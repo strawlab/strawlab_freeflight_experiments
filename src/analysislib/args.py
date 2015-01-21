@@ -94,7 +94,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "cached" in only_these_options:
         parser.add_argument(
             '--no-cached', action='store_false', dest='cached',
-            default=defaults.get('no_cached') if 'no_cached' in defaults else not defaults.get('cached',False),
+            default=not defaults.get('no_cached') if 'no_cached' in defaults else not defaults.get('cached',False),
             help='load cached analysis pkl file')
     if not only_these_options or "ignore-permission-errors" in only_these_options:
         parser.add_argument(
