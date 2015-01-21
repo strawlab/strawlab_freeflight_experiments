@@ -1019,6 +1019,8 @@ class CombineH5WithCSV(_Combine):
         results = self._results
         skipped = self._skipped
 
+        frames_start_offset = int(args.trajectory_start_offset / self._dt)
+
         for oid, lodf in csv.groupby('lock_object'):
 
             #
@@ -1079,8 +1081,8 @@ class CombineH5WithCSV(_Combine):
                     fdf['condition'].replace(original_condition,fixed_condition,inplace=True)
 
                 #get the comparible range of data from flydra
-                if args.frames_before != 0:
-                    start_frame = trial_framenumbers[0] - args.frames_before
+                if frames_start_offset != 0:
+                    start_frame = trial_framenumbers[0] + frames_start_offset
                 else:
                     start_frame = trial_framenumbers[0]
 
@@ -1176,7 +1178,7 @@ class CombineH5WithCSV(_Combine):
                         #unique.
                         #
                         #an outer join allows the tracking data to have started
-                        #before the csv (frames_before)
+                        #before the csv (frames_start_offset)
 
                         #delete the framenumber from the h5 dataframe, it only
                         #duplicates what should be in the index anyway

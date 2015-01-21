@@ -583,7 +583,6 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
 
                 series["%d"%obj_id] = pandas.Series(val,ts)
 
-            ax.set_xlim(-args.frames_before,100*max(6,args.lenfilt*2))
             if dvdt:
                 ax.set_ylim(-0.0005,0.0005)
             else:
