@@ -115,7 +115,7 @@ if __name__ == "__main__":
         '-q', '--quiet', action='store_true',
         help='only print uuids according to the grouped value')
     parser.add_argument(
-        '-g', '--groupby', choices=['condition','genotype'],
+        '-g', '--groupby', choices=['condition','genotype','none'],
         help='print and optionally group by this information in each experiment')
     parser.add_argument(
         '-G', '--groupby-value',
@@ -149,6 +149,9 @@ if __name__ == "__main__":
         print "\nSUMMARY"
         for k,v in collections.Counter(unique).items():
             print "%d\t%s" % (v,k)
+
+    if args.groupby == 'none':
+        print " ".join(map(str,(r.uuid for r in results)))
 
     if args.groupby_value:
         if not args.quiet:
