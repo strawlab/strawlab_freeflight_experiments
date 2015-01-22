@@ -16,8 +16,7 @@ import autodata.model
 import autodata.files
 import strawlab.constants
 
-DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --arena %s'
+DEFAULT_ARGS    = '--uuid %s --arena %s'
 
 EXCEPT = set()
 
