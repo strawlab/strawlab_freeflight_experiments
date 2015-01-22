@@ -1158,7 +1158,7 @@ class CombineH5WithCSV(_Combine):
                     self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
                                             n_samples,
                                             traj_start_frame,traj_stop_frame,
-                                            oid,cond))
+                                            oid,self.get_condition_name(cond)))
 
                     if self._index == 'framenumber':
                         #if the csv has been written at a faster rate than the
