@@ -1108,7 +1108,7 @@ class CombineH5WithCSV(_Combine):
 
                 n_samples = len(validframenumber)
                 if n_samples < dur_samples:
-                    self._debug('TRIM:   %d samples for obj_id %d' % (n_samples,oid))
+                    self._debug('FILT:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
                     self._skipped[cond] += 1
                     continue
 
