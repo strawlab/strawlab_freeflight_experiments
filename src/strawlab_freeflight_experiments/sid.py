@@ -182,18 +182,19 @@ function g = do_spa(trial_data,title)
     w = logspace(-2,2,100);
     g = spa(trial_data,[],w);
     opt = bodeoptions;
-    opt.Title.Interpreter = 'none';
     if title
         opt.Title.String = title;
     end
+    opt.Title.Interpreter = 'none';
     h = bodeplot(g,w,opt);
     showConfidence(h,1);
-end""",iddata,title,
+end""",iddata,title.replace('_',''),
        nout=1,saveout=(mlab.varname('idfrd'),))
     return idfrd_model
 
 def compare_models(mlab,title,iddata,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs if not r.failed])
     model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
@@ -205,7 +206,8 @@ legend(ax(2),%s);
 title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
 def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
@@ -232,7 +234,8 @@ setoptions(h,'YLimMode','manual','YLim',ylims);
          'showConfidence(h,1);' if show_confidence else ''))
 
 def pzmap_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
