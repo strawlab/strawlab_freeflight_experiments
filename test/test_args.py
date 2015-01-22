@@ -19,8 +19,8 @@ class TestArgs(unittest.TestCase):
         self.assertRaises(SystemExit, aargs.check_args, parser, args)
 
     def test_get_parser(self):
-        p1 = aargs.get_parser("zfilt")
-        self.assertEqual(p1.get_default("zfilt"), "trim")
+        p1 = aargs.get_parser("show")
+        self.assertEqual(p1.get_default("show"), False)
         p2 = aargs.get_parser("zfilt",zfilt="none")
         self.assertEqual(p2.get_default("zfilt"), "none")
 
