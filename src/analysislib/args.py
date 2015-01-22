@@ -15,6 +15,8 @@ from strawlab.constants import DATE_FMT
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL
 from .arenas import get_arena_from_args
 
+REQUIRED_ARENA_DEFAULTS = ("zfilt_max","zfilt_min","rfilt_max","rfilt","zfilt","trajectory_start_offset")
+
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
         args = argparse.ArgumentParser.parse_args(self, *args, **kwargs)
@@ -24,6 +26,10 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
             arena = get_arena_from_args(args)
         except ValueError, e:
             parser.error(e.message)
+
+        rad = set(REQUIRED_ARENA_DEFAULTS)
+        if set(arena.get_filter_properties().keys()) != rad:
+            raise ValueError("Arenas must supply defaults for %s" % ",".join(rad))
 
         for k,v in arena.get_filter_properties().items():
             if getattr(args,k,None) is None:

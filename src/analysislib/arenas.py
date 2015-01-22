@@ -38,7 +38,7 @@ class ArenaBase(object):
     def plot_mpl_3d(self, ax, *args, **kwargs):
         pass
     def get_filter_properties(self):
-        return {}
+        raise NotImplementedError
     def apply_filter(self, args, valid, dt):
         return np.ones_like(valid['framenumber']),np.ones_like(valid['framenumber'])
 
