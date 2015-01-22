@@ -142,28 +142,4 @@ def filter_cond(method, cond, alldata, filter_interval_frames):
     else:
         raise Exception("Unknown filter method")
 
-def filter_z(method, allz, minz, maxz, **kwargs):
-    cond = (minz < allz) & (allz < maxz)
-    return filter_cond(method, cond, allz, **kwargs)
-
-def filter_radius(method, allx, ally, maxr, **kwargs):
-    rad = np.sqrt(allx**2 + ally**2)
-    cond = rad < maxr
-    return filter_cond(method, cond, allx, **kwargs)
-
-if __name__ == "__main__":
-    z = np.array([2,2,3,2,3,4,5,5,4,3,2,2,0])
-
-    print "z     ", z
-    print "remove", z[filter_z(FILTER_REMOVE,z,1,4)]
-    print "trim  ", z[filter_z(FILTER_TRIM,z,1,4)]
-    print "noop  ", z[filter_z(FILTER_NOOP,z,1,4)]
-
-    x = np.array([2,2,2,2,2,2,2])
-    y = np.array([2,2,2,3,4,2,4])
-    print "y     ", y
-    print "remove", y[filter_radius(FILTER_REMOVE,x,y,4.2)]
-    print "trim  ", y[filter_radius(FILTER_TRIM,x,y,4.2)]
-    print "noop  ", y[filter_radius(FILTER_NOOP,x,y,4.2)]
-
 

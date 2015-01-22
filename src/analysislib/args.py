@@ -25,7 +25,7 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
         except ValueError, e:
             parser.error(e.message)
 
-        for k,v in arena.get_geometry_filter_properties().items():
+        for k,v in arena.get_filter_properties().items():
             if getattr(args,k,None) is None:
                 setattr(args,k,v)
 

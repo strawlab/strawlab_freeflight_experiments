@@ -26,7 +26,6 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 
 import analysislib.fixes
-import analysislib.filters
 import analysislib.args
 import analysislib.curvature as acurve
 
@@ -1019,8 +1018,9 @@ class CombineH5WithCSV(_Combine):
         results = self._results
         skipped = self._skipped
 
+        arena = analysislib.args.get_arena_from_args(args)
+
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
-        filter_kwargs = {"filter_interval_frames":int(args.filter_interval/self._dt)}
 
         for oid, lodf in csv.groupby('lock_object'):
 
@@ -1094,23 +1094,9 @@ class CombineH5WithCSV(_Combine):
 
                 valid = trajectories.readWhere(query)
 
-                #filter the trajectories based on Z value
-                valid_z_cond = analysislib.filters.filter_z(
-                                            args.zfilt,
-                                            valid['z'],
-                                            args.zfilt_min, args.zfilt_max,
-                                            **filter_kwargs)
-
-                #filter based on radius
-                valid_r_cond = analysislib.filters.filter_radius(
-                                            args.rfilt,
-                                            valid['x'],valid['y'],
-                                            args.rfilt_max,
-                                            **filter_kwargs)
-
-                valid_cond = valid_z_cond & valid_r_cond
-
-                validframenumber = valid['framenumber'][valid_cond]
+                #apply filters based on experimental arena
+                filter_cond,valid_cond = arena.apply_filter(args, valid, self._dt)
+                validframenumber = valid['framenumber'][filter_cond]
 
                 n_samples = len(validframenumber)
                 if n_samples < dur_samples:
@@ -1124,7 +1110,7 @@ class CombineH5WithCSV(_Combine):
 
                 flydra_series = []
                 for a in 'xyz':
-                    avalid = valid[a][valid_cond]
+                    avalid = valid[a][filter_cond]
                     flydra_series.append( pd.Series(avalid,name=a,index=validframenumber) )
 
                 #we can now create a dataframe that has the flydra data, and the
