@@ -110,7 +110,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,
-            default=defaults.get('zfilt', 'trim'),
+            default=defaults.get('zfilt', None),
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
@@ -144,7 +144,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
             '--rfilt', type=str, choices=filt_choices,
-            default=defaults.get('rfilt', 'trim'),
+            default=defaults.get('rfilt', None),
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
