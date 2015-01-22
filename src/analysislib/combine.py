@@ -300,9 +300,17 @@ class _Combine(object):
         trials are skipped if they do not meet all the filter criteria"""
         return self._skipped.get(condition,0)
 
+    def get_total_skipped(self):
+        """returns the total trials skipped for all conditions"""
+        return sum([self.get_num_skipped(c) for c in self.get_conditions()])
+
     def get_num_analysed(self, condition):
         """returns the number of trials which met the filter criteria"""
         return self._results[condition]['count']
+
+    def get_total_analysed(self):
+        """returns the total number of trials which met the filter criteria for all conditions"""
+        return sum([self.get_num_analysed(c) for c in self.get_conditions()])
 
     def get_num_trials(self, condition):
         """returns the total number of trials in the data for the givent condition"""
