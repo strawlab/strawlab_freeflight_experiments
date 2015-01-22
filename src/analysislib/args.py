@@ -181,7 +181,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "trajectory-start-offset" in only_these_options:
         parser.add_argument(
             '--trajectory-start-offset', type=float,
-            default=defaults.get('trajectory_start_offset',0.0),
+            default=defaults.get('trajectory_start_offset',None),
             help='number of seconds to relative to the start of each trial '\
                  '(i.e. from the csv) trajectory from which to keep data. if negative '\
                  'this means include data before the trial began. if positive this '\
