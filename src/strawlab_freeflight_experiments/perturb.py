@@ -81,11 +81,11 @@ class Perturber:
     def __eq__(self, o):
         return (self.progress == o.progress) and (self.descriptor == o.descriptor)
 
-    def _get_duration(self):
-        return 0.98*self.duration
+    def _get_duration(self, thresh=0.98):
+        return thresh*self.duration
 
-    def _get_duration_discrete(self, Fs):
-        return int(self._get_duration()*Fs)
+    def _get_duration_discrete(self, Fs, thresh=0.98):
+        return int(self._get_duration(thresh)*Fs)
 
     def get_perturb_range_identifier(self, v):
         for i,f in enumerate(self.in_ratio_funcs):
@@ -93,11 +93,11 @@ class Perturber:
                 return i
         return -1
 
-    def completed_perturbation(self, t):
-        return t >= self._get_duration()
+    def completed_perturbation(self, t, thresh=0.98):
+        return t >= self._get_duration(thresh)
 
-    def completed_perturbation_discrete(self, lidx, fidx, Fs):
-        return (lidx > fidx) and ((lidx - fidx) > self._get_duration_discrete(Fs))
+    def completed_perturbation_discrete(self, lidx, fidx, Fs, thresh=0.98):
+        return (lidx > fidx) and ((lidx - fidx) > self._get_duration_discrete(Fs,thresh))
 
     def reset(self):
         self.progress = -1

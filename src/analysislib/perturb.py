@@ -10,7 +10,7 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio, perturbation_length, trajectory_length, condition')
 
-def collect_perturbation_traces(combine, args):
+def collect_perturbation_traces(combine, completion_threshold=0.98):
     results,dt = combine.get_results()
 
     perturbations = collections.OrderedDict()           #perturb_obj: {obj_id:PerturbationHolder,...}
@@ -61,7 +61,7 @@ def collect_perturbation_traces(combine, args):
                 tmax = df['talign'].max()
                 traj_length = tmax - df['talign'].min()
 
-                completed = step_obj.completed_perturbation(tmax) and (lidx > fidx)
+                completed = step_obj.completed_perturbation(tmax, completion_threshold) and (lidx > fidx)
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 

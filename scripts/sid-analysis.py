@@ -114,14 +114,23 @@ if __name__=='__main__':
     parser = analysislib.args.get_parser()
     parser.add_argument(
         "--min-fit-pct", type=float, default=40,
-        help='minimum model fit percentage')
+        help='minimum model fit percentage for model order selection')
+    parser.add_argument(
+        "--min-fit-pct-individual", type=float,
+        help='minimum model fit percentage for individual models')
     parser.add_argument(
         "--models", type=str, default="tf44,tf33,oe441,oe331,arx441,arx331",
         help='model specs to test')
+    parser.add_argument(
+        "--perturb-completion-threshold", type=float, default=0.98,
+        help='perturbations must be this complete to be counted')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
+
+    if args.min_fit_pct_individual is None:
+        args.min_fit_pct_individual = args.min_fit_pct * 0.5
 
     MODEL_SPECS_TO_TEST = args.models.split(',')
 
@@ -137,7 +146,8 @@ if __name__=='__main__':
 
     aplt.save_args(combine, args)
 
-    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
+    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+                                                    completion_threshold=args.perturb_completion_threshold)
 
     plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
     plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
@@ -158,7 +168,7 @@ if __name__=='__main__':
             system_us = []
             system_ys = []
 
-            individual_iddata = []
+            individual_iddata = []          #[(iddata_object,perturbation_holder,len_data),...]
             individual_iddata_mean = None
 
             for ph in phs.itervalues():
@@ -175,13 +185,13 @@ if __name__=='__main__':
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-LOOKBACK):ph.end_idx]
                     iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
-                    individual_iddata.append(iddata)
+                    individual_iddata.append((iddata,ph,len(pdf_extra)))
 
                     dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
 
         if not any_completed_perturbations:
-            print "NO COMPLETED PERTURBATIONS"
+            print "%s: NO COMPLETED PERTURBATIONS" % combine.get_condition_name(cond)
 
         if any_completed_perturbations:
             #upload the pooled
@@ -192,7 +202,7 @@ if __name__=='__main__':
 
             n_completed = system_u_df.shape[-1]
 
-            print "%d completed perturbations (%s)" % (n_completed, cond)
+            print "%s: %d completed perturbations" % (combine.get_condition_name(cond), n_completed)
 
             individual_iddata_mean = sfe_sid.upload_data(mlab,
                                          system_y_df_mean.values,
@@ -209,7 +219,7 @@ if __name__=='__main__':
             pooled_id_varname = mlab.varname('iddata')
             mlab.run_code("%s = merge(%s);" % (
                     pooled_id_varname,
-                    ','.join([str(i) for i in individual_iddata])))
+                    ','.join([str(i[0]) for i in individual_iddata])))
             pooled_id = mlab.proxy_variable(pooled_id_varname)
             dest = combine.get_plot_filename("iddata_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
@@ -223,7 +233,7 @@ if __name__=='__main__':
             #over the perturbation period (as that data is less noisy)
             for spec in MODEL_SPECS_TO_TEST:
                 result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec)
-                print "testing model order on mean of %r trajectories = %s" % (n_completed,result_obj)
+                print "\ttested model order = %s" % result_obj
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
@@ -276,7 +286,7 @@ if __name__=='__main__':
                 ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
                 ax.set_title(title)
 
-            print "perturbation", perturbation_obj, len(possible_models), "passed min fit critiera"
+            print "\t", len(possible_models), "models passed min fit critiera"
 
             #MATLAB PLOTTING FROM HERE
             if not possible_models:
@@ -312,13 +322,14 @@ if __name__=='__main__':
             for pm in possible_models:
                 indmdls = []
                 meanmdls = []
-                for n,i in enumerate(individual_iddata):
+                for i,ph,idlen in individual_iddata:
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
                     #accept a lower fit due to noise on the individual trajectories
-                    if mdl.fitpct > (0.5*args.min_fit_pct):
-                        mdl.name = '%s_%d' % (pm.spec,n)
+                    if mdl.fitpct > (args.min_fit_pct_individual):
+                        mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
                         mdl.matlab_color = 'k'
                         indmdls.append(mdl)
+                        print "\tindividual model: %s (%.1f%%, %s frames)" % (mdl, mdl.fitpct,idlen)
                 if indmdls:
                     extra_models = []
 

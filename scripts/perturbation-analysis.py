@@ -34,7 +34,8 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
     #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
     #perturb_obj:cond
 
-    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
+    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+                                                    completion_threshold=args.perturb_completion_threshold)
 
     for step_obj in perturbations:
         phs = perturbations[step_obj]
@@ -164,6 +165,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-perturb-start-id", type=int,
         help='only plot perturbations that started in this id')
+    parser.add_argument(
+        "--perturb-completion-threshold", type=float, default=0.98,
+        help='perturbations must be this complete to be counted')
 
     args = parser.parse_args()
 
