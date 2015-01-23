@@ -115,7 +115,10 @@ def filter_cond(method, cond, alldata, filter_interval_frames):
             valid zone.
     NOOP:   remove no values
     """
-
+    if not isinstance(cond, np.ndarray):
+        cond = np.array(cond)
+    if not isinstance(alldata, np.ndarray):
+        alldata = np.array(alldata)
 
     if method == FILTER_NOOP:
         return np.ones_like(alldata, dtype=np.bool)

@@ -16,6 +16,7 @@ import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.legend as mlegend
 import matplotlib.text as mtext
+import matplotlib.transforms as mtransforms
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 from dateutil.rrule import rrule, SECONDLY
@@ -621,7 +622,7 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
     return x
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None, show_filter_args=None):
     if name is None:
         name = '%s.infinity' % combine.fname
 
@@ -651,6 +652,22 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         _ax.set_ylim(*ylimits.get("z",(0, 1)))
         _ax.set_ylabel("z")
+
+        if show_filter_args:
+            filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
+            filt_valid,filt_cond = filt_arena.apply_filter(show_filter_args, _df, dt)
+
+            trans = mtransforms.blended_transform_factory(_ax.transData, _ax.transAxes)
+            _ax.fill_between(filt_cond.index.values,
+                             0, 1,
+                             ~filt_cond.values,
+                             facecolor='red', alpha=0.4, transform=trans)
+
+            try:
+                last_valid_frame = _df['framenumber'].values[filt_valid][-1]
+                _ax.axvline(last_valid_frame, color='b')
+            except IndexError:
+                #no valid frames
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
