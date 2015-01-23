@@ -44,14 +44,14 @@ def _show_mlab_figures(mlab):
             break
         time.sleep(0.1)
 
-def plot_perturbation_signal(combine, args, perturbations, completed_perturbations, perturbation_conditions):
+def plot_perturbation_signal(combine, args, perturbations, perturbation_conditions):
     for perturbation_obj in perturbations:
         cond = perturbation_conditions[perturbation_obj]
         name = combine.get_plot_filename('perturbation_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             sfe_perturb.plot_perturbation_frequency_characteristics(fig, perturbation_obj)
 
-def plot_input_output_characteristics(combine, args, perturbations, completed_perturbations, perturbation_conditions):
+def plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions):
 
     for perturbation_obj in perturbations:
 
@@ -137,13 +137,15 @@ if __name__=='__main__':
 
     aplt.save_args(combine, args)
 
-    perturbations, completed_perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
+    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
 
-    plot_perturbation_signal(combine, args, perturbations, completed_perturbations, perturbation_conditions)
-    plot_input_output_characteristics(combine, args, perturbations, completed_perturbations, perturbation_conditions)
+    plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
+    plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
 
     #loop per condition
     for perturbation_obj in perturbations:
+
+        any_completed_perturbations = False
 
         cond = perturbation_conditions[perturbation_obj]
         condn = aplt.get_safe_filename(cond, allowed_spaces=False)
@@ -152,8 +154,6 @@ if __name__=='__main__':
         #any perturbations started
         phs = perturbations[perturbation_obj]
         if phs:
-            any_completed_perturbations = False
-
             #all input_u/output_y data for all completed perturbations
             system_us = []
             system_ys = []
