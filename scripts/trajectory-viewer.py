@@ -25,6 +25,7 @@ if __name__=='__main__':
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
+                    trajectory_start_offset=0.0
     )
     parser.add_argument(
         '--index', default='framenumber',

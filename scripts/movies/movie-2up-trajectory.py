@@ -211,7 +211,9 @@ def doit(combine, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, sho
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser(zfilt='none', rfilt='none')
+    parser = analysislib.args.get_parser(zfilt='none',
+                                         rfilt='none',
+                                         trajectory_start_offset=0.0)
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
         help='path to fmf file (if not using --uuid)')
