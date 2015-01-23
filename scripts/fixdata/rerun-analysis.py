@@ -33,7 +33,8 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
         todo = []
         for res in model.query(model.table('experiment'), distinct_on="start_secs"):
             if res.title.startswith(args.type):
-                todo.append(res.uuid)
+                if not res.hidden:
+                    todo.append(res.uuid)
     except KeyError:
         model.close()
         print desc
@@ -78,7 +79,7 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
             else:
                 lenfilt = "1"
             opts = DEFAULT_ARGS % (uuid, arena)
-            opts = opts.replace(DEFAULT_LENFILT, '--lenfilt %s' % lenfilt)
+            opts += '--lenfilt %s' % lenfilt
             where = 'r'
         else:
             raise Exception("Error generating arguments")
