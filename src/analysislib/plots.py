@@ -668,6 +668,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
                 _ax.axvline(last_valid_frame, color='b')
             except IndexError:
                 #no valid frames
+                pass
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
