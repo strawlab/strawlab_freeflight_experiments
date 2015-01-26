@@ -444,7 +444,7 @@ class _Combine(object):
 
         Parameters
         ----------
-        filter_func: function (df, start_obj_id, uuid, dt) -> True, default _ -> True (keep all)
+        filter_func: function (df, start_obj_id, uuid, dt) -> boolean, default _ -> True (keep all)
           The predicate to evaluate on each trial data; only trials that evaluate to True are kept
 
         Returns
