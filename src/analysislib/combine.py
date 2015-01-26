@@ -227,6 +227,12 @@ class _Combine(object):
         self._warn_cache[m] += 1
 
     @property
+    def dt(self):
+        if self._dt is None:
+            raise ValueError("instance contains no data")
+        return self._dt
+
+    @property
     def analysis_type(self):
         if self._analysistype is None:
             return os.path.basename(sys.argv[0])
