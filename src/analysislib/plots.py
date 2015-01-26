@@ -229,7 +229,47 @@ def plot_saccades(combine, args, figncols, name=None):
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
+
 def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
+    """
+    PLots the 2D/3D trajectories in a virtual arena.
+
+    Parameters
+    ----------
+    - combine: Combine object
+      carries information about trials (in this case we need just x, y and possibly z)
+      Also:
+        combine.fname: to construct the default file name
+      :type combine: analysislib.combine.CombineH5WithCSV
+    - args: dictionary-like from argparse / cli arguments framework / manually constructed
+      carries some of the configuration for the plots from command line
+      From it we get:
+        - args.ignore_permission_errors: whether to check if we can set the ownership permissions
+                                         in the output directory or do not check
+        - args.arena: the arena id, used to get proper arena geometry
+        - args.outdir: if defined and not None, the directory where the plot will be saved
+        - args.show_obj_ids: if True, we display a legend with the oid of each trace
+    - figncols: int
+      The number of plots that will be layed-out together (think of the webpage, one per condition)
+    - in3d: boolean
+      If False, plot just (x, y), else plot (x, y, z)
+    - name: string
+      the file name/path that will be given to the saved plot, if None a default name is inferred from combine
+    - show_starts: boolean, default False
+      if true, displays the start of the trajectory as a green dot.
+    -show_ends: boolean, default False
+      if true, displays the end of the trajectory as a red dot.
+    - alpha: float in [0, 1], default 0.5
+      alpha-transparency value for the traces. Useful to play with depending on the number of traces to show.
+
+    Returns
+    -------
+    None
+
+    Side effects
+    ------------
+    Stores the figure plot where specified in the options
+    """
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
