@@ -32,6 +32,7 @@ def get_matlab_file(name):
 class _SIDFail(object):
     fitpct = 0
     failed = True
+    perturb_holder = None
 
 class _SIDResult(object):
     def __init__(self, abrv, est_args, z, p, k, fitpct, fitmse, sid_data, sid_model):
@@ -49,6 +50,8 @@ class _SIDResult(object):
         self.name = ''
         self.matlab_color = 'k'
         self.failed = False
+
+        self.perturb_holder = None
 
     #these are vectors if the id was performed on a merged iddata object
     @property

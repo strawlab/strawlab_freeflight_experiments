@@ -156,6 +156,7 @@ if __name__=='__main__':
     for perturbation_obj in perturbations:
 
         any_completed_perturbations = False
+        individual_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
         condn = aplt.get_safe_filename(cond, allowed_spaces=False)
@@ -292,7 +293,6 @@ if __name__=='__main__':
             if not possible_models:
                 continue
 
-
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,condn))
             title = 'Model Comparison: %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
@@ -320,17 +320,22 @@ if __name__=='__main__':
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
             for pm in possible_models:
-                indmdls = []
-                meanmdls = []
+
+                individual_models[pm] = []
+
                 for i,ph,idlen in individual_iddata:
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
                     #accept a lower fit due to noise on the individual trajectories
                     if mdl.fitpct > (args.min_fit_pct_individual):
                         mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
                         mdl.matlab_color = 'k'
-                        indmdls.append(mdl)
+                        mdl.perturb_holder = ph
+
+                        individual_models[pm].append(mdl)
+
                         print "\tindividual model: %s (%.1f%%, %s frames)" % (mdl, mdl.fitpct,idlen)
-                if indmdls:
+
+                if individual_models[pm]:
                     extra_models = []
 
                     #create a merged model from the individual models (mean of models)
@@ -338,16 +343,18 @@ if __name__=='__main__':
                         mom_varname = mlab.varname('sidmodelmerged')
                         mlab.run_code("%s = merge(%s);" % (
                                 mom_varname,
-                                ','.join([str(r.sid_model) for r in indmdls])))
+                                ','.join([str(r.sid_model) for r in individual_models[pm]])))
                         merged_model = sfe_sid.SIDResultMerged(mlab.proxy_variable(mom_varname), pm.spec)
                         merged_model.matlab_color = 'b'
                         extra_models.append(merged_model)
                     except RuntimeError,e:
-                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(indmdls),pm.spec,e)
+                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(individual_models[pm]),pm.spec,e)
 
                     #also show the model mad on the basis of the mean trajectories
                     pm.matlab_color = 'r'
                     extra_models.append(pm)
+
+                    indmdls = individual_models[pm]
 
                     #and also a model based on all the data
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
@@ -385,6 +392,33 @@ if __name__=='__main__':
                     if EPS:
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
+
+            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
+            with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
+                ax = fig.add_subplot(1,1,1)
+
+                lbls = []
+                locs = []
+                data = []
+
+                for i,pm in enumerate(sorted(individual_models, key=lambda x: x.spec)):
+                    data.append( [max(-1,mdl.fitpct) for mdl in individual_models[pm]] )
+                    locs.append(i+1)
+                    lbls.append(pm.spec)
+
+                try:
+                    ax.boxplot(data,labels=lbls)
+                except TypeError:
+                    #old mpl version
+                    ax.boxplot(data,positions=locs)
+                    ax.set_xticks(locs)
+                    ax.set_xticklabels(lbls)
+                    ax.set_xlim(0,locs[-1]+1)
+
+                ax.set_ylim(-1,100)
+                ax.set_ylabel('fit to data (pct)')
+                ax.set_title('Individual model fits\n%s' % combine.get_condition_name(cond))
+
 
     if args.show:
         t = threading.Thread(target=_show_mlab_figures, args=(mlab,))
