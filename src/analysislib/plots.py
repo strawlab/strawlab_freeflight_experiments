@@ -241,7 +241,7 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
       Also:
         combine.fname: to construct the default file name
       :type combine: analysislib.combine.CombineH5WithCSV
-    - args: dictionary-like from argparse blah
+    - args: dictionary-like from argparse / cli arguments framework / manually constructed
       carries some of the configuration for the plots from command line
       From it we get:
         - args.ignore_permission_errors: whether to check if we can set the ownership permissions
@@ -254,7 +254,7 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
     - in3d: boolean
       If False, plot just (x, y), else plot (x, y, z)
     - name: string
-      the file name that will be given to the saved plot, if None a default name is inferred from combine
+      the file name/path that will be given to the saved plot, if None a default name is inferred from combine
     - show_starts: boolean, default False
       if true, displays the start of the trajectory as a green dot.
     -show_ends: boolean, default False
@@ -265,6 +265,10 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
     Returns
     -------
     None
+
+    Side effects
+    ------------
+    Stores the figure plot where specified in the options
     """
     figsize = (5.0*figncols,5.0)
     if name is None:
