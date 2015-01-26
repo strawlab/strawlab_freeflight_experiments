@@ -109,7 +109,6 @@ if __name__=='__main__':
 
     EPS = False
     DETREND = True
-    LOOKBACK = 400
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
@@ -124,6 +123,10 @@ if __name__=='__main__':
     parser.add_argument(
         "--perturb-completion-threshold", type=float, default=0.98,
         help='perturbations must be this complete to be counted')
+    parser.add_argument(
+        "--lookback", type=float, default=4.0,
+        help="number of seconds of data before perturbation to include "\
+             "in analysis")
 
     args = parser.parse_args()
 
@@ -143,6 +146,8 @@ if __name__=='__main__':
     combine = autil.get_combiner_for_args(args)
     combine.set_index('time+10L')
     combine.add_from_args(args)
+
+    lookback_frames = int(args.lookback * combine.dt)
 
     aplt.save_args(combine, args)
 
@@ -184,7 +189,7 @@ if __name__=='__main__':
 
                     #upload to matlab the data for this perturbation and also including
                     #some data before the perturbation
-                    pdf_extra = ph.df.iloc[max(0,ph.start_idx-LOOKBACK):ph.end_idx]
+                    pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
                     iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
                     individual_iddata.append((iddata,ph,len(pdf_extra)))
 
