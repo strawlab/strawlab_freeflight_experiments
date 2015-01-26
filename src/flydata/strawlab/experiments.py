@@ -138,17 +138,18 @@ def load_freeflight_experiments(uuids,
 
 
 # ah pickle limits
-def _trajs_from_experiment(experiment):
-    return experiment.trajectories()
+def _trajs_from_experiment(experiment, filter_id=None):
+    return experiment.trajectories(filter_id=filter_id)
 
 
 def trajectories_from_experiments(experiments,
                                   project_root=None,
+                                  filter_id=None,
                                   n_jobs=1,
                                   with_conditions=None):
     # Read to memory
     trajs = Parallel(n_jobs=n_jobs)(delayed(_trajs_from_experiment)
-                                    (experiment)
+                                    (experiment, filter_id=filter_id)
                                     for experiment in experiments)
     # flatten
     trajs = list(chain(*trajs))
@@ -160,6 +161,7 @@ def trajectories_from_experiments(experiments,
 
 
 def load_freeflight_trajectories(uuids,
+                                 filter_id=None,
                                  project_root=None,
                                  n_jobs=1,
                                  md_transforms=None,
@@ -174,6 +176,11 @@ def load_freeflight_trajectories(uuids,
     project_root: string, default None
       Path to the directory where the experiments are stored.
       If None, read from the global freeflight data repository
+
+    filter_id: string, default None
+      When loading the trajectories from the strawlab central repository, this is the name of
+      the script used to generate the data (e.g. "translation_analysis.py").
+      When None, the recentmost analysis data is picked.
 
     n_jobs: int or None, default 1
       Number of threads used to read the data in.
@@ -207,7 +214,7 @@ def load_freeflight_trajectories(uuids,
                                               with_conditions=with_conditions,
                                               md_transforms=md_transforms,
                                               traj_transforms=traj_transforms)
-    return trajectories_from_experiments(experiments, with_conditions=with_conditions)
+    return trajectories_from_experiments(experiments, with_conditions=with_conditions, filter_id=filter_id)
 
 
 # These are contracts for the data in our trajectories
