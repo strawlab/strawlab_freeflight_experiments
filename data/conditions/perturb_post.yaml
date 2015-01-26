@@ -16,7 +16,7 @@ conflict_control_just-a-gray-post:
     z_gain: 0.18
     z_target: 0.2
     model_descriptor: justpost2.osg|-0.25|-0.12|-0.1
-conflict_perturbation_tone_3s_5hz:
+conflict_perturbation_tone_3s_3hz:
     cylinder_image: checkerboard16.png
     svg_path: infinity07.svg
     gain: 0.3
