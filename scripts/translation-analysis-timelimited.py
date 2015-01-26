@@ -24,6 +24,8 @@ import analysislib.util as autil
 def filter_trials_after_start(combine,
                               delta=timedelta(hours=2)):
     """
+    Returns a new combine object with only the trials that started before exp_start + delta.
+
     :type combine: analysislib.combine._Combine
     """
     # retrieve the experiment start times
@@ -32,6 +34,7 @@ def filter_trials_after_start(combine,
     def keep_before(unused1, soid, uuid, unused2):
         if uuid is None:
             return False  # Can happen even in basic examples, probably because of race conditions
+                          # FIXME: infer better the uuid in combine (easier if we assume only one exp at a time)
         if uuid not in datetime_limits:
             exp_md = find_experiment(uuid)[2]
             exp_start = exp_md['start_secs'] + 1E-9 * exp_md['start_nsecs']
@@ -47,7 +50,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    # hack: separate by uuid even if we specify an outdir
+    # hack: separate by uuid even if we specify an outdir, useful to debug
     if args.outdir is not None and not args.outdir.endswith(args.uuid[0]):
         args.outdir = os.path.join(args.outdir, args.uuid[0])
 
@@ -69,7 +72,7 @@ if __name__=='__main__':
     #   - add a new filter to the command line of combine scripts
     #   - create a script that will just do this
     #   - ...
-    combine_before = filter_trials_after_start(combine, delta=timedelta(hours=6)) #change delta here
+    combine_before = filter_trials_after_start(combine, delta=timedelta(hours=6))
 
     aplt.save_args(combine_before, args)
     aplt.save_results(combine_before, args)
