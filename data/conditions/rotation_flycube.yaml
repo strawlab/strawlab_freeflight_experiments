@@ -1,0 +1,49 @@
+rotation_infinity_1:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity05.svg
+    gain: 0.2
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.30
+    z_target: 0.18
+rotation_infinity_2:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity05.svg
+    gain: 0.15
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.30
+    z_target: 0.18
+rotation_infinity_3:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity05.svg
+    gain: 0.2
+    radius_when_locked: -10.0
+    advance_threshold: 0.15
+    z_gain: 0.30
+    z_target: 0.10
+rotation_infinity_4:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity05.svg
+    gain: 0.15
+    radius_when_locked: -10.0
+    advance_threshold: 0.15
+    z_gain: 0.30
+    z_target: 0.10
+rotation_zero_gain_control:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity05.svg
+    gain: 0.0
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.0
+    z_target: 0.18
+rotation_zero_texture_control:
+    cylinder_image: gray.png
+    svg_path: infinity05.svg
+    gain: 0.2
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.30
+    z_target: 0.18
+

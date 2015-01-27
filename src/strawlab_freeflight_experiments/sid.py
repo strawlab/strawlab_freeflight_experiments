@@ -32,6 +32,7 @@ def get_matlab_file(name):
 class _SIDFail(object):
     fitpct = 0
     failed = True
+    perturb_holder = None
 
 class _SIDResult(object):
     def __init__(self, abrv, est_args, z, p, k, fitpct, fitmse, sid_data, sid_model):
@@ -49,6 +50,8 @@ class _SIDResult(object):
         self.name = ''
         self.matlab_color = 'k'
         self.failed = False
+
+        self.perturb_holder = None
 
     #these are vectors if the id was performed on a merged iddata object
     @property
@@ -85,7 +88,6 @@ end""", self.sid_model, nout=2)
 
     @staticmethod
     def run_tfest(mlab,iddata,np,nz):
-        print repr(iddata)
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts)
@@ -183,18 +185,19 @@ function g = do_spa(trial_data,title)
     w = logspace(-2,2,100);
     g = spa(trial_data,[],w);
     opt = bodeoptions;
-    opt.Title.Interpreter = 'none';
     if title
         opt.Title.String = title;
     end
+    opt.Title.Interpreter = 'none';
     h = bodeplot(g,w,opt);
     showConfidence(h,1);
-end""",iddata,title,
+end""",iddata,title.replace('_',''),
        nout=1,saveout=(mlab.varname('idfrd'),))
     return idfrd_model
 
 def compare_models(mlab,title,iddata,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs if not r.failed])
     model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
@@ -206,7 +209,8 @@ legend(ax(2),%s);
 title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
 def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
@@ -233,7 +237,8 @@ setoptions(h,'YLimMode','manual','YLim',ylims);
          'showConfidence(h,1);' if show_confidence else ''))
 
 def pzmap_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
-    mlab.set_variable('figtitle',title)
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))

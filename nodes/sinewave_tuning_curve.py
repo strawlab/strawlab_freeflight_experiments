@@ -21,16 +21,16 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.model
 import flyflypath.transform
-import nodelib.log
+import nodelib.node
 import strawlab_freeflight_experiments.replay as sfe_replay
 import strawlab_freeflight_experiments.perturb as sfe_perturb
+import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
-SWITCH_MODE_TIME    = 5.0*60    #alternate between control and static (i.e. experimental control) seconds
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -55,39 +55,28 @@ TAU= 2*PI
 
 MAX_ROTATION_RATE = 1.5
 
-#CONDITION = "cylinder_image/
-#             svg_path(if omitted target = 0,0)/
-#             gain/
-#             radius_when_locked(+ve = centre of cylinder is locked to the fly)/
-#             advance_threshold(m)/
-#             z_gain,
-#             perturbation_descriptor"
-
-CONDITIONS = [
-]
-
-for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
-    duration=3.0
-    ratio_min=1.0
-    tf_hz=1.0
-    CONDITIONS.append(
-        "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20/stepn_wavelength_tf|2|%s|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06"%(np.deg2rad(lmbda_deg),tf_hz,duration,ratio_min))
-
-# condition with no perturbation
-CONDITIONS.append(  "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20" )
-
-START_CONDITION = CONDITIONS[0]
-#If there is a considerable flight in these conditions then a pushover
-#message is sent and a video recorded
-COOL_CONDITIONS = set()#set(CONDITIONS[0:])
 
 XFORM = flyflypath.transform.SVGTransform()
 
-class Logger(nodelib.log.CsvLogger):
-    STATE = ("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","wavelength")
+class Node(nodelib.node.Experiment):
+    def __init__(self, args):
+        super(Node, self).__init__(args=args,
+                                   state=("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","perturb_progress","wavelength"))
 
-class Node(object):
-    def __init__(self, wait_for_flydra, use_tmpdir, continue_existing):
+        #programatically add more conditions
+        base_cond = self.conditions.first_condtition()
+        for lmbda_deg in [12.25,22.5,45.0,90.0,180.0]:
+            duration=3.0
+            ratio_min=1.0
+            tf_hz=1.0
+            perturb_desc = "stepn_wavelength_tf|2|%s|%s|%s|%s|0.46|0.56|0.96|1.0|0.0|0.06" % (np.deg2rad(lmbda_deg),tf_hz,duration,ratio_min)
+
+            new_cond_name = "perturbation_step_wl%.1f" % lmbda_deg
+            new_cond = sfe_conditions.Condition(base_cond)
+            new_cond.name = new_cond_name
+            new_cond['perturb_desc'] = perturb_desc
+
+            self.conditions[new_cond_name] = new_cond
 
         self._pub_stim_mode = display_client.DisplayServerProxy
         self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
@@ -110,8 +99,6 @@ class Node(object):
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
-
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
@@ -146,49 +133,38 @@ class Node(object):
         self.trg_pub = rospy.Publisher("target", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
-        self.switch_conditions(None,force=START_CONDITION)
-
-        self.timer = rospy.Timer(rospy.Duration(SWITCH_MODE_TIME),
-                                  self.switch_conditions)
+        self.switch_conditions()
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    @property
-    def is_perturbation_experiment(self):
-        return not isinstance(self.perturber, sfe_perturb.NoPerturb)
-    @property
-    def is_replay_experiment_rotation(self):
-        return np.isnan(self.p_const)
-    @property
-    def is_replay_experiment_z(self):
-        return np.isnan(self.v_gain)
+    def is_perturbation_experiment(self, what):
+        return (not isinstance(self.perturber, sfe_perturb.NoPerturb)) and self.perturber.what == what
 
-    def switch_conditions(self,event,force=''):
-        if force:
-            self.condition = force
+    def is_replay_experiment(self, what):
+        if what == 'rotation_rate':
+            return np.isnan(self.p_const)
+        elif what == 'z':
+            return np.isnan(self.v_gain)
         else:
-            i = CONDITIONS.index(self.condition)
-            j = (i+1) % len(CONDITIONS)
-            self.condition = CONDITIONS[j]
-        self.log.condition = self.condition
+            raise Exception("Unsupported replay configuration")
+
+    def switch_conditions(self):
 
         self.drop_lock_on()
 
-        try:
-            img,svg,p,rad,advance,v_gain,perturb_desc = self.condition.split('/')
-        except ValueError:
-            #no perturbation defined
+        ssvg            = str(self.condition['svg_path'])
+        self.img_fn     = str(self.condition['cylinder_image'])
+        self.p_const    = float(self.condition['gain'])
+        self.v_gain     = float(self.condition['z_gain'])
+        self.rad_locked = float(self.condition['radius_when_locked'])
+        self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
+        self.z_target   = 0.7
+        if self.condition.is_type('perturbation'):
+            perturb_desc = str(self.condition['perturb_desc'])
+        else:
             perturb_desc = None
-            img,svg,p,rad,advance,v_gain = self.condition.split('/')
-
-        self.img_fn = str(img)
-        self.p_const = float(p)
-        self.v_gain = float(v_gain)
-        self.rad_locked = float(rad)
-        self.advance_px = XFORM.m_to_pixel(float(advance))
-        self.z_target = 0.7
 
         self.log.cyl_r = self.rad_locked
 
@@ -196,7 +172,6 @@ class Node(object):
         self.perturber = sfe_perturb.NoPerturb()
 
         self.svg_fn = ''
-        ssvg = str(svg)
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
@@ -206,21 +181,36 @@ class Node(object):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
+        
+        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition.name,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
         rospy.loginfo('perturbation: %r' % self.perturber)
 
-    def get_v_rate(self,fly_z):
+    def get_v_rate(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        #return early if open loop
+        if self.is_perturbation_experiment('z'):
+            if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             self.model.ratio, self.ratio_total,
+                                             now, framenumber, currently_locked_obj_id):
+                rate,state = self.perturber.step(
+                                             fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
+                                             now, framenumber, currently_locked_obj_id)
+
+                if state=='finished':
+                    self.drop_lock_on(blacklist=True)
+                    rospy.loginfo("'z' perturbation finished")
+
+                return rate
+
         #return early if this is a replay experiment
-        if self.is_replay_experiment_z:
+        if self.is_replay_experiment('z'):
             return self.replay_z.next()
 
         return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         could_perturb = False
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
-            could_perturb = self.is_perturbation_experiment
+        if self.svg_fn and (not self.is_replay_experiment('rotation_rate')):
+            could_perturb = self.is_perturbation_experiment('rotation_rate')
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -262,10 +252,9 @@ class Node(object):
                 if state=='finished':
                     self._pub_stim_mode.set_stimulus_mode('StimulusCylinder') # pre-trigger with checkerboard
                     self.drop_lock_on(blacklist=True)
-
                     rospy.loginfo('perturbation finished')
 
-                    if self.condition in COOL_CONDITIONS:
+                    if self.condition.name in self.cool_conditions:
                         #fly is still flying
                         if abs(fly_z-self.z_target) < 0.1:
                             self.pub_pushover.publish("Fly %s completed perturbation" % (currently_locked_obj_id,))
@@ -483,8 +472,8 @@ class Node(object):
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
 
-        if (self.ratio_total > 3) and (old_id is not None):
-            if self.condition in COOL_CONDITIONS:
+        if (self.ratio_total > 2) and (old_id is not None):
+            if self.condition.name in self.cool_conditions:
                 self.pub_pushover.publish("Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
                 self.pub_save.publish(old_id)
 
@@ -492,21 +481,8 @@ class Node(object):
 
 def main():
     rospy.init_node("sinewave_tuning_curve")
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--no-wait', action='store_true', default=False,
-                        help="dont't start unless flydra is saving data")
-    parser.add_argument('--tmpdir', action='store_true', default=False,
-                        help="store logfile in tmpdir")
-    parser.add_argument('--continue-existing', type=str, default=None,
-                        help="path to a logfile to continue")
-    argv = rospy.myargv()
-    args = parser.parse_args(argv[1:])
-
-    node = Node(
-            wait_for_flydra=not args.no_wait,
-            use_tmpdir=args.tmpdir,
-            continue_existing=args.continue_existing)
+    parser, args = nodelib.node.get_and_parse_commandline()
+    node = Node(args)
     return node.run()
 
 if __name__=='__main__':

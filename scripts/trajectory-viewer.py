@@ -25,6 +25,7 @@ if __name__=='__main__':
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
+                    trajectory_start_offset=0.0
     )
     parser.add_argument(
         '--index', default='framenumber',
@@ -40,6 +41,8 @@ if __name__=='__main__':
     parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)",
         default=",".join(["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]))
+    parser.add_argument(
+        "--test-filter-args")
     
     args = parser.parse_args()
 
@@ -64,6 +67,12 @@ if __name__=='__main__':
     plot_axes = args.plot_values.split(',')
 
     results, dt = combine.get_results()
+
+    if args.test_filter_args:
+        filt_parser = analysislib.args.get_parser(arena=args.arena)
+        filt_args = filt_parser.parse_args(args.test_filter_args.split(' '))
+    else:
+        filt_args = None
 
     anims = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
@@ -93,6 +102,7 @@ if __name__=='__main__':
                             name=name,
                             plot_axes=plot_axes,
                             title=title,
+                            show_filter_args=filt_args
                     )
 
                 if args.save_data:

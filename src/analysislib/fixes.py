@@ -1,3 +1,4 @@
+import re
 import datetime
 import os.path
 
@@ -7,6 +8,25 @@ import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 from autodata.files import get_autodata_filename_datetime
+
+_FLOAT_RE = re.compile("[+-]?(?=\d*[.eE])(?=\.?\d)\d*\.?\d*(?:[eE][+-]?\d+)?")
+_INT_RE   = re.compile("^[+-]?\d+$")
+
+def normalize_condition_string(cond):
+    #remove leading + and superfluous zeros from condition strings
+    bits = []
+    for s in cond.split('/'):
+        try:
+            if _FLOAT_RE.match(s):
+                bit = str(float(s))
+            elif _INT_RE.match(s):
+                bit = str(int(s))
+            else:
+                bit = s
+        except ValueError:
+            bit = s
+        bits.append(bit)
+    return '/'.join(bits)
 
 class _Fixup(object):
 
@@ -136,10 +156,4 @@ def load_fixups(**kwargs):
 
 
     return _Fixup(None, None)
-
-if __name__ == "__main__":
-    print load_fixups(h5_file='20140512_172636.mainbrain.h5', csv_file='20140512_172656.translation.csv')
-    print load_fixups(h5_file='20140128_175011.mainbrain.h5', csv_file='20140128_175037.conflict.csv')
-    print load_fixups(h5_file='20140615_180047.simple_flydra.h5', csv_file='20140615_180052.perturbation.csv')
-
 

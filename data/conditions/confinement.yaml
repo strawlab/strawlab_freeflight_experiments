@@ -1,0 +1,24 @@
+confine_lbox:
+    stimulus_filename: lboxmed.svg.osg
+    x0: 0.0
+    y0: 0.0
+    lag: 0.0
+    start_radius: 0.12
+confine_lbox_1ms_lag:
+    stimulus_filename: lboxmed.svg.osg
+    x0: 0.0
+    y0: 0.0
+    lag: 1.0
+    start_radius: 0.12
+confine_lbox_infinite_lag:
+    stimulus_filename: lboxmed.svg.osg
+    x0: 0.0
+    y0: 0.0
+    lag: -1.0
+    start_radius: 0.12
+confine_zero_texture_control:
+    stimulus_filename: midgray.osg
+    x0: 0.0
+    y0: 0.0
+    lag: 0.0
+    start_radius: 0.12

@@ -34,7 +34,8 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
     #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
     #perturb_obj:cond
 
-    perturbations, completed_perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
+    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+                                                    completion_threshold=args.perturb_completion_threshold)
 
     for step_obj in perturbations:
         phs = perturbations[step_obj]
@@ -45,10 +46,14 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
             condn = 'p%d_%s' % (pid,condn)
 
         if phs:
+            n_completed = 0
+
             to_pool = []
             for ph in phs.itervalues():
                 if pid is None or (ph.df['ratio_range_start_id'].values[0] == pid):
                     to_pool.append(ph.df)
+                    if ph.completed:
+                        n_completed += 1
 
             pool = pd.concat(to_pool,join="outer",axis=0)
             pool.to_pickle(
@@ -60,7 +65,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
             name = combine.get_plot_filename('xy_%s' % condn)
             with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
                 ax = fig.add_subplot(1,1,1)
-                ax.set_title("%s" % cond, fontsize=12)
+                ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
                 for oid,_df in grouped_oid:
 
@@ -95,10 +100,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                     ax = fig.add_subplot(1,1,1)
                     ax2 = ax.twinx()
 
-                    ax.set_title("%s" % cond, fontsize=12)
+                    ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
                     ax.text(0.01, 0.99, #top left
-                            "n=%d" % len(to_pool),
+                            "n=%s/%d" % (n_completed, len(to_pool)),
                             fontsize=10,
                             horizontalalignment='left',
                             verticalalignment='top',
@@ -140,18 +145,16 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         f.write("| condition | obj_id | perturb_length | trajectory_length |\n")
         f.write("| --- | --- | --- | --- |\n")
 
-        i = None
-        for cond in sorted(completed_perturbations.keys()):
-            #make condition markdown table safe
-            scond = cond.replace('|','&#124;')
-            for i,(perturb_obj,oid,pl,tl) in enumerate(completed_perturbations[cond]):
-                if i == 0:
-                    #first row
-                    f.write("| %s | %s | %.1f | %.1f |\n" % (scond, oid, pl, tl))
-                else:
-                    f.write("|    | %s | %.1f | %.1f |\n" % (oid, pl, tl))
+        i = 0
+        for perturb_obj in perturbations:
+            cond = perturbation_conditions[perturb_obj]
+            scond = combine.get_condition_name(cond)
+            for response_obj in perturbations[perturb_obj].itervalues():
+                if response_obj.completed:
+                    f.write("| %s | %s | %.1f | %.1f |\n" % (scond, response_obj.obj_id, response_obj.perturbation_length, response_obj.trajectory_length))
+                    i += 1
 
-        if i is None:
+        if not i:
             #empty tables are not valid markdown...
             f.write("| n/a | n/a | n/a | n/a |\n")
 
@@ -162,6 +165,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-perturb-start-id", type=int,
         help='only plot perturbations that started in this id')
+    parser.add_argument(
+        "--perturb-completion-threshold", type=float, default=0.98,
+        help='perturbations must be this complete to be counted')
 
     args = parser.parse_args()
 

@@ -12,7 +12,30 @@ import autodata.files
 
 from strawlab.constants import DATE_FMT
 
-from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP
+from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL
+from .arenas import get_arena_from_args
+
+REQUIRED_ARENA_DEFAULTS = ("zfilt_max","zfilt_min","rfilt_max","rfilt","zfilt","trajectory_start_offset")
+
+class _ArenaAwareArgumentParser(argparse.ArgumentParser):
+    def parse_args(self, *args, **kwargs):
+        args = argparse.ArgumentParser.parse_args(self, *args, **kwargs)
+
+        #set some arena geometry specific defaults
+        try:
+            arena = get_arena_from_args(args)
+        except ValueError, e:
+            self.error(e.message)
+
+        rad = set(REQUIRED_ARENA_DEFAULTS)
+        if set(arena.get_filter_properties().keys()) != rad:
+            raise ValueError("Arenas must supply defaults for %s" % ",".join(rad))
+
+        for k,v in arena.get_filter_properties().items():
+            if getattr(args,k,None) is None:
+                setattr(args,k,v)
+
+        return args
 
 def get_default_args(**kwargs):
     """
@@ -21,10 +44,10 @@ def get_default_args(**kwargs):
     :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_uuid`
     instead
     """
-    parser = get_parser()
-    args = parser.parse_args("--zfilt trim --rfilt trim".split(' '))
-    for k,v in kwargs.iteritems():
-        setattr(args,k,v)
+    if 'arena' not in kwargs:
+        kwargs['arena'] = 'flycave'
+    parser = get_parser(**kwargs)
+    args = parser.parse_args('')
     return parser,args
 
 DATA_MODIFYING_ARGS = [
@@ -34,8 +57,9 @@ DATA_MODIFYING_ARGS = [
     'arena',
     'idfilt',
     'lenfilt',
-    'frames_before',
+    'trajectory_start_offset',
     'custom_filt','custom_filt_len',
+    'filter_interval'
 ]
 
 def get_parser(*only_these_options, **defaults):
@@ -46,9 +70,9 @@ def get_parser(*only_these_options, **defaults):
     :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_args`
     """
 
-    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP)
+    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL)
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = _ArenaAwareArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     if not only_these_options or "csv-file" in only_these_options:
         parser.add_argument(
             '--csv-file', type=str,
@@ -77,7 +101,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "cached" in only_these_options:
         parser.add_argument(
             '--no-cached', action='store_false', dest='cached',
-            default=defaults.get('no_cached') if 'no_cached' in defaults else not defaults.get('cached',False),
+            default=not defaults.get('no_cached') if 'no_cached' in defaults else not defaults.get('cached',False),
             help='load cached analysis pkl file')
     if not only_these_options or "ignore-permission-errors" in only_these_options:
         parser.add_argument(
@@ -92,23 +116,25 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "zfilt" in only_these_options:
         parser.add_argument(
             '--zfilt', type=str, choices=filt_choices,
-            required=False if 'zfilt' in defaults else True,
-            default=defaults.get('zfilt', 'trim'),
+            default=defaults.get('zfilt', None),
             help='method to filter trajectory data based on z values')
     if not only_these_options or "zfilt-min" in only_these_options:
         parser.add_argument(
             '--zfilt-min', type=float,
-            default=defaults.get('zfilt_min', 0.10),
+            default=defaults.get('zfilt_min', None),
             help='minimum z, metres')
     if not only_these_options or "zfilt-max" in only_these_options:
         parser.add_argument(
             '--zfilt-max', type=float,
-            default=defaults.get('zfilt_max', 0.90),
+            default=defaults.get('zfilt_max', None),
             help='maximum z, metres')
     if not only_these_options or "uuid" in only_these_options:
+        ud = defaults.get('uuid', None)
+        if ud is not None:
+            ud = ud if isinstance(ud,list) else [ud]
         parser.add_argument(
             '--uuid', type=str, nargs='*',
-            default=defaults.get('uuid', None),
+            default=ud,
             help='get the appropriate csv and h5 file for this UUID (multiple may be specified)')
     if not only_these_options or "basedir" in only_these_options:
         parser.add_argument(
@@ -124,18 +150,16 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "rfilt" in only_these_options:
         parser.add_argument(
             '--rfilt', type=str, choices=filt_choices,
-            required=False if 'rfilt' in defaults else True,
-            default=defaults.get('rfilt', 'trim'),
+            default=defaults.get('rfilt', None),
             help='method to filter trajectory data based on radius from centre values')
     if not only_these_options or "rfilt-max" in only_these_options:
         parser.add_argument(
             '--rfilt-max', type=float,
-            default=defaults.get('rfilt_max', 0.42),
+            default=defaults.get('rfilt_max', None),
             help='maximum r, metres,')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
             '--lenfilt', type=float,
-            required=False,
             default=defaults.get('lenfilt', 1.0),
             help='filter trajectories shorter than this many seconds')
     if not only_these_options or "idfilt" in only_these_options:
@@ -154,15 +178,25 @@ def get_parser(*only_these_options, **defaults):
             help='minimum length of remaining (seconds) after applying custom filter. '\
                  'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
                  'operations')
-    if not only_these_options or "frames-before" in only_these_options:
+    if not only_these_options or "trajectory-start-offset" in only_these_options:
         parser.add_argument(
-            '--frames-before', type=int,
-            default=defaults.get('frames_before',0),
-            help='number of frames added at the beginning of the trajectory before the trial actually starts')
+            '--trajectory-start-offset', type=float,
+            default=defaults.get('trajectory_start_offset',None),
+            help='number of seconds to relative to the start of each trial '\
+                 '(i.e. from the csv) trajectory from which to keep data. if negative '\
+                 'this means include data before the trial began. if positive this '\
+                 'ignores data at the start of a trajectory')
+    if not only_these_options or "filter-interval" in only_these_options:
+        parser.add_argument(
+            '--filter-interval', type=float,
+            default=defaults.get('filter_interval',0.3),
+            help="when using 'triminterval' filter methods, the length over "\
+                 "which the filter must match in order for data to be trimmed. ")
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str,
             default=defaults.get('arena', 'flycave'),
+            required=True if 'arena' not in defaults else False,
             help='name of arena type')
     if not only_these_options or "tfilt" in only_these_options:
         parser.add_argument(
@@ -180,7 +214,7 @@ def get_parser(*only_these_options, **defaults):
 
     return parser
 
-def check_args(parser, args, max_uuids=1000):
+def check_args(parser, args, max_uuids=1000, defaults_from_arena=True):
     """
     checks that the command line arguments parsed to the parser make sense.
     In particular this checks if the number of uuids passed to idfilt

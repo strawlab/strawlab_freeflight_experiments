@@ -1,0 +1,32 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+perturbation_mtrs2_18_3s_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+    perturb_desc: multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
+perturbation_mtrs2_09_3s_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+    perturb_desc: multitone_rotation_rate|rudinshapiro2|0.9|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
+perturbation_mtrs2_045_3s_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+    perturb_desc: multitone_rotation_rate|rudinshapiro2|0.45|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
+

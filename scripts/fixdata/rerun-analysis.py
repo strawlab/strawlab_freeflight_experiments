@@ -7,6 +7,7 @@ import re
 import time
 import shlex
 import json
+import webbrowser
 
 import sh
 
@@ -15,8 +16,7 @@ import autodata.model
 import autodata.files
 import strawlab.constants
 
-DEFAULT_LENFILT = '--lenfilt 1'
-DEFAULT_ARGS    = '--uuid %s --zfilt trim --rfilt trim ' + DEFAULT_LENFILT + ' --reindex --cached --arena %s'
+DEFAULT_ARGS    = '--uuid %s --arena %s'
 
 EXCEPT = set()
 
@@ -33,7 +33,8 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
         todo = []
         for res in model.query(model.table('experiment'), distinct_on="start_secs"):
             if res.title.startswith(args.type):
-                todo.append(res.uuid)
+                if not res.hidden:
+                    todo.append(res.uuid)
     except KeyError:
         model.close()
         print desc
@@ -78,7 +79,7 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
             else:
                 lenfilt = "1"
             opts = DEFAULT_ARGS % (uuid, arena)
-            opts = opts.replace(DEFAULT_LENFILT, '--lenfilt %s' % lenfilt)
+            opts += '--lenfilt %s' % lenfilt
             where = 'r'
         else:
             raise Exception("Error generating arguments")
@@ -92,13 +93,18 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
             else:
                 argslist = ["strawlab_freeflight_experiments", analysis_script]
             for opt in opts.split(' '):
-                if opt.strip() == '--reindex':
-                    if args.reindex:
-                        argslist.append(opt)
+                if opt.strip() == '--no-reindex':
+                    if args.no_reindex:
+                        argslist.append('--no-reindex')
                 elif opt.strip() == '--cached':
-                    if args.cached:
-                        argslist.append(opt)
+                    if args.no_cached:
+                        argslist.append('--no-cached')
                 elif opt.strip() == '--show':
+                    pass
+                #don't retain backwards compat, its too hard and not worthwhile
+                elif opt.strip() == '--reindex':
+                    pass
+                elif opt.strip() == '--cached':
                     pass
                 else:
                     argslist.append(opt)
@@ -121,8 +127,15 @@ def run_analysis(db_name, db_prefix, arena, analysis_script, args):
 
             dt = time.time() - t
             print "succeeded (%.1fs)" % dt, " ".join(argslist)
+
+            if args.open:
+                try:
+                    webbrowser.open(strawlab.constants.get_experiment_result_url(uuid))
+                except:
+                    pass
+
         except Exception, e:
-            print "failed", opts
+            print "failed", opts, e
 
     model.close()
 
@@ -167,10 +180,10 @@ if __name__ == "__main__":
         '-P', '--db-prefix', default="/flycave/",
         help='database prefix (assay name) for listing experiments')
     parser.add_argument(
-        '-n', '--no-reindex', action='store_false', default=True, dest='reindex',
+        '-n', '--no-reindex', action='store_true',
         help='dont reindex h5 file')
     parser.add_argument(
-        '-c', '--no-cache', action='store_false', default=True, dest='cached',
+        '-c', '--no-cached', action='store_true',
         help='dont used cached data')
     parser.add_argument(
         '-S','--assay',
@@ -179,6 +192,9 @@ if __name__ == "__main__":
              'values. Can be a comma separated list of assays to process more data')
     parser.add_argument(
         '-r', '--no-rosrun', action='store_true', default=False)
+    parser.add_argument(
+        '-o', '--open', action='store_true',
+        help='open results in webbrowser when analysis completes successfully')
 
     args = parser.parse_args()
 

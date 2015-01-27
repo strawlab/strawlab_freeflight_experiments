@@ -1,0 +1,18 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.12
+perturbation_mtrs2_18_2s_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.3
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.12
+    perturb_desc: multitone_rotation_rate|rudinshapiro2|1.8|2|1|5||0.4|0.47|0.53|0.97|1.0|0.0|0.03
+

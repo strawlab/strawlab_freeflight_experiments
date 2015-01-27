@@ -1,9 +1,6 @@
 #!/usr/bin/env python2
 import os.path
 import sys
-import operator
-import numpy as np
-import itertools
 
 if not os.environ.get('DISPLAY'):
     print "DISPLAY NOT SET: USING AGG BACKEND"

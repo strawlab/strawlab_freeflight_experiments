@@ -8,13 +8,12 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio')
+PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio, perturbation_length, trajectory_length, condition')
 
-def collect_perturbation_traces(combine, args):
+def collect_perturbation_traces(combine, completion_threshold=0.98):
     results,dt = combine.get_results()
 
-    perturbations = collections.OrderedDict()           #perturb_obj: {obj_id:Perturbation,...}
-    completed_perturbations = {c:[] for c in results}   #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
+    perturbations = collections.OrderedDict()           #perturb_obj: {obj_id:PerturbationHolder,...}
     perturbation_conditions = {}                        #perturb_obj: cond
 
     for cond in sorted(results):
@@ -60,10 +59,9 @@ def collect_perturbation_traces(combine, args):
                 df['talign'] = t - t[fidx]
 
                 tmax = df['talign'].max()
-                completed = False
-                if step_obj.completed_perturbation(tmax) and (lidx > fidx):
-                    completed_perturbations[cond].append((step_obj,obj_id,tmax,tmax-df['talign'].min()))
-                    completed = True
+                traj_length = tmax - df['talign'].min()
+
+                completed = step_obj.completed_perturbation(tmax, completion_threshold) and (lidx > fidx)
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 
@@ -76,9 +74,11 @@ def collect_perturbation_traces(combine, args):
                 start_ratio = df.iloc[fidx]['ratio']
                 df['ratio_range_start_id'] = step_obj.get_perturb_range_identifier(start_ratio)
 
-                perturbations[step_obj][obj_id] = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio)
+                ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
 
-    return perturbations, completed_perturbations, perturbation_conditions
+                perturbations[step_obj][obj_id] = ph_obj
+
+    return perturbations, perturbation_conditions
 
 def get_input_output_columns(step_obj):
     if step_obj.what == 'rotation_rate':

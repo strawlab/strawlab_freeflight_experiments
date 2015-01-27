@@ -20,6 +20,7 @@ if __name__=='__main__':
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,
+                    trajectory_start_offset=0.0
     )
     parser.add_argument(
         '--n-longest', type=int, default=100,

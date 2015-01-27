@@ -1,0 +1,7 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20

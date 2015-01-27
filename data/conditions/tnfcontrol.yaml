@@ -1,0 +1,15 @@
+rotation_1:
+    cylinder_image: checkerboard16.png
+    gain: tnf|+0.0|-1.0|-2.0
+    radius_when_locked: -10.0
+    z_gain: 0.20
+rotation_2:
+    cylinder_image: checkerboard16.png
+    gain: tnf|+0.0|-1.0|-10.0
+    radius_when_locked: -10.0
+    z_gain: 0.20
+rotation_zero_texture_control:
+    cylinder_image: gray.png
+    gain: tnf|+0.0|-1.0|-2.0
+    radius_when_locked: -10.0
+    z_gain: 0.20

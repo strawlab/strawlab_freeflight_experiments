@@ -44,14 +44,14 @@ def _show_mlab_figures(mlab):
             break
         time.sleep(0.1)
 
-def plot_perturbation_signal(combine, args, perturbations, completed_perturbations, perturbation_conditions):
+def plot_perturbation_signal(combine, args, perturbations, perturbation_conditions):
     for perturbation_obj in perturbations:
         cond = perturbation_conditions[perturbation_obj]
         name = combine.get_plot_filename('perturbation_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             sfe_perturb.plot_perturbation_frequency_characteristics(fig, perturbation_obj)
 
-def plot_input_output_characteristics(combine, args, perturbations, completed_perturbations, perturbation_conditions):
+def plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions):
 
     for perturbation_obj in perturbations:
 
@@ -109,19 +109,31 @@ if __name__=='__main__':
 
     EPS = False
     DETREND = True
-    LOOKBACK = 400
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
         "--min-fit-pct", type=float, default=40,
-        help='minimum model fit percentage')
+        help='minimum model fit percentage for model order selection')
+    parser.add_argument(
+        "--min-fit-pct-individual", type=float,
+        help='minimum model fit percentage for individual models')
     parser.add_argument(
         "--models", type=str, default="tf44,tf33,oe441,oe331,arx441,arx331",
         help='model specs to test')
+    parser.add_argument(
+        "--perturb-completion-threshold", type=float, default=0.98,
+        help='perturbations must be this complete to be counted')
+    parser.add_argument(
+        "--lookback", type=float, default=4.0,
+        help="number of seconds of data before perturbation to include "\
+             "in analysis")
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
+
+    if args.min_fit_pct_individual is None:
+        args.min_fit_pct_individual = args.min_fit_pct * 0.5
 
     MODEL_SPECS_TO_TEST = args.models.split(',')
 
@@ -135,15 +147,21 @@ if __name__=='__main__':
     combine.set_index('time+10L')
     combine.add_from_args(args)
 
+    lookback_frames = int(args.lookback * combine.dt)
+
     aplt.save_args(combine, args)
 
-    perturbations, completed_perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine, args)
+    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+                                                    completion_threshold=args.perturb_completion_threshold)
 
-    plot_perturbation_signal(combine, args, perturbations, completed_perturbations, perturbation_conditions)
-    plot_input_output_characteristics(combine, args, perturbations, completed_perturbations, perturbation_conditions)
+    plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
+    plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
 
     #loop per condition
     for perturbation_obj in perturbations:
+
+        any_completed_perturbations = False
+        individual_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
         condn = aplt.get_safe_filename(cond, allowed_spaces=False)
@@ -152,13 +170,11 @@ if __name__=='__main__':
         #any perturbations started
         phs = perturbations[perturbation_obj]
         if phs:
-            any_completed_perturbations = False
-
             #all input_u/output_y data for all completed perturbations
             system_us = []
             system_ys = []
 
-            individual_iddata = []
+            individual_iddata = []          #[(iddata_object,perturbation_holder,len_data),...]
             individual_iddata_mean = None
 
             for ph in phs.itervalues():
@@ -167,20 +183,21 @@ if __name__=='__main__':
                     any_completed_perturbations = True
 
                     #take out the perturbation period only (for the mean response)
-                    print ph.end_idx - ph.start_idx,perturbation_obj._get_duration_discrete(100)
-
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
                     system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
                     system_ys.append( pd.Series(pdf[system_y_name].values, name=str(ph.obj_id)) )
 
                     #upload to matlab the data for this perturbation and also including
                     #some data before the perturbation
-                    pdf_extra = ph.df.iloc[max(0,ph.start_idx-LOOKBACK):ph.end_idx]
+                    pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
                     iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
-                    individual_iddata.append(iddata)
+                    individual_iddata.append((iddata,ph,len(pdf_extra)))
 
                     dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
+
+        if not any_completed_perturbations:
+            print "%s: NO COMPLETED PERTURBATIONS" % combine.get_condition_name(cond)
 
         if any_completed_perturbations:
             #upload the pooled
@@ -188,6 +205,10 @@ if __name__=='__main__':
             system_y_df = pd.concat(system_ys,axis=1)
             system_y_df_mean = system_y_df.mean(axis=1)
             system_u_df_mean = system_u_df.mean(axis=1)
+
+            n_completed = system_u_df.shape[-1]
+
+            print "%s: %d completed perturbations" % (combine.get_condition_name(cond), n_completed)
 
             individual_iddata_mean = sfe_sid.upload_data(mlab,
                                          system_y_df_mean.values,
@@ -204,7 +225,7 @@ if __name__=='__main__':
             pooled_id_varname = mlab.varname('iddata')
             mlab.run_code("%s = merge(%s);" % (
                     pooled_id_varname,
-                    ','.join([str(i) for i in individual_iddata])))
+                    ','.join([str(i[0]) for i in individual_iddata])))
             pooled_id = mlab.proxy_variable(pooled_id_varname)
             dest = combine.get_plot_filename("iddata_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
@@ -218,6 +239,7 @@ if __name__=='__main__':
             #over the perturbation period (as that data is less noisy)
             for spec in MODEL_SPECS_TO_TEST:
                 result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec)
+                print "\ttested model order = %s" % result_obj
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
 
@@ -270,6 +292,7 @@ if __name__=='__main__':
                 ax.set_xlim(-10,perturbation_obj._get_duration_discrete(100)+10)
                 ax.set_title(title)
 
+            print "\t", len(possible_models), "models passed min fit critiera"
 
             #MATLAB PLOTTING FROM HERE
             if not possible_models:
@@ -302,16 +325,22 @@ if __name__=='__main__':
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
             for pm in possible_models:
-                indmdls = []
-                meanmdls = []
-                for n,i in enumerate(individual_iddata):
+
+                individual_models[pm] = []
+
+                for i,ph,idlen in individual_iddata:
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
                     #accept a lower fit due to noise on the individual trajectories
-                    if mdl.fitpct > (0.5*args.min_fit_pct):
-                        mdl.name = '%s_%d' % (pm.spec,n)
+                    if mdl.fitpct > (args.min_fit_pct_individual):
+                        mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
                         mdl.matlab_color = 'k'
-                        indmdls.append(mdl)
-                if indmdls:
+                        mdl.perturb_holder = ph
+
+                        individual_models[pm].append(mdl)
+
+                        print "\tindividual model: %s (%.1f%%, %s frames)" % (mdl, mdl.fitpct,idlen)
+
+                if individual_models[pm]:
                     extra_models = []
 
                     #create a merged model from the individual models (mean of models)
@@ -319,16 +348,18 @@ if __name__=='__main__':
                         mom_varname = mlab.varname('sidmodelmerged')
                         mlab.run_code("%s = merge(%s);" % (
                                 mom_varname,
-                                ','.join([str(r.sid_model) for r in indmdls])))
+                                ','.join([str(r.sid_model) for r in individual_models[pm]])))
                         merged_model = sfe_sid.SIDResultMerged(mlab.proxy_variable(mom_varname), pm.spec)
                         merged_model.matlab_color = 'b'
                         extra_models.append(merged_model)
                     except RuntimeError,e:
-                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(indmdls),pm.spec,e)
+                        print "ERROR MERGING %d %s MODELS\n\t%s" % (len(individual_models[pm]),pm.spec,e)
 
                     #also show the model mad on the basis of the mean trajectories
                     pm.matlab_color = 'r'
                     extra_models.append(pm)
+
+                    indmdls = individual_models[pm]
 
                     #and also a model based on all the data
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
@@ -358,6 +389,41 @@ if __name__=='__main__':
                     if EPS:
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
+
+                    name = combine.get_plot_filename('pz_merge_and_means_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    title = 'Pole Zero Plot %s (merge/means): %s->%s\n%s\n%s' % (pm.spec,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    with mlab.fig(name+'.png') as f:
+                        sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
+                    if EPS:
+                        with mlab.fig(name+'.eps',driver='epsc2') as f:
+                            sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
+
+            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
+            with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
+                ax = fig.add_subplot(1,1,1)
+
+                lbls = []
+                locs = []
+                data = []
+
+                for i,pm in enumerate(sorted(individual_models, key=lambda x: x.spec)):
+                    data.append( [max(-1,mdl.fitpct) for mdl in individual_models[pm]] )
+                    locs.append(i+1)
+                    lbls.append(pm.spec)
+
+                try:
+                    ax.boxplot(data,labels=lbls)
+                except TypeError:
+                    #old mpl version
+                    ax.boxplot(data,positions=locs)
+                    ax.set_xticks(locs)
+                    ax.set_xticklabels(lbls)
+                    ax.set_xlim(0,locs[-1]+1)
+
+                ax.set_ylim(-1,100)
+                ax.set_ylabel('fit to data (pct)')
+                ax.set_title('Individual model fits\n%s' % combine.get_condition_name(cond))
+
 
     if args.show:
         t = threading.Thread(target=_show_mlab_figures, args=(mlab,))

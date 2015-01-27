@@ -24,7 +24,6 @@ class TestFixes(unittest.TestCase):
         self.assertIsNotNone(fu)
         self.assertTrue(fu.active)
         self.assertTrue(fu.should_fix_condition)
-
         
         before = "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06"
         after = "checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06"
@@ -32,15 +31,16 @@ class TestFixes(unittest.TestCase):
         a2 = fu.fix_condition(before)
         self.assertEqual(after, a2)
 
-    def test_fix_condition_full(self):
+    def test_fix_and_normalise_conditions(self):
         combine = analysislib.util.get_combiner_for_uuid("2a8386e0dd1911e3bd786c626d3a008a")
         combine.disable_debug()
         combine.add_from_uuid("2a8386e0dd1911e3bd786c626d3a008a")
 
-        FIXED_COND = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06'
-        BROKEN_COND = 'checkerboard16.png/infinity.svg/+0.3/-10.0/0.1/0.20/chirp_linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06'
+        FIXED_COND = 'checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/chirp_rotation_rate|linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06'
+        BROKEN_COND = 'checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/chirp_linear|1.8|3|1.0|5.0|0.4|0.46|0.56|0.96|1.0|0.0|0.06'
 
         conds = combine.get_conditions()
+
         self.assertTrue(FIXED_COND in conds)
         self.assertFalse(BROKEN_COND in conds)
 
@@ -50,12 +50,25 @@ class TestFixes(unittest.TestCase):
         self.assertTrue(FIXED_COND in conds)
         self.assertFalse(BROKEN_COND in conds)
 
-    def test_fix_combine(self):
+    def test_normalise_conditions(self):
         UUID = '401be1eee81a11e3bf926c626d3a008a'
         combine = analysislib.util.get_combiner_for_uuid(UUID)
         combine.set_index('time+10L')
         combine.disable_debug()
+        combine.disable_warn()
         combine.add_from_uuid(UUID)
+
+        ORIG_COND = "checkerboard16.png/infinity.svg/+0.3/+10.0/0.1/0.20"
+        NORMALISED_COND = "checkerboard16.png/infinity.svg/0.3/10.0/0.1/0.2"
+
+        conds = combine.get_conditions()
+
+        self.assertTrue(NORMALISED_COND in conds)
+        self.assertFalse(ORIG_COND in conds)
+
+        fix = analysislib.fixes.load_fixups(csv_file=combine.csv_file,
+                                            h5_file=combine.h5_file)
+        self.assertTrue(fix.active)
 
 if __name__=='__main__':
     unittest.main()

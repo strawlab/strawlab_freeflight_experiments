@@ -16,6 +16,7 @@ import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.legend as mlegend
 import matplotlib.text as mtext
+import matplotlib.transforms as mtransforms
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
 from dateutil.rrule import rrule, SECONDLY
@@ -109,7 +110,6 @@ def plot_trial_times(combine, args, name=None):
         starts = {}
         lengths = {}
         for i,(current_condition,r) in enumerate(results.iteritems()):
-
             if not r['count']:
                 print "WARNING: NO DATA TO PLOT"
                 continue
@@ -127,7 +127,7 @@ def plot_trial_times(combine, args, name=None):
             ax.plot_date(
                     mdates.epoch2num(starts[condition]),
                     lengths[condition],
-                    label=condition,marker='o',color=colors[i],
+                    label=combine.get_condition_name(condition),marker='o',color=colors[i],
                     tz=combine.timezone)
 
         ax.set_xlabel("start")
@@ -220,7 +220,7 @@ def plot_saccades(combine, args, figncols, name=None):
                 ys = df['y'].where(df['saccade'].values).dropna()
                 ax.plot(xs,ys,'r.')
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
         for ax in axes:
@@ -229,7 +229,47 @@ def plot_saccades(combine, args, figncols, name=None):
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
+
 def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
+    """
+    PLots the 2D/3D trajectories in a virtual arena.
+
+    Parameters
+    ----------
+    - combine: Combine object
+      carries information about trials (in this case we need just x, y and possibly z)
+      Also:
+        combine.fname: to construct the default file name
+      :type combine: analysislib.combine.CombineH5WithCSV
+    - args: dictionary-like from argparse / cli arguments framework / manually constructed
+      carries some of the configuration for the plots from command line
+      From it we get:
+        - args.ignore_permission_errors: whether to check if we can set the ownership permissions
+                                         in the output directory or do not check
+        - args.arena: the arena id, used to get proper arena geometry
+        - args.outdir: if defined and not None, the directory where the plot will be saved
+        - args.show_obj_ids: if True, we display a legend with the oid of each trace
+    - figncols: int
+      The number of plots that will be layed-out together (think of the webpage, one per condition)
+    - in3d: boolean
+      If False, plot just (x, y), else plot (x, y, z)
+    - name: string
+      the file name/path that will be given to the saved plot, if None a default name is inferred from combine
+    - show_starts: boolean, default False
+      if true, displays the start of the trajectory as a green dot.
+    -show_ends: boolean, default False
+      if true, displays the end of the trajectory as a red dot.
+    - alpha: float in [0, 1], default 0.5
+      alpha-transparency value for the traces. Useful to play with depending on the number of traces to show.
+
+    Returns
+    -------
+    None
+
+    Side effects
+    ------------
+    Stores the figure plot where specified in the options
+    """
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -274,7 +314,7 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
                     for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
                         ax.text( x0, y0, str(obj_id) )
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             if not in3d:
                 make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
@@ -319,13 +359,15 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
             mean_r = np.mean(r)
             std_r = np.std(r)
 
+            cc_name = combine.get_condition_name(current_condition)
+
             means.append( mean_r )
             stds.append( std_r )
-            labels.append( current_condition )
+            labels.append( cc_name )
             x.append(i)
             lens.append( len(r) )
             allr.extend( list(r) )
-            allcond.extend( [current_condition]*len(r) )
+            allcond.extend( [cc_name]*len(r) )
 
         df = pandas.DataFrame({'radius':allr,'condition':allcond})
         df.to_pickle('dist_df.pkl')
@@ -333,12 +375,6 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
         stds = np.array( stds )
         lens = np.array( lens )
 
-        print '*'*100
-        print 'dist means',means
-        print 'dist stds',stds
-        print 'labels',labels
-        print 'lens',lens
-        print '*'*100
         ax.plot( x, means )
         ax.plot( x, means+stds )
         ax.plot( x, means-stds )
@@ -412,7 +448,7 @@ def plot_histograms(combine, args, figncols, name=None, colorbar=False):
             arena.plot_mpl_line_2d(ax, 'w:', lw=2 )
             ax.set_aspect('equal')
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
 
             ax.set_ylabel( 'y (m)' )
@@ -473,7 +509,7 @@ def plot_tracking_length(combine, args, figncols, name=None):
             ax.set_xlabel("tracking duration (s)")
             ax.set_ylabel("num tracks")
 
-            ax.set_title(current_condition, fontsize=TITLE_FONT_SIZE)
+            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
             make_note(ax, 'n=%d' % r['count'])
 
         if WRAP_TEXT:
@@ -507,8 +543,10 @@ def plot_nsamples(combine, args, name=None):
             n_samples = [len(df) for df in r['df']]
             hist,edges = np.histogram(n_samples,bins=bins)
 
-            ax.plot(bin_centers, hist, '-x', label=current_condition)
-            ax_outliers.plot(0, combine.get_num_trials(current_condition), 'o', clip_on=False, label=current_condition)
+            cc_name = combine.get_condition_name(current_condition)
+
+            ax.plot(bin_centers, hist, '-x', label=cc_name)
+            ax_outliers.plot(0, combine.get_num_trials(current_condition), 'o', clip_on=False, label=cc_name)
 
             nconds += 1
 
@@ -571,7 +609,7 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
                 try:
                     val = df[valname].values
                 except KeyError:
-                    if valname == "radius":
+                    if (valname == "radius") and combine.has_positional_information:
                         val = np.sqrt(df['x'].values**2 + df['y'].values**2)
                     else:
                         raise
@@ -586,7 +624,6 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
 
                 series["%d"%obj_id] = pandas.Series(val,ts)
 
-            ax.set_xlim(-args.frames_before,100*max(6,args.lenfilt*2))
             if dvdt:
                 ax.set_ylim(-0.0005,0.0005)
             else:
@@ -598,7 +635,7 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
             ax.set_ylabel('%s%s (m)' % ('d' if dvdt else '', valname))
             ax.set_xlabel('frame (n)')
 
-            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,current_condition))
+            ax.set_title('%s%s %s' % ('d' if dvdt else '',valname,combine.get_condition_name(current_condition)))
             make_note(ax, 'n=%d' % nsamples)
 
             df = pandas.DataFrame(series)
@@ -625,7 +662,7 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
     return x
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None, show_filter_args=None):
     if name is None:
         name = '%s.infinity' % combine.fname
 
@@ -655,6 +692,23 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         _ax.set_ylim(*ylimits.get("z",(0, 1)))
         _ax.set_ylabel("z")
+
+        if show_filter_args:
+            filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
+            filt_valid,filt_cond = filt_arena.apply_filter(show_filter_args, _df, dt)
+
+            trans = mtransforms.blended_transform_factory(_ax.transData, _ax.transAxes)
+            _ax.fill_between(filt_cond.index.values,
+                             0, 1,
+                             ~filt_cond.values,
+                             facecolor='red', alpha=0.4, transform=trans)
+
+            try:
+                last_valid_frame = _df['framenumber'].values[filt_valid][-1]
+                _ax.axvline(last_valid_frame, color='b')
+            except IndexError:
+                #no valid frames
+                pass
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))

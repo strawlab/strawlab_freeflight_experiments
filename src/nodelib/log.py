@@ -6,8 +6,10 @@ import tempfile
 import threading
 
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
+
 import rospy
 import std_msgs.msg
+import strawlab_freeflight_experiments.conditions
 
 class NoDataError(Exception):
     pass
@@ -16,7 +18,7 @@ class CsvLogger(object):
 
     STATE =         tuple()
     EXTRA_STATE =   ("t_sec","t_nsec","flydra_data_file","exp_uuid")
-    FLY_STATE =     ("condition","lock_object","framenumber")
+    FLY_STATE =     ("condition","condition_name","lock_object","framenumber")
     DEFAULT_DIRECTORY = "~/FLYDRA"
 
     def __init__(self,fname=None, mode='w', directory=None, wait=False, use_tmpdir=False, continue_existing=None, state=None, use_rostime=False, warn=True, debug=True):
@@ -33,6 +35,8 @@ class CsvLogger(object):
         self._enable_debug = debug
 
         self._condition = ''
+        self._condition_name = ''
+
         self._pub_condition = None
 
         self._use_rostime = use_rostime
@@ -107,10 +111,10 @@ class CsvLogger(object):
             rospy.Subscriber('flydra_mainbrain/data_file',
                              std_msgs.msg.String,
                              self._on_flydra_mainbrain_start_saving)
-            rospy.Subscriber('experiment_uuid',
-                             std_msgs.msg.String,
-                             self._on_experiment_uuid)
-            self._pub_condition = rospy.Publisher('condition', std_msgs.msg.String)
+
+            self._pub_condition_s = rospy.Publisher('condition_slash', std_msgs.msg.String)
+            self._pub_condition_y = rospy.Publisher('condition_yaml', std_msgs.msg.String)
+            self._pub_condition_n = rospy.Publisher('condition_name', std_msgs.msg.String)
 
             if wait:
                 self._debug("waiting for flydra_mainbrain/data_file")
@@ -142,19 +146,45 @@ class CsvLogger(object):
     def _on_flydra_mainbrain_start_saving(self, msg):
         self._flydra_data_file = msg.data
 
-    def _on_experiment_uuid(self, msg):
-        self._exp_uuid = msg.data
+    def set_experiment_uuid(self, uuid):
+        self._exp_uuid = uuid
 
+    @property
+    def condition_name(self):
+        return self._condition_name
+    @condition_name.setter
+    def condition_name(self, v):
+        self._condition_name = v
 
     @property
     def condition(self):
         return self._condition
-
     @condition.setter
     def condition(self, v):
-        self._condition = v
-        if self._pub_condition is not None:
-            self._pub_condition.publish(v)
+        if v is None:
+            return
+
+        if not isinstance(v, strawlab_freeflight_experiments.conditions.Condition):
+            raise ValueError("YOU MUST ASSIGN CONDITION OBJECT TO LOG")
+
+        s = v.to_slash_separated()
+        y = v.to_yaml()
+        n = v.name
+
+        with self._wlock:
+            #still write the slash separated to the csv
+            self._condition = s
+            self._condition_name = n
+
+        for val,pub in zip((s,y,n),(self._pub_condition_s,self._pub_condition_y,self._pub_condition_n)):
+            if pub is not None:
+                try:
+                    pub.publish(val)
+                except rospy.ROSException:
+                    #node not yet initialized, which is usually just in test cases,
+                    #in any case, this is not fatal even in practice and publishing
+                    #condition is only for the operator-console anyway
+                    pass
 
     @property
     def filename(self):

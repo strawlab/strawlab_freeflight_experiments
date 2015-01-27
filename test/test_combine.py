@@ -41,7 +41,7 @@ class TestCombineData(unittest.TestCase):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
 
-        combine.add_from_uuid(self._uuid)
+        combine.add_from_uuid(self._uuid, reindex=False)
         cols = set(combine.get_result_columns())
         self.assertEqual(cols,
                          set(['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate',
@@ -58,7 +58,7 @@ class TestCombineData(unittest.TestCase):
             combine = autil.get_combiner("rotation.csv") #back compat for testing old branch pre merge
         combine.disable_warn()
         combine.disable_debug()
-        combine.add_from_uuid(self._uuid)
+        combine.add_from_uuid(self._uuid, reindex=False)
         return combine
 
     def _get_fn(self, df):
@@ -125,6 +125,8 @@ class TestCombine(unittest.TestCase):
 
         self._assert_two_equal(a,b)
 
+        combine2.close()
+
         parser,args = analysislib.args.get_default_args(
                     uuid=["f5adba10e8b511e2a28b6c626d3a008a"],
                     outdir='/tmp/'
@@ -160,6 +162,7 @@ class TestCombine(unittest.TestCase):
         _quiet(combine)
 
         parser,args = analysislib.args.get_default_args(
+                h5_file='/dev/null',
                 csv_file=self.RT_CSV,
                 outdir='/tmp/'
         )

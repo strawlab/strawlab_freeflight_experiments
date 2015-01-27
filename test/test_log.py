@@ -83,12 +83,12 @@ class TestLog(unittest.TestCase):
         fn2 = l.close()
         self.assertEqual(self._fn,fn2)
 
-        HEAD = 'a_float,b_int,c_string,condition,lock_object,framenumber,t_sec,t_nsec,flydra_data_file,exp_uuid\n'
+        HEAD = 'a_float,b_int,c_string,condition,condition_name,lock_object,framenumber,t_sec,t_nsec,flydra_data_file,exp_uuid\n'
 
         with open(fn2) as f:
             header,line = f.readlines()
             self.assertEqual(header, HEAD)
-            self.assertTrue(line.startswith('50.0,50,50,None,None,None,'))
+            self.assertTrue(line.startswith('50.0,50,50,,None,None,None,'))
 
         #try duplicate csv row
         l = nodelib.log.CsvLogger(self._fn+'.2','w',state=TEST_STATE_NAMES+['framenumber'])
