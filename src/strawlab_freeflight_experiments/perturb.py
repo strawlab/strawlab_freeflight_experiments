@@ -651,7 +651,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
         self.value = float(value)
 
         #look for the cached data object
-        fn = '_'.join([str(i) for i in (name,self.type,dur,b0,b1,value,s0,s1,s2,seed)])
+        fn = '_'.join([str(i) for i in (me,self.type,dur,b0,b1,value,s0,s1,s2,seed)])
         fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
 
         fn_exists = os.path.isfile(fn)
@@ -667,7 +667,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
                     PerturberIDINPUT._mlab.start()
                     _mlab = PerturberIDINPUT._mlab
                 except ImportError:
-                    raise ValueError("idinput not cached and matlab not available")
+                    raise ValueError("%s not cached and matlab not available" % fn)
 
             if self.type == 'sine':
                 band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
