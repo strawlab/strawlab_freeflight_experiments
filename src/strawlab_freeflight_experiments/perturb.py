@@ -1,4 +1,6 @@
 import datetime
+import os.path
+
 import numpy as np
 import numpy.random
 import scipy.signal
@@ -47,6 +49,8 @@ def get_perturb_class(perturb_descriptor, debug=False):
             return PerturberTone
         elif name == 'rbs':
             return PerturberRBS
+        elif name == 'idinput':
+            return PerturberIDINPUT
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
@@ -611,6 +615,86 @@ class PerturberRBS(Perturber):
     def get_value_limits(self):
         return min(self.value_min,0),max(self.value_max,0)
 
+
+class PerturberIDINPUT(_PerturberInterpolation):
+
+    DEFAULT_DESC = "idinput_WHAT|sine|3|0|5|1.8||||1"
+
+    _mlab = None
+
+    def __init__(self, descriptor):
+        """
+        descriptor is
+        'idinput_WHAT'|type|dur|band0|band1|value|s0|s1|s2|seed|ratio_min|a|b|c|d|e|f
+
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+
+        ratio_min is the minimum amount of the path the target must have flown
+
+        a,b c,d e,f are pairs or ranges in the ratio
+        """
+        OS = 1.0    #over sample
+        FS = 100.0
+
+        def freq_to_bw(f):
+            nf = FS*0.5
+            return f/nf
+
+        name,self.type,dur,b0,b1,value,s0,s1,s2,seed,ratio_min,chunks = descriptor.split('|', 11)
+        name_parts = name.split('_')
+        me = name_parts[0]
+        self.what = '_'.join(name_parts[1:])
+        if me != 'idinput':
+            raise Exception("Incorrect PerturberIDINPUT configuration")
+
+        self.t1 = float(dur)
+        self.value = float(value)
+
+        #look for the cached data object
+        fn = '_'.join([str(i) for i in (name,self.type,dur,b0,b1,value,s0,s1,s2,seed)])
+        fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
+
+        fn_exists = os.path.isfile(fn)
+
+        if fn_exists:
+            w = np.load(fn)
+            t = np.linspace(0, self.t1, len(w))
+        else:
+            if PerturberIDINPUT._mlab == None:
+                try:
+                    import pymatbridge
+                    PerturberIDINPUT._mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', log=False, capture_stdout=True)
+                    PerturberIDINPUT._mlab.start()
+                    _mlab = PerturberIDINPUT._mlab
+                except ImportError:
+                    raise ValueError("idinput not cached and matlab not available")
+
+            if self.type == 'sine':
+                band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
+            else:
+                band = []
+
+            lvls = [-self.value,self.value]
+            if s0 and s1 and s2:
+                sindata = [int(s0),int(s1),int(s2)]
+            else:
+                sindata = [10,10,1]
+
+            N = self.t1*100*OS
+
+            _mlab.rng(int(seed))
+            u = _mlab.idinput(int(N),self.type,band,lvls,sindata,nout=1)
+            w = np.squeeze(u.T)
+
+            t = np.linspace(0, self.t1, len(w))
+
+            np.save(fn,w)
+
+        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
+
+    def __repr__(self):
+        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs>" % (self.what,self.type,self.duration)
+
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
         #can't do this for stepN without a better Perturber.plot API
@@ -647,7 +731,7 @@ def plot_perturbation_frequency_characteristics(fig,obj):
     ax = fig.add_subplot(gs[1,1])
     plot_amp_spectrum(ax, obj)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberRBS)
+PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberRBS, PerturberIDINPUT)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
