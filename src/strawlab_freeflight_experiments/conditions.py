@@ -93,6 +93,11 @@ class Conditions(OrderedDict, _YamlMixin):
         except AttributeError:
             txt = text_or_file_like
 
+        VALID_SWITCH_STRATEGIES = {'seq', 'randstart', 'fullrand'}
+        if switch_order not in VALID_SWITCH_STRATEGIES:
+            raise ValueError('switch order must be one of %r, not "%s"' %
+                             (VALID_SWITCH_STRATEGIES, switch_order))
+
         d = yaml.load(txt, _OrderedDictYAMLLoader)
 
         # provenance
