@@ -47,7 +47,7 @@ def _show_mlab_figures(mlab):
 def plot_perturbation_signal(combine, args, perturbations, perturbation_conditions):
     for perturbation_obj in perturbations:
         cond = perturbation_conditions[perturbation_obj]
-        name = combine.get_plot_filename('perturbation_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
+        name = combine.get_plot_filename('perturbation_%s' % aplt.get_safe_filename(cond))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             sfe_perturb.plot_perturbation_frequency_characteristics(fig, perturbation_obj)
 
@@ -56,7 +56,7 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
     for perturbation_obj in perturbations:
 
         cond = perturbation_conditions[perturbation_obj]
-        condn = aplt.get_safe_filename(cond, allowed_spaces=False)
+        condn = aplt.get_safe_filename(cond)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         phs = perturbations[perturbation_obj]
@@ -96,7 +96,7 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
                             combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
                             system_y_df,'none')
 
-                name = combine.get_plot_filename('cohere_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond, allowed_spaces=False)))
+                name = combine.get_plot_filename('cohere_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond)))
                 with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
                     nfft_desc = sfe_frequency.plot_input_output_characteristics(fig,
                                     system_u_df_mean, system_y_df_mean,
@@ -161,11 +161,12 @@ if __name__=='__main__':
     for perturbation_obj in perturbations:
 
         any_completed_perturbations = False
+
         individual_models = {}
         alldata_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
-        condn = aplt.get_safe_filename(cond, allowed_spaces=False)
+        condn = aplt.get_safe_filename(cond, **plot_fn_kwargs)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
@@ -232,7 +233,7 @@ if __name__=='__main__':
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
 
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,condn))
-            title = 'Bode (from data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
