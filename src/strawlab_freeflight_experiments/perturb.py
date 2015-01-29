@@ -759,11 +759,12 @@ if __name__ == "__main__":
         _plot(f,obj)
     else:
         for p in PERTURBERS:
-            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
+            condition = p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC
+            obj = p(condition)
             f = plt.figure(repr(obj), figsize=(8,8))
             _plot(f,obj)
 
             obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
-            print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1)
+            print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1),condition
 
     plt.show()
