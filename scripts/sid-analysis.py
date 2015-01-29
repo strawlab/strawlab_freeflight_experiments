@@ -201,8 +201,12 @@ if __name__=='__main__':
                     #upload to matlab the data for this perturbation and also including
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
-                    iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
-                    individual_iddata.append((iddata,ph,len(pdf_extra)))
+                    try:
+                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
+                        individual_iddata.append((iddata,ph,len(pdf_extra)))
+                    except RuntimeError, e:
+                        print "ERROR UPLOADING DATA: %s" % e
+                        continue
 
                     dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
