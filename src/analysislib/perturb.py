@@ -72,7 +72,9 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 #if the fly started its perturbation with a ratio of 0.55 the range
                 #chunk identifier is 1 (the 2nd pair in the range string).
                 start_ratio = df.iloc[fidx]['ratio']
-                df['ratio_range_start_id'] = step_obj.get_perturb_range_identifier(start_ratio)
+                start_id = step_obj.get_perturb_range_identifier(start_ratio)
+
+                df['ratio_range_start_id'] = start_id
 
                 ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
 
