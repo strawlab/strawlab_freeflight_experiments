@@ -152,7 +152,7 @@ if __name__=='__main__':
     combine.set_index('time+10L')
     combine.add_from_args(args)
 
-    lookback_frames = int(args.lookback * combine.dt)
+    lookback_frames = int(args.lookback / combine.dt)
 
     aplt.save_args(combine, args)
 
