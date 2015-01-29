@@ -672,7 +672,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
             if self.type == 'sine':
                 band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
             else:
-                band = []
+                band = [0, float(b1)]
 
             lvls = [-self.value,self.value]
             if s0 and s1 and s2:
