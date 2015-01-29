@@ -53,6 +53,8 @@ def plot_perturbation_signal(combine, args, perturbations, perturbation_conditio
 
 def plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions):
 
+    pid = args.only_perturb_start_id
+
     for perturbation_obj in perturbations:
 
         cond = perturbation_conditions[perturbation_obj]
@@ -127,6 +129,9 @@ if __name__=='__main__':
         "--lookback", type=float, default=4.0,
         help="number of seconds of data before perturbation to include "\
              "in analysis")
+    parser.add_argument(
+        "--only-perturb-start-id", type=int,
+        help='only plot perturbations that started in this id')
 
     args = parser.parse_args()
 
@@ -157,6 +162,10 @@ if __name__=='__main__':
     plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
     plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
 
+    pid = args.only_perturb_start_id
+
+    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid}
+
     #loop per condition
     for perturbation_obj in perturbations:
 
@@ -181,7 +190,7 @@ if __name__=='__main__':
 
             for ph in phs.itervalues():
                 #any perturbations completed
-                if ph.completed:
+                if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
                     any_completed_perturbations = True
 
                     #take out the perturbation period only (for the mean response)
