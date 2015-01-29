@@ -267,6 +267,34 @@ ylim([-1.5 1.5]);
        legend,
        'showConfidence(h,1);' if show_confidence else ''))
 
+def step_response_models(mlab,title,show_confidence,show_legend,use_model_colors,amplitude,tfinal,result_objs):
+    #remove _ because it seems impossible to disable the tex interpreter
+    mlab.set_variable('figtitle',title.replace('_',''))
+
+    if use_model_colors:
+        plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
+    else:
+        plot_args = ','.join(map(str,[r.sid_model for r in result_objs if not r.failed]))
+
+    if show_legend:
+        legend = "legend(%s);" % ','.join(["'%s'" % r for r in result_objs if not r.failed])
+    else:
+        legend = ''
+
+    mlab.run_code("""
+t = %f;
+opt = stepDataOptions('StepAmplitude',%f);
+h = stepplot(%s,t,opt);
+%s
+p = getoptions(h);
+p.Title.String = figtitle;
+setoptions(h,p);
+%s
+""" % (tfinal,
+       amplitude,
+       plot_args,
+       'showConfidence(h,1);' if show_confidence else '',
+       legend))
 
 def control_object_from_result(result_obj):
     return control.tf(result_obj.num,result_obj.den)

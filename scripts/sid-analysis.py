@@ -162,6 +162,7 @@ if __name__=='__main__':
 
         any_completed_perturbations = False
         individual_models = {}
+        alldata_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
         condn = aplt.get_safe_filename(cond, allowed_spaces=False)
@@ -365,6 +366,8 @@ if __name__=='__main__':
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
                     alldata_model.matlab_color = 'g'
 
+                    alldata_models[pm.spec] = alldata_model
+
                     #FIXME: save python obj of all models
                     py_mdl = alldata_model.get_control_object(mlab)
                     name = combine.get_plot_filename("py_mdl_individual_data_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
@@ -398,7 +401,15 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
-            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, allowed_spaces=False))
+            name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
+            title = 'Step response: %s->%s\n%s' % (system_u_name,system_y_name,perturbation_obj)
+            with mlab.fig(name+'.png') as f:
+                sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
+            if EPS:
+                with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
+
+            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
             with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
                 ax = fig.add_subplot(1,1,1)
 
