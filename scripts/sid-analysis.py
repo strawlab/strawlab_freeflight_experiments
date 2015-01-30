@@ -430,6 +430,14 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
+                    name = combine.get_plot_filename('bode_alldata_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    with mlab.fig(name+'.png') as f:
+                        sfe_sid.bode_models(mlab,title,False,False,True,[alldata_good_mdl])
+                    if EPS:
+                        with mlab.fig(name+'.eps',driver='epsc2') as f:
+                            sfe_sid.bode_models(mlab,title,False,False,True,[alldata_good_mdl])
+
             name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
             title = 'Step response (ind. model fit > %.1f%%): %s->%s\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,perturbation_obj)
             with mlab.fig(name+'.png') as f:
