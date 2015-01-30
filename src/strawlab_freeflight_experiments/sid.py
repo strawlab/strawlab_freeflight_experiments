@@ -87,16 +87,16 @@ end""", self.sid_model, nout=2)
         return control.tf(num, den)
 
     @staticmethod
-    def run_tfest(mlab,iddata,np,nz):
+    def run_tfest(mlab,iddata,np,nz,iod):
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
-    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts)
-        mdl = tfest(trial_data,np,nz,'Ts',ts);
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts,iod)
+        mdl = tfest(trial_data,np,nz,iod,'Ts',ts);
         mdl.name = ['tf' num2str(np) num2str(nz)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
-    end""",iddata,np,nz,0.01,
+    end""",iddata,np,nz,0.01,iod,
             nout=6,
             saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdtf("tf%d%d" % (np, nz),
@@ -155,11 +155,11 @@ class MATLABIdpoly(_SIDResult):
             print e
             return _SIDFail()
 
-def run_model_from_specifier(mlab, iddata, spec):
+def run_model_from_specifier(mlab, iddata, spec, iod):
     spec_type,spec_params = re.match('([a-zA-Z]+)([0-9]+)', spec).groups()
     if (spec_type == 'tf') and (len(spec_params) == 2):
         np,nz = map(int,spec_params)
-        return MATLABIdtf.run_tfest(mlab, iddata, np, nz)
+        return MATLABIdtf.run_tfest(mlab, iddata, np, nz, iod)
     elif (spec_type in ('oe','arx')) and (len(spec_params) == 3):
         nb,nf,nk = map(int,spec_params)
         if spec_type == 'oe':

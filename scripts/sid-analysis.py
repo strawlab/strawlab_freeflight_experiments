@@ -111,6 +111,7 @@ if __name__=='__main__':
 
     EPS = False
     DETREND = True
+    IODELAY = 9
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
@@ -254,7 +255,7 @@ if __name__=='__main__':
             #do initial model order selection based on the mean of the trajectories
             #over the perturbation period (as that data is less noisy)
             for spec in MODEL_SPECS_TO_TEST:
-                result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec)
+                result_obj = sfe_sid.run_model_from_specifier(mlab,individual_iddata_mean,spec,IODELAY)
                 print "\ttested model order = %s" % result_obj
                 if result_obj.fitpct > args.min_fit_pct:
                     possible_models.append(result_obj)
@@ -345,7 +346,7 @@ if __name__=='__main__':
                 individual_models[pm] = []
 
                 for i,ph,idlen in individual_iddata:
-                    mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec)
+                    mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec,IODELAY)
                     #accept a lower fit due to noise on the individual trajectories
                     if mdl.fitpct > (args.min_fit_pct_individual):
                         mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
@@ -391,7 +392,7 @@ if __name__=='__main__':
                     indmdls = individual_models[pm]
 
                     #and also a model based on all the data
-                    alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec)
+                    alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec,IODELAY)
                     alldata_model.matlab_color = 'g'
 
                     alldata_models[pm.spec] = alldata_model
