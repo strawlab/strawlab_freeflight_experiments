@@ -371,7 +371,20 @@ if __name__=='__main__':
                     except RuntimeError,e:
                         print "ERROR MERGING %d %s MODELS\n\t%s" % (len(individual_models[pm]),pm.spec,e)
 
-                    #also show the model mad on the basis of the mean trajectories
+                    #create a model from all data, using data from where the individual data was good enough
+                    pooled_good_id_varname = mlab.varname('iddata')
+                    mlab.run_code("%s = merge(%s);" % (
+                            pooled_good_id_varname,
+                            ','.join([str(mdl.sid_data) for mdl in individual_models[pm]])))
+                    pooled_good_id = mlab.proxy_variable(pooled_good_id_varname)
+                    dest = combine.get_plot_filename("iddata_good_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
+                    mlab.run_code("save('%s','%s');" % (dest,pooled_good_id))
+
+                    alldata_good_mdl = sfe_sid.run_model_from_specifier(mlab,pooled_good_id,pm.spec,IODELAY)
+                    alldata_good_mdl.matlab_color = 'm'
+                    extra_models.append(alldata_good_mdl)
+
+                    #also show the model made on the basis of the mean trajectories
                     pm.matlab_color = 'r'
                     extra_models.append(pm)
 
@@ -390,7 +403,7 @@ if __name__=='__main__':
                         pickle.dump(py_mdl,f)
 
                     extra_models.append(alldata_model)
-                    extra_desc = 'r=model(mean_perturb),b=merge(individual_models),g=model(individual_data)'
+                    extra_desc = 'r=model(mean perturb),b=merge(%d good ind. models),g=model(%d all ind. data),m=model(%d good ind. data) ' % (len(individual_models[pm]),len(individual_iddata), len(individual_models[pm]))
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
                     title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
