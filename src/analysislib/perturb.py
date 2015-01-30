@@ -18,7 +18,17 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
     for cond in sorted(results):
 
-        perturb_desc = cond.split("/")[-1]
+        condition_conf = combine.get_condition_configuration(combine.get_condition_name(cond))
+        if condition_conf:
+            try:
+                perturb_desc = condition_conf['perturb_desc']
+            except KeyError:
+                #new style yaml experiment, not a perturbation condition
+                continue
+        else:
+            #backwards compatibility for old pre-yaml experiments where the perturb_descripor
+            #was assumed to be the last element in the condition string
+            perturb_desc = cond.split("/")[-1]
 
         pklass = sfe_perturb.get_perturb_class(perturb_desc)
 
