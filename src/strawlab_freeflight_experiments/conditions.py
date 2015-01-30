@@ -115,8 +115,13 @@ class Conditions(OrderedDict, _YamlMixin):
             v = d[k]
             if k.startswith('_') or k == 'uuid':
                 continue
+
             c = Condition(v)
             c.name = k
+
+            if c in self.values():
+                raise ValueError("duplicate condition %s" % k)
+
             self[k] = c
 
     @staticmethod

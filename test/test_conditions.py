@@ -35,6 +35,15 @@ rotation_infinity:
         c2 = sfe_conditions.Conditions(open(self._yaml))
         self.assertEqual(c1, c2)
 
+    def test_duplicate_names(self):
+        s = """
+foo:
+    bar: 1
+foo2:
+    bar: 1
+"""
+        self.assertRaises(ValueError, sfe_conditions.Conditions, s)
+
     def test_api(self):
         c = sfe_conditions.Conditions(open(self._yaml))
 
