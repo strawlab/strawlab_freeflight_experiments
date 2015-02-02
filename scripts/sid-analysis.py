@@ -111,7 +111,6 @@ if __name__=='__main__':
 
     EPS = False
     DETREND = True
-    IODELAY = 9
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
@@ -133,6 +132,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-perturb-start-id", type=int,
         help='only plot perturbations that started in this id')
+    parser.add_argument(
+        "--iod", type=int, default=9,
+        help='io delay')
 
     args = parser.parse_args()
 
@@ -141,6 +143,7 @@ if __name__=='__main__':
     if args.min_fit_pct_individual is None:
         args.min_fit_pct_individual = args.min_fit_pct * 0.5
 
+    IODELAY = args.iod
     MODEL_SPECS_TO_TEST = args.models.split(',')
 
     mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
@@ -165,7 +168,7 @@ if __name__=='__main__':
 
     pid = args.only_perturb_start_id
 
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual}
+    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod}
 
 
     #loop per condition
