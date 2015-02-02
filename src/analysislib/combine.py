@@ -353,6 +353,10 @@ class _Combine(object):
         """a list of dictionaries, each dict containing the metadata for the experiment"""
         return self._metadata
 
+    def get_experiment_conditions(self):
+        """a list of dictionaries, each dict containing the metadata for the experiment"""
+        return self._conditions
+
     def get_spanned_results(self):
         """
         returns a dict of object ids whose trajectories span multiple conditions.
