@@ -180,7 +180,7 @@ if __name__=='__main__':
         alldata_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
-        condn = aplt.get_safe_filename(cond, **plot_fn_kwargs)
+        condn = aplt.get_safe_filename(combine.get_condition_name(cond), **plot_fn_kwargs)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
