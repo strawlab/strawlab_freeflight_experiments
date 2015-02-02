@@ -75,6 +75,8 @@ class Perturber:
         else:
             self.in_ratio_funcs = []
 
+        self.f0 = self.f1 = np.nan
+
         self.duration = float(duration)
         self.ratio_min = float(ratio_min)
         self.reset()
@@ -90,6 +92,15 @@ class Perturber:
 
     def _get_duration_discrete(self, Fs, thresh=0.98):
         return int(self._get_duration(thresh)*Fs)
+
+    def get_time_limits(self):
+        raise NotImplementedError
+
+    def get_value_limits(self):
+        raise NotImplementedError
+
+    def get_frequency_limits(self):
+        return self.f0,self.f1
 
     def get_perturb_range_identifier(self, v):
         for i,f in enumerate(self.in_ratio_funcs):
@@ -179,6 +190,8 @@ class NoPerturb(Perturber):
         return 0,0
     def get_value_limits(self):
         return 0,0
+    def get_frequency_limits(self):
+        pass
 
 class PerturberStep(Perturber):
 
@@ -692,8 +705,15 @@ class PerturberIDINPUT(_PerturberInterpolation):
 
         _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
 
+        if self.type == 'sine':
+            self.f0 = float(b0)
+            self.f1 = float(b1)
+        else:
+            self.f0 = 0.0
+            self.f1 = float(b1)
+
     def __repr__(self):
-        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs>" % (self.what,self.type,self.duration)
+        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.f0,self.f1)
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
