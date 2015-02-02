@@ -156,7 +156,13 @@ class MATLABIdpoly(_SIDResult):
             return _SIDFail()
 
 def run_model_from_specifier(mlab, iddata, spec, iod):
+    #match arx331,arx4410,oe442,tf55
+
     spec_type,spec_params = re.match('([a-zA-Z]+)([0-9]+)', spec).groups()
+
+    spec_params = re.match('([0-9])([0-9])([0-9]*)', spec_params).groups()
+    spec_params = filter(len,spec_params) #remove optional last (no)match
+
     if (spec_type == 'tf') and (len(spec_params) == 2):
         np,nz = map(int,spec_params)
         return MATLABIdtf.run_tfest(mlab, iddata, np, nz, iod)
