@@ -76,8 +76,9 @@ class _Combine(object):
         self._debug_cache = {}
         self._conditions = {}
         self._condition_names = {}
+        self._metadata = []
 
-        self._configdict = {'v':9,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':10,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -153,6 +154,7 @@ class _Combine(object):
                           "dt":self._dt,
                           "conditions":self._conditions,
                           "condition_names":self._condition_names,
+                          "metadata":self._metadata,
                           "csv_file":self.csv_file},
                          f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -346,6 +348,10 @@ class _Combine(object):
     def get_num_frames(self, seconds):
         """returns the number of frames that should be recorded for the given seconds"""
         return seconds / self._dt
+
+    def get_experiment_metadata(self):
+        """a list of dictionaries, each dict containing the metadata for the experiment"""
+        return self._metadata
 
     def get_spanned_results(self):
         """
@@ -940,6 +946,7 @@ class CombineH5WithCSV(_Combine):
                 self.csv_file = d['csv_file']   #for plot names
                 self._conditions = d['conditions']
                 self._condition_names = d['condition_names']
+                self._metadata = d['metadata']
 
                 if args.uuid is None:
                     self.plotdir = args.outdir if args.outdir else os.getcwd()
@@ -1021,6 +1028,14 @@ class CombineH5WithCSV(_Combine):
                 self._debug("IO:     reading %s" % fn)
         except:
             self._conditions = {}
+        path,fname = os.path.split(csv_fname)
+        try:
+            fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
+            with open(fn) as f:
+                self._metadata.append( yaml.load(f) )
+                self._debug("IO:     reading %s" % fn)
+        except:
+            pass
 
         #open the csv file as a dataframe
         try:
