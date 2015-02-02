@@ -12,6 +12,7 @@ import numpy as np
 
 import control
 import control.pzmap
+import control.ctrlutil
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -313,5 +314,73 @@ def get_model_fit(mlab, iddata, sid_model):
 def get_bode_response(mlab, result_obj, freq_range):
     mag,phase,wout,sdmag,sdphase = mlab.bode(result_obj.sid_model, freq_range, nout=5)
     return mag,phase,wout,sdmag,sdphase
+
+def plot_bode(syslist, omega, dB=None, Hz=None, deg=None, labels=None, fig=None):
+
+    if (not getattr(syslist, '__iter__', False)):
+        syslist = (syslist,)
+
+    if labels is None:
+        labels = [None] * len(syslist)
+
+    if len(syslist) != len(labels):
+        raise ValueError("labels must be same length as syslist")
+
+    if fig is None:
+        fig = plt.figure()
+
+    axm = fig.add_subplot(211)
+    axp = fig.add_subplot(212)
+
+    mags, phases = [], []
+    lines = []
+
+    for sys,lbl in zip(syslist,labels):
+        if (sys.inputs > 1 or sys.outputs > 1):
+            #TODO: Add MIMO bode plots.
+            raise NotImplementedError("Bode is currently only implemented for SISO systems.")
+        else:
+            # Get the magnitude and phase of the system
+            mag_tmp, phase_tmp, omega_sys = sys.freqresp(omega)
+            mag = np.atleast_1d(np.squeeze(mag_tmp))
+            phase = np.atleast_1d(np.squeeze(phase_tmp))
+            phase = control.ctrlutil.unwrap(phase)
+            if Hz:
+                omega_plt = omega_sys/(2*np.pi)
+            else:
+                omega_plt = omega_sys
+
+            if dB: mag = 20*np.log10(mag)
+            if deg: phase = phase * 180 / np.pi
+
+            mags.append(mag)
+            phases.append(phase)
+
+            # Magnitude plot
+            if dB:
+                lm = axm.semilogx(omega_plt, mag, label=lbl)
+            else:
+                lm = axm.loglog(omega_plt, mag, label=lbl)
+
+            # Add a grid to the plot + labeling
+            axm.grid(True, which='minor')
+            axm.set_ylabel("Magnitude (dB)" if dB else "Magnitude")
+
+            # Phase plot
+            lp = axp.semilogx(omega_plt, phase, label=lbl)
+            axp.grid(True, which='minor')
+            axp.set_ylabel("Phase (deg)" if deg else "Phase (rad)")
+
+            # Label the frequency axis
+            axp.set_xlabel("Frequency (Hz)" if Hz else "Frequency (rad/sec)")
+
+            lines.append((lm[0],lp[0]))
+
+    if len(syslist) == 1:
+        return mags[0], phases[0], lines, (axm, axp)
+    else:
+        return mags, phases, lines, (axm, axp)
+
+
 
 
