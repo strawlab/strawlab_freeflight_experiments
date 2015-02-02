@@ -387,6 +387,15 @@ if __name__=='__main__':
                     alldata_good_mdl = sfe_sid.run_model_from_specifier(mlab,pooled_good_id,pm.spec,IODELAY)
                     alldata_good_mdl.matlab_color = 'm'
                     extra_models.append(alldata_good_mdl)
+                    py_mdl = alldata_good_mdl.get_control_object(mlab)
+                    name = combine.get_plot_filename("py_mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    with open(name,'wb') as f:
+                        pickle.dump({"model":py_mdl,
+                                     "metadata":combine.get_experiment_metadata(),
+                                     "conditions":combine.get_experiment_conditions(),
+                                     "condition_name":combine.get_condition_name(cond),
+                                     "model_spec":pm.spec},
+                                    f)
 
                     #also show the model made on the basis of the mean trajectories
                     pm.matlab_color = 'r'
@@ -397,16 +406,19 @@ if __name__=='__main__':
                     #and also a model based on all the data
                     alldata_model = sfe_sid.run_model_from_specifier(mlab,pooled_id,pm.spec,IODELAY)
                     alldata_model.matlab_color = 'g'
+                    extra_models.append(alldata_model)
+                    py_mdl = alldata_model.get_control_object(mlab)
+                    name = combine.get_plot_filename("py_mdl_alldata_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    with open(name,'wb') as f:
+                        pickle.dump({"model":py_mdl,
+                                     "metadata":combine.get_experiment_metadata(),
+                                     "conditions":combine.get_experiment_conditions(),
+                                     "condition_name":combine.get_condition_name(cond),
+                                     "model_spec":pm.spec},
+                                    f)
 
                     alldata_models[pm.spec] = alldata_model
 
-                    #FIXME: save python obj of all models
-                    py_mdl = alldata_model.get_control_object(mlab)
-                    name = combine.get_plot_filename("py_mdl_individual_data_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
-                    with open(name,'wb') as f:
-                        pickle.dump(py_mdl,f)
-
-                    extra_models.append(alldata_model)
                     extra_desc = 'r=model(mean perturb),b=merge(%d good ind. models),g=model(%d all ind. data),m=model(%d good ind. data) ' % (len(individual_models[pm]),len(individual_iddata), len(individual_models[pm]))
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
