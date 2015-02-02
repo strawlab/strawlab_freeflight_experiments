@@ -134,18 +134,18 @@ class MATLABIdpoly(_SIDResult):
             return _SIDFail()
 
     @staticmethod
-    def run_arx(mlab,iddata,nb,nf,nk):
+    def run_arx(mlab,iddata,nb,nf,nk,iod):
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
-    function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk,iod)
         Opt = arxOptions;
         Opt.Focus = 'simulation';
-        mdl = arx(trial_data,[nb nf nk],Opt);
+        mdl = arx(trial_data,[nb nf nk],'ioDelay',iod,Opt);
         mdl.name = ['arx' num2str(nb) num2str(nf) num2str(nk)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
-    end""",iddata,nb,nf,nk,
+    end""",iddata,nb,nf,nk,iod,
             nout=6,
             saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdpoly("arx%d%d%d" % (nb, nf, nk),
@@ -165,7 +165,7 @@ def run_model_from_specifier(mlab, iddata, spec, iod):
         if spec_type == 'oe':
             return MATLABIdpoly.run_oe(mlab, iddata, nb, nf, nk)
         else:
-            return MATLABIdpoly.run_arx(mlab, iddata, nb, nf, nk)
+            return MATLABIdpoly.run_arx(mlab, iddata, nb, nf, nk, iod)
     else:
         raise ValueError("Unknown model specifier")
 
