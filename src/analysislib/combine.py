@@ -1043,8 +1043,11 @@ class CombineH5WithCSV(_Combine):
                 self._metadata.append(md)
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
-                with open(fn, 'w') as f:
-                    yaml.dump(md, f)
+                try:
+                    with open(fn, 'w') as f:
+                        yaml.dump(md, f)
+                except:
+                    pass
             except:
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
