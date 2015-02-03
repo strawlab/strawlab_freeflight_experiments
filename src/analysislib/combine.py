@@ -32,7 +32,7 @@ import analysislib.args
 import analysislib.curvature as acurve
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuid_from_flydra_h5
 
 from whatami import What, MAX_EXT4_FN_LENGTH
 
@@ -146,17 +146,30 @@ class _Combine(object):
                         self._warn('The error was %s' % str(e))
         return None
 
+    def get_data_dictionary(self):
+        """Returns a dictionary with the data that is worth to save from this combine object.
+
+        These are the data we deem worthy:
+          - dt and results (see get_results)
+          - conditions: a dictionary {normalised_condition_name -> condition_configuration_dict}
+          - condition_names: a dictionary {condition_name -> normalised_condition_name}
+          - metadata: a list of dictionaries, each containing the metadata for one experiment
+          - csv_file: the path to the original experiment csv file or None if it was not used
+        """
+        return {
+            "results": self._results,
+            "dt": self._dt,
+            "conditions": self._conditions,
+            "condition_names": self._condition_names,
+            "metadata": self._metadata,
+            "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
+        }
+
     def _save_cache_file(self):
         pkl,s = self._get_cache_name_and_config_string()
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
-            cPickle.dump({"results":self._results,
-                          "dt":self._dt,
-                          "conditions":self._conditions,
-                          "condition_names":self._condition_names,
-                          "metadata":self._metadata,
-                          "csv_file":self.csv_file},
-                         f, protocol=pickle.HIGHEST_PROTOCOL)
+            cPickle.dump(self.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
 
         #if the string has been truncted to a hash then also write a text file with
         #the calibration string
@@ -926,16 +939,20 @@ class CombineH5WithCSV(_Combine):
 
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
-        given uuid
+        given uuid.
+
+        Returns an argparse Namespace containing the configuration arguments.
         """
         if 'args' in kwargs:
             args = kwargs['args']
             args.uuid = [uuid]
         else:
-            kwargs['uuid'] = uuid
+            kwargs['uuid'] = uuid  # note: this is side effect free, as python warrants kwargs is a fresh copy
             parser,args = analysislib.args.get_default_args(**kwargs)
 
         self.add_from_args(args, csv_suffix=csv_suffix)
+
+        return args
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
@@ -989,7 +1006,7 @@ class CombineH5WithCSV(_Combine):
                 if self.plotdir is None:
                     self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-                self.add_csv_and_h5_file(csv_file, h5_file, args, uuid=uuid)
+                self.add_csv_and_h5_file(csv_file, h5_file, args)
 
         else:
             csv_file = args.csv_file
@@ -1009,11 +1026,13 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args, uuid=None):
+    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
+
+        uuid = uuid_from_flydra_h5(h5_file)
 
         fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                             h5_file=self.h5_file)
@@ -1028,16 +1047,30 @@ class CombineH5WithCSV(_Combine):
         try:
             fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
             with open(fn) as f:
-                self._conditions = yaml.load(f)
                 self._debug("IO:     reading %s" % fn)
+                self._conditions = yaml.load(f)
         except:
             self._conditions = {}
         path,fname = os.path.split(csv_fname)
         try:
+            # get it from the database, if it fails, try from the yaml
+            # TODO: get this refactored-out to a ExperimentMetadata class
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
-            with open(fn) as f:
-                self._metadata.append( yaml.load(f) )
-                self._debug("IO:     reading %s" % fn)
+            try:
+                _, arena, md = find_experiment(uuid)
+                md['arena'] = arena
+                self._metadata.append(md)
+                # try to update the yaml
+                # (we need to tell to people these yaml are read-only, subject to change for them)
+                try:
+                    with open(fn, 'w') as f:
+                        yaml.dump(md, f)
+                except:
+                    pass
+            except:
+                with open(fn) as f:
+                    self._debug("IO:     reading %s" % fn)
+                    self._metadata.append( yaml.load(f) )
         except:
             pass
 
@@ -1061,10 +1094,6 @@ class CombineH5WithCSV(_Combine):
                                      'flydra_data_file':str})
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
-
-        # uuids from CSV
-        if 'exp_uuid' not in csv.columns:
-            self._warn('exp_uuid not in %s, cannot infer the UUID' % self.csv_file)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
@@ -1357,12 +1386,6 @@ class CombineH5WithCSV(_Combine):
                     r['df'].append( df )
 
                     # save uuid
-                    uuid = None
-                    if 'exp_uuid' in odf:
-                        if odf['exp_uuid'].nunique() != 1:
-                            self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, oid))
-                        else:
-                            uuid = odf['exp_uuid'].dropna().unique()[0]
                     self._results[cond]['uuids'].append(uuid)
 
         h5.close()

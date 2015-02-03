@@ -11,13 +11,12 @@ if not os.environ.get('DISPLAY'):
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
-from autodata.model import find_experiment
+from strawlab.constants import find_experiment
 import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
-import analysislib.curvature as curve
 import analysislib.util as autil
 
 
