@@ -44,6 +44,14 @@ def _show_mlab_figures(mlab):
             break
         time.sleep(0.1)
 
+def _load_matlab_variable_as_same_name(fobj, path, name):
+    TMPL = """
+inf = whos('-file','%(path)s');
+dat = load('%(path)s', '-mat');
+%(name)s = dat.(inf.name);
+"""
+    fobj.write(TMPL % {'path':path,'name':name})
+
 def plot_perturbation_signal(combine, args, perturbations, perturbation_conditions):
     for perturbation_obj in perturbations:
         cond = perturbation_conditions[perturbation_obj]
@@ -172,6 +180,8 @@ if __name__=='__main__':
 
     plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod}
 
+    mfile = combine.get_plot_filename('variables.m')
+    mfile = open(mfile,'w')
 
     #loop per condition
     for perturbation_obj in perturbations:
@@ -242,6 +252,7 @@ if __name__=='__main__':
 
             dest = combine.get_plot_filename("iddata_mean_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,individual_iddata_mean))
+            _load_matlab_variable_as_same_name(mfile,dest,'iddata_mean_%s' % cond_name)
 
             possible_models = []
 
@@ -253,6 +264,7 @@ if __name__=='__main__':
             pooled_id = mlab.proxy_variable(pooled_id_varname)
             dest = combine.get_plot_filename("iddata_merged_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
+            _load_matlab_variable_as_same_name(mfile,dest,'iddata_all_%s' % cond_name)
 
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
@@ -387,6 +399,7 @@ if __name__=='__main__':
                     pooled_good_id = mlab.proxy_variable(pooled_good_id_varname)
                     dest = combine.get_plot_filename("iddata_good_merged_%s_%s_%s_%s.mat" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     mlab.run_code("save('%s','%s');" % (dest,pooled_good_id))
+                    _load_matlab_variable_as_same_name(mfile,dest,'iddata_good_%s_%s' % (pm.spec,cond_name))
 
                     alldata_good_mdl = sfe_sid.run_model_from_specifier(mlab,pooled_good_id,pm.spec,IODELAY)
                     alldata_good_mdl.matlab_color = 'm'
@@ -499,6 +512,7 @@ if __name__=='__main__':
         t.join()
 
     mlab.stop()
+    mfile.close()
 
     sys.exit(0)
 
