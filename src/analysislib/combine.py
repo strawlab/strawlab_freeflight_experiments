@@ -989,7 +989,7 @@ class CombineH5WithCSV(_Combine):
                 if self.plotdir is None:
                     self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
 
-                self.add_csv_and_h5_file(csv_file, h5_file, args, uuid=uuid)
+                self.add_csv_and_h5_file(csv_file, h5_file, args)
 
         else:
             csv_file = args.csv_file
@@ -1077,10 +1077,6 @@ class CombineH5WithCSV(_Combine):
                                      'flydra_data_file':str})
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
-
-        # uuids from CSV
-        if 'exp_uuid' not in csv.columns:
-            self._warn('exp_uuid not in %s, cannot infer the UUID' % self.csv_file)
 
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
