@@ -32,7 +32,7 @@ import analysislib.args
 import analysislib.curvature as acurve
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuid_from_flydra_h5
 
 from whatami import What, MAX_EXT4_FN_LENGTH
 
@@ -1009,11 +1009,13 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args, uuid=None):
+    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
         self.csv_file = csv_fname
         self.h5_file = h5_file
+
+        uuid = uuid_from_flydra_h5(h5_file)
 
         fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                             h5_file=self.h5_file)
@@ -1371,12 +1373,6 @@ class CombineH5WithCSV(_Combine):
                     r['df'].append( df )
 
                     # save uuid
-                    uuid = None
-                    if 'exp_uuid' in odf:
-                        if odf['exp_uuid'].nunique() != 1:
-                            self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, oid))
-                        else:
-                            uuid = odf['exp_uuid'].dropna().unique()[0]
                     self._results[cond]['uuids'].append(uuid)
 
         h5.close()
