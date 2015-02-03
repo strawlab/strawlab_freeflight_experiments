@@ -58,7 +58,9 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
     for perturbation_obj in perturbations:
 
         cond = perturbation_conditions[perturbation_obj]
-        condn = aplt.get_safe_filename(cond)
+        cond_name = combine.get_condition_name(cond)
+
+        plot_fn = aplt.get_safe_filename(cond_name)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         phs = perturbations[perturbation_obj]
@@ -87,15 +89,15 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
 
                 #save the dataframes for analysis in MATLAB
                 acombine.write_result_dataframe(
-                            combine.get_plot_filename("mean_%s_%s_%s" % (system_u_name,system_y_name,condn)),
+                            combine.get_plot_filename("mean_%s_%s_%s" % (system_u_name,system_y_name,plot_fn)),
                             pd.DataFrame({"y":system_y_df_mean,"u":system_u_df_mean}),'none')
 
                 #save all input_traces
                 acombine.write_result_dataframe(
-                            combine.get_plot_filename("input_%s_%s" % (system_u_name,condn)),
+                            combine.get_plot_filename("input_%s_%s" % (system_u_name,plot_fn)),
                             system_u_df,'none')
                 acombine.write_result_dataframe(
-                            combine.get_plot_filename("output_%s_%s" % (system_y_name,condn)),
+                            combine.get_plot_filename("output_%s_%s" % (system_y_name,plot_fn)),
                             system_y_df,'none')
 
                 name = combine.get_plot_filename('cohere_%s_%s_%s' % (system_u_name,system_y_name,aplt.get_safe_filename(cond)))
@@ -180,7 +182,9 @@ if __name__=='__main__':
         alldata_models = {}
 
         cond = perturbation_conditions[perturbation_obj]
-        condn = aplt.get_safe_filename(combine.get_condition_name(cond), **plot_fn_kwargs)
+        cond_name = combine.get_condition_name(cond)
+
+        plot_fn = aplt.get_safe_filename(cond_name, **plot_fn_kwargs)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
@@ -213,7 +217,7 @@ if __name__=='__main__':
                         print "ERROR UPLOADING DATA: %s" % e
                         continue
 
-                    dest = combine.get_plot_filename(str(ph.obj_id),subdir='all_iddata_%s' % condn)
+                    dest = combine.get_plot_filename('%s.mat' % ph.obj_id,subdir='all_iddata_%s' % plot_fn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
 
         if not any_completed_perturbations:
@@ -236,7 +240,7 @@ if __name__=='__main__':
                                          0.01,
                                          DETREND)
 
-            dest = combine.get_plot_filename("iddata_mean_%s_%s_%s" % (system_u_name,system_y_name,condn))
+            dest = combine.get_plot_filename("iddata_mean_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,individual_iddata_mean))
 
             possible_models = []
@@ -247,10 +251,10 @@ if __name__=='__main__':
                     pooled_id_varname,
                     ','.join([str(i[0]) for i in individual_iddata])))
             pooled_id = mlab.proxy_variable(pooled_id_varname)
-            dest = combine.get_plot_filename("iddata_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
+            dest = combine.get_plot_filename("iddata_merged_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
 
-            name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
@@ -264,7 +268,7 @@ if __name__=='__main__':
                     possible_models.append(result_obj)
 
             #plot the mean timeseries and any model fits using matplotlib
-            name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Model Comparison (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
 
@@ -318,7 +322,7 @@ if __name__=='__main__':
             if not possible_models:
                 continue
 
-            name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Model Comparison (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
@@ -326,7 +330,7 @@ if __name__=='__main__':
                 with mlab.fig(name+'.eps',driver='epsc2') as f:
                     sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
 
-            name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Bode (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
@@ -334,7 +338,7 @@ if __name__=='__main__':
                 with mlab.fig(name+'.eps',driver='epsc2') as f:
                     sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
 
-            name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,condn))
+            name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Pole Zero Plot (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
@@ -381,14 +385,14 @@ if __name__=='__main__':
                             pooled_good_id_varname,
                             ','.join([str(mdl.sid_data) for mdl in individual_models[pm]])))
                     pooled_good_id = mlab.proxy_variable(pooled_good_id_varname)
-                    dest = combine.get_plot_filename("iddata_good_merged_%s_%s_%s" % (system_u_name,system_y_name,condn))
+                    dest = combine.get_plot_filename("iddata_good_merged_%s_%s_%s_%s.mat" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     mlab.run_code("save('%s','%s');" % (dest,pooled_good_id))
 
                     alldata_good_mdl = sfe_sid.run_model_from_specifier(mlab,pooled_good_id,pm.spec,IODELAY)
                     alldata_good_mdl.matlab_color = 'm'
                     extra_models.append(alldata_good_mdl)
                     py_mdl = alldata_good_mdl.get_control_object(mlab)
-                    name = combine.get_plot_filename("py_mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename("py_mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     with open(name,'wb') as f:
                         pickle.dump({"model":py_mdl,
                                      "metadata":combine.get_experiment_metadata(),
@@ -408,7 +412,7 @@ if __name__=='__main__':
                     alldata_model.matlab_color = 'g'
                     extra_models.append(alldata_model)
                     py_mdl = alldata_model.get_control_object(mlab)
-                    name = combine.get_plot_filename("py_mdl_alldata_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename("py_mdl_alldata_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     with open(name,'wb') as f:
                         pickle.dump({"model":py_mdl,
                                      "metadata":combine.get_experiment_metadata(),
@@ -421,7 +425,7 @@ if __name__=='__main__':
 
                     extra_desc = 'r=model(mean perturb),b=merge(%d good ind. models),g=model(%d all ind. data),m=model(%d good ind. data) ' % (len(individual_models[pm]),len(individual_iddata), len(individual_models[pm]))
 
-                    name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
@@ -429,7 +433,7 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
 
-                    name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Pole Zero Plot %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
@@ -437,7 +441,7 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
 
-                    name = combine.get_plot_filename('pz_merge_and_means_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename('pz_merge_and_means_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Pole Zero Plot %s (merge>%.1f%%/means): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
@@ -445,7 +449,7 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
-                    name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,condn))
+                    name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
