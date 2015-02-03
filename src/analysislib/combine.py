@@ -1038,6 +1038,7 @@ class CombineH5WithCSV(_Combine):
             # TODO: get this refactored-out to a ExperimentMetadata class
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
             try:
+                self._debug("IO:     reading from database")
                 _, arena, md = find_experiment(uuid)
                 md['arena'] = arena
                 self._metadata.append(md)
@@ -1046,6 +1047,7 @@ class CombineH5WithCSV(_Combine):
                 try:
                     with open(fn, 'w') as f:
                         yaml.dump(md, f)
+                        self._debug("IO:     wrote %s" % fn)
                 except:
                     pass
             except:
