@@ -32,7 +32,7 @@ import analysislib.args
 import analysislib.curvature as acurve
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment
 
 from whatami import What, MAX_EXT4_FN_LENGTH
 
@@ -1034,11 +1034,21 @@ class CombineH5WithCSV(_Combine):
             self._conditions = {}
         path,fname = os.path.split(csv_fname)
         try:
-            # get it from the database
+            # get it from the database, if it fails, try from the yaml
+            # TODO: get this refactored-out to a ExperimentMetadata class
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
-            with open(fn) as f:
-                self._debug("IO:     reading %s" % fn)
-                self._metadata.append( yaml.load(f) )  # FIXME: if the gold standard for MD is the DB, get it from there
+            try:
+                _, arena, md = find_experiment(uuid)
+                md['arena'] = arena
+                self._metadata.append(md)
+                # try to update the yaml
+                # (we need to tell to people these yaml are read-only, subject to change for them)
+                with open(fn, 'w') as f:
+                    yaml.dump(md, f)
+            except:
+                with open(fn) as f:
+                    self._debug("IO:     reading %s" % fn)
+                    self._metadata.append( yaml.load(f) )
         except:
             pass
 
