@@ -146,17 +146,30 @@ class _Combine(object):
                         self._warn('The error was %s' % str(e))
         return None
 
+    def get_data_dictionary(self):
+        """Returns a dictionary with the data that is worth to save from this combine object.
+
+        These are the data we deem worthy:
+          - dt and results (see get_results)
+          - conditions: a dictionary {normalised_condition_name -> condition_configuration_dict}
+          - condition_names: a dictionary {condition_name -> normalised_condition_name}
+          - metadata: a list of dictionaries, each containing the metadata for one experiment
+          - csv_file: the path to the original experiment csv file or None if it was not used
+        """
+        return {
+            "results": self._results,
+            "dt": self._dt,
+            "conditions": self._conditions,
+            "condition_names": self._condition_names,
+            "metadata": self._metadata,
+            "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
+        }
+
     def _save_cache_file(self):
         pkl,s = self._get_cache_name_and_config_string()
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
-            cPickle.dump({"results":self._results,
-                          "dt":self._dt,
-                          "conditions":self._conditions,
-                          "condition_names":self._condition_names,
-                          "metadata":self._metadata,
-                          "csv_file":self.csv_file},
-                         f, protocol=pickle.HIGHEST_PROTOCOL)
+            cPickle.dump(self.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
 
         #if the string has been truncted to a hash then also write a text file with
         #the calibration string
