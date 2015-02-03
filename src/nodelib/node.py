@@ -100,7 +100,7 @@ class Experiment(object):
                 v = str(v)
             exp[i] = v
         with open(os.path.join(path,date_fname)+'.experiment.yaml','w') as f:
-            yaml.dump(exp, f, default_flow_style=False)
+            yaml.safe_dump(exp, f, default_flow_style=False)
 
     def run(self):
         raise NotImplementedError
