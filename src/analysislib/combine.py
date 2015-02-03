@@ -939,16 +939,20 @@ class CombineH5WithCSV(_Combine):
 
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
-        given uuid
+        given uuid.
+
+        Returns an argparse Namespace containing the configuration arguments.
         """
         if 'args' in kwargs:
             args = kwargs['args']
             args.uuid = [uuid]
         else:
-            kwargs['uuid'] = uuid
+            kwargs['uuid'] = uuid  # note: this is side effect free, as python warrants kwargs is a fresh copy
             parser,args = analysislib.args.get_default_args(**kwargs)
 
         self.add_from_args(args, csv_suffix=csv_suffix)
+
+        return args
 
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
