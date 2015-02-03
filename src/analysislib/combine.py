@@ -1028,16 +1028,17 @@ class CombineH5WithCSV(_Combine):
         try:
             fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
             with open(fn) as f:
-                self._conditions = yaml.load(f)
                 self._debug("IO:     reading %s" % fn)
+                self._conditions = yaml.load(f)
         except:
             self._conditions = {}
         path,fname = os.path.split(csv_fname)
         try:
+            # get it from the database
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
             with open(fn) as f:
-                self._metadata.append( yaml.load(f) )
                 self._debug("IO:     reading %s" % fn)
+                self._metadata.append( yaml.load(f) )  # FIXME: if the gold standard for MD is the DB, get it from there
         except:
             pass
 
