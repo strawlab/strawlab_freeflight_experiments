@@ -1056,7 +1056,7 @@ class CombineH5WithCSV(_Combine):
             except:
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
-                    self._metadata.append( yaml.load(f) )
+                    self._metadata.append( yaml.safe_load(f) )
         except:
             pass
 
