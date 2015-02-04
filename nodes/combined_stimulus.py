@@ -26,7 +26,6 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
-from strawlab_freeflight_experiments import INVALID_VALUE
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -153,8 +152,10 @@ class Node(nodelib.node.Experiment):
         #default to no perturb
         self.perturber = sfe_perturb.NoPerturb()
         #default to no conflict
-        model_filename = '/dev/null'
-        model_x = model_y = model_z = INVALID_VALUE
+        model_filename = MODEL_NO_FILE
+        model_x = model_y = model_z = MODEL_NO_POSITION
+
+        self.conflict_and_perturb_model_filename = MODEL_NO_FILE
 
         if self.condition.is_type('rotation','perturbation','conflict'):
             ssvg            = str(self.condition['svg_path'])
@@ -182,24 +183,27 @@ class Node(nodelib.node.Experiment):
         if self.condition.is_type('conflict'):
             model_descriptor = str(self.condition['model_descriptor'])
             model_filename,model_x,model_y,model_z = model_descriptor.split('|')
+            if self.condition.is_type('perturbation'):
+                #in a perturbation+conflict experiment the model is not shown now,
+                #but when the perturbation starts
+                self.conflict_and_perturb_model_filename = str(model_filename)
 
         #set the model in all cases
         self.model_filename = str(model_filename)
-        self.model_x = float(model_x)
-        self.model_y = float(model_y)
-        self.model_z = float(model_z)
+        model_x = float(model_x)
+        model_y = float(model_y)
+        model_z = float(model_z)
 
         msg = Pose()
-        msg.position.x = self.model_x
-        msg.position.y = self.model_y
-        msg.position.z = self.model_z
+        msg.position.x = model_x
+        msg.position.y = model_y
+        msg.position.z = model_z
         msg.orientation.w = 1.0
         self.pub_model_centre.publish(msg)
 
-        self.log.model_filename = self.model_filename
-        self.log.model_x = self.model_x
-        self.log.model_y = self.model_y
-        self.log.model_z = self.model_z
+        self.log.model_x = model_x
+        self.log.model_y = model_y
+        self.log.model_z = model_z
 
         rospy.loginfo('condition: %s %r' % (self.condition.name,self.condition))
         
@@ -230,10 +234,18 @@ class Node(nodelib.node.Experiment):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
                                              now, framenumber, currently_locked_obj_id):
-            
+
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              now, framenumber, currently_locked_obj_id)
+
+                #show the post at the start
+                if state=='starting':
+                    if self.condition.is_type('perturbation') and self.condition.is_type('conflict'):
+                        model_filename = self.conflict_and_perturb_model_filename
+                        self.pub_model_filename.publish(model_filename)
+                        self.log.model_filename = model_filename
+
 
                 print 'perturbation progress: %s' % self.perturber.progress
  
@@ -431,7 +443,12 @@ class Node(nodelib.node.Experiment):
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
 
-        self.pub_model_filename.publish(self.model_filename)
+        if self.condition.is_type('perturbation') and self.condition.is_type('conflict'):
+            model_filename = MODEL_NO_FILE
+        else:
+            model_filename = self.model_filename
+        self.log.model_filename = model_filename
+        self.pub_model_filename.publish(model_filename)
 
         self.update()
 
@@ -463,6 +480,8 @@ class Node(nodelib.node.Experiment):
         self.pub_rotation_velocity.publish(0)
         self.pub_cyl_radius.publish(0.5)
         self.pub_cyl_centre.publish(0,0,0)
+
+        self.pub_model_filename.publish(MODEL_NO_FILE)
 
         if (self.ratio_total > 3) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
