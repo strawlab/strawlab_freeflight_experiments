@@ -1029,7 +1029,10 @@ class CombineH5WithCSV(_Combine):
             fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
             with open(fn) as f:
                 self._debug("IO:     reading %s" % fn)
-                self._conditions = yaml.load(f)
+                c = yaml.safe_load(f)
+                try: del c['uuid']
+                except KeyError: pass
+                self._conditions.update( c )
         except:
             self._conditions = {}
         path,fname = os.path.split(csv_fname)
