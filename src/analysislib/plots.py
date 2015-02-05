@@ -978,6 +978,8 @@ def save_args(combine, args, name="README"):
         f.write("The configuration was (including default values)\n")
         for k,v in args._get_kwargs():
             f.write("%s\n    %r\n" % (k,v))
+        if 'index' not in args:  # index was set programmatically and not reflected in args
+            f.write("index\n    %r\n" % combine._index)
         f.write("\n")
 
 def save_results(combine, args, maxn=20):
