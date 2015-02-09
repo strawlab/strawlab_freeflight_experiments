@@ -261,7 +261,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 5000;
+    unsigned int numPtcls = 2000;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
@@ -404,8 +404,8 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
 }
 
 void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
-    std::string osg_filename = "post.osg";
-    _load_stimulus_filename( osg_filename );
+    //std::string osg_filename = "post.osg";
+    //_load_stimulus_filename( osg_filename );
 
     pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
 
