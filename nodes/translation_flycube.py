@@ -73,13 +73,14 @@ class Node(nodelib.node.Experiment):
                                    state=("trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","stim_x","stim_y","stim_z"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
-            'StimulusStarField')
+            'StimulusCUDAStarFieldAndModel')
 
-        self.pub_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
-        self.pub_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
+        self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32)
 
-        self.pub_velocity.publish(0,0,0)
-        self.pub_size.publish(5.0)
+        self.pub_star_velocity.publish(0,0,0)
+        self.pub_star_size.publish(5.0)
 
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
@@ -140,6 +141,7 @@ class Node(nodelib.node.Experiment):
         star_size       = float(self.condition['star_size'])
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = float(self.condition['z_target'])
+        star_rotation_rate = float(self.condition['star_rotation_rate'])
 
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
@@ -148,7 +150,8 @@ class Node(nodelib.node.Experiment):
         else:
             self.svg_fn = ''
 
-        self.pub_size.publish(star_size)
+        self.pub_star_size.publish(star_size)
+        self.pub_star_rotation_rate.publish(star_rotation_rate)
 
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
 
@@ -254,7 +257,7 @@ class Node(nodelib.node.Experiment):
                 self.log.stim_x = rate_x
                 self.log.stim_y = rate_y
                 self.log.stim_z = v_rate
-                self.pub_velocity.publish(rate_x,rate_y,v_rate)
+                self.pub_star_velocity.publish(rate_x,rate_y,v_rate)
 
                 self.log.framenumber = framenumber
 
@@ -338,7 +341,7 @@ class Node(nodelib.node.Experiment):
             if blacklist:
                 self.blacklist[old_id] = True
 
-        self.pub_velocity.publish(0,0,0)
+        self.pub_star_velocity.publish(0,0,0)
 
         if (self.ratio_total > 2) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
@@ -346,7 +349,7 @@ class Node(nodelib.node.Experiment):
         self.update()
 
 def main():
-    rospy.init_node("translation")
+    rospy.init_node("starfield")
     parser, args = nodelib.node.get_and_parse_commandline()
     node = Node(args)
     return node.run()
