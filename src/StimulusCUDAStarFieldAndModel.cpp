@@ -53,7 +53,7 @@ extern "C" void move(
 class MovePtcls : public osgCompute::Computation
 {
 public:
-    MovePtcls() {}
+    MovePtcls() : _rotation_rate(0.0) {}
 
     virtual void setFrameStamp( const osg::FrameStamp* fs) { _fs=fs; }
     virtual void launch()
