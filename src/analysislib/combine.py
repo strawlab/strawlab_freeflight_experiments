@@ -158,7 +158,7 @@ class _Combine(object):
         """
         return {
             "results": self._results,
-            "dt": self._dt,
+            "dt": self.dt,
             "conditions": self._conditions,
             "condition_names": self._condition_names,
             "metadata": self._metadata,
@@ -241,11 +241,28 @@ class _Combine(object):
             self._warn_cache[m] = 0
         self._warn_cache[m] += 1
 
+    def _get_df_sample_interval(self):
+        for cond,r in self._results.iteritems():
+            for _df in r['df']:
+                try:
+                    return _df.index.freq.nanos / 1e9
+                except AttributeError:
+                    #not datetime index
+                    return None
+        return None
+
     @property
     def dt(self):
-        if self._dt is None:
+        if not self._results:
             raise ValueError("instance contains no data")
-        return self._dt
+
+        dt = self._get_df_sample_interval()
+        if dt is None:
+            #framenumber index, or original index. dt determined by
+            #tracking framerate
+            dt = self._dt
+
+        return dt
 
     @property
     def analysis_type(self):
@@ -413,7 +430,7 @@ class _Combine(object):
         r = collections.OrderedDict()
         for c in sorted(self._results, key=self.get_condition_name):
             r[c] = self._results[c]
-        return r, self._dt
+        return r, self.dt
 
     def get_one_result(self, obj_id, condition=None):
         """
