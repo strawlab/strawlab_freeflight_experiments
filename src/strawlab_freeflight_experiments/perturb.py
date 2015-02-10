@@ -75,8 +75,6 @@ class Perturber:
         else:
             self.in_ratio_funcs = []
 
-        self.f0 = self.f1 = np.nan
-
         self.duration = float(duration)
         self.ratio_min = float(ratio_min)
         self.reset()
@@ -100,7 +98,11 @@ class Perturber:
         raise NotImplementedError
 
     def get_frequency_limits(self):
-        return self.f0,self.f1
+        try:
+            return self.f0,self.f1
+        except AttributeError:
+            #not present in subclasses
+            return np.nan,np.nan
 
     def get_perturb_range_identifier(self, v):
         for i,f in enumerate(self.in_ratio_funcs):
@@ -192,6 +194,8 @@ class NoPerturb(Perturber):
         return 0,0
     def get_frequency_limits(self):
         pass
+    def get_frequency_limits(self):
+        return np.nan, np.nan
 
 class PerturberStep(Perturber):
 
@@ -260,6 +264,9 @@ class PerturberStep(Perturber):
 
     def get_value_limits(self):
         return min(self.value,0),max(self.value,0)
+
+    def get_frequency_limits(self):
+        return np.nan, np.nan
 
 class PerturberStepN(Perturber):
 
@@ -365,6 +372,9 @@ class PerturberStepN(Perturber):
         ax.legend(prop={'size':8})
 
         self._plot_ylabel(ax, ylabel, **plot_kwargs)
+
+    def get_frequency_limits(self):
+        return np.nan, np.nan
 
 class _PerturberInterpolation(Perturber):
     """
@@ -476,7 +486,7 @@ class PerturberTone(_PerturberInterpolation):
         self.what = '_'.join(name_parts[1:])
         self.value = float(value)
         self.t1 = float(t1)
-        self.f0 = float(f0)
+        self.f0 = self.f1 = float(f0)
         self.po = float(po)
 
         t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
@@ -512,6 +522,9 @@ class PerturberMultiTone(_PerturberInterpolation):
         self.tone0 = int(tone0)
         self.Ntones = int(Ntones)
         self.seed = str(seed) if seed else None
+
+        self.f0 = float(tone0)
+        self.f1 = self.f0 + float(Ntones) - 1
 
         #oversample by 10 times the framerate (100)
         fs = 10*100
@@ -663,6 +676,13 @@ class PerturberIDINPUT(_PerturberInterpolation):
         self.t1 = float(dur)
         self.value = float(value)
 
+        if self.type == 'sine':
+            self.f0 = float(b0)
+            self.f1 = float(b1)
+        else:
+            self.f0 = 0.0
+            self.f1 = float(b1)
+
         #look for the cached data object
         fn = '_'.join([str(i) for i in (me,self.type,dur,b0,b1,value,s0,s1,s2,seed)])
         fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
@@ -704,13 +724,6 @@ class PerturberIDINPUT(_PerturberInterpolation):
             np.save(fn,w)
 
         _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
-
-        if self.type == 'sine':
-            self.f0 = float(b0)
-            self.f1 = float(b1)
-        else:
-            self.f0 = 0.0
-            self.f1 = float(b1)
 
     def __repr__(self):
         return "<PerturberIDINPUT what=%s type=%s dur=%.1fs f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.f0,self.f1)
