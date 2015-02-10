@@ -1221,6 +1221,8 @@ class CombineH5WithCSV(_Combine):
 
                 #make a ns since epoch column
                 tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
+                if tns0 == 0.0:
+                    self._warn("WARN: trajectory start time of object_id %s is 0" % oid)
                 tns = ((validframenumber - traj_start_frame) * self._dt * 1e9) + tns0
                 tns_series = pd.Series(tns,name='tns',index=validframenumber,dtype=np.uint64)
                 flydra_series.append(tns_series)
