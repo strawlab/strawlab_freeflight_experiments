@@ -133,7 +133,7 @@ if __name__=='__main__':
         "--min-fit-pct-individual", type=float,
         help='minimum model fit percentage for individual models')
     parser.add_argument(
-        "--models", type=str, default="tf44,tf33,oe441,oe331,arx441,arx331",
+        "--models", type=str, default="tf44,tf33,tf22,oe441,oe331,oe221,arx441,arx331,arx221",
         help='model specs to test')
     parser.add_argument(
         "--perturb-completion-threshold", type=float, default=0.98,
