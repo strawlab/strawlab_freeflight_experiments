@@ -124,6 +124,9 @@ if __name__=='__main__':
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
+        '--index', default='time+10L',
+        help='the index of the returned dataframe (framenumber, none, time+NN)')
+    parser.add_argument(
         "--min-fit-pct", type=float, default=40,
         help='minimum model fit percentage for model order selection')
     parser.add_argument(
@@ -163,8 +166,12 @@ if __name__=='__main__':
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
 
     combine = autil.get_combiner_for_args(args)
-    combine.set_index('time+10L')
+    combine.set_index(args.index)
     combine.add_from_args(args)
+
+    TS = combine.dt
+    FS = 1/TS
+    print "DATA FS=%sHz (TS=%fs)" % (FS,TS)
 
     lookback_frames = int(args.lookback / combine.dt)
 
@@ -178,7 +185,7 @@ if __name__=='__main__':
 
     pid = args.only_perturb_start_id
 
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod}
+    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod, 'fs':int(FS)}
 
     mfile = combine.get_plot_filename('variables.m')
     mfile = open(mfile,'w')
