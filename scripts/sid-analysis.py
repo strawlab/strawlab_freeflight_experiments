@@ -189,8 +189,8 @@ if __name__=='__main__':
     perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
                                                     completion_threshold=args.perturb_completion_threshold)
 
-    plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
-    plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
+    #plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
+    #plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
 
     pid = args.only_perturb_start_id
 
@@ -285,10 +285,10 @@ if __name__=='__main__':
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
             _load_matlab_variable_as_same_name(mfile,dest,'iddata_all_%s' % cond_name)
 
-            name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
-            with mlab.fig(name+'.png') as f:
-                idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
+            #name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
+            #title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            #with mlab.fig(name+'.png') as f:
+            #    idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
             #do initial model order selection based on the mean of the trajectories
             #over the perturbation period (as that data is less noisy)
