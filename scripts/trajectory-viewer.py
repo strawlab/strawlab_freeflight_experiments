@@ -82,7 +82,7 @@ if __name__=='__main__':
                 name = analysislib.combine.safe_condition_string(current_condition)
 
                 filename = "%s_%s_%s" % (uuid, obj_id, name)
-                title = "%s: %s" % (obj_id, current_condition)
+                title = "%s: %s" % (obj_id, combine.get_condition_name(current_condition))
 
                 if args.animate:
                     args.show = True
