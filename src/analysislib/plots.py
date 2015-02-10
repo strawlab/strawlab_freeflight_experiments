@@ -674,6 +674,8 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
+    xl0,xl1,yl0,yl1,zl0,zl1 = arena.get_bounds()
+
 
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
@@ -684,8 +686,8 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
             _fig.suptitle(title, fontsize=12)
 
         _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
-        _ax.set_xlim(-0.5, 0.5)
-        _ax.set_ylim(-0.5, 0.5)
+        _ax.set_xlim(xl0,xl1)
+        _ax.set_ylim(yl0,yl1)
         _ax.plot(_df['x'], _df['y'], 'k-')
         arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
 
@@ -694,7 +696,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         _ts = plot_timeseries(_ax, _df, 'z', 'k-')
         _ax.set_xlim(_ts[0], _ts[-1])
 
-        _ax.set_ylim(*ylimits.get("z",(0, 1)))
+        _ax.set_ylim(zl0,zl1)
         _ax.set_ylabel("z")
 
         if show_filter_args:
