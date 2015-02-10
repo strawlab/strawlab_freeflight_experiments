@@ -176,14 +176,14 @@ def run_model_from_specifier(mlab, iddata, spec, iod):
     else:
         raise ValueError("Unknown model specifier")
 
-def upload_data(mlab, y, u, Ts, detrend):
+def upload_data(mlab, y, u, Ts, detrend, name):
     iddata = mlab.run_code("""
-function trial_data = make_iddata(y,u,Ts,detrend_first)
-    trial_data = iddata(y(:),u(:),Ts);
+function trial_data = make_iddata(y,u,Ts,detrend_first,name)
+    trial_data = iddata(y(:),u(:),Ts,'ExperimentName',name);
     if detrend_first
         trial_data = detrend(trial_data);
     end
-end""",y,u,Ts,detrend,nout=1,saveout=(mlab.varname('iddata'),))
+end""",y,u,Ts,detrend,name,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
 
 def iddata_spa(mlab, iddata,title):

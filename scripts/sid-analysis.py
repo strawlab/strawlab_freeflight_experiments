@@ -221,7 +221,7 @@ if __name__=='__main__':
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
                     try:
-                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, 0.01, DETREND)
+                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, DETREND,'OID_%d' % ph.obj_id)
                         individual_iddata.append((iddata,ph,len(pdf_extra)))
                     except RuntimeError, e:
                         print "ERROR UPLOADING DATA: %s" % e
@@ -247,8 +247,8 @@ if __name__=='__main__':
             individual_iddata_mean = sfe_sid.upload_data(mlab,
                                          system_y_df_mean.values,
                                          system_u_df_mean.values,
-                                         0.01,
-                                         DETREND)
+                                         TS,
+                                         DETREND,'Mean')
 
             dest = combine.get_plot_filename("iddata_mean_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,individual_iddata_mean))
