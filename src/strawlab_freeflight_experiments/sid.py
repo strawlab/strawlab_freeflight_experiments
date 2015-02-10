@@ -91,13 +91,22 @@ end""", self.sid_model, nout=2)
     def run_tfest(mlab,iddata,np,nz,iod):
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
-    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,ts,iod)
+    function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,iod)
+
+        if iscell(trial_data.Ts)
+            tss = cell2mat(trial_data.Ts);
+        else
+            tss = trial_data.Ts;
+        end
+        ts = unique(tss);
+        assert(length(ts) == 1,'iddata must have identical Ts for tfestimate')
+
         mdl = tfest(trial_data,np,nz,iod,'Ts',ts);
         mdl.name = ['tf' num2str(np) num2str(nz)];
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
         [z p k] = zpkdata(mdl);
-    end""",iddata,np,nz,0.01,iod,
+    end""",iddata,np,nz,iod,
             nout=6,
             saveout=('z', 'p', 'k', 'fitpct', 'fitmse', mlab.varname('sid_model')))
             return MATLABIdtf("tf%d%d" % (np, nz),
