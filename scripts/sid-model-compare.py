@@ -45,11 +45,11 @@ if __name__ == "__main__":
                 pkls.append(p)
 
     mdls = [p['model'] for p in pkls]
-    lbls = ["%s (%s)\n%s" % (get_genotype(p), p['model_spec'], p['condition_name']) for p in pkls]
+    lbls = ["%s (%s, n=%d)\n%s" % (get_genotype(p), p['model_spec'], p['n'], p['condition_name']) for p in pkls]
 
     #if the labels cannot distinguish, use the uuid too
     if len(set(lbls)) < len(lbls):
-        lbls = ["%s (%s)\n%s\n%s" % (get_genotype(p), p['model_spec'], p['condition_name'],','.join([md.get('uuid','???') for md in p.get('metadata',[])])) for p in pkls]
+        lbls = ["%s (%s, n=%d)\n%s\n%s" % (get_genotype(p), p['model_spec'], p['n'], p['condition_name'],','.join([md.get('uuid','???') for md in p.get('metadata',[])])) for p in pkls]
 
     omega = np.logspace(-1,2,120)
 

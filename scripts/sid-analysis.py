@@ -426,7 +426,8 @@ if __name__=='__main__':
                     py_mdl = alldata_good_mdl.get_control_object(mlab)
                     name = combine.get_plot_filename("py_mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     with open(name,'wb') as f:
-                        pickle.dump({"model":py_mdl,
+                        pickle.dump({"n":len(individual_models[pm]),
+                                     "model":py_mdl,
                                      "metadata":combine.get_experiment_metadata(),
                                      "conditions":combine.get_experiment_conditions(),
                                      "condition_name":combine.get_condition_name(cond),
@@ -446,7 +447,8 @@ if __name__=='__main__':
                     py_mdl = alldata_model.get_control_object(mlab)
                     name = combine.get_plot_filename("py_mdl_alldata_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
                     with open(name,'wb') as f:
-                        pickle.dump({"model":py_mdl,
+                        pickle.dump({"n":len(individual_iddata),
+                                     "model":py_mdl,
                                      "metadata":combine.get_experiment_metadata(),
                                      "conditions":combine.get_experiment_conditions(),
                                      "condition_name":combine.get_condition_name(cond),
