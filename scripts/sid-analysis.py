@@ -148,6 +148,10 @@ if __name__=='__main__':
     parser.add_argument(
         "--iod", type=int, default=9,
         help='io delay')
+    parser.add_argument(
+        "--only-conditions", type=str,
+        help='only analyze perturbations in these conditions')
+
 
     args = parser.parse_args()
 
@@ -155,6 +159,11 @@ if __name__=='__main__':
 
     if args.min_fit_pct_individual is None:
         args.min_fit_pct_individual = args.min_fit_pct * 0.5
+
+    try:
+        only_conditions = args.only_conditions.split(',')
+    except AttributeError:
+        only_conditions = None
 
     IODELAY = args.iod
     MODEL_SPECS_TO_TEST = args.models.split(',')
@@ -200,6 +209,9 @@ if __name__=='__main__':
 
         cond = perturbation_conditions[perturbation_obj]
         cond_name = combine.get_condition_name(cond)
+
+        if only_conditions and (cond_name not in only_conditions):
+            continue
 
         plot_fn = aplt.get_safe_filename(cond_name, **plot_fn_kwargs)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
