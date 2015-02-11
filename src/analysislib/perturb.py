@@ -13,8 +13,8 @@ PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx 
 def collect_perturbation_traces(combine, completion_threshold=0.98):
     results,dt = combine.get_results()
 
-    perturbations = collections.OrderedDict()           #perturb_obj: {obj_id:PerturbationHolder,...}
-    perturbation_conditions = {}                        #perturb_obj: cond
+    perturbations = collections.OrderedDict()           #cond: {obj_id:PerturbationHolder,...}
+    perturbation_objects = {}                           #cond: perturb_obj
 
     for cond in sorted(results):
 
@@ -37,9 +37,9 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
             continue
 
         step_obj = pklass(perturb_desc)
-        perturbations[step_obj] = {}
 
-        perturbation_conditions[step_obj] = cond
+        perturbations[cond] = {}
+        perturbation_objects[cond] = step_obj
 
         r = results[cond]
 
@@ -60,7 +60,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 #ensure we get a unique obj_id for later grouping. That is not necessarily
                 #guarenteed because obj_ids may be in multiple conditions, so if need be
                 #create a new one
-                if obj_id in perturbations[step_obj]:
+                if obj_id in perturbations[cond]:
                     obj_id = int(time.time()*1e6)
                 df['obj_id'] = obj_id
 
@@ -88,9 +88,9 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
                 ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
 
-                perturbations[step_obj][obj_id] = ph_obj
+                perturbations[cond][obj_id] = ph_obj
 
-    return perturbations, perturbation_conditions
+    return perturbations, perturbation_objects
 
 def get_input_output_columns(step_obj):
     if step_obj.what == 'rotation_rate':
