@@ -35,8 +35,6 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
     #perturbations {cond: {obj_id:PerturbationHolder,...}}
     #perturbation_objects {cond: perturb_obj}
 
-    print perturbation_objects.keys()
-
     for cond in perturbations:
 
         step_obj = perturbation_objects[cond]
