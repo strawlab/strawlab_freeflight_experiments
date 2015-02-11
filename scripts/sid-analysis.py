@@ -52,26 +52,26 @@ dat = load('%(path)s', '-mat');
 """
     fobj.write(TMPL % {'path':path,'name':name})
 
-def plot_perturbation_signal(combine, args, perturbations, perturbation_conditions):
-    for perturbation_obj in perturbations:
-        cond = perturbation_conditions[perturbation_obj]
+def plot_perturbation_signal(combine, args, perturbations, perturbation_objects):
+    for cond in perturbations:
+        perturbation_obj = perturbation_objects[cond]
         name = combine.get_plot_filename('perturbation_%s' % aplt.get_safe_filename(cond))
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             sfe_perturb.plot_perturbation_frequency_characteristics(fig, perturbation_obj)
 
-def plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions):
+def plot_input_output_characteristics(combine, args, perturbations, perturbation_objects):
 
     pid = args.only_perturb_start_id
 
-    for perturbation_obj in perturbations:
+    for cond in perturbations:
 
-        cond = perturbation_conditions[perturbation_obj]
+        perturbation_obj = perturbation_objects[cond]
         cond_name = combine.get_condition_name(cond)
 
         plot_fn = aplt.get_safe_filename(cond_name)
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
-        phs = perturbations[perturbation_obj]
+        phs = perturbations[cond]
         if phs:
             any_completed_perturbations = False
 
@@ -186,11 +186,11 @@ if __name__=='__main__':
 
     aplt.save_args(combine, args)
 
-    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+    perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
                                                     completion_threshold=args.perturb_completion_threshold)
 
-    #plot_perturbation_signal(combine, args, perturbations, perturbation_conditions)
-    #plot_input_output_characteristics(combine, args, perturbations, perturbation_conditions)
+    #perturbations {cond: {obj_id:PerturbationHolder,...}}
+    #perturbation_objects {cond: perturb_obj}
 
     pid = args.only_perturb_start_id
 
@@ -200,14 +200,14 @@ if __name__=='__main__':
     mfile = open(mfile,'w')
 
     #loop per condition
-    for perturbation_obj in perturbations:
+    for cond in perturbations:
 
         any_completed_perturbations = False
 
         individual_models = {}
         alldata_models = {}
 
-        cond = perturbation_conditions[perturbation_obj]
+        perturbation_obj = perturbation_objects[cond]
         cond_name = combine.get_condition_name(cond)
 
         if only_conditions and (cond_name not in only_conditions):
@@ -217,7 +217,7 @@ if __name__=='__main__':
         system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
-        phs = perturbations[perturbation_obj]
+        phs = perturbations[cond]
         if phs:
             #all input_u/output_y data for all completed perturbations
             system_us = []
