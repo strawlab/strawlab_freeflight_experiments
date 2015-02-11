@@ -30,6 +30,8 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
+MAX_ROTATION_RATE   = 10.0      #FIXME: may not be the optimal value
+
 ADVANCE_RATIO       = 1/100.0
 
 FLY_DIST_CHECK_TIME = 0.2       # time interval in seconds to check fly movement
@@ -70,7 +72,7 @@ XFORM = flyflypath.transform.SVGTransform()
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","stim_x","stim_y","stim_z"))
+                                   state=("rotation_rate", "trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","stim_x","stim_y","stim_z"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCUDAStarFieldAndModel')
@@ -78,6 +80,7 @@ class Node(nodelib.node.Experiment):
         self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
         self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
         self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32)
+        #FIXME: what are latch and tcp_nodelay booleans?
 
         self.pub_star_velocity.publish(0,0,0)
         self.pub_star_size.publish(5.0)
@@ -141,7 +144,7 @@ class Node(nodelib.node.Experiment):
         star_size       = float(self.condition['star_size'])
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = float(self.condition['z_target'])
-        star_rotation_rate = float(self.condition['star_rotation_rate'])
+        self.rotation_gain = float(self.condition['star_rotation_rate'])
 
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
@@ -151,9 +154,8 @@ class Node(nodelib.node.Experiment):
             self.svg_fn = ''
 
         self.pub_star_size.publish(star_size)
-        self.pub_star_rotation_rate.publish(star_rotation_rate)
 
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, advance=%.1fpx)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.advance_px))
+        rospy.loginfo('condition: %s' % (self.condition))
 
     def get_v_rate(self,fly_z):
         #return early if this is a replay experiment
@@ -182,6 +184,49 @@ class Node(nodelib.node.Experiment):
         dy = self.trg_y-fly_y
 
         return self.p_const*dx,self.p_const*dy,self.trg_x,self.trg_y
+
+    #FIXME: make sure to understand this def... (at least, this slightly modified copy-paste functions)
+    def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
+        if self.svg_fn and (not self.is_replay_experiment_rotation):
+            with self.trackinglock:
+                px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
+                segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
+                if segment.length < self.advance_px:
+                    self.log.ratio, newpt = self.model.advance_point(ADVANCE_RATIO, wrap=True)
+                    self.trg_x,self.trg_y = XFORM.pxpy_to_xy(newpt.x,newpt.y)
+                    self.ratio_total += ADVANCE_RATIO
+        else:
+            self.trg_x = self.trg_y = 0.0
+
+        #return early if this is a replay experiment
+        if self.is_replay_experiment_rotation:
+            return self.replay_rotation.next(), self.trg_x,self.trg_y
+
+        dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
+        vel  = np.array((fly_vx, fly_vy))
+
+        speed = np.linalg.norm(vel)
+
+        dposn = dpos / np.linalg.norm(dpos)
+        eps = 1e-20
+        if speed > eps:
+            veln = vel / speed
+
+            vel_angle = np.arctan2( veln[1], veln[0] )
+            desired_angle = np.arctan2( dposn[1], dposn[0] )
+
+            error_angle_unwrapped = desired_angle - vel_angle
+
+            error_angle = (error_angle_unwrapped + PI) % TAU - PI
+
+            velocity_gate = max( speed*20.0, 1.0) # linear ramp to 1.0
+            val = velocity_gate*error_angle*self.rotation_gain
+        else:
+            val = 0.0
+
+        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+
+        return val,self.trg_x,self.trg_y
 
     def run(self):
         rospy.loginfo('running stimulus')
@@ -244,8 +289,10 @@ class Node(nodelib.node.Experiment):
                         rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
+                #FIXME: what if gains for translation and rotation are both not zero?
                 rate_x,rate_y,trg_x,trg_y = self.get_starfield_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
                 v_rate = self.get_v_rate(fly_z)
+                rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
@@ -258,6 +305,8 @@ class Node(nodelib.node.Experiment):
                 self.log.stim_y = rate_y
                 self.log.stim_z = v_rate
                 self.pub_star_velocity.publish(rate_x,rate_y,v_rate)
+                self.log.rotation_rate = rate
+                self.pub_star_rotation_rate.publish(rate)
 
                 self.log.framenumber = framenumber
 
@@ -337,11 +386,13 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = 0
 
             self.log.ratio = 0
+            self.log.rotation_rate = 0
 
             if blacklist:
                 self.blacklist[old_id] = True
 
         self.pub_star_velocity.publish(0,0,0)
+        self.pub_star_rotation_rate.publish(0)
 
         if (self.ratio_total > 2) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
