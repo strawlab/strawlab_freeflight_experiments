@@ -243,7 +243,7 @@ if __name__=='__main__':
                         iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, DETREND,'OID_%d' % ph.obj_id)
                         individual_iddata.append((iddata,ph,len(pdf_extra)))
                     except RuntimeError, e:
-                        print "ERROR UPLOADING DATA: %s" % e
+                        print "ERROR UPLOADING DATA obj_id: %s: %s" % (ph.obj_id,e)
                         continue
 
                     dest = combine.get_plot_filename('%s.mat' % ph.obj_id,subdir='all_iddata_%s' % plot_fn)
