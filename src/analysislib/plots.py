@@ -701,7 +701,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
-            filt_valid,filt_cond = filt_arena.apply_filter(show_filter_args, _df, dt)
+            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
 
             trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
             _axz.fill_between(filt_cond.index.values,

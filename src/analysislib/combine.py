@@ -1215,7 +1215,7 @@ class CombineH5WithCSV(_Combine):
                 valid = trajectories.readWhere(query)
 
                 #apply filters based on experimental arena
-                filter_cond,valid_cond = arena.apply_filter(args, valid, self._dt)
+                filter_cond,valid_cond = arena.apply_geometry_filter(args, valid, self._dt)
                 validframenumber = valid['framenumber'][filter_cond]
 
                 n_samples = len(validframenumber)

@@ -39,7 +39,7 @@ class ArenaBase(object):
         pass
     def get_filter_properties(self):
         raise NotImplementedError
-    def apply_filter(self, args, valid, dt):
+    def apply_geometry_filter(self, args, valid, dt):
         return np.ones_like(valid['framenumber']),np.ones_like(valid['framenumber'])
 
 class FlyCaveCylinder(ArenaBase):
@@ -68,7 +68,7 @@ class FlyCaveCylinder(ArenaBase):
         return [self.height/2.0,self.height]
     def get_filter_properties(self):
         return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.42,"rfilt":"trim","zfilt":"trim","trajectory_start_offset":0.0}
-    def apply_filter(self, args, valid, dt):
+    def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
 
 class FishBowl(ArenaBase):
@@ -84,7 +84,7 @@ class FishBowl(ArenaBase):
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
     def get_filter_properties(self):
         return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.17,"rfilt":"trim","zfilt":"trim","trajectory_start_offset":0.0}
-    def apply_filter(self, args, valid, dt):
+    def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
 
 class FlyCube(ArenaBase):
@@ -133,7 +133,7 @@ class FlyCube(ArenaBase):
         return [self.zdim/2.0,self.zdim]
     def get_filter_properties(self):
         return {"zfilt_max":0.365,"zfilt_min":0.05,"rfilt_max":np.nan,"rfilt":"none","zfilt":"trim","trajectory_start_offset":0.5}
-    def apply_filter(self, args, valid, dt):
+    def apply_geometry_filter(self, args, valid, dt):
         filter_kwargs = {"filter_interval_frames":int(args.filter_interval/dt)}
         #filter the trajectories based on Z value
         cond_z = (args.zfilt_min < valid['z']) & (valid['z'] < args.zfilt_max)
