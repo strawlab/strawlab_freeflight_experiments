@@ -195,9 +195,9 @@ function trial_data = make_iddata(y,u,Ts,detrend_first,name)
 end""",y,u,Ts,detrend,name,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
 
-def iddata_spa(mlab, iddata,title):
+def iddata_spa(mlab,iddata,title,f1):
     idfrd_model = mlab.run_code("""
-function g = do_spa(trial_data,title)
+function g = do_spa(trial_data,title,f1)
     w = logspace(-2,2,100);
     g = spa(trial_data,[],w);
     opt = bodeoptions;
@@ -207,7 +207,12 @@ function g = do_spa(trial_data,title)
     opt.Title.Interpreter = 'none';
     h = bodeplot(g,w,opt);
     showConfidence(h,1);
-end""",iddata,title.replace('_',''),
+
+    if f1 > 0
+        line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
+    end
+
+end""",iddata,title.replace('_',''),f1,
        nout=1,saveout=(mlab.varname('idfrd'),))
     return idfrd_model
 
