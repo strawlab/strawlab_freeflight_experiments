@@ -685,33 +685,42 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         if title:
             _fig.suptitle(title, fontsize=12)
 
-        _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
-        _ax.set_xlim(xl0,xl1)
-        _ax.set_ylim(yl0,yl1)
-        _ax.plot(_df['x'], _df['y'], 'k-')
-        arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
+        _axxy = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
+        _axxy.set_xlim(xl0,xl1)
+        _axxy.set_ylim(yl0,yl1)
+        _axxy.plot(_df['x'], _df['y'], 'k-')
+        arena.plot_mpl_line_2d(_axxy, 'r-', lw=2, alpha=0.3, clip_on=False )
 
-        _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
+        _axz = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
 
-        _ts = plot_timeseries(_ax, _df, 'z', 'k-')
-        _ax.set_xlim(_ts[0], _ts[-1])
+        _ts = plot_timeseries(_axz, _df, 'z', 'k-')
+        _axz.set_xlim(_ts[0], _ts[-1])
 
-        _ax.set_ylim(zl0,zl1)
-        _ax.set_ylabel("z")
+        _axz.set_ylim(zl0,zl1)
+        _axz.set_ylabel("z")
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
             filt_valid,filt_cond = filt_arena.apply_filter(show_filter_args, _df, dt)
 
-            trans = mtransforms.blended_transform_factory(_ax.transData, _ax.transAxes)
-            _ax.fill_between(filt_cond.index.values,
+            trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
+            _axz.fill_between(filt_cond.index.values,
                              0, 1,
                              ~filt_cond.values,
-                             facecolor='red', alpha=0.4, transform=trans)
+                             facecolor='blue', alpha=0.4, transform=trans)
+
+            _axxy.set_xlim(1.1*xl0,1.1*xl1)
+            _axxy.set_ylim(1.1*yl0,1.1*yl1)
+
+            #reimplement fill_between on x,y
+            invalid = filt_cond.index.values[~filt_cond.values]
+            _x = _df.loc[invalid,'x']
+            _y = _df.loc[invalid,'y']
+            _axxy.plot(_x, _y, color='blue',marker='.',markeredgecolor='none', linestyle='none',markersize=6)
 
             try:
                 last_valid_frame = _df['framenumber'].values[filt_valid][-1]
-                _ax.axvline(last_valid_frame, color='b')
+                _axz.axvline(last_valid_frame, color='b', lw=2)
             except IndexError:
                 #no valid frames
                 pass
