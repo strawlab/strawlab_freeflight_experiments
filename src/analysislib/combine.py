@@ -1033,7 +1033,7 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-        if not os.path.isfile(self._get_cache_file()):
+        if not os.path.isfile(self._get_cache_name()):
             if args.cached:
                 self._save_cache_file()
         elif args.recache:
