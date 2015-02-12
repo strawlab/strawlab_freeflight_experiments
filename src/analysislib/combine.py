@@ -1033,7 +1033,10 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-        if args.recache or not os.path.isfile(self._get_cache_file()):
+        if not os.path.isfile(self._get_cache_file()):
+            if args.cached:
+                self._save_cache_file()
+        elif args.recache:
             self._save_cache_file()
 
     def get_spanned_results(self):
