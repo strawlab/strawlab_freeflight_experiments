@@ -216,47 +216,6 @@ class TestCombineFake(unittest.TestCase):
 
         self.assertEqual(time0, self.combine._t0 + self.combine._dt)
 
-    def test_custom_filter(self):
-        # FIXME: this tests some stuff that should not be used, as create holes in trajectories
-        #        just remove custom_filt
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['ratio']>0.2)&(df['ratio']<0.8)]", 2.0)
-        c1.add_from_args(self.args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
-
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity']>1.22)]", 3.0)
-        c1.add_from_args(self.args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
-
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity']>9999)]", 1.0)
-        c1.add_from_args(self.args)
-
-        #no data left after filtering
-        self.assertRaises(ValueError, c1.get_one_result, 1)
-
-    def test_load_from_args(self):
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        parser,args = analysislib.args.get_default_args(
-                outdir='/tmp/',
-                show='--show' in sys.argv,
-                customfilt="df[(df['ratio']>0.2)&(df['ratio']<0.8)]",
-                customfilt_len=1.0,
-                lenfilt=1
-        )
-        c1.add_from_args(args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
-
     def test_export(self):
         d = os.path.join(self._tdir, "export")
         dests = analysislib.combine.write_result_dataframe(d,self.df0, self.combine._index)

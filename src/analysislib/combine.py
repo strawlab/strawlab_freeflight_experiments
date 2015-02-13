@@ -63,8 +63,6 @@ class _Combine(object):
         self._idfilt = []
         self._skipped = {}
         self._results = {}
-        self._custom_filter = None
-        self._custom_filter_min = None
         self._tzname = 'Europe/Vienna'
         self._tfilt_before = None
         self._tfilt_after = None
@@ -218,10 +216,6 @@ class _Combine(object):
             if v is not None:
                 setattr(self, "_%s" % f, datetime.datetime.strptime(v, DATE_FMT))
 
-    def _maybe_add_customfilt(self, args):
-        if args.customfilt is not None and args.customfilt_len is not None:
-            self.add_custom_filter(args.customfilt, args.customfilt_len)
-
     def _debug(self, m):
         if self._enable_debug:
             print m
@@ -310,14 +304,6 @@ class _Combine(object):
         """the minimum number of frames for the given lenfilt and dt"""
         try:
             return self._lenfilt / self._dt
-        except TypeError:
-            return 1
-
-    @property
-    def custom_filter_min_num_frames(self):
-        """the minimum number of frames for the given customfilter and dt"""
-        try:
-            return self._custom_filter_min / self._dt
         except TypeError:
             return 1
 
@@ -475,16 +461,6 @@ class _Combine(object):
                 return list(df.columns)
         return []
 
-    def add_custom_filter(self, s, post_filter_min):
-        if 'df[' not in s:
-            raise Exception("incorrectly formatted filter string: %s" % s)
-        if ' ' in s:
-            raise Exception("incorrectly formatted filter string (containts spaces): %s" % s)
-        if post_filter_min is None:
-            raise Exception("filter minimum must be given")
-        self._custom_filter = s
-        self._custom_filter_min = post_filter_min
-
     def filter_trials(self, filter_func=lambda trial: True):
         """Returns a new combine object, filtering out trials that do not meet the filtering condition.
         Makes a best-effort to keep everything else the same.
@@ -592,14 +568,6 @@ class _CombineFakeInfinity(_Combine):
                 dt = self._dt
                 self._calc_other_series(df, dt)
 
-                if self._custom_filter is not None:
-                    df = eval(self._custom_filter)
-                    n_samples = len(df)
-                    if n_samples < self.custom_filter_min_num_frames:
-                        self._debug('FILTER: %d for obj_id %d' % (n_samples,obj_id))
-                        self._skipped[cond] += 1
-                        continue
-
                 first = df.irow(0)
                 last = df.irow(-1)
                 f0 = first.name
@@ -699,7 +667,6 @@ class _CombineFakeInfinity(_Combine):
 
         self._lenfilt = args.lenfilt
         self._maybe_add_tfilt(args)
-        self._maybe_add_customfilt(args)
         self.plotdir = args.outdir if args.outdir else os.getcwd()
         self.csv_file = "test"
 
@@ -867,7 +834,6 @@ class CombineH5(_Combine):
         self._args_to_configuration(args)
 
         self._maybe_add_tfilt(args)
-        self._maybe_add_customfilt(args)
 
         if args.uuid:
             uuid = args.uuid[0]
@@ -1003,7 +969,6 @@ class CombineH5WithCSV(_Combine):
             csv_suffix = self._csv_suffix
 
         self._maybe_add_tfilt(args)
-        self._maybe_add_customfilt(args)
 
         if args.uuid:
             if len(args.uuid) > 1:
@@ -1251,14 +1216,6 @@ class CombineH5WithCSV(_Combine):
                 try:
                     dt = self._dt
                     self._calc_other_series(df, dt)
-
-                    if self._custom_filter is not None:
-                        df = eval(self._custom_filter)
-                        n_samples = len(df)
-                        if n_samples < self.custom_filter_min_num_frames:
-                            self._debug('FILTER: %d for obj_id %d' % (n_samples,oid))
-                            self._skipped[cond] += 1
-                            df = None
                 except Exception, e:
                     self._skipped[cond] += 1
                     self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid,n_samples,e))

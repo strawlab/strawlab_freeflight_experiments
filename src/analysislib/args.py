@@ -65,7 +65,6 @@ DATA_MODIFYING_ARGS = [
     'idfilt',
     'lenfilt',
     'trajectory_start_offset',
-    'custom_filt','custom_filt_len',
     'filter_interval'
 ]
 
@@ -175,17 +174,6 @@ def get_parser(*only_these_options, **defaults):
             '--idfilt', type=int, nargs='*',
             default=defaults.get('idfilt', []),
             help='only show these obj_ids')
-    if not only_these_options or "customfilt" in only_these_options:
-        parser.add_argument(
-            '--customfilt', type=str,
-            default=defaults.get('customfilt', None),
-            help='string to eval against a dataframe')
-        parser.add_argument(
-            '--customfilt-len', type=int,
-            default=defaults.get('customfilt_len', None),
-            help='minimum length of remaining (seconds) after applying custom filter. '\
-                 'note: all data is returned, it is not trimmed as per the zfilt and rfilt '\
-                 'operations')
     if not only_these_options or "trajectory-start-offset" in only_these_options:
         parser.add_argument(
             '--trajectory-start-offset', type=float,
