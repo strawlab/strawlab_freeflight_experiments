@@ -152,7 +152,7 @@ class FlyCube(ArenaBase):
                 "xfilt":"none",'xfilt_min':-self.xdim/2.0,'xfilt_max':self.xdim/2.0,
                 "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
                 "vfilt":"none",'vfilt_min':0.05,'vfilt_max':np.inf,
-                "rfilt_max":0.17,"rfilt":"trim",
+                "rfilt_max":np.inf,"rfilt":"none",
                 "filter_interval":0.2,
                 "trajectory_start_offset":0.5}
 
