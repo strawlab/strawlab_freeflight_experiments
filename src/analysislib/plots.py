@@ -688,7 +688,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         _axxy = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
         _axxy.set_xlim(xl0,xl1)
         _axxy.set_ylim(yl0,yl1)
-        _axxy.plot(_df['x'], _df['y'], 'k-')
+        _axxy.plot(_df['x'], _df['y'], 'k-', label='__nolabel__')
         arena.plot_mpl_line_2d(_axxy, 'r-', lw=2, alpha=0.3, clip_on=False )
 
         _axz = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
@@ -701,29 +701,40 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
-            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
 
             trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
-            _axz.fill_between(filt_cond.index.values,
-                             0, 1,
-                             ~filt_cond.values,
-                             facecolor='blue', alpha=0.4, transform=trans)
+
+            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
+
+            filt2_valid,filt2_cond = filt_arena.apply_secondary_filter(show_filter_args, _df, dt)
+
+            i = 0
+            for color,name,cond in (('b','geometry',filt_cond),('g','secondary',filt2_cond)):
+                _axz.fill_between(cond.index.values,
+                                 i, i+0.5,
+                                 ~cond.values,
+                                 edgecolor=color,
+                                 facecolor=color,
+                                 alpha=0.4, transform=trans)
+                i+=0.5
+
+                #use _cond to draw because we want to plot where the condition is not true
+                _x = _df.loc[~cond,'x']
+                _y = _df.loc[~cond,'y']
+                _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='fail %s filter' % name)
+
+            try:
+                last_valid_frame = _df['framenumber'].values[filt_valid][-1]
+                _axz.axvline(last_valid_frame, color='r', lw=2, label='end of filtered trajectory')
+            except IndexError:
+                #no valid frames
+                pass
 
             _axxy.set_xlim(1.1*xl0,1.1*xl1)
             _axxy.set_ylim(1.1*yl0,1.1*yl1)
 
-            #reimplement fill_between on x,y
-            invalid = filt_cond.index.values[~filt_cond.values]
-            _x = _df.loc[invalid,'x']
-            _y = _df.loc[invalid,'y']
-            _axxy.plot(_x, _y, color='blue',marker='.',markeredgecolor='none', linestyle='none',markersize=6)
-
-            try:
-                last_valid_frame = _df['framenumber'].values[filt_valid][-1]
-                _axz.axvline(last_valid_frame, color='b', lw=2)
-            except IndexError:
-                #no valid frames
-                pass
+            _axxy.legend(frameon=False,numpoints=1,prop={'size':8})
+            _axz.legend(frameon=False,numpoints=1,prop={'size':8})
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))

@@ -46,7 +46,7 @@ if __name__=='__main__':
         default=",".join(["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]))
     parser.add_argument(
         "--test-filter-args",
-        help="test filter args (e.g. '--zfilt trim --zfilt-min 0.2')")
+        help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
     
     args = parser.parse_args()
 
