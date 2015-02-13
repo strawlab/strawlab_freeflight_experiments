@@ -14,13 +14,13 @@ def get_arena_from_args(args):
     return arena
 
 def apply_z_and_r_filter(args, valid, dt):
-    filter_kwargs = {"filter_interval_frames":int(args.filter_interval/dt)}
+    fif = int(args.filter_interval/dt)
     #filter the trajectories based on Z value
     cond_z = (args.zfilt_min < valid['z']) & (valid['z'] < args.zfilt_max)
-    valid_z = filter_cond(args.zfilt, cond_z, valid['z'], **filter_kwargs)
+    valid_z = filter_cond(args.zfilt, cond_z, valid['z'], filter_interval_frames=fif)
     #filter based on radius
     cond_r = np.sqrt(valid['x']**2 + valid['y']**2) < args.rfilt_max
-    valid_r = filter_cond(args.rfilt, cond_r, valid['x'], **filter_kwargs)
+    valid_r = filter_cond(args.rfilt, cond_r, valid['x'], filter_interval_frames=fif)
     return valid_z & valid_r, cond_z & cond_r
 
 class ArenaBase(object):
@@ -172,8 +172,10 @@ class FlyCube(ArenaBase):
         return valid_x & valid_y & valid_z, cond_x & cond_y & cond_z
 
     def apply_secondary_filter(self, args, df, dt):
+        fif = int(args.filter_interval/dt)
+
         cond_v = (df['velocity'] > args.vfilt_min) & (df['velocity'] < args.vfilt_max)
-        valid_v = filter_cond(args.vfilt, cond_v, df['velocity'], filter_interval_frames=0.2/dt)
+        valid_v = filter_cond(args.vfilt, cond_v, df['velocity'], filter_interval_frames=fif)
 
         return valid_v, cond_v
 
