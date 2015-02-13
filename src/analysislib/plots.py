@@ -708,8 +708,10 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
             filt2_valid,filt2_cond = filt_arena.apply_secondary_filter(show_filter_args, _df, dt)
 
+            lasts = []
+
             i = 0
-            for color,name,cond in (('b','geometry',filt_cond),('g','secondary',filt2_cond)):
+            for color,name,cond,valid in (('b','geometry',filt_cond,filt_valid),('g','secondary',filt2_cond,filt2_valid)):
                 _axz.fill_between(cond.index.values,
                                  i, i+0.5,
                                  ~cond.values,
@@ -723,12 +725,16 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
                 _y = _df.loc[~cond,'y']
                 _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='fail %s filter' % name)
 
-            try:
-                last_valid_frame = _df['framenumber'].values[filt_valid][-1]
-                _axz.axvline(last_valid_frame, color='r', lw=2, label='end of filtered trajectory')
-            except IndexError:
-                #no valid frames
-                pass
+                try:
+                    last_valid_frame = _df['framenumber'].values[valid][-1]
+                    _axz.axvline(last_valid_frame, color=color, lw=2, label='end of filtered %s' % name)
+                    lasts.append(last_valid_frame)
+                except IndexError:
+                    #no valid frames
+                    pass
+
+            if lasts:
+                _axz.axvline(last_valid_frame, color='red', lw=2, label='end of filtered trajectory')
 
             _axxy.set_xlim(1.1*xl0,1.1*xl1)
             _axxy.set_ylim(1.1*yl0,1.1*yl1)
