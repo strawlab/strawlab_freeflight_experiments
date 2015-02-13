@@ -129,7 +129,8 @@ def filter_cond(method, cond, alldata, filter_interval_frames):
         bad_idxs = np.nonzero(~cond)[0]
         if len(bad_idxs):
             cond = np.ones_like(alldata, dtype=np.bool)
-            cond[bad_idxs[0]:] = False
+            i1 = bad_idxs[0]
+            cond[i1:] = False
             return cond
         else:
             #keep all data
@@ -140,6 +141,8 @@ def filter_cond(method, cond, alldata, filter_interval_frames):
             if (_i1 - _i0) > filter_interval_frames:
                 i1 = _i0
                 break
+        #ensure no holes
+        cond[:i1] = True
         cond[i1:] = False
         return cond
     else:
