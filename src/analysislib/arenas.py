@@ -67,7 +67,13 @@ class FlyCaveCylinder(ArenaBase):
     def get_ztick_locations(self):
         return [self.height/2.0,self.height]
     def get_filter_properties(self):
-        return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.42,"rfilt":"trim","zfilt":"trim","trajectory_start_offset":0.0}
+        return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
+                "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
+                "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
+                "rfilt_max":0.42,"rfilt":"trim",
+                "filter_interval":0.0,
+                "trajectory_start_offset":0.0}
+
     def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
 
@@ -83,7 +89,13 @@ class FishBowl(ArenaBase):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
     def get_filter_properties(self):
-        return {"zfilt_max":0.9,"zfilt_min":0.1,"rfilt_max":0.17,"rfilt":"trim","zfilt":"trim","trajectory_start_offset":0.0}
+        return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
+                "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
+                "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
+                "rfilt_max":0.17,"rfilt":"trim",
+                "filter_interval":0.0,
+                "trajectory_start_offset":0.0}
+
     def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
 
@@ -132,11 +144,26 @@ class FlyCube(ArenaBase):
     def get_ztick_locations(self):
         return [self.zdim/2.0,self.zdim]
     def get_filter_properties(self):
-        return {"zfilt_max":0.365,"zfilt_min":0.05,"rfilt_max":np.nan,"rfilt":"none","zfilt":"trim","trajectory_start_offset":0.5}
+        return {"zfilt":"trim","zfilt_min":0.05,"zfilt_max":0.365,
+                "xfilt":"none",'xfilt_min':-self.xdim/2.0,'xfilt_max':self.xdim/2.0,
+                "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
+                "rfilt_max":0.17,"rfilt":"trim",
+                "filter_interval":0.2,
+                "trajectory_start_offset":0.5}
+
     def apply_geometry_filter(self, args, valid, dt):
-        filter_kwargs = {"filter_interval_frames":int(args.filter_interval/dt)}
-        #filter the trajectories based on Z value
+        fif = int(args.filter_interval/dt)
+
         cond_z = (args.zfilt_min < valid['z']) & (valid['z'] < args.zfilt_max)
-        valid_z = filter_cond(args.zfilt, cond_z, valid['z'], **filter_kwargs)
-        return valid_z, cond_z
+        valid_z = filter_cond(args.zfilt, cond_z, valid['z'], filter_interval_frames=fif)
+
+        d = 0.01    #exclusion area around wall
+        cond_x = (valid['x'] > args.xfilt_min+d) & (valid['x'] < args.xfilt_max-d)
+        valid_x = filter_cond(args.xfilt, cond_x, valid['x'], filter_interval_frames=fif)
+
+        cond_y = (valid['y'] > args.yfilt_min+d) & (valid['y'] < args.yfilt_max-d)
+        valid_y = filter_cond(args.yfilt, cond_y, valid['y'], filter_interval_frames=fif)
+
+        return valid_x & valid_y & valid_z, cond_x & cond_y & cond_z
+
 

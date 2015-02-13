@@ -22,6 +22,8 @@ import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
+                    xfilt='none',
+                    yfilt='none',
                     zfilt='none',
                     rfilt='none',
                     lenfilt=0,

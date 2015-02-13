@@ -15,7 +15,12 @@ from strawlab.constants import DATE_FMT
 from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL
 from .arenas import get_arena_from_args
 
-REQUIRED_ARENA_DEFAULTS = ("zfilt_max","zfilt_min","rfilt_max","rfilt","zfilt","trajectory_start_offset")
+REQUIRED_ARENA_DEFAULTS = ("xfilt_max","xfilt_min","xfilt",
+                           "yfilt_max","yfilt_min","yfilt",
+                           "zfilt_max","zfilt_min","zfilt",
+                           "rfilt_max","rfilt",
+                           "filter_interval",
+                           "trajectory_start_offset")
 
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
@@ -52,6 +57,8 @@ def get_default_args(**kwargs):
 
 DATA_MODIFYING_ARGS = [
     'uuid',
+    'xfilt','xfilt_min','xfilt_max',
+    'yfilt','yfilt_min','yfilt_max',
     'zfilt','zfilt_min','zfilt_max',
     'rfilt','rfilt_max',
     'arena',
@@ -113,21 +120,22 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
-    if not only_these_options or "zfilt" in only_these_options:
-        parser.add_argument(
-            '--zfilt', type=str, choices=filt_choices,
-            default=defaults.get('zfilt', None),
-            help='method to filter trajectory data based on z values')
-    if not only_these_options or "zfilt-min" in only_these_options:
-        parser.add_argument(
-            '--zfilt-min', type=float,
-            default=defaults.get('zfilt_min', None),
-            help='minimum z, metres')
-    if not only_these_options or "zfilt-max" in only_these_options:
-        parser.add_argument(
-            '--zfilt-max', type=float,
-            default=defaults.get('zfilt_max', None),
-            help='maximum z, metres')
+    for i in 'xyz': 
+        if not only_these_options or ("%sfilt" % i) in only_these_options:
+            parser.add_argument(
+                '--%sfilt' % i, type=str, choices=filt_choices,
+                default=defaults.get('%sfilt' % i, None),
+                help='method to filter trajectory data based on %s values' % i)
+        if not only_these_options or ("%sfilt-min" % i) in only_these_options:
+            parser.add_argument(
+                '--%sfilt-min' % i, type=float,
+                default=defaults.get('%sfilt_min' % i, None),
+                help='minimum %s, metres' % i)
+        if not only_these_options or ("%sfilt-max" % i) in only_these_options:
+            parser.add_argument(
+                '--%sfilt-max' % i, type=float,
+                default=defaults.get('%sfilt_max' % i, None),
+                help='maximum %s, metres' % i)
     if not only_these_options or "uuid" in only_these_options:
         ud = defaults.get('uuid', None)
         if ud is not None:
