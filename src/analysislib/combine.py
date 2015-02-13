@@ -78,7 +78,7 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
 
-        self._configdict = {'v':11,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':12,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
@@ -159,6 +159,7 @@ class _Combine(object):
         return {
             "results": self._results,
             "dt": self.dt,
+            "skipped": self._skipped,
             "conditions": self._conditions,
             "condition_names": self._condition_names,
             "metadata": self._metadata,
@@ -981,6 +982,7 @@ class CombineH5WithCSV(_Combine):
             if d is not None:
                 self._results = d['results']
                 self._dt = d['dt']
+                self._skipped = d['skipped']
                 self.csv_file = d['csv_file']   #for plot names
                 self._conditions = d['conditions']
                 self._condition_names = d['condition_names']
