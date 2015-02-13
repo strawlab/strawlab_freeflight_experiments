@@ -25,6 +25,7 @@ if __name__=='__main__':
                     xfilt='none',
                     yfilt='none',
                     zfilt='none',
+                    vfilt='none',
                     rfilt='none',
                     lenfilt=0,
                     trajectory_start_offset=0.0

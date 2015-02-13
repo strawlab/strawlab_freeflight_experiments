@@ -41,6 +41,8 @@ class ArenaBase(object):
         raise NotImplementedError
     def apply_geometry_filter(self, args, valid, dt):
         return np.ones_like(valid['framenumber']),np.ones_like(valid['framenumber'])
+    def apply_secondary_filter(self, args, df, dt):
+        raise NotImplementedError
 
 class FlyCaveCylinder(ArenaBase):
     def __init__(self,radius=0.5,height=1.0):
@@ -70,6 +72,7 @@ class FlyCaveCylinder(ArenaBase):
         return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
                 "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
                 "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
+                "vfilt":"none",'vfilt_min':np.nan,'vfilt_max':np.nan,
                 "rfilt_max":0.42,"rfilt":"trim",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
@@ -92,6 +95,7 @@ class FishBowl(ArenaBase):
         return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
                 "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
                 "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
+                "vfilt":"none",'vfilt_min':np.nan,'vfilt_max':np.nan,
                 "rfilt_max":0.17,"rfilt":"trim",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
@@ -147,6 +151,7 @@ class FlyCube(ArenaBase):
         return {"zfilt":"trim","zfilt_min":0.05,"zfilt_max":0.365,
                 "xfilt":"none",'xfilt_min':-self.xdim/2.0,'xfilt_max':self.xdim/2.0,
                 "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
+                "vfilt":"none",'vfilt_min':0.05,'vfilt_max':np.inf,
                 "rfilt_max":0.17,"rfilt":"trim",
                 "filter_interval":0.2,
                 "trajectory_start_offset":0.5}
@@ -166,4 +171,9 @@ class FlyCube(ArenaBase):
 
         return valid_x & valid_y & valid_z, cond_x & cond_y & cond_z
 
+    def apply_secondary_filter(self, args, df, dt):
+        cond_v = (df['velocity'] > args.vfilt_min) & (df['velocity'] < args.vfilt_max)
+        valid_v = filter_cond(args.vfilt, cond_v, df['velocity'], filter_interval_frames=0.2/dt)
+
+        return valid_v, cond_v
 

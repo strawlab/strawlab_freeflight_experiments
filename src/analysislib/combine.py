@@ -1185,9 +1185,12 @@ class CombineH5WithCSV(_Combine):
 
                 n_samples = len(validframenumber)
                 if n_samples < dur_samples:
-                    self._debug('FILT:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
+                    self._debug('FILT1:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
                     self._skipped[cond] += 1
                     continue
+                if n_samples != len(valid):
+                    self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
+
 
                 traj_start_frame = validframenumber[0]
                 traj_stop_frame = validframenumber[-1]
@@ -1220,6 +1223,24 @@ class CombineH5WithCSV(_Combine):
                     self._skipped[cond] += 1
                     self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid,n_samples,e))
                     continue
+
+                n_samples_before = len(df)
+                try:
+                    filter_cond,_ = arena.apply_secondary_filter(args, df, dt)
+                    df =  df.iloc[filter_cond]
+                except NotImplementedError:
+                    pass
+
+                n_samples = len(df)
+                if n_samples < dur_samples:
+                    self._debug('FILT2:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
+                    self._skipped[cond] += 1
+                    continue
+                if n_samples != n_samples_before:
+                    self._debug('TRIM2:   removed %d frames' % (n_samples_before - n_samples))
+
+                traj_start_frame = df['framenumber'].values[0]
+                traj_stop_frame = df['framenumber'].values[-1]
 
                 start_time = float(csv.head(1)['t_sec'] + (csv.head(1)['t_nsec'] * 1e-9))
                 if not self._maybe_apply_tfilt_should_save(start_time):
