@@ -1110,7 +1110,20 @@ class CombineH5WithCSV(_Combine):
 
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
-        for oid, lodf in csv.groupby('lock_object'):
+        # Grouping by contiguous condition is bogus and we should stop doing it asap.
+        # If the same oid is reused within the same condition, that will already for sure fail.
+        # The longer flydra can take to release a lock, the worst these effects will be.
+
+        # So we should come back to the good old days and use the 0-marker observations.
+        # This should make the trick, but will test it next week... now it is time to fancy-dress!
+
+        def iterative_groups(lock_object, count=[0]):
+            if lock_object == 0:
+                count[0] += 1
+                return -1
+            return count[0]
+
+        for oid, lodf in csv.groupby(csv['lock_object'].apply(iterative_groups)):
 
             #
             # "Contiguous" grouping is not yet available in pandas
@@ -1121,6 +1134,8 @@ class CombineH5WithCSV(_Combine):
             # This is a too indirect workaround that requires a bit of thinking
             # (not that hard, just recall what a cumulative distributuion does...)
             #
+
+            # FIXME: not needed anymore
             for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
 
                 #start of file
