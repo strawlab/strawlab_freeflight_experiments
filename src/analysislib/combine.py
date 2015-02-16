@@ -1129,18 +1129,18 @@ class CombineH5WithCSV(_Combine):
         for trial_num, df in csv.groupby(timeline):
 
             assert df['lock_object'].nunique() == 1, 'CSV problem, more than one object id in the same trial'
-            assert df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
-
             oid = df['lock_object'].iloc[0]
-            cond = df['condition'].iloc[0]
+
+            # controller marker observations group?
+            if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+                continue
 
             # start of file?
             if df['condition'].count() == 0:
                 continue
 
-            # controller marker observations group?
-            if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
-                continue
+            assert df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
+            cond = df['condition'].iloc[0]
 
             # do we want this object?
             if args.idfilt and (oid not in args.idfilt):
@@ -1171,7 +1171,7 @@ class CombineH5WithCSV(_Combine):
             # causing there to be multiple rows with the same framenumber.
             # find the last index for all unique framenumbers for this trial
             fdf = df.drop_duplicates(cols=('framenumber',), take_last=True)
-            trial_framenumbers = fdf['framenumber'].values
+            trial_framenumbers = fdf['framenumber'].values  # TODO: role of zeros here, can be troublesome?
 
             if original_condition != fixed_condition:
                 self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
