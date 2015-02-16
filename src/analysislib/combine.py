@@ -1029,19 +1029,21 @@ class CombineH5WithCSV(_Combine):
         if fix.active:
             self._debug("FIX:     fixing data %s" % fix)
 
-        #try and open the experiment and condition metadata files
-        path,fname = os.path.split(csv_fname)
+        # try and open the experiment and condition metadata files
+        path, fname = os.path.split(csv_fname)
         try:
             fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
             with open(fn) as f:
                 self._debug("IO:     reading %s" % fn)
                 c = yaml.safe_load(f)
-                try: del c['uuid']
-                except KeyError: pass
+                try:
+                    del c['uuid']
+                except KeyError:
+                    pass
                 self._conditions.update( c )
         except:
             self._conditions = {}
-        path,fname = os.path.split(csv_fname)
+        path, fname = os.path.split(csv_fname)
         try:
             # get it from the database, if it fails, try from the yaml
             # TODO: get this refactored-out to a ExperimentMetadata class
@@ -1062,28 +1064,28 @@ class CombineH5WithCSV(_Combine):
             except:
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
-                    self._metadata.append( yaml.safe_load(f) )
+                    self._metadata.append(yaml.safe_load(f))
         except:
             pass
 
-        #open the csv file as a dataframe
+        # open the csv file as a dataframe (if memory ever is a problem, look here)
         try:
-            csv = pd.read_csv(self.csv_file,na_values=('None',),
+            csv = pd.read_csv(self.csv_file, na_values=('None',),
                               error_bad_lines=False,
-                              dtype={'framenumber':int,
-                                     'condition':str,
-                                     'exp_uuid':str,
-                                     'flydra_data_file':str})
+                              dtype={'framenumber': int,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
         except:
             self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
-            #protect against rubbish in the framenumber column
-            csv = pd.read_csv(self.csv_file,na_values=('None',),
+            # protect against rubbish in the framenumber column
+            csv = pd.read_csv(self.csv_file, na_values=('None',),
                               error_bad_lines=False,
                               low_memory=False,
-                              dtype={'framenumber':float,
-                                     'condition':str,
-                                     'exp_uuid':str,
-                                     'flydra_data_file':str})
+                              dtype={'framenumber': float,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
 
@@ -1100,8 +1102,8 @@ class CombineH5WithCSV(_Combine):
             assert dt == self._dt
             assert tzname == self._tzname
 
-        #minimum length of 2 to prevent later errors calculating derivitives
-        dur_samples = max(2,self.min_num_frames)
+        # minimum length of 2 to prevent later errors calculating derivitives
+        dur_samples = max(2, self.min_num_frames)
 
         results = self._results
         skipped = self._skipped
@@ -1110,305 +1112,293 @@ class CombineH5WithCSV(_Combine):
 
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
-        # Grouping by contiguous condition is bogus and we should stop doing it asap.
-        # If the same oid is reused within the same condition, that will already for sure fail.
-        # The longer flydra can take to release a lock, the worst these effects will be.
+        # The controller tells us that there is a trial change by storing a row with a special object id.
+        # A trial change is either a conditoin change or a lock-object change.
+        # Usint these marker observations is *the only safe way to segment trials*.
+        # Any more pandas-style way to do this?
+        trial_count = [0]
 
-        # So we should come back to the good old days and use the 0-marker observations.
-        # This should make the trick, but will test it next week... now it is time to fancy-dress!
-
-        def iterative_groups(lock_object, count=[0]):
-            if lock_object == 0:
-                count[0] += 1
+        def iterative_groups(lock_object):
+            if lock_object == IMPOSSIBLE_OBJ_ID:
+                trial_count[0] += 1
                 return -1
-            return count[0]
+            return trial_count[0]
 
-        for oid, lodf in csv.groupby(csv['lock_object'].apply(iterative_groups)):
+        timeline = csv['lock_object'].apply(iterative_groups)  # We probably want to save this too
 
-            #
-            # "Contiguous" grouping is not yet available in pandas
-            #   https://github.com/pydata/pandas/issues/5494
-            # We need it because we cannot assume that a trial won't pass two times
-            # by the same condition (long trials happen now when tracking fishes).
-            #
-            # This is a too indirect workaround that requires a bit of thinking
-            # (not that hard, just recall what a cumulative distributuion does...)
-            #
+        for trial_num, df in csv.groupby(timeline):
 
-            # FIXME: not needed anymore
-            for _, odf in lodf.groupby((lodf['condition'] != lodf['condition'].shift()).cumsum()):
+            assert df['lock_object'].nunique() == 1, 'CSV problem, more than one object id in the same trial'
+            assert df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
 
-                #start of file
-                if odf['condition'].count() == 0:
-                    continue
+            oid = df['lock_object'].iloc[0]
+            cond = df['condition'].iloc[0]
 
-                if oid in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
-                    continue
+            # start of file?
+            if df['condition'].count() == 0:
+                continue
 
-                if args.idfilt and (oid not in args.idfilt):
-                    continue
+            # controller marker observations group?
+            if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
+                continue
 
-                assert odf['condition'].nunique() == 1, 'A single trial must not span more than one condition'
+            # do we want this object?
+            if args.idfilt and (oid not in args.idfilt):
+                continue
 
-                cond = odf['condition'].iloc[0]
-                original_condition = cond
+            original_condition = cond
 
-                #fix and normalise condition strings
-                if fix.active:
-                    cond = fix.fix_condition(cond)
-                cond = analysislib.fixes.normalize_condition_string(cond)
-                fixed_condition = cond
+            # fix and normalise condition strings
+            if fix.active:
+                cond = fix.fix_condition(cond)
+            cond = analysislib.fixes.normalize_condition_string(cond)
+            fixed_condition = cond
 
-                if cond not in results:
-                    results[cond] = dict(count=0,
-                                         start_obj_ids=[],
-                                         df=[],
-                                         uuids=[])
-                    skipped[cond] = 0
-                    try:
-                        self._condition_names[cond] = odf['condition_name'].iloc[0]
-                    except:
-                        pass
-
-                r = results[cond]
-
-                #the csv may be written at a faster rate than the framerate,
-                #causing there to be multiple rows with the same framenumber.
-                #find the last index for all unique framenumbers for this trial
-                fdf = odf.drop_duplicates(cols=('framenumber',),take_last=True)
-                trial_framenumbers = fdf['framenumber'].values
-
-                if original_condition != fixed_condition:
-                    self._debug_once("FIX:    condition string %s -> %s" % (original_condition,fixed_condition))
-                    #copy the df otherwise we set on the copy of the view of odf
-                    fdf = fdf.copy()
-                    fdf['condition'].replace(original_condition,fixed_condition,inplace=True)
-
-                #get the comparible range of data from flydra
-                if frames_start_offset != 0:
-                    start_frame = trial_framenumbers[0] + frames_start_offset
-                else:
-                    start_frame = trial_framenumbers[0]
-
-                query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % (
-                                oid,
-                                start_frame,
-                                trial_framenumbers[-1])
-
-                valid = trajectories.readWhere(query)
-
-                #apply filters based on experimental arena
-                filter_cond,_ = arena.apply_geometry_filter(args, valid, self._dt)
-                validframenumber = valid['framenumber'][filter_cond]
-
-                n_samples = len(validframenumber)
-                if n_samples < dur_samples:
-                    self._debug('FILT1:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
-                    self._skipped[cond] += 1
-                    continue
-                if n_samples != len(valid):
-                    self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
-
-
-                traj_start_frame = validframenumber[0]
-                traj_stop_frame = validframenumber[-1]
-                traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
-
-                flydra_series = []
-                for a in 'xyz':
-                    avalid = valid[a][filter_cond]
-                    flydra_series.append( pd.Series(avalid,name=a,index=validframenumber) )
-
-                #we can now create a dataframe that has the flydra data, and the
-                #original index of the csv dataframe
-                framenumber_series = pd.Series(validframenumber,name='framenumber',index=validframenumber)
-                flydra_series.append(framenumber_series)
-
-                #make a ns since epoch column
-                tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
-                if tns0 == 0.0:
-                    self._warn("WARN: trajectory start time of object_id %s is 0" % oid)
-                tns = ((validframenumber - traj_start_frame) * self._dt * 1e9) + tns0
-                tns_series = pd.Series(tns,name='tns',index=validframenumber,dtype=np.uint64)
-                flydra_series.append(tns_series)
-
-                df = pd.concat(flydra_series,axis=1)
-
+            if cond not in results:
+                results[cond] = dict(count=0,
+                                     start_obj_ids=[],
+                                     df=[],
+                                     uuids=[])
+                skipped[cond] = 0
                 try:
-                    dt = self._dt
-                    self._calc_other_series(df, dt)
-                except Exception, e:
-                    self._skipped[cond] += 1
-                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid,n_samples,e))
-                    continue
-
-                n_samples_before = len(df)
-                try:
-                    filter_cond,_ = arena.apply_secondary_filter(args, df, dt)
-                    df =  df.iloc[filter_cond]
-                except NotImplementedError:
+                    self._condition_names[cond] = df['condition_name'].iloc[0]
+                except:
                     pass
 
+            r = results[cond]
+
+            # the csv may be written at a faster rate than the framerate,
+            # causing there to be multiple rows with the same framenumber.
+            # find the last index for all unique framenumbers for this trial
+            fdf = df.drop_duplicates(cols=('framenumber',), take_last=True)
+            trial_framenumbers = fdf['framenumber'].values
+
+            if original_condition != fixed_condition:
+                self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
+                fdf = fdf.copy()  # use copy and not view
+                fdf['condition'].replace(original_condition, fixed_condition, inplace=True)
+
+            # get the comparable range of data from flydra
+            if frames_start_offset != 0:
+                start_frame = trial_framenumbers[0] + frames_start_offset
+            else:
+                start_frame = trial_framenumbers[0]
+
+            query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
+                    (oid, start_frame, trial_framenumbers[-1])
+
+            valid = trajectories.readWhere(query)
+
+            # apply filters based on experimental arena
+            filter_cond, _ = arena.apply_geometry_filter(args, valid, self._dt)
+            validframenumber = valid['framenumber'][filter_cond]
+
+            n_samples = len(validframenumber)
+            if n_samples < dur_samples:
+                self._debug('FILT1:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
+                self._skipped[cond] += 1
+                continue
+            if n_samples != len(valid):
+                self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
+
+            traj_start_frame = validframenumber[0]
+            traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
+
+            flydra_series = []
+            for a in 'xyz':
+                avalid = valid[a][filter_cond]
+                flydra_series.append(pd.Series(avalid, name=a, index=validframenumber))
+
+            # we can now create a dataframe that has the flydra data, and the
+            # original index of the csv dataframe
+            framenumber_series = pd.Series(validframenumber, name='framenumber', index=validframenumber)
+            flydra_series.append(framenumber_series)
+
+            # make a ns since epoch column
+            tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
+            if tns0 == 0.0:
+                self._warn("WARN: trajectory start time of object_id %s is 0" % oid)
+            tns = ((validframenumber - traj_start_frame) * self._dt * 1e9) + tns0
+            tns_series = pd.Series(tns, name='tns', index=validframenumber, dtype=np.uint64)
+            flydra_series.append(tns_series)
+
+            df = pd.concat(flydra_series, axis=1)
+
+            try:
+                dt = self._dt
+                self._calc_other_series(df, dt)
+            except Exception, e:
+                self._skipped[cond] += 1
+                self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                continue
+
+            n_samples_before = len(df)
+            try:
+                filter_cond, _ = arena.apply_secondary_filter(args, df, dt)
+                df = df.iloc[filter_cond]
+            except NotImplementedError:
+                pass
+
+            n_samples = len(df)
+            if n_samples < dur_samples:
+                self._debug('FILT2:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
+                self._skipped[cond] += 1
+                continue
+            if n_samples != n_samples_before:
+                self._debug('TRIM2:   removed %d frames' % (n_samples_before - n_samples))
+
+            traj_start_frame = df['framenumber'].values[0]
+            traj_stop_frame = df['framenumber'].values[-1]
+
+            start_time = float(csv.head(1)['t_sec'] + (csv.head(1)['t_nsec'] * 1e-9))
+            if not self._maybe_apply_tfilt_should_save(start_time):
+                df = None
+
+            if df is not None:
+
                 n_samples = len(df)
-                if n_samples < dur_samples:
-                    self._debug('FILT2:   %d/%d valid samples for obj_id %d' % (n_samples,len(valid),oid))
-                    self._skipped[cond] += 1
-                    continue
-                if n_samples != n_samples_before:
-                    self._debug('TRIM2:   removed %d frames' % (n_samples_before - n_samples))
+                span_details = (cond, n_samples)
+                try:
+                    self._results_by_condition[oid].append(span_details)
+                except KeyError:
+                    self._results_by_condition[oid] = [span_details]
 
-                traj_start_frame = df['framenumber'].values[0]
-                traj_stop_frame = df['framenumber'].values[-1]
+                self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' %
+                            (n_samples,
+                             traj_start_frame, traj_stop_frame,
+                             oid, self.get_condition_name(cond)))
 
-                start_time = float(csv.head(1)['t_sec'] + (csv.head(1)['t_nsec'] * 1e-9))
-                if not self._maybe_apply_tfilt_should_save(start_time):
-                    df = None
+                if self._index == 'framenumber':
+                    # if the csv has been written at a faster rate than the
+                    # flydra data then fdf contains the last estimate in the
+                    # csv for that framenumber (because drop_duplicates take_last=True)
+                    # removes the extra rows and make a new framenumber index
+                    # unique.
+                    #
+                    # an outer join allows the tracking data to have started
+                    # before the csv (frames_start_offset)
 
-                if df is not None:
+                    # delete the framenumber from the h5 dataframe, it only
+                    # duplicates what should be in the index anyway
+                    del df['framenumber']
 
-                    n_samples = len(df)
-                    span_details = (cond, n_samples)
-                    try:
-                        self._results_by_condition[oid].append( span_details )
-                    except KeyError:
-                        self._results_by_condition[oid] = [ span_details ]
+                    # if there are any columns common in both dataframes the result
+                    # seems to be that the concat resizes the contained values
+                    # by adding an extra dimenstion.
+                    # df['x'].values.ndim = 1 becomes = 2 (for version of
+                    # pandas < 0.14). To work around this, remove any columns
+                    # in the csv dataframe that exists in df
+                    common_columns = df.columns & fdf.columns
+                    for c in common_columns:
+                        self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c, c))
+                        cv = df[c].values
+                        del df[c]
+                        df['_'+c] = cv
 
-                    self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' % (
-                                            n_samples,
-                                            traj_start_frame,traj_stop_frame,
-                                            oid,self.get_condition_name(cond)))
+                    df = pd.concat((fdf.set_index('framenumber'), df),
+                                   axis=1, join='outer')
 
-                    if self._index == 'framenumber':
-                        #if the csv has been written at a faster rate than the
-                        #flydra data then fdf contains the last estimate in the
-                        #csv for that framenumber (because drop_duplicates take_last=True)
-                        #removes the extra rows and make a new framenumber index
-                        #unique.
-                        #
-                        #an outer join allows the tracking data to have started
-                        #before the csv (frames_start_offset)
+                    # restore a framenumber column for API compatibility
+                    df['framenumber'] = df.index.values
 
-                        #delete the framenumber from the h5 dataframe, it only
-                        #duplicates what should be in the index anyway
-                        del df['framenumber'] #df.drop('framenumber', axis=1, inplace=True) (drop added in 13.1)
+                    if df['x'].values.ndim > 1:
+                        self._warn_once("ERROR: pandas merge added empty dimension to dataframe values")
 
-                        #if there are any columns common in both dataframes the result
-                        #seems to be that the concat resizes the contained values
-                        #by adding an extra dimenstion.
-                        #df['x'].values.ndim = 1 becomes = 2 (for version of
-                        #pandas < 0.14). To work around this, remove any columns
-                        #in the csv dataframe that exists in df
-                        common_columns = df.columns & fdf.columns
-                        for c in common_columns:
-                            self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c,c))
-                            cv = df[c].values
-                            del df[c]
-                            df['_'+c] = cv
+                    # Because of the outer join, trim filter do not work
+                    # (trimmed observations come back as haunting missing values)
+                    # This is a quick workaround...
+                    df = df.dropna(subset=['x'])
+                    # TODO: check for holes
 
-                        df = pd.concat((
-                                    fdf.set_index('framenumber'),df),
-                                    axis=1,join='outer')
+                elif (self._index == 'none') or (self._index.startswith('time')):
 
-                        #restore a framenumber column for API compatibility
-                        df['framenumber'] = df.index.values
+                    if self._index.startswith('time'):
+                        # add a tns column
+                        df['tns'] = np.array((df['t_sec'].values * 1e9) + df['t_nsec'], dtype=np.uint64)
 
-                        if df['x'].values.ndim > 1:
-                            self._warn_once("ERROR: pandas merge added empty dimension to dataframe values")
+                    # we still must trim the original dataframe by the trim conditions (framenumber)
+                    odf_fns = df['framenumber'].values
+                    odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   # first frame
+                    odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   # last frame
 
-                        # Because of the outer join, trim filter do not work
-                        # (trimmed observations come back as haunting missing values)
-                        # This is a quick workaround...
-                        df = df.dropna(subset=['x'])
+                    # in this case we want to keep all the rows (outer)
+                    # but the two dataframes should remain sorted by
+                    # framenumber because we use that for building a new time index
+                    # if we resample
+                    df = pd.merge(df.iloc[odf_fn0_idx:odf_fnN_idx], df,  # trim as filtered
+                                  suffixes=("_csv", "_h5"),
+                                  on='framenumber',
+                                  left_index=False, right_index=False,
+                                  how='outer', sort=True)
+
+                    # in the time case we want to set a datetime index and optionally resample
+                    if self._index.startswith('time'):
+                        try:
+                            _, resamplespec = self._index.split('+')
+                        except ValueError:
+                            resamplespec = None
+
+                        if df['framenumber'][0] != traj_start_frame:
+                            dfv = df['framenumber'].values
+                            # now the df is sorted we can just remove the invalid data from the front
+                            n_invalid_rows = np.where(dfv == traj_start_frame)[0][0]
+
+                            self._warn("ERROR: csv started %s rows before tracking (fn csv:%r... vs h5:%s, obj_id) %s"
+                                       % (n_invalid_rows, dfv[0:3], traj_start_frame, oid))
+
+                            df = df.iloc[n_invalid_rows:]
+
+                        df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
+
+                        df['datetime'] = df['tns'].values.astype('datetime64[ns]')
+                        # any invalid (NaT) rows break resampling
+                        df = df.dropna(subset=['datetime'])
+                        df = df.set_index('datetime')
                         # TODO: check for holes
 
-                    elif (self._index == 'none') or (self._index.startswith('time')):
+                        if resamplespec is not None:
+                            df = df.resample(resamplespec, fill_method='pad')
+                else:
+                    raise Exception('Unknown index requested %s' % self._index)
 
-                        if self._index.startswith('time'):
-                            #add a tns column
-                            odf['tns'] = np.array((odf['t_sec'].values * 1e9) + odf['t_nsec'], dtype=np.uint64)
-
-                        #we still must trim the original dataframe by the trim conditions (framenumber)
-                        odf_fns = odf['framenumber'].values
-                        odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   #first frame
-                        odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   #last frame
-
-                        #in this case we want to keep all the rows (outer)
-                        #but the two dataframes should remain sorted by
-                        #framenumber because we use that for building a new time index
-                        #if we resample
-                        df = pd.merge(
-                                    odf.iloc[odf_fn0_idx:odf_fnN_idx],df,           #trim as filtered
-                                    suffixes=("_csv","_h5"),
-                                    on='framenumber',
-                                    left_index=False,right_index=False,
-                                    how='outer',sort=True)
-
-                        #in the time case we want to set a datetime index and optionally resample
-                        if self._index.startswith('time'):
+                if fix.should_fix_rows:
+                    for _ix, row in df.iterrows():
+                        fixed = fix.fix_row(row)
+                        for col in fix.should_fix_rows:
+                            if col not in df.columns:
+                                self._warn_once("ERROR: column '%s' missing from dataframe (are you resampling?)" % col)
+                                continue
+                            # modify in place
                             try:
-                                _,resamplespec = self._index.split('+')
-                            except ValueError:
-                                resamplespec = None
+                                df.loc[_ix, col] = fixed[col]
+                            except IndexError, e:
+                                self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
+                                           (oid, col, str(e)))
 
-                            if df['framenumber'][0] != traj_start_frame:
-                                dfv = df['framenumber'].values
-                                #now the df is sorted we can just remove the invalid data from the front
-                                n_invalid_rows = np.where(dfv==traj_start_frame)[0][0]
+                # the start time and the start framenumber are defined by the experiment,
+                # so they come from the csv (fdf)
+                first = fdf.irow(0)
 
-                                self._warn("ERROR: csv started %s rows before tracking (fn csv:%r... vs h5:%s, obj_id) %s" % (n_invalid_rows,dfv[0:3],traj_start_frame,oid))
+                start_time = float(first['t_sec'] + (first['t_nsec'] * 1e-9))
+                start_framenumber = int(first['framenumber'])
+                # we could get this from the merged dataframe, but this is easier...
+                # also, the >= is needed to make valid['x'][0] not crash
+                # because for some reason sometimes we have a framenumber
+                # in the csv (which means it must be tracked) but not the simple
+                # flydra file....?
+                #
+                # maybe there is an off-by-one hiding elsewhere
+                query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_framenumber)
+                valid = trajectories.readWhere(query)
+                start_x = valid['x'][0]
+                start_y = valid['y'][0]
 
-                                df = df.iloc[n_invalid_rows:]
+                r['count'] += 1
+                r['start_obj_ids'].append((start_x, start_y, oid, start_framenumber, start_time))
+                r['df'].append(df)
 
-                            df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
-
-                            df['datetime'] = df['tns'].values.astype('datetime64[ns]')
-                            #any invalid (NaT) rows break resampling
-                            df = df.dropna(subset=['datetime'])
-                            df = df.set_index('datetime')
-
-                            if resamplespec is not None:
-                                df = df.resample(resamplespec, fill_method='pad')
-
-                    else:
-                        raise Exception('Unknown index requested %s' % self._index)
-
-                    if fix.should_fix_rows:
-                        for _ix, row in df.iterrows():
-                            fixed = fix.fix_row(row)
-                            for col in fix.should_fix_rows:
-                                if col not in df.columns:
-                                    self._warn_once("ERROR: column '%s' missing from dataframe (are you resampling?)" % col)
-                                    continue
-                                #modify in place
-                                try:
-                                    df.loc[_ix,col] = fixed[col]
-                                except IndexError, e:
-                                    self._warn("ERROR: could not apply fixup to obj_id %s (column '%s')" % (oid,col))
-
-                    #the start time and the start framenumber are defined by the experiment,
-                    #so they come from the csv (fdf)
-                    first = fdf.irow(0)
-
-                    start_time = float(first['t_sec'] + (first['t_nsec'] * 1e-9))
-                    start_framenumber = int(first['framenumber'])
-                    #i could get this from the merged dataframe, but this is easier...
-                    #also, the >= is needed to make valid['x'][0] not crash
-                    #because for some reason sometimes we have a framenumber
-                    #in the csv (which means it must be tracked) but not the simple
-                    #flydra file....?
-                    #
-                    #maybe there is an off-by-one hiding elsewhere
-                    query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_framenumber)
-                    valid = trajectories.readWhere(query)
-                    start_x = valid['x'][0]
-                    start_y = valid['y'][0]
-
-                    r['count'] += 1
-                    r['start_obj_ids'].append( (start_x, start_y, oid, start_framenumber, start_time) )
-                    r['df'].append( df )
-
-                    # save uuid
-                    self._results[cond]['uuids'].append(uuid)
+                # save uuid
+                self._results[cond]['uuids'].append(uuid)
 
         h5.close()
 
