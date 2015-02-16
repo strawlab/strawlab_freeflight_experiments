@@ -32,6 +32,7 @@ if __name__=='__main__':
 
         for cond,r in results.iteritems():
             scond = combine.get_condition_name(cond)
+            scond = scond.replace('|','&#124;') #escape | for markdown
 
             dur = sum(len(df) for df in r['df'])*dt            
 
