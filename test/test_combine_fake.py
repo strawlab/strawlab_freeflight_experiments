@@ -120,8 +120,15 @@ def combine2h5csv(combine,
                 df = df.head(n=trim_trajs_to)
 
             # prepare the csv logger
+            # we need to fake a condition object
+            class FakeCondition(Condition):
+                def __init__(self, slash_separated_cond, *args, **kwargs):
+                    super(FakeCondition, self).__init__(*args, **kwargs)
+                    self.cond = slash_separated_cond
+                def to_slash_separated(self):
+                    return self.cond
 
-            log.condition = combine.get_condition_configuration(cond)
+            log.condition = FakeCondition(cond)  # combine.get_condition_configuration()
             log.lock_object = obj_id
             log._exp_uuid = uuid  # dirty
             # write the csv rows for this trial
