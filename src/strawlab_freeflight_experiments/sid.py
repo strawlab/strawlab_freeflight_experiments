@@ -77,6 +77,11 @@ class SIDResultMerged(_SIDResult):
         _SIDResult.__init__(self, spec, '', 0, 0, 0, 0, 0, None, sid_model)
         self.name = '%s_MoM' % spec
 
+class SIDResultSPA(_SIDResult):
+    def __init__(self, sid_data, sid_model, name):
+        _SIDResult.__init__(self, 'spa', '', 0, 0, 0, 0, 0, sid_data, sid_model)
+        self.name = name
+
 class MATLABIdtf(_SIDResult):
 
     def get_control_object(self, mlab):
@@ -195,6 +200,15 @@ function trial_data = make_iddata(y,u,Ts,detrend_first,name)
     end
 end""",y,u,Ts,detrend,name,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
+
+def run_spa(mlab, iddata, name, w=None):
+    if w is None:
+        w = np.logspace(-2,2,100)
+    idfrd_model = mlab.run_code("""
+function g = do_spa(trial_data,w)
+    g = spa(trial_data,[],w);
+end""", iddata, w, nout=1, saveout=(mlab.varname('idfrd'),))
+    return SIDResultSPA(iddata, idfrd_model, name)
 
 def iddata_spa(mlab,iddata,title,f1):
     idfrd_model = mlab.run_code("""
