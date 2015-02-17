@@ -30,7 +30,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
-MAX_ROTATION_RATE   = 10.0      #FIXME: may not be the optimal value
+MAX_ROTATION_RATE   = 10.0      # may not be the optimal value but gives excellent results with a rotational gain equal to 3
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -79,8 +79,7 @@ class Node(nodelib.node.Experiment):
 
         self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3, latch=True, tcp_nodelay=True)
         self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
-        self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32)
-        #FIXME: what are latch and tcp_nodelay booleans?
+        self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
 
         self.pub_star_velocity.publish(0,0,0)
         self.pub_star_size.publish(5.0)
@@ -185,7 +184,6 @@ class Node(nodelib.node.Experiment):
 
         return self.p_const*dx,self.p_const*dy,self.trg_x,self.trg_y
 
-    #FIXME: make sure to understand this def... (at least, this slightly modified copy-paste functions)
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
         if self.svg_fn and (not self.is_replay_experiment_rotation):
             with self.trackinglock:
@@ -289,7 +287,8 @@ class Node(nodelib.node.Experiment):
                         rospy.loginfo('SLOW: too slow (< %.1f m/s)' % (FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
                         continue
 
-                #FIXME: what if gains for translation and rotation are both not zero?
+                # it is possible to give to the star field a translational and a rotational component
+                # to force the fly to follow the desired path...
                 rate_x,rate_y,trg_x,trg_y = self.get_starfield_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
                 v_rate = self.get_v_rate(fly_z)
                 rate,trg_x,trg_y = self.get_rotation_velocity_vector(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz)
