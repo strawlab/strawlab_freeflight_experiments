@@ -1,0 +1,40 @@
+starfield_translation_infinity_g=100:
+    svg_path: infinity07.svg
+    gain: 100.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 20.0
+    z_target: 0.12
+    star_rotation_rate: 0.0
+starfield_translation_infinity_g=70:
+    svg_path: infinity07.svg
+    gain: 70.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 20.0
+    z_target: 0.12
+    star_rotation_rate: 0.0
+starfield_translation_infinity_g=130:
+    svg_path: infinity07.svg
+    gain: 130.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 20.0
+    z_target: 0.12
+    star_rotation_rate: 0.0
+starfield_rotation_infinity:
+    svg_path: infinity07.svg
+    gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 20.0
+    z_target: 0.12
+    star_rotation_rate: 3.0
+starfield_control:
+    svg_path: infinity07.svg
+    gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 20.0
+    z_target: 0.12
+    star_rotation_rate: 0.0
