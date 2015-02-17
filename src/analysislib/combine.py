@@ -1402,6 +1402,10 @@ class CombineH5WithCSV(_Combine):
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
 
+                # provide a nanoseconds after the epoc column
+                if 'tns' not in df.columns:
+                    df['tns'] = len(df) * dt + start_time
+
                 r['count'] += 1
                 r['start_obj_ids'].append((start_x, start_y, oid, start_framenumber, start_time))
                 r['df'].append(df)
