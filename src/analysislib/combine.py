@@ -1145,7 +1145,10 @@ class CombineH5WithCSV(_Combine):
 
         for trial_num, csv_df in csv.groupby(timeline):
 
-            assert csv_df['lock_object'].nunique() == 1, 'CSV problem, more than one object id in the same trial'
+            if not csv_df['lock_object'].nunique() == 1:
+                raise Exception('CSV problem, more than one object id in the same trial:\n\ttrial=%d oids=(%s) %s' %
+                                trial_num, ','.join(map(str, csv_df['lock_object'].unique())), csv_fname)
+
             oid = csv_df['lock_object'].iloc[0]
 
             # controller marker observations group?
@@ -1156,7 +1159,10 @@ class CombineH5WithCSV(_Combine):
             if csv_df['condition'].count() == 0:
                 continue
 
-            assert csv_df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
+            if not csv_df['condition'].nunique() == 1:
+                raise Exception('CSV problem, more than one condition in the same trial:\n\ttrial=%d oids=(%s) %s' %
+                                trial_num, ','.join(csv_df['condition'].unique()), csv_fname)
+
             cond = csv_df['condition'].iloc[0]
 
             # do we want this object?
