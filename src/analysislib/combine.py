@@ -511,6 +511,14 @@ class _Combine(object):
         if self.calc_linear_stats:
             acurve.calc_velocities(df, dt)
             acurve.calc_accelerations(df, dt)
+
+            try:
+                #compute a position error estimate from the observed covariances
+                #covariance is m**2, hence 2 sqrt
+                df['err_pos_stddev_m'] = np.sqrt( np.sqrt( df['covariance_x']**2 + df['covariance_y']**2 + df['covariance_z']**2 ) )
+            except KeyError:
+                pass
+
         if self.calc_angular_stats:
             acurve.calc_angular_velocities(df, dt)
         if self.calc_turn_stats:
@@ -1200,9 +1208,14 @@ class CombineH5WithCSV(_Combine):
                 traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
 
                 flydra_series = []
-                for a in 'xyz':
-                    avalid = valid[a][filter_cond]
-                    flydra_series.append( pd.Series(avalid,name=a,index=validframenumber) )
+                for a in ('x','y','z','covariance_x','covariance_y','covariance_z'):
+                    try:
+                        avalid = valid[a][filter_cond]
+                        flydra_series.append( pd.Series(avalid,name=a,index=validframenumber) )
+                    except ValueError:
+                        #old simple_flydra.h5 without covariance
+                        self._warn_once('WARN: %s lacks %s data' % (h5_file,a))
+
 
                 #we can now create a dataframe that has the flydra data, and the
                 #original index of the csv dataframe
