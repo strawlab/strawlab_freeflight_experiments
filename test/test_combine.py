@@ -1,10 +1,14 @@
 #!/usr/bin/env python
+from functools import partial
 import os.path
 import sys
 import numpy as np
 import unittest
 import collections
 import tempfile
+from pandas.tseries.index import DatetimeIndex
+from analysislib.combine import check_combine_health
+from flydata.transformers.contracts import NoHolesContract
 
 import roslib
 import roslib.packages
@@ -181,7 +185,7 @@ class TestCombine(unittest.TestCase):
         combine.add_from_args(args)
 
         self.assertEqual(combine.get_num_conditions(), 3)
-        self.assertEqual(combine.get_total_trials(), 1005)
+        self.assertEqual(combine.get_total_trials(), 1375)
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
