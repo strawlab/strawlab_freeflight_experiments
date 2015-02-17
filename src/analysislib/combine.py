@@ -1218,9 +1218,6 @@ class CombineH5WithCSV(_Combine):
             if n_samples != len(valid):
                 self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
 
-            traj_start_frame = validframenumber[0]
-            traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
-
             flydra_series = []
             for a in 'xyz':
                 avalid = valid[a][filter_cond]
@@ -1230,14 +1227,6 @@ class CombineH5WithCSV(_Combine):
             # original index of the csv dataframe
             framenumber_series = pd.Series(validframenumber, name='framenumber', index=validframenumber)
             flydra_series.append(framenumber_series)
-
-            # make a ns since epoch column
-            tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
-            if tns0 == 0.0:
-                self._warn("WARN: trajectory start time of object_id %s is 0" % oid)
-            tns = ((validframenumber - traj_start_frame) * self._dt * 1e9) + tns0
-            tns_series = pd.Series(tns, name='tns', index=validframenumber, dtype=np.uint64)
-            flydra_series.append(tns_series)
 
             df = pd.concat(flydra_series, axis=1)
 
@@ -1365,6 +1354,10 @@ class CombineH5WithCSV(_Combine):
 
                             df = df.iloc[n_invalid_rows:]
 
+                        traj_start = h5.root.trajectory_start_times.readWhere("obj_id == %d" % oid)
+                        tns0 = (traj_start['first_timestamp_secs'] * 1e9) + traj_start['first_timestamp_nsecs']
+                        if tns0 == 0.0:
+                            self._warn("WARN: trajectory start time of object_id %s is 0" % oid)
                         df['tns'] = ((df['framenumber'].values - traj_start_frame) * self._dt * 1e9) + tns0
 
                         df['datetime'] = df['tns'].values.astype('datetime64[ns]')
