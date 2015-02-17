@@ -49,6 +49,15 @@ def safe_condition_string(s):
     return "".join([c for c in s if re.match(r'\w', c)])
 
 
+def condition_switches_from_controller_csv(csv):
+    if not isinstance(csv, pd.DataFrame):
+        csv = pd.read_csv(csv)
+    cond_or_trial_change = csv[csv['lock_object'] == 0]
+    cond_changes = cond_or_trial_change['condition'].shift() != cond_or_trial_change['condition']
+    return cond_or_trial_change[cond_changes][['condition', 't_sec', 't_nsec']]
+    # could also save framenumbers from last / next obs?
+
+
 class _Combine(object):
 
     calc_linear_stats = True
@@ -75,7 +84,7 @@ class _Combine(object):
         self._conditions = {}
         self._condition_names = {}
         self._metadata = []
-
+        self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
         self._configdict = {'v':13,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
@@ -149,8 +158,10 @@ class _Combine(object):
 
         These are the data we deem worthy:
           - dt and results (see get_results)
+          - skipped: a dictionary {condition -> number of skipped trials}
           - conditions: a dictionary {normalised_condition_name -> condition_configuration_dict}
           - condition_names: a dictionary {condition_name -> normalised_condition_name}
+          - condition_switches: a dictionary {uuid -> df}; df contains [condition, t_sec, t_nsec]
           - metadata: a list of dictionaries, each containing the metadata for one experiment
           - csv_file: the path to the original experiment csv file or None if it was not used
         """
@@ -160,6 +171,7 @@ class _Combine(object):
             "skipped": self._skipped,
             "conditions": self._conditions,
             "condition_names": self._condition_names,
+            "condition_switches": self._condition_switches,
             "metadata": self._metadata,
             "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
         }
@@ -1113,8 +1125,9 @@ class CombineH5WithCSV(_Combine):
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
         # The controller tells us that there is a trial change by storing a row with a special object id.
-        # A trial change is either a conditoin change or a lock-object change.
-        # Usint these marker observations is *the only safe way to segment trials*.
+        # These rows have lock_object = IMPOSSIBLE_OBJ_ID and framenumber = 0.
+        # A trial change is either a condition change or a lock_object change.
+        # Using these marker observations is *the only safe way to segment trials*.
         # Any more pandas-style way to do this?
         trial_count = [0]
 
@@ -1124,7 +1137,11 @@ class CombineH5WithCSV(_Combine):
                 return -1
             return trial_count[0]
 
-        timeline = csv['lock_object'].apply(iterative_groups)  # We probably want to save this too
+        timeline = csv['lock_object'].apply(iterative_groups)
+        # compress intervals, save... useful?
+
+        # find condition switches, save
+        self._condition_switches[uuid] = condition_switches_from_controller_csv(csv)
 
         for trial_num, df in csv.groupby(timeline):
 
