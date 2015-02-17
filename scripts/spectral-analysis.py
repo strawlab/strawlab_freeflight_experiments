@@ -55,7 +55,6 @@ def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, 
 if __name__=='__main__':
 
     EPS = False
-    DETREND = True
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
@@ -71,6 +70,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-perturb-start-id", type=int,
         help='only plot perturbations that started in this id')
+    parser.add_argument(
+        "--detrend", type=int, default=1, choices=(1,0),
+        help='detrend data')
 
     args = parser.parse_args()
 
@@ -102,7 +104,7 @@ if __name__=='__main__':
 
     pid = args.only_perturb_start_id
 
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS)}
+    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS), 'dt':args.detrend}
 
     #loop per condition
     for cond in perturbations:
@@ -140,7 +142,7 @@ if __name__=='__main__':
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
                     try:
-                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, DETREND, 'OID_%d' % ph.obj_id)
+                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, args.detrend, 'OID_%d' % ph.obj_id)
                         individual_iddata.append((iddata,ph,len(pdf_extra)))
                     except RuntimeError, e:
                         print "ERROR UPLOADING DATA obj_id: %s: %s" % (ph.obj_id,e)

@@ -198,7 +198,7 @@ function trial_data = make_iddata(y,u,Ts,detrend_first,name)
     if detrend_first
         trial_data = detrend(trial_data);
     end
-end""",y,u,Ts,detrend,name,nout=1,saveout=(mlab.varname('iddata'),))
+end""",y,u,Ts,bool(detrend),name,nout=1,saveout=(mlab.varname('iddata'),))
     return iddata
 
 def run_spa(mlab, iddata, name, w=None):
