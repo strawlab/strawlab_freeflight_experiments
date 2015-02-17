@@ -49,6 +49,31 @@ def simple_flydra_datatypes():
     return traj_datatypes, traj_start_datatypes
 
 
+def select_h5csv_oids(h5, csv,
+                      h5_dest,
+                      csv_dest,
+                      oids=(5537, 5547),
+                      csv_cols=('condition', 'lock_object', 'framenumber', 't_sec', 't_nsec')):
+    """Combine-independent selection of object ids in csv and simple-flydra files."""
+    # Most probably there is something like this in flydra
+    # Here we do not even bother to use pytables or be nice in memory
+    import h5py
+    with h5py.File(h5, 'r') as h5:
+        # obj_id -> (first_timestamp_secs, first_timestamp_nsecs)
+        starts = pd.DataFrame(h5['trajectory_start_times'][:])
+        # obj_id -> (obj_id, framenumber, x, y, z)
+        trajs = pd.DataFrame(h5['trajectories'][:])
+
+        with h5py.File(h5_dest, 'w') as h5_slim:
+            h5_slim['experiment_info'] = h5['experiment_info'][:]  # uuid
+            h5_slim['trajectories'] = trajs[trajs['obj_id'].isin(oids)].to_records()
+            h5_slim['trajectory_start_times'] = starts[starts['obj_id'].isin(oids)].to_records()
+
+    csv = pd.read_csv(csv)
+    csv = csv[csv['lock_object'].isin(oids)]
+    csv[list(csv_cols)].to_csv(csv_dest, index=False)
+
+
 def combine2h5csv(combine,
                   trim_trajs_to=10,
                   columns_for_csv=('rotation_rate', 'ratio'),
