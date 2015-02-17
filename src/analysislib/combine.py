@@ -76,7 +76,7 @@ def check_combine_health(combine, min_length_f=100):
         uuids = cond_dict['uuids']
         for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
             dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
-    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'frame0', 'time0', 'length_f', 'df'])
+    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'frame0', 'time0', 'length_f', 'series'])
     df = df.sort('frame0')
     df['end'] = df['frame0'] + df['length_f']
 
@@ -98,7 +98,7 @@ def check_combine_health(combine, min_length_f=100):
         raise Exception('There are overlapping trials!\n%s' % '\n'.join(report))
 
     # Check that trial id is indeed unique
-    if not len(set(df[['uuid', 'oid', 'frame0']])) == len(df):
+    if not len(df.groupby(['uuid', 'oid', 'frame0'])) == len(df):
         raise Exception('There are duplicated (uuid, oid, frame0) tuples!')
 
     # Check that there are no holes in the dataframes
