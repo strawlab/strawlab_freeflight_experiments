@@ -1124,20 +1124,41 @@ class CombineH5WithCSV(_Combine):
 
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
-        # The controller tells us that there is a trial change by storing a row with a special object id.
+        #
+        # Group the csv dataframe by trial.
+        #
+        # On older versions, we considered any change of lock_object or condition as
+        # trial change. These were the rules implemented in the old, non-pandas
+        # version of this function. However, that would fail in the rare case
+        # (in the freeflight arenas) in which the same lock_object would be given
+        # two trials within the same condition. To correct these CSV would require
+        # heuristics over framenumbers that we better do not implement.
+        #
+        # On newer versions, the controller tells us that there is a trial change
+        # by storing a row with a special object id.
         # These rows have lock_object = IMPOSSIBLE_OBJ_ID and framenumber = 0.
-        # A trial change is either a condition change or a lock_object change.
-        # Using these marker observations is *the only safe way to segment trials*.
-        # Any more pandas-style way to do this?
+        # A trial change is still either a condition change or a lock_object change.
+        # Using these marker observations is *the only fully correct way to segment trials*.
+        # (any more pandas-style way to do this is welcomed)
+        #
         trial_count = [0]
+        last_oid = ['this_is_not_an_oid']
+        last_condition = [33]
 
-        def iterative_groups(lock_object):
-            if lock_object == IMPOSSIBLE_OBJ_ID:
+        def iterative_groups(oid, condition):
+            # new style, marker rows
+            if oid == IMPOSSIBLE_OBJ_ID:
                 trial_count[0] += 1
                 return -1
+            # old style, change of oid or condition
+            if oid != last_oid[0] or condition != last_condition[0]:  # these would never happen on newer CSV versions
+                trial_count[0] += 1
+            last_oid[0] = oid
+            last_condition[0] = condition
             return trial_count[0]
 
-        timeline = csv['lock_object'].apply(iterative_groups)
+        # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow
+        timeline = [iterative_groups(oid, cond) for oid, cond in izip(csv['lock_object'], csv['condition'])]
         # compress intervals, save... useful?
 
         # find condition switches, save
@@ -1145,9 +1166,13 @@ class CombineH5WithCSV(_Combine):
 
         for trial_num, csv_df in csv.groupby(timeline):
 
+            # start of file?
+            if csv_df['condition'].count() == 0:
+                continue
+
             if not csv_df['lock_object'].nunique() == 1:
                 raise Exception('CSV problem, more than one object id in the same trial:\n\ttrial=%d oids=(%s) %s' %
-                                trial_num, ','.join(map(str, csv_df['lock_object'].unique())), csv_fname)
+                                (trial_num, ','.join(map(str, csv_df['lock_object'].unique())), csv_fname))
 
             oid = csv_df['lock_object'].iloc[0]
 
@@ -1155,13 +1180,9 @@ class CombineH5WithCSV(_Combine):
             if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
-            # start of file?
-            if csv_df['condition'].count() == 0:
-                continue
-
             if not csv_df['condition'].nunique() == 1:
                 raise Exception('CSV problem, more than one condition in the same trial:\n\ttrial=%d oids=(%s) %s' %
-                                trial_num, ','.join(csv_df['condition'].unique()), csv_fname)
+                                (trial_num, ','.join(csv_df['condition'].unique()), csv_fname))
 
             cond = csv_df['condition'].iloc[0]
 
