@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import izip
 import os.path
 import os.path
@@ -13,6 +14,7 @@ import datetime
 import calendar
 import collections
 import copy
+from pandas.tseries.index import DatetimeIndex
 
 import tables
 import pandas as pd
@@ -56,6 +58,60 @@ def condition_switches_from_controller_csv(csv):
     cond_changes = cond_or_trial_change['condition'].shift() != cond_or_trial_change['condition']
     return cond_or_trial_change[cond_changes][['condition', 't_sec', 't_nsec']]
     # could also save framenumbers from last / next obs?
+
+
+def check_combine_health(combine, min_length_f=100):
+    """Checks some invariants in combine.
+
+    Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
+    """
+
+    results, dt = combine.get_results()
+
+    # Aggregate results in a handy dataframe
+    dfs_stuff = []
+    for cond, cond_dict in results.iteritems():
+        dfs = cond_dict['df']
+        sois = cond_dict['start_obj_ids']
+        uuids = cond_dict['uuids']
+        for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
+            dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
+    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'frame0', 'time0', 'length_f', 'df'])
+    df = df.sort('frame0')
+    df['end'] = df['frame0'] + df['length_f']
+
+    # Check all trajectories are long enough
+    if min_length_f is not None:
+        if df['length_f'].min() < min_length_f:
+            raise Exception('There are too short trials')
+
+    # Check there are not overlapping trajectories
+    overlapping = {}
+    for uuid, expdf in df.groupby('uuid'):
+        starts_before_ends = expdf['frame0'].shift(-1).iloc[:-1] < expdf['end'].iloc[:-1]
+        if starts_before_ends.any():
+            firsts = expdf.iloc[:-1][starts_before_ends.values].index
+            overlaps = expdf.iloc[1:][starts_before_ends.values].index
+            overlapping[uuid] = zip(firsts, overlaps)
+    if len(overlapping) > 0:
+        report = ['%s: %r' % (uuid, overlaps) for uuid, overlaps in sorted(overlapping.items())]
+        raise Exception('There are overlapping trials!\n%s' % '\n'.join(report))
+
+    # Check that trial id is indeed unique
+    if not len(set(df[['uuid', 'oid', 'frame0']])) == len(df):
+        raise Exception('There are duplicated (uuid, oid, frame0) tuples!')
+
+    # Check that there are no holes in the dataframes
+    def has_holes(df, dt):
+        observations_distances = df.index.values[1:] - df.index.values[0:-1]
+        if isinstance(df.index, DatetimeIndex):
+            return (observations_distances != dt).any()
+        return (observations_distances != 1).any()
+
+    with_holes = df[df['series'].apply(partial(has_holes, dt=dt))]
+    if len(with_holes) > 0:
+        raise Exception('There are trajectories with holes: \n%s' %
+                        '\n'.join(df[['uuid', 'oid', 'frame0']].to_string()))
 
 
 class _Combine(object):

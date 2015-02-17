@@ -41,7 +41,7 @@ class TestCombineData(unittest.TestCase):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
 
-        combine.add_from_uuid(self._uuid, reindex=False, no_cached=True)
+        combine.add_from_uuid(self._uuid, reindex=False)
         cols = set(combine.get_result_columns())
         expected = {'cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate', 'trg_x', 'trg_y', 'trg_z',
                     'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az', 'theta',
