@@ -34,16 +34,6 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 import strawlab_freeflight_experiments.frequency as sfe_frequency
 import strawlab_freeflight_experiments.sid as sfe_sid
 
-def _show_mlab_figures(mlab):
-    varname = mlab.varname('nopenfigs')
-    while True:
-        mlab.drawnow()
-        mlab.run_code("%s = length(findall(0,'type','figure'));" % varname)
-        nfigs = mlab.get_variable(varname)
-        if not nfigs:
-            break
-        time.sleep(0.1)
-
 def _load_matlab_variable_as_same_name(fobj, path, name):
     TMPL = """
 inf = whos('-file','%(path)s');
@@ -527,7 +517,7 @@ if __name__=='__main__':
 
 
     if args.show:
-        t = threading.Thread(target=_show_mlab_figures, args=(mlab,))
+        t = threading.Thread(target=sfe_sid.show_mlab_figures, args=(mlab,))
         t.start()
         aplt.show_plots()
         t.join()

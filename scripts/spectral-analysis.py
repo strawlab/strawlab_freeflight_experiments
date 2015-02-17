@@ -36,16 +36,6 @@ import strawlab_freeflight_experiments.sid as sfe_sid
 
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
-def _show_mlab_figures(mlab):
-    varname = mlab.varname('nopenfigs')
-    while True:
-        mlab.drawnow()
-        mlab.run_code("%s = length(findall(0,'type','figure'));" % varname)
-        nfigs = mlab.get_variable(varname)
-        if not nfigs:
-            break
-        time.sleep(0.1)
-
 def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, basefn):
     h1,h2,h3 = mlab.run_func(os.path.join(pkg_dir,'src','matlab','sid_spectrum_plots.m'),
                         iddata,f0,f1,FS,title,system_u_name,system_y_name,nout=3)
@@ -184,7 +174,7 @@ if __name__=='__main__':
 
 
     if args.show:
-        t = threading.Thread(target=_show_mlab_figures, args=(mlab,))
+        t = threading.Thread(target=sfe_sid.show_mlab_figures, args=(mlab,))
         t.start()
         aplt.show_plots()
         t.join()

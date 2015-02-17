@@ -5,6 +5,7 @@ import collections
 import random
 import string
 import itertools
+import time
 
 import pymatbridge
 import pandas as pd
@@ -395,6 +396,14 @@ def plot_bode(syslist, omega, dB=None, Hz=None, deg=None, labels=None, fig=None)
     else:
         return mags, phases, lines, (axm, axp)
 
-
+def show_mlab_figures(mlab):
+    varname = mlab.varname('nopenfigs')
+    while True:
+        mlab.drawnow()
+        mlab.run_code("%s = length(findall(0,'type','figure'));" % varname)
+        nfigs = mlab.get_variable(varname)
+        if not nfigs:
+            break
+        time.sleep(0.1)
 
 
