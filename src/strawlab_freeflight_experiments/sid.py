@@ -258,7 +258,11 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
         plot_args = ','.join(map(str,[r.sid_model for r in result_objs if not r.failed]))
 
     if show_legend:
-        legend = "legend(%s);" % ','.join(["'%s'" % r for r in result_objs if not r.failed])
+        if isinstance(show_legend,str):
+            loc = show_legend
+        else:
+            loc = 'NorthEast'
+        legend = "legend(%s,'Location','%s');" % (','.join(["'%s'" % r for r in result_objs if not r.failed]), loc)
     else:
         legend = ''
 
