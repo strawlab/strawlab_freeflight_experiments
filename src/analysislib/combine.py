@@ -1143,21 +1143,21 @@ class CombineH5WithCSV(_Combine):
         # find condition switches, save
         self._condition_switches[uuid] = condition_switches_from_controller_csv(csv)
 
-        for trial_num, df in csv.groupby(timeline):
+        for trial_num, csv_df in csv.groupby(timeline):
 
-            assert df['lock_object'].nunique() == 1, 'CSV problem, more than one object id in the same trial'
-            oid = df['lock_object'].iloc[0]
+            assert csv_df['lock_object'].nunique() == 1, 'CSV problem, more than one object id in the same trial'
+            oid = csv_df['lock_object'].iloc[0]
 
             # controller marker observations group?
             if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
             # start of file?
-            if df['condition'].count() == 0:
+            if csv_df['condition'].count() == 0:
                 continue
 
-            assert df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
-            cond = df['condition'].iloc[0]
+            assert csv_df['condition'].nunique() == 1, 'CSV problem, more than one condition in the same trial'
+            cond = csv_df['condition'].iloc[0]
 
             # do we want this object?
             if args.idfilt and (oid not in args.idfilt):
@@ -1178,7 +1178,7 @@ class CombineH5WithCSV(_Combine):
                                      uuids=[])
                 skipped[cond] = 0
                 try:
-                    self._condition_names[cond] = df['condition_name'].iloc[0]
+                    self._condition_names[cond] = csv_df['condition_name'].iloc[0]
                 except:
                     pass
 
@@ -1187,13 +1187,13 @@ class CombineH5WithCSV(_Combine):
             # the csv may be written at a faster rate than the framerate,
             # causing there to be multiple rows with the same framenumber.
             # find the last index for all unique framenumbers for this trial
-            fdf = df.drop_duplicates(cols=('framenumber',), take_last=True)
-            trial_framenumbers = fdf['framenumber'].values  # TODO: role of zeros here, can be troublesome?
+            csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
+            trial_framenumbers = csv_df['framenumber'].values
 
             if original_condition != fixed_condition:
                 self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
-                fdf = fdf.copy()  # use copy and not view
-                fdf['condition'].replace(original_condition, fixed_condition, inplace=True)
+                csv_df = csv_df.copy()  # use copy and not view
+                csv_df['condition'].replace(original_condition, fixed_condition, inplace=True)
 
             # get the comparable range of data from flydra
             if frames_start_offset != 0:
@@ -1228,24 +1228,24 @@ class CombineH5WithCSV(_Combine):
             framenumber_series = pd.Series(validframenumber, name='framenumber', index=validframenumber)
             flydra_series.append(framenumber_series)
 
-            df = pd.concat(flydra_series, axis=1)
+            h5_df = pd.concat(flydra_series, axis=1)
 
             try:
                 dt = self._dt
-                self._calc_other_series(df, dt)
+                self._calc_other_series(h5_df, dt)
             except Exception, e:
                 self._skipped[cond] += 1
                 self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
 
-            n_samples_before = len(df)
+            n_samples_before = len(h5_df)
             try:
-                filter_cond, _ = arena.apply_secondary_filter(args, df, dt)
-                df = df.iloc[filter_cond]
+                filter_cond, _ = arena.apply_secondary_filter(args, h5_df, dt)
+                h5_df = h5_df.iloc[filter_cond]
             except NotImplementedError:
                 pass
 
-            n_samples = len(df)
+            n_samples = len(h5_df)
             if n_samples < dur_samples:
                 self._debug('FILT2:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
                 self._skipped[cond] += 1
@@ -1253,21 +1253,19 @@ class CombineH5WithCSV(_Combine):
             if n_samples != n_samples_before:
                 self._debug('TRIM2:   removed %d frames' % (n_samples_before - n_samples))
 
-            traj_start_frame = df['framenumber'].values[0]
-            traj_stop_frame = df['framenumber'].values[-1]
+            traj_start_frame = h5_df['framenumber'].values[0]
+            traj_stop_frame = h5_df['framenumber'].values[-1]
 
-            start_time = float(csv.head(1)['t_sec'] + (csv.head(1)['t_nsec'] * 1e-9))
+            # another bug fixed here, we were using csv instead of fdf (hidden for ages as we almost never used this...)
+            start_time = float(csv_df.head(1)['t_sec'] + (csv_df.head(1)['t_nsec'] * 1e-9))
             if not self._maybe_apply_tfilt_should_save(start_time):
-                df = None
+                h5_df = None
 
-            if df is not None:
+            if h5_df is not None:
 
-                n_samples = len(df)
+                n_samples = len(h5_df)
                 span_details = (cond, n_samples)
-                try:
-                    self._results_by_condition[oid].append(span_details)
-                except KeyError:
-                    self._results_by_condition[oid] = [span_details]
+                self._results_by_condition.setdefault(oid, []).append(span_details)
 
                 self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' %
                             (n_samples,
@@ -1276,7 +1274,7 @@ class CombineH5WithCSV(_Combine):
 
                 if self._index == 'framenumber':
                     # if the csv has been written at a faster rate than the
-                    # flydra data then fdf contains the last estimate in the
+                    # flydra data then csv_df contains the last estimate in the
                     # csv for that framenumber (because drop_duplicates take_last=True)
                     # removes the extra rows and make a new framenumber index
                     # unique.
@@ -1286,22 +1284,22 @@ class CombineH5WithCSV(_Combine):
 
                     # delete the framenumber from the h5 dataframe, it only
                     # duplicates what should be in the index anyway
-                    del df['framenumber']
+                    del h5_df['framenumber']
 
                     # if there are any columns common in both dataframes the result
                     # seems to be that the concat resizes the contained values
                     # by adding an extra dimenstion.
                     # df['x'].values.ndim = 1 becomes = 2 (for version of
                     # pandas < 0.14). To work around this, remove any columns
-                    # in the csv dataframe that exists in df
-                    common_columns = df.columns & fdf.columns
+                    # in the csv dataframe that exists in the h5 dataframe
+                    common_columns = h5_df.columns & csv_df.columns
                     for c in common_columns:
                         self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c, c))
-                        cv = df[c].values
-                        del df[c]
-                        df['_'+c] = cv
+                        cv = csv_df[c].values
+                        del csv_df[c]
+                        csv_df['_'+c] = cv
 
-                    df = pd.concat((fdf.set_index('framenumber'), df),
+                    df = pd.concat((csv_df.set_index('framenumber'), h5_df),
                                    axis=1, join='outer')
 
                     # restore a framenumber column for API compatibility
@@ -1320,10 +1318,10 @@ class CombineH5WithCSV(_Combine):
 
                     if self._index.startswith('time'):
                         # add a tns column
-                        df['tns'] = np.array((df['t_sec'].values * 1e9) + df['t_nsec'], dtype=np.uint64)
+                        csv_df['tns'] = np.array((csv_df['t_sec'].values * 1e9) + csv_df['t_nsec'], dtype=np.uint64)
 
                     # we still must trim the original dataframe by the trim conditions (framenumber)
-                    odf_fns = df['framenumber'].values
+                    odf_fns = h5_df['framenumber'].values
                     odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   # first frame
                     odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   # last frame
 
@@ -1331,7 +1329,7 @@ class CombineH5WithCSV(_Combine):
                     # but the two dataframes should remain sorted by
                     # framenumber because we use that for building a new time index
                     # if we resample
-                    df = pd.merge(df.iloc[odf_fn0_idx:odf_fnN_idx], df,  # trim as filtered
+                    df = pd.merge(csv_df.iloc[odf_fn0_idx:odf_fnN_idx], h5_df,  # trim as filtered
                                   suffixes=("_csv", "_h5"),
                                   on='framenumber',
                                   left_index=False, right_index=False,
@@ -1385,9 +1383,10 @@ class CombineH5WithCSV(_Combine):
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
 
+
                 # the start time and the start framenumber are defined by the experiment,
-                # so they come from the csv (fdf)
-                first = fdf.irow(0)
+                # so they come from the csv
+                first = csv_df.irow(0)
 
                 start_time = float(first['t_sec'] + (first['t_nsec'] * 1e-9))
                 start_framenumber = int(first['framenumber'])
