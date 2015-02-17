@@ -46,6 +46,7 @@ if __name__=='__main__':
     parser.add_argument('--save', help='save figure', default='/tmp/spa_model_compare')
     parser.add_argument('--labels', nargs='+', metavar='L')
     parser.add_argument('--show', action='store_true')
+    parser.add_argument('--title',type=str)
     args = parser.parse_args()
 
     mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
@@ -70,7 +71,9 @@ if __name__=='__main__':
         model = sfe_sid.run_spa(mlab,idobj,"%s (n=%d)" % (lbl,int(n)),w)
         models.append(model)
 
-    title = "SPA Comparison"
+    title = "Bode (using SPA on all data)"
+    if args.title:
+        title += ('\n' + args.title)
     with mlab.fig(args.save+'.png') as f:
         sfe_sid.bode_models(mlab,title,True,'SouthWest',False,models,w)
 
