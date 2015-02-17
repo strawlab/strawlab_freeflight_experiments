@@ -85,7 +85,7 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
         self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v':13,  #bump this version when you change delicate combine machinery
+        self._configdict = {'v':14,  #bump this version when you change delicate combine machinery
                             'index':self._index
         }
 
