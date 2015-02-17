@@ -654,13 +654,16 @@ def plot_aligned_timeseries(combine, args, figncols, valname, dvdt, name=None):
 
 def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
+    xax = ax.get_xaxis()
+
     if df.index.is_all_dates:
         x = df.index.to_pydatetime()
-        xax = ax.get_xaxis()
         xax.set_major_locator(SecondLocator(interval=3))
         xax.set_major_formatter(SecondFormatter())
     else:
         x = df.index.values
+        #integer / framenumber index, plot integer format and not engineering notation
+        xax.set_major_formatter(mticker.FormatStrFormatter('%d'))
 
     ax.plot(x, df[colname].values, *plot_args, **plot_kwargs)
 
