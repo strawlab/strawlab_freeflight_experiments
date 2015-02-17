@@ -244,9 +244,13 @@ ax = findall(mf,'type','axes');
 legend(ax(2),%s);
 title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
-def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
+def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs,w=None):
+    if w is None:
+        w = np.logspace(-2,2,100)
+
     #remove _ because it seems impossible to disable the tex interpreter
     mlab.set_variable('figtitle',title.replace('_',''))
+    mlab.set_variable('w',w)
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
@@ -259,7 +263,6 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
         legend = ''
 
     mlab.run_code("""
-w = logspace(-2,2,100);
 opt = bodeoptions;
 opt.Title.String = figtitle;
 opt.Title.Interpreter = 'none';
