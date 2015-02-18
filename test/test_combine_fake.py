@@ -434,15 +434,21 @@ class TestCombineNonContiguous(unittest.TestCase):
     These happen when trials are long, for example within fish experiments
     """
 
-    def _combine_for_test(self):
+    def _combine_for_test(self, cont_within_cond=False):
         """Returns a combine object useful for testing proper splitting of non-contiguous condition blocks
         within the same trial.
         """
 
         MAX_TEST_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
-        DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
-        csv = op.join(DATA_ROOT, 'data.csv')
-        h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
+
+        if cont_within_cond:
+            DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous'))
+            csv = op.join(DATA_ROOT, 'non-contiguous-same-oid.csv')
+            h5 = op.join(DATA_ROOT, 'non-contiguous-same-oid.h5')
+        else:
+            DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
+            csv = op.join(DATA_ROOT, 'data.csv')
+            h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
 
         # generate small-test-data from real data
         if not op.isfile(csv) or not op.isfile(h5):
@@ -452,11 +458,11 @@ class TestCombineNonContiguous(unittest.TestCase):
             combine.calc_linear_stats = False
             combine.calc_angular_stats = False
             combine.add_from_uuid(MAX_TEST_UUID,
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none')
+                                  xfilt='none',
+                                  yfilt='none',
+                                  zfilt='none',
+                                  vfilt='none',
+                                  rfilt='none')
             combine2h5csv(combine,
                           tempdir=DATA_ROOT,
                           columns_for_csv=('stim_x',))
@@ -466,13 +472,12 @@ class TestCombineNonContiguous(unittest.TestCase):
         combine.calc_turn_stats = False
         combine.calc_linear_stats = False
         combine.calc_angular_stats = False
-        _, args = analysislib.args.get_default_args(
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none',
-                    lenfilt=0)
+        _, args = analysislib.args.get_default_args(xfilt='none',
+                                                    yfilt='none',
+                                                    zfilt='none',
+                                                    vfilt='none',
+                                                    rfilt='none',
+                                                    lenfilt=0)
 
         combine.add_csv_and_h5_file(csv_fname=csv,
                                     h5_file=h5,
@@ -493,6 +498,24 @@ class TestCombineNonContiguous(unittest.TestCase):
         self.assertEquals(20, len(dfs))
         # there must be 200 observations
         self.assertEquals(sum(map(len, dfs)), 200)
+
+    def test_correct_noncontiguous_split(self):
+        combine, csv, h5 = self._combine_for_test(cont_within_cond=True)
+        results, dt = combine.get_results()
+        self.assertAlmostEqual(dt, 0.01)
+        self.assertEqual(len(results), 1)  # 1 condition
+        # There needs to be two trials for oid 5537: (595668, len=50 and 596002, len=180)
+        # There needs to be one trial for oid 5547: (595784, len=213)
+        valid_trials = (
+            (5537, 595668, 50),
+            (5537, 596002, 180),
+            (5547, 595784, 213)
+        )
+        trials = results['gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2']
+        for df, (x0, y0, obj_id, framenumber0, time0) in zip(trials['df'], trials['start_obj_ids']):
+            self.assertIn((obj_id, framenumber0, len(df)), valid_trials)
+
+        # TODO: implement heuristic and test for "old csvs", when we do not have marker rows for lock_object drop
 
 if __name__ == '__main__':
     unittest.main()
