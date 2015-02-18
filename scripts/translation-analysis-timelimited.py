@@ -30,7 +30,7 @@ def filter_trials_after_start(combine,
     # retrieve the experiment start times
     datetime_limits = {}
 
-    def keep_before(unused1, soid, uuid, unused2):
+    def keep_before(unused0, unused1, soid, uuid, unused2):
         if uuid is None:
             return False  # Can happen even in basic examples, probably because of race conditions
                           # FIXME: infer better the uuid in combine (easier if we assume only one exp at a time)
