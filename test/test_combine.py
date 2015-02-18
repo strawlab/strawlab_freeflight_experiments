@@ -1,17 +1,11 @@
 #!/usr/bin/env python
-from functools import partial
 import os.path
-import sys
-import numpy as np
 import unittest
-import collections
 import tempfile
-from pandas.tseries.index import DatetimeIndex
-from analysislib.combine import check_combine_health
-from flydata.transformers.contracts import NoHolesContract
 
 import roslib
 import roslib.packages
+
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.combine
 import analysislib.args
