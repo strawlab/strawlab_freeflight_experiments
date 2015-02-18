@@ -34,6 +34,8 @@ import analysislib.curvature as acurve
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuid_from_flydra_h5
 
+from strawlab_freeflight_experiments.conditions import Condition, ConditionCompat
+
 from whatami import What, MAX_EXT4_FN_LENGTH
 
 #results = {
@@ -361,6 +363,16 @@ class _Combine(object):
     def get_condition_configuration(self, cond):
         """returns the full dictionary that defines the experimental condition"""
         return self._conditions.get(cond,{})
+
+    def get_condition_object(self, cond):
+        condition_conf = self.get_condition_configuration(self.get_condition_name(cond))
+        if condition_conf:
+            obj = Condition(condition_conf)
+            obj.name = cond
+            return obj
+        else:
+            #old experiment
+            return ConditionCompat(cond)
 
     def get_num_frames(self, seconds):
         """returns the number of frames that should be recorded for the given seconds"""

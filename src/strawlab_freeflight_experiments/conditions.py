@@ -1,6 +1,7 @@
 import os.path
 import itertools
 import random
+import re
 
 import yaml
 import yaml.constructor
@@ -58,6 +59,44 @@ def get_default_condition_filename(argv):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                         'data','conditions',
                         '%s.yaml' % fn)
+
+class ConditionCompat:
+
+    ROTATION_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}$")
+    CONFLICT_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}\/\w+\.osg(?:\|[\d.+-]+)+$")
+    PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
+
+    def __init__(self, slash_string):
+        self._s = slash_string
+
+    def is_type(self, *names):
+        fake_names = []
+        #rotation experiments look like this
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2
+        # gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
+        # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
+        if ConditionCompat.ROTATION_RE.match(self._s):
+            fake_names.append('rotation')
+
+        #conflict experiments look like this
+        # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0
+        if ConditionCompat.CONFLICT_RE.match(self._s):
+            fake_names.append('conflict')
+
+        #perturb experiments look like this
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06
+        if ConditionCompat.PERTURB_RE.match(self._s):
+            #let the validation logic in sfe.perturb do the heavy work here.
+            #lazy import for Santi
+            from .perturb import is_perturb_condition_string
+            if is_perturb_condition_string(self._s):
+                fake_names.append('perturbation')
+
+        return any(name in fake_names for name in names)
+
+    def to_slash_separated(self):
+        return self._s
 
 class Condition(OrderedDict, _YamlMixin):
 
