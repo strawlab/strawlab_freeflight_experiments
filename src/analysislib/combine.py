@@ -1218,6 +1218,7 @@ class CombineH5WithCSV(_Combine):
         #   - a marker row for a lock_object change or loss (present only in newer CSVs)
         #
         # Marker rows have either oid=IMPOSSIBLE_OBJ_ID or oid=IMPOSSIBLE_OBJ_ID_ZERO_POSE
+        # The beginning of the file might contain garbage (because we do not sync with flydra or exp. start).
         #
         # Newer CSVs are better designed because using these marker observations is
         # *the only correct way to segment trials*.
