@@ -111,7 +111,15 @@ def check_combine_health(combine, min_length_f=100):
     with_holes = df[df['series'].apply(partial(has_holes, dt=dt))]
     if len(with_holes) > 0:
         raise Exception('There are trajectories with holes: \n%s' %
-                        '\n'.join(df[['uuid', 'oid', 'frame0']].to_string()))
+                        with_holes[['uuid', 'oid', 'frame0']].to_string())
+
+    # Check no missings in x, y, z
+    def has_missings(df, cols=('x', 'y', 'z')):
+        return 0 != np.count_nonzero(df[list(cols)].isnull())
+    with_missing = df[df['series'].apply(has_missings)]
+    if len(with_missing) > 0:
+        raise Exception('There are trajectories with unexpected missing values: \n%s' %
+                        with_missing[['uuid', 'oid', 'frame0']].to_string())
 
 
 class _Combine(object):
