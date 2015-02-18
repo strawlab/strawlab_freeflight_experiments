@@ -499,7 +499,7 @@ class TestCombineNonContiguous(unittest.TestCase):
         # there must be 200 observations
         self.assertEquals(sum(map(len, dfs)), 200)
 
-    def test_correct_noncontiguous_split(self):
+    def test_correct_noncontiguous_split_within_cond(self):
         combine, csv, h5 = self._combine_for_test(cont_within_cond=True)
         results, dt = combine.get_results()
         self.assertAlmostEqual(dt, 0.01)
