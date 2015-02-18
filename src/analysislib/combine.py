@@ -495,22 +495,19 @@ class _Combine(object):
             r[c] = self._results[c]
         return r, self.dt
 
-    def get_one_result(self, obj_id, condition=None):
+    def get_one_result(self, obj_id, framenumber0):
         """
         Get the data associated with a single object_id
 
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
-        if (not condition) and (obj_id in self.get_spanned_results()):
-            raise ValueError("obj_id: %s exists in multiple conditions - please specify which one" % obj_id)
-
+        # TODO: we should also pass uuid in here or make each combine object hold one experiment
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-                if _obj_id == obj_id:
-                    if (not condition) or (current_condition == condition):
-                        return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+                if _obj_id == obj_id and framenumber0 == framenumber0:
+                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
 
-        raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
+        raise ValueError("No such obj_id=%d startf=%d)" % (obj_id, framenumber0))
 
     def get_obj_ids_sorted_by_length(self):
         """
