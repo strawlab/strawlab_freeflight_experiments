@@ -49,9 +49,12 @@ def simple_flydra_datatypes():
     return traj_datatypes, traj_start_datatypes
 
 
-def select_h5csv_oids(h5, csv,
-                      h5_dest,
-                      csv_dest,
+def select_h5csv_oids(h5_file='/mnt/strawscience/data/csv-test-case-deleteme/katja-exp/'
+                              '20150131_174031.simple_flydra.h5',
+                      csv_file='/mnt/strawscience/data/csv-test-case-deleteme/katja-exp/'
+                               'overlap-e3ccf472a96711e48156bcee7bdac428-5537-595668.csv',
+                      h5_dest=None,
+                      csv_dest=None,
                       oids=(5537, 5547),
                       keep_in_between=False,
                       frames_before=None,
@@ -63,19 +66,28 @@ def select_h5csv_oids(h5, csv,
     if keep_in_between or frames_before is not None or frames_after is not None:
         raise NotImplementedError('This would surely be convenient and it is should be easy to do...')
     import h5py
-    with h5py.File(h5, 'r') as h5:
+    with h5py.File(h5_file, 'r') as h5:
         # obj_id -> (first_timestamp_secs, first_timestamp_nsecs)
         starts = pd.DataFrame(h5['trajectory_start_times'][:])
         # obj_id -> (obj_id, framenumber, x, y, z)
         trajs = pd.DataFrame(h5['trajectories'][:])
 
+        if h5_dest is None:
+            h5_dest = op.join(op.dirname(h5_file), 'slim-' + op.basename(h5_file))
+
         with h5py.File(h5_dest, 'w') as h5_slim:
             h5_slim['experiment_info'] = h5['experiment_info'][:]  # uuid
             h5_slim['trajectories'] = trajs[trajs['obj_id'].isin(oids)].to_records()
+            for k, v in h5['trajectories'].attrs.iteritems():
+                h5_slim['trajectories'].attrs[k] = v
             h5_slim['trajectory_start_times'] = starts[starts['obj_id'].isin(oids)].to_records()
+            for k, v in h5['trajectory_start_times'].attrs.iteritems():
+                h5_slim['trajectory_start_times'].attrs[k] = v
 
-    csv = pd.read_csv(csv)
+    csv = pd.read_csv(csv_file)
     csv = csv[csv['lock_object'].isin(oids)]
+    if csv_dest is None:
+        csv_dest = op.join(op.dirname(csv_file), 'slim-' + op.basename(csv_file))
     if csv_cols is None:
         csv.to_csv(csv_dest, index=False)
     else:
