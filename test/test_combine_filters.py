@@ -51,7 +51,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
         self.assertEqual(len(df), 571)  # here the trajectory has already been removed, too short, change lenfilt?
 
@@ -66,7 +66,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
         self.assertEqual(len(df), 666)  # this is 92 out of the new combine
 
@@ -82,7 +82,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
         self.assertEqual(len(df), 103)  # here it says 91
 
@@ -97,7 +97,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
         self.assertEqual(len(df), 90)  # here it says 91
 

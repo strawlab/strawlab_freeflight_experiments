@@ -495,7 +495,24 @@ class _Combine(object):
             r[c] = self._results[c]
         return r, self.dt
 
-    def get_one_result(self, obj_id, framenumber0):
+    def get_one_result(self, obj_id, condition=None):
+        """
+        Get the data associated with a single object_id
+
+        returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
+        """
+        if (not condition) and (obj_id in self.get_spanned_results()):
+            raise ValueError("obj_id: %s exists in multiple conditions - please specify which one" % obj_id)
+
+        for i,(current_condition,r) in enumerate(self._results.iteritems()):
+            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+                if _obj_id == obj_id:
+                    if (not condition) or (current_condition == condition):
+                        return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+
+        raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
+
+    def get_one_result_proper_coords(self, obj_id, framenumber0):
         """
         Get the data associated with a single object_id
 
