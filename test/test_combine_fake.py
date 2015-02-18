@@ -78,7 +78,8 @@ def select_h5csv_oids(h5, csv,
     csv = csv[csv['lock_object'].isin(oids)]
     if csv_cols is None:
         csv.to_csv(csv_dest, index=False)
-    csv[list(csv_cols)].to_csv(csv_dest, index=False)
+    else:
+        csv[list(csv_cols)].to_csv(csv_dest, index=False)
     # TODO: allow to add number of frames before and after
 
 
