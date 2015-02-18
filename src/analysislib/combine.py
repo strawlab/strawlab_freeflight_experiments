@@ -1194,39 +1194,54 @@ class CombineH5WithCSV(_Combine):
         # On older versions, we considered any change of lock_object or condition as
         # trial change. These were the rules implemented in the old, non-pandas
         # version of this function. However, that would fail in the rare case
-        # (in the freeflight arenas) in which the same lock_object would be given
-        # two trials within the same condition. To correct these CSV would require
-        # heuristics over framenumbers that we better do not implement.
+        # (rare in the freeflight arenas) in which the same lock_object would be given
+        # two trials within the same condition realisation. To correct these CSV
+        # would require heuristics over framenumbers that I won't implement for the moment.
         #
         # On newer versions, the controller tells us that there is a trial change
-        # by storing a row with a special object id.
-        # These rows have lock_object = IMPOSSIBLE_OBJ_ID and framenumber = 0.
+        # by storing a row with a special object id (IMPOSSIBLE_OBJ_ID, also framenumber=0).
         # A trial change is still either a condition change or a lock_object change.
         # Using these marker observations is *the only fully correct way to segment trials*.
         # (any more pandas-style way to do this is welcomed)
         #
-        trial_count = [0]
-        last_oid = ['this_is_not_an_oid']
-        last_condition = [33]
 
-        def iterative_groups(oid, condition):
+        #
+        # --- This is still incorrect, because in the old-style CSVs there are also
+        #     observations with IMPOSSIBLE_OBJ_ID identifier
+        #     So:
+        #       - we should not use these marker rows in old-style csvs
+        #       - we should not use condition/locked_object switch in new-style csvs
+        #       - it is not trivial to differentiate the two
+        #
+
+        if (csv['lock_object'] == IMPOSSIBLE_OBJ_ID).any():
             # new style, marker rows
-            if oid == IMPOSSIBLE_OBJ_ID:
-                trial_count[0] += 1
-                return -1
-            # old style, change of oid or condition
-            if oid != last_oid[0] or condition != last_condition[0]:  # these would never happen on newer CSV versions
-                trial_count[0] += 1
-            last_oid[0] = oid
-            last_condition[0] = condition
-            return trial_count[0]
-
-        # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow
-        timeline = [iterative_groups(oid, cond) for oid, cond in izip(csv['lock_object'], csv['condition'])]
-        # compress intervals, save... useful?
-
-        # find condition switches, save
-        self._condition_switches[uuid] = condition_switches_from_controller_csv(csv)
+            def iterative_groups(oid, trial_count=[0]):
+                if oid == IMPOSSIBLE_OBJ_ID:
+                    trial_count[0] += 1
+                    return -1
+                return trial_count[0]
+            timeline = csv['lock_object'].apply(iterative_groups)
+            # find condition switches, save
+            self._condition_switches[uuid] = condition_switches_from_controller_csv(csv)
+        else:
+            # old style, change of oid or condition, not completelly correct
+            def iterative_groups(oid, condition,
+                                 # these three keep track of last value, while not poluting outer namespace
+                                 # only codestyle warning in this whole function ATM, keep it like that! ;-)
+                                 trial_count=[0],
+                                 last_oid=['this_is_not_an_oid'],
+                                 last_condition=[33]):
+                if oid != last_oid[0] or condition != last_condition[0]:
+                    trial_count[0] += 1
+                last_oid[0] = oid
+                last_condition[0] = condition
+                return trial_count[0]
+            # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow, jumping in mem
+            timeline = [iterative_groups(oid, cond) for oid, cond in izip(csv['lock_object'], csv['condition'])]
+            # no robust way of finding this here, save in node or infer from condition switching strategy
+            self._condition_switches[uuid] = None
+        # compress intervals + save, useful?
 
         for trial_num, csv_df in csv.groupby(timeline):
 
@@ -1473,7 +1488,6 @@ class CombineH5WithCSV(_Combine):
                             except IndexError, e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
-
 
                 # the start time and the start framenumber are defined by the experiment,
                 # so they come from the csv
