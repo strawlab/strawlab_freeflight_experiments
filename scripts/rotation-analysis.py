@@ -149,7 +149,7 @@ if __name__=='__main__':
     if 'tnfcontrol' in combine.csv_file:
         rrate_lim = (-15,15)
     else:
-        rrate_lim = (-1.55,1.55)
+        rrate_lim = (-10,10)
 
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
