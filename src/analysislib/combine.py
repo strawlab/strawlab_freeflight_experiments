@@ -502,10 +502,10 @@ class _Combine(object):
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
         # TODO: we should also pass uuid in here or make each combine object hold one experiment
-        for i,(current_condition,r) in enumerate(self._results.iteritems()):
-            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
-                if _obj_id == obj_id and framenumber0 == framenumber0:
-                    return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+        for current_condition, r in self._results.iteritems():
+            for df, (x0, y0, _obj_id, _framenumber0, time0) in zip(r['df'], r['start_obj_ids']):
+                if _obj_id == obj_id and _framenumber0 == framenumber0:
+                    return df, self._dt, (x0, y0, obj_id, framenumber0, time0)
 
         raise ValueError("No such obj_id=%d startf=%d)" % (obj_id, framenumber0))
 
