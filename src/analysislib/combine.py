@@ -365,10 +365,11 @@ class _Combine(object):
         return self._conditions.get(cond,{})
 
     def get_condition_object(self, cond):
-        condition_conf = self.get_condition_configuration(self.get_condition_name(cond))
+        name = self.get_condition_name(cond)
+        condition_conf = self.get_condition_configuration(name)
         if condition_conf:
             obj = Condition(condition_conf)
-            obj.name = cond
+            obj.name = name
             return obj
         else:
             #old experiment
