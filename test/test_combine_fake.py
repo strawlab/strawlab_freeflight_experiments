@@ -53,10 +53,15 @@ def select_h5csv_oids(h5, csv,
                       h5_dest,
                       csv_dest,
                       oids=(5537, 5547),
+                      keep_in_between=False,
+                      frames_before=None,
+                      frames_after=None,
                       csv_cols=('condition', 'lock_object', 'framenumber', 't_sec', 't_nsec')):
     """Combine-independent selection of object ids in csv and simple-flydra files."""
     # Most probably there is something like this in flydra
     # Here we do not even bother to use pytables or be nice in memory
+    if keep_in_between or frames_before is not None or frames_after is not None:
+        raise NotImplementedError('This would surely be convenient and it is should be easy to do...')
     import h5py
     with h5py.File(h5, 'r') as h5:
         # obj_id -> (first_timestamp_secs, first_timestamp_nsecs)
@@ -71,7 +76,10 @@ def select_h5csv_oids(h5, csv,
 
     csv = pd.read_csv(csv)
     csv = csv[csv['lock_object'].isin(oids)]
+    if csv_cols is None:
+        csv.to_csv(csv_dest, index=False)
     csv[list(csv_cols)].to_csv(csv_dest, index=False)
+    # TODO: allow to add number of frames before and after
 
 
 def combine2h5csv(combine,
