@@ -54,7 +54,7 @@ def safe_condition_string(s):
 def condition_switches_from_controller_csv(csv):
     if not isinstance(csv, pd.DataFrame):
         csv = pd.read_csv(csv)
-    cond_or_trial_change = csv[csv['lock_object'] == 0]
+    cond_or_trial_change = csv[csv['lock_object'].isin((IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE))]
     cond_changes = cond_or_trial_change['condition'].shift() != cond_or_trial_change['condition']
     return cond_or_trial_change[cond_changes][['condition', 't_sec', 't_nsec']]
     # could also save framenumbers from last / next obs?
@@ -1186,8 +1186,11 @@ class CombineH5WithCSV(_Combine):
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
         #
-        # Group the csv dataframe by trial.
-        # A trial end is determined by either:
+        # The CSV (output from the controller) indicates how to segment trials, although not
+        # always in an unambiguous way. We should force stimuli writers to do the right thing,
+        # letting them know what that right is.
+        #
+        # At the moment, a trial end is determined by either:
         #   - a lock_object (oid) change
         #   - or a condition change
         # A trial should have unique oid and condition
@@ -1202,12 +1205,13 @@ class CombineH5WithCSV(_Combine):
         # Newer CSVs are better designed because using these marker observations is
         # *the only correct way to segment trials*.
         #
-        # For old CSVs we need a heuristic based to account for the hopefully rare case
+        # For old CSVs we need a heuristic to account for the hopefully rare case
         # (less frequent in the more animals are in the arena) in which
         # the same lock_object would be given two trials within the same condition
-        # realisation (meaning within the time between two consecutive (different)
-        # condition switches) and with no other oid given a trial in the middle.
-        # Such heuristic, of framenumbers, should allow us to split these cases.
+        # realisation (meaning within the time between two consecutive switches
+        # to different conditions) and with no other oid given a trial in the middle.
+        # Such heuristic, based framenumbers, should allow us to split these cases
+        # (instead of time-travelling).
         #
 
         def iterative_groups(oid, condition,
