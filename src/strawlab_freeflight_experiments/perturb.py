@@ -60,6 +60,9 @@ def get_perturb_class(perturb_descriptor, debug=False):
 
     return NoPerturb
 
+def is_perturb_condition_string(desc):
+    return get_perturb_class(desc.rsplit('/',1)[-1]) != NoPerturb
+
 class Perturber:
 
     DEFAULT_RATIO_MIN = "0.4"
