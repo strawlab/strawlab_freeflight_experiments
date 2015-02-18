@@ -1213,25 +1213,6 @@ class CombineH5WithCSV(_Combine):
         #       - we should not use condition/locked_object switch in new-style csvs
         #       - it is not trivial to differentiate the two
         #
-        # Grouping first by condition, and work with heuristics within each condition should make the trick...
-        #
-
-        # Two ways of grouping by condition...
-        def condition_app(condition, cond_count=[0], last_condition=[666]):
-            if last_condition[0] != condition:
-                cond_count[0] += 1
-                last_condition[0] = condition
-            return cond_count[0]
-
-        # What if a condition switches to itself?
-        # That can happen with the current implementation of random switching...
-        # It is also a valid thing to happen if the experimental design says so
-        # We should actually not log a condition switch then...
-        gb = csv.groupby((csv['condition'] != csv['condition'].shift()).cumsum())
-        csv['condition'].apply(condition_app)
-
-        def is_old_csv_heuristic():
-            zeros = csv['lock_object'] == IMPOSSIBLE_OBJ_ID
 
         if (csv['lock_object'] == IMPOSSIBLE_OBJ_ID).any():
             # new style, marker rows
