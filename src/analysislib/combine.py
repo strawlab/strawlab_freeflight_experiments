@@ -1190,26 +1190,34 @@ class CombineH5WithCSV(_Combine):
 
         #
         # Group the csv dataframe by trial.
+        # A trial end is determined by either:
+        #   - a lock_object (oid) change
+        #   - or a condition change
         #
-        # On older versions, we considered any change of lock_object or condition as
-        # trial change. These were the rules implemented in the old, non-pandas
-        # version of this function. However, that would fail in the rare case
-        # (in the freeflight arenas) in which the same lock_object would be given
-        # two trials within the same condition. To correct these CSV would require
-        # heuristics over framenumbers that we better do not implement.
+        # Lines can be written in our CSVs in 3 different situations:
+        #   - a regular observation during a experiment
+        #   - a marker row for a condition change (present in all CSVs)
+        #   - a marker row for a lock_object change or loss (present only in newer CSVs)
         #
-        # On newer versions, the controller tells us that there is a trial change
-        # by storing a row with a special object id.
-        # These rows have lock_object = IMPOSSIBLE_OBJ_ID and framenumber = 0.
-        # A trial change is still either a condition change or a lock_object change.
-        # Using these marker observations is *the only fully correct way to segment trials*.
-        # (any more pandas-style way to do this is welcomed)
+        # Marker rows have either oid=IMPOSSIBLE_OBJ_ID or oid=IMPOSSIBLE_OBJ_ID_ZERO_POSE
         #
-        trial_count = [0]
-        last_oid = ['this_is_not_an_oid']
-        last_condition = [33]
+        # Newer CSVs are better designed because using these marker observations is
+        # *the only correct way to segment trials*.
+        #
+        # For old CSVs we need a heuristic based to account for the hopefully rare case
+        # (less frequent in the more animals are in the arena) in which
+        # the same lock_object would be given two trials within the same condition
+        # realisation (meaning within the time between two consecutive (different)
+        # condition switches) and with no other oid given a trial in the middle.
+        # Such heuristic, of framenumbers, should allow us to split these cases.
+        #
 
-        def iterative_groups(oid, condition):
+        def iterative_groups(oid, condition,
+                             # these three keep track of last value, while not poluting outer namespace
+                             # only codestyle warning in this whole function ATM, keep it like that! ;-)
+                             trial_count=[0],
+                             last_oid=csv.iloc[0]['lock_object'],
+                             last_condition=csv.iloc[0]['condition']):
             # new style, marker rows
             if oid == IMPOSSIBLE_OBJ_ID:
                 trial_count[0] += 1
