@@ -480,7 +480,7 @@ class _Combine(object):
 
         Parameters
         ----------
-        filter_func: function (df, start_obj_id, uuid, dt) -> boolean, default _ -> True (keep all)
+        filter_func: function (condition, df, start_obj_id, uuid, dt) -> boolean, default _ -> True (keep all)
           The predicate to evaluate on each trial data; only trials that evaluate to True are kept
 
         Returns
@@ -499,16 +499,19 @@ class _Combine(object):
             uuids = []
             for df, soid, uuid in izip(
                     cond_trials['df'], cond_trials['start_obj_ids'], cond_trials['uuids']):
-                if filter_func(df, soid, uuid, self._dt):
+                if filter_func(cond_name, df, soid, uuid, self._dt):
                     dfs.append(df)
                     start_obj_ids.append(soid)
                     uuids.append(uuid)
-            filtered._results[cond_name] = {
-                'df': dfs,
-                'start_obj_ids': start_obj_ids,
-                'count': len(dfs),
-                'uuids': uuids
-            }
+
+            if dfs:
+                filtered._results[cond_name] = {
+                    'df': dfs,
+                    'start_obj_ids': start_obj_ids,
+                    'count': len(dfs),
+                    'uuids': uuids
+                }
+
         return filtered
 
     def close(self):
