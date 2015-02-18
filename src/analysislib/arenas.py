@@ -70,15 +70,23 @@ class FlyCaveCylinder(ArenaBase):
         return [self.height/2.0,self.height]
     def get_filter_properties(self):
         return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
-                "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
-                "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
-                "vfilt":"none",'vfilt_min':np.nan,'vfilt_max':np.nan,
+                "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
+                "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
+                "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
                 "rfilt_max":0.42,"rfilt":"trim",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
 
     def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
+
+    def apply_secondary_filter(self, args, df, dt):
+        fif = int(args.filter_interval/dt)
+
+        cond_v = (df['velocity'] > args.vfilt_min) & (df['velocity'] < args.vfilt_max)
+        valid_v = filter_cond(args.vfilt, cond_v, df['velocity'], filter_interval_frames=fif)
+
+        return valid_v, cond_v
 
 class FishBowl(ArenaBase):
     def __init__(self,radius=0.175,height=0.08):
@@ -93,9 +101,9 @@ class FishBowl(ArenaBase):
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
     def get_filter_properties(self):
         return {"zfilt":"none","zfilt_min":0.1,"zfilt_max":0.9,
-                "xfilt":"none",'xfilt_min':np.nan,'xfilt_max':np.nan,
-                "yfilt":"none",'yfilt_min':np.nan,'yfilt_max':np.nan,
-                "vfilt":"none",'vfilt_min':np.nan,'vfilt_max':np.nan,
+                "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
+                "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
+                "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
                 "rfilt_max":0.17,"rfilt":"none",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
