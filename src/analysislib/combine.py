@@ -1193,6 +1193,7 @@ class CombineH5WithCSV(_Combine):
         # A trial end is determined by either:
         #   - a lock_object (oid) change
         #   - or a condition change
+        # A trial should have unique oid and condition
         #
         # Lines can be written in our CSVs in 3 different situations:
         #   - a regular observation during a experiment
@@ -1216,8 +1217,8 @@ class CombineH5WithCSV(_Combine):
                              # these three keep track of last value, while not poluting outer namespace
                              # only codestyle warning in this whole function ATM, keep it like that! ;-)
                              trial_count=[0],
-                             last_oid=csv.iloc[0]['lock_object'],
-                             last_condition=csv.iloc[0]['condition']):
+                             last_oid=[csv.iloc[0]['lock_object']],
+                             last_condition=[csv.iloc[0]['condition']]):
             # new style, marker rows
             if oid == IMPOSSIBLE_OBJ_ID:
                 trial_count[0] += 1
