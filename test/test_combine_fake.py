@@ -431,24 +431,39 @@ class TestCombineNonContiguous(unittest.TestCase):
     """
     Tests that combine separates correctly trajectories where  the same object_id
     contains trials with the same condition appearing several times.
-    These happen when trials are long, for example within fish experiments
+    These happen when trials are long, for example within fish experiments.
+
+    It also tests when the same condition interval contains different trials
+    with the same oid, which happens everywhere.
     """
 
-    def _combine_for_test(self, cont_within_cond=False):
-        """Returns a combine object useful for testing proper splitting of non-contiguous condition blocks
-        within the same trial.
-        """
+    def _combine_from_csv_h5(self, csv, h5):
+        # combine the test csv/h5
+        combine = get_combiner_for_csv(csv)
+        combine.calc_turn_stats = False
+        combine.calc_linear_stats = False
+        combine.calc_angular_stats = False
+        _, args = analysislib.args.get_default_args(xfilt='none',
+                                                    yfilt='none',
+                                                    zfilt='none',
+                                                    vfilt='none',
+                                                    rfilt='none',
+                                                    lenfilt=0)
+
+        combine.add_csv_and_h5_file(csv_fname=csv,
+                                    h5_file=h5,
+                                    args=args)
+        return combine, csv, h5
+
+    def _combine_inter_condition(self):
+        """Returns a combine object useful for testing proper splitting of same-oid trajectories spanning
+        more than one block with the same condition."""
 
         MAX_TEST_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
 
-        if cont_within_cond:
-            DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous'))
-            csv = op.join(DATA_ROOT, 'non-contiguous-same-oid.csv')
-            h5 = op.join(DATA_ROOT, 'non-contiguous-same-oid.h5')
-        else:
-            DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
-            csv = op.join(DATA_ROOT, 'data.csv')
-            h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
+        DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
+        csv = op.join(DATA_ROOT, 'data.csv')
+        h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
 
         # generate small-test-data from real data
         if not op.isfile(csv) or not op.isfile(h5):
@@ -467,25 +482,22 @@ class TestCombineNonContiguous(unittest.TestCase):
                           tempdir=DATA_ROOT,
                           columns_for_csv=('stim_x',))
 
-        # combine the test csv/h5
-        combine = get_combiner_for_csv(csv)
-        combine.calc_turn_stats = False
-        combine.calc_linear_stats = False
-        combine.calc_angular_stats = False
-        _, args = analysislib.args.get_default_args(xfilt='none',
-                                                    yfilt='none',
-                                                    zfilt='none',
-                                                    vfilt='none',
-                                                    rfilt='none',
-                                                    lenfilt=0)
+        return self._combine_from_csv_h5(csv, h5)
 
-        combine.add_csv_and_h5_file(csv_fname=csv,
-                                    h5_file=h5,
-                                    args=args)
-        return combine, csv, h5
+    def _combine_intra_condition(self, continuous_oids, with_markers):
+        # 'non-contiguous-same-oid-consecutive-no-markers.csv'
+        # 'non-contiguous-same-oid-consecutive-with-markers.csv'
+        DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous'))
+        base = 'non-contiguous-same-oid'
+        if continuous_oids:
+            base += '-continuous'
+        base += '-with-markers.csv' if with_markers else '-no-markers.csv'
+        csv = op.join(DATA_ROOT, 'non-contiguous-same-oid.csv')
+        h5 = op.join(DATA_ROOT, 'non-contiguous-same-oid.h5')
+        return self._combine_from_csv_h5(csv, h5)
 
-    def test_correct_noncontiguous_split(self):
-        combine, csv, h5 = self._combine_for_test()
+    def test_correct_intercondition_split(self):
+        combine, csv, h5 = self._combine_inter_condition()
         results, dt = combine.get_results()
         self.assertAlmostEqual(dt, 0.01)
         self.assertEqual(len(results), 6)
@@ -499,23 +511,40 @@ class TestCombineNonContiguous(unittest.TestCase):
         # there must be 200 observations
         self.assertEquals(sum(map(len, dfs)), 200)
 
-    def test_correct_noncontiguous_split_within_cond(self):
-        combine, csv, h5 = self._combine_for_test(cont_within_cond=True)
-        results, dt = combine.get_results()
-        self.assertAlmostEqual(dt, 0.01)
-        self.assertEqual(len(results), 1)  # 1 condition
+    def test_correct_intracondition_split(self):
+        # Expectations...
         # There needs to be two trials for oid 5537: (595668, len=50 and 596002, len=180)
         # There needs to be one trial for oid 5547: (595784, len=213)
-        valid_trials = (
-            (5537, 595668, 50),
-            (5537, 596002, 180),
-            (5547, 595784, 213)
-        )
-        trials = results['gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2']
-        for df, (x0, y0, obj_id, framenumber0, time0) in zip(trials['df'], trials['start_obj_ids']):
-            self.assertIn((obj_id, framenumber0, len(df)), valid_trials)
+        def test_combine(combine):
+            valid_trials = (
+                (5537, 595668, 50),
+                (5537, 596002, 180),
+                (5547, 595784, 213)
+            )
+            results, dt = combine.get_results()
+            self.assertAlmostEqual(dt, 0.01)
+            self.assertEqual(len(results), 1)  # 1 condition
+            trials = results['gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2']
+            for df, (x0, y0, obj_id, framenumber0, time0) in zip(trials['df'], trials['start_obj_ids']):
+                self.assertIn((obj_id, framenumber0, len(df)), valid_trials)
 
+        # With intermediate trial, with markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=True)
+        test_combine(combine)
+
+        # With intermediate trial, without markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=False)
+        test_combine(combine)
+
+        # Without intermediate trial, with markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=True)
+        test_combine(combine)
+
+        # Without intermediate trial, without markers
+        # This fails because we do the wrong thing here...
         # TODO: implement heuristic and test for "old csvs", when we do not have marker rows for lock_object drop
+        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
+        test_combine(combine)
 
 if __name__ == '__main__':
     unittest.main()
