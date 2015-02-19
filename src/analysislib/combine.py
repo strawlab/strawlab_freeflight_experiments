@@ -1267,7 +1267,7 @@ class CombineH5WithCSV(_Combine):
                              framenumber0=[csv.iloc[0]['framenumber']],
                              min_frames_diff_split=10):
             # for bookeeping
-            if framenumber[0] is None:
+            if framenumber0[0] is None:
                 framenumber0[0] = last_framenumber[0]
             # new style, marker rows
             if oid == IMPOSSIBLE_OBJ_ID or oid == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
