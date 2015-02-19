@@ -45,4 +45,7 @@ if __name__=='__main__':
 
         f.write("\n")
 
+    if args.show:
+        print open(name,'r').read()
+
     sys.exit(0)
