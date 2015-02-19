@@ -1145,9 +1145,12 @@ class CombineH5WithCSV(_Combine):
 
         if len(uuids_from_csv) > 1:
             raise Exception('More than one uuid in csv %s' % self.csv_file)
-        if uuids_from_csv is None:
-            raise Exception('No uuid found in the csv %s' % self.csv_file)
-        uuid = uuids_from_csv[0]
+        if len(uuids_from_csv) == 0 or uuids_from_csv is None:
+            # we are tolerant here, although probably we should not be...
+            self._warn('No uuid found in the csv %s' % self.csv_file)
+            uuid = None
+        else:
+            uuid = uuids_from_csv[0]
         if uuids_from_flydra is None or uuid not in uuids_from_flydra:
             self._warn('The uuid %s in the csv %s cannot be found in the h5 file %s' %
                        (uuid, self.csv_file, self.h5_file))
