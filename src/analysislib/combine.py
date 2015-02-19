@@ -1370,6 +1370,31 @@ class CombineH5WithCSV(_Combine):
             if oid in (IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE):
                 continue
 
+            # sometimes flydra crashes and I restart it while leaving the node running. in that
+            # case the csv can contain references to two h5 files and two uuids. because
+            # flydra re-uses object ids there can be confusion as to which trial an object id
+            # refers. if combine is explictly constructed from a single uuid then only query the
+            # h5 file if the csv says it should be present
+            if uuid is not None:
+                exp_uuids = csv_df['exp_uuid'].dropna().unique()
+                if not len(exp_uuids):
+                    #normal case, the first few rows before a uuid was assigned.
+                    #assume everything is ok....
+                    pass
+                else:
+                    #I can perform stricter checks because in the general case 
+                    #(i.e. not when someone has done add_uuid_to_csv) because
+                    #nodelib writes the uuid on every line so we can check if we should
+                    #query the h5 file
+                    if len(exp_uuids) > 1:
+                        self._warn("WARN: object id %d in multiple possible h5 files (%s)" % (oid,','.join(exp_uuids)))
+                        continue
+
+                    #length of exp_uuids must be 1
+                    if uuid not in exp_uuids:
+                        self._warn("SKIP: object id %d in another h5 file (%s)" % (oid,exp_uuids[0]))
+                        continue
+
             if not csv_df['condition'].nunique() == 1:
                 raise Exception('CSV problem, more than one condition in the same trial:\n\ttrial=%d oids=(%s) %s' %
                                 (trial_num, ','.join(csv_df['condition'].unique()), csv_fname))
