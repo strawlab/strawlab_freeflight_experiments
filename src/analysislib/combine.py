@@ -34,18 +34,19 @@ import analysislib.args
 import analysislib.curvature as acurve
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuid_from_flydra_h5
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
 
 from whatami import What, MAX_EXT4_FN_LENGTH
 
-#results = {
+
+# results = {
 #   condition:{
 #       df:[dataframe,...],
 #       start_obj_ids:[(x0,y0,obj_id,framenumber0,time0),...],
 #       count:n_frames,
 #       uuids:[uuid,...],
 #   }
-#}
+# }
 
 def safe_condition_string(s):
     return "".join([c for c in s if re.match(r'\w', c)])
@@ -1109,8 +1110,6 @@ class CombineH5WithCSV(_Combine):
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
-        uuid = uuid_from_flydra_h5(h5_file)
-
         fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
                                             h5_file=self.h5_file)
 
@@ -1118,6 +1117,46 @@ class CombineH5WithCSV(_Combine):
         self._debug("IO:     reading %s" % h5_file)
         if fix.active:
             self._debug("FIX:     fixing data %s" % fix)
+
+        # open the csv file as a dataframe (if memory ever is a problem, look here)
+        try:
+            csv = pd.read_csv(self.csv_file, na_values=('None',),
+                              error_bad_lines=False,
+                              dtype={'framenumber': int,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
+        except:
+            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
+            # protect against rubbish in the framenumber column
+            csv = pd.read_csv(self.csv_file, na_values=('None',),
+                              error_bad_lines=False,
+                              low_memory=False,
+                              dtype={'framenumber': float,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
+            csv = csv.dropna(subset=['framenumber'])
+            csv['framenumber'] = csv['framenumber'].astype(int)
+
+        # infer uuid
+        uuids_from_flydra = uuids_from_flydra_h5(self.h5_file, logger=self._warn)
+        uuids_from_csv = uuids_from_experiment_csv(csv)
+
+        if len(uuids_from_csv) > 1:
+            raise Exception('More than one uuid in csv %s' % self.csv_file)
+        if uuids_from_csv is None:
+            raise Exception('No uuid found in the csv %s' % self.csv_file)
+        uuid = uuids_from_csv[0]
+        if uuids_from_flydra is None or uuid not in uuids_from_flydra:
+            self._warn('The uuid %s in the csv %s cannot be found in the h5 file %s' %
+                       (uuid, self.csv_file, self.h5_file))
+
+        # open h5 file (TODO: in a with statement, indent all under this)
+        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
+        trajectories = self._get_trajectories(h5)
+        dt = 1.0/trajectories.attrs['frames_per_second']
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
 
         # try and open the experiment and condition metadata files
         path, fname = os.path.split(csv_fname)
@@ -1130,7 +1169,7 @@ class CombineH5WithCSV(_Combine):
                     del c['uuid']
                 except KeyError:
                     pass
-                self._conditions.update( c )
+                self._conditions.update(c)
         except:
             self._conditions = {}
         path, fname = os.path.split(csv_fname)
@@ -1157,32 +1196,6 @@ class CombineH5WithCSV(_Combine):
                     self._metadata.append(yaml.safe_load(f))
         except:
             pass
-
-        # open the csv file as a dataframe (if memory ever is a problem, look here)
-        try:
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
-                              error_bad_lines=False,
-                              dtype={'framenumber': int,
-                                     'condition': str,
-                                     'exp_uuid': str,
-                                     'flydra_data_file': str})
-        except:
-            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
-            # protect against rubbish in the framenumber column
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
-                              error_bad_lines=False,
-                              low_memory=False,
-                              dtype={'framenumber': float,
-                                     'condition': str,
-                                     'exp_uuid': str,
-                                     'flydra_data_file': str})
-            csv = csv.dropna(subset=['framenumber'])
-            csv['framenumber'] = csv['framenumber'].astype(int)
-
-        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
-        trajectories = self._get_trajectories(h5)
-        dt = 1.0/trajectories.attrs['frames_per_second']
-        tzname = h5.root.trajectory_start_times.attrs['timezone']
 
         if self._dt is None:
             self._dt = dt
@@ -1502,7 +1515,6 @@ class CombineH5WithCSV(_Combine):
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
 
-
                 # the start time and the start framenumber are defined by the experiment,
                 # so they come from the csv
                 first = csv_df.irow(0)
@@ -1533,7 +1545,7 @@ class CombineH5WithCSV(_Combine):
                 # save uuid
                 self._results[cond]['uuids'].append(uuid)
 
-        h5.close()
+        h5.close()  # maybe this should go in a finally?
 
 
 FORMAT_DOCS = """
