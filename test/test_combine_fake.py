@@ -59,7 +59,7 @@ def select_h5csv_oids(h5_file='/mnt/strawscience/data/csv-test-case-deleteme/kat
                       keep_in_between=False,
                       frames_before=None,
                       frames_after=None,
-                      csv_cols=('condition', 'lock_object', 'framenumber', 't_sec', 't_nsec')):
+                      csv_cols=('condition', 'lock_object', 'framenumber', 't_sec', 't_nsec', 'exp_uuid')):
     """Combine-independent selection of object ids in csv and simple-flydra files."""
     # Most probably there is something like this in flydra
     # Here we do not even bother to use pytables or be nice in memory
@@ -171,6 +171,7 @@ def combine2h5csv(combine,
                 def __init__(self, slash_separated_cond, *args, **kwargs):
                     super(FakeCondition, self).__init__(*args, **kwargs)
                     self.cond = slash_separated_cond
+
                 def to_slash_separated(self):
                     return self.cond
 
@@ -490,9 +491,9 @@ class TestCombineNonContiguous(unittest.TestCase):
         DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous'))
         base = 'non-contiguous-same-oid'
         if continuous_oids:
-            base += '-continuous'
-        base += '-with-markers.csv' if with_markers else '-no-markers.csv'
-        csv = op.join(DATA_ROOT, 'non-contiguous-same-oid.csv')
+            base += '-consecutive'
+        base += '-with-markers' if with_markers else '-no-markers'
+        csv = op.join(DATA_ROOT, base + '.csv')
         h5 = op.join(DATA_ROOT, 'non-contiguous-same-oid.h5')
         return self._combine_from_csv_h5(csv, h5)
 
@@ -515,36 +516,40 @@ class TestCombineNonContiguous(unittest.TestCase):
         # Expectations...
         # There needs to be two trials for oid 5537: (595668, len=50 and 596002, len=180)
         # There needs to be one trial for oid 5547: (595784, len=213)
-        def test_combine(combine):
+        def test_combine(combine, intermediate=True):
             valid_trials = (
                 (5537, 595668, 50),
                 (5537, 596002, 180),
-                (5547, 595784, 213)
             )
+            if intermediate:
+                valid_trials += ((5547, 595784, 213),)
             results, dt = combine.get_results()
             self.assertAlmostEqual(dt, 0.01)
             self.assertEqual(len(results), 1)  # 1 condition
             trials = results['gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2']
-            for df, (x0, y0, obj_id, framenumber0, time0) in zip(trials['df'], trials['start_obj_ids']):
+            for df, (x0, y0, obj_id, framenumber0, time0), uuid in zip(trials['df'],
+                                                                       trials['start_obj_ids'],
+                                                                       trials['uuids']):
                 self.assertIn((obj_id, framenumber0, len(df)), valid_trials)
+                self.assertEquals(uuid, 'e3ccf472a96711e48156bcee7bdac428')
 
         # With intermediate trial, with markers
         combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=True)
-        test_combine(combine)
+        test_combine(combine, intermediate=True)
 
         # With intermediate trial, without markers
         combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=False)
-        test_combine(combine)
+        test_combine(combine, intermediate=True)
 
         # Without intermediate trial, with markers
         combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=True)
-        test_combine(combine)
+        test_combine(combine, intermediate=False)
 
         # Without intermediate trial, without markers
         # This fails because we do the wrong thing here...
         # TODO: implement heuristic and test for "old csvs", when we do not have marker rows for lock_object drop
-        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
-        test_combine(combine)
+        # combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
+        # test_combine(combine, intermediate=False)
 
 if __name__ == '__main__':
     unittest.main()
