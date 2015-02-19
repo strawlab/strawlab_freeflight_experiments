@@ -1042,8 +1042,6 @@ class CombineH5WithCSV(_Combine):
 
         self._debug("IO:     reading %s" % csv_fname)
         self._debug("IO:     reading %s" % h5_file)
-        if fix.active:
-            self._debug("FIX:     fixing data %s" % fix)
 
         #try and open the experiment and condition metadata files
         path,fname = os.path.split(csv_fname)
@@ -1064,9 +1062,9 @@ class CombineH5WithCSV(_Combine):
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
             try:
                 self._debug("IO:     reading from database")
-                _, arena, md = find_experiment(uuid)
-                md['arena'] = arena
-                self._metadata.append(md)
+                _, arena, this_exp_metadata = find_experiment(uuid)
+                this_exp_metadata['arena'] = arena
+                self._metadata.append( this_exp_metadata )
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:

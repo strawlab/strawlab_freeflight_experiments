@@ -324,6 +324,11 @@ def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, c
 def _correlate(df, cola, colb, shift=0):
     return df[cola].shift(shift).corr(df[colb])
 
+def _get_gridspec_rc(n):
+    r = np.floor(np.sqrt(n))
+    c = np.ceil(n/r)
+    return int(r),int(c)
+
 def plot_correlation_analysis(args, combine, correlations, correlation_options, conditions=None):
     results,dt = combine.get_results()
     fname = combine.fname
@@ -435,7 +440,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
             with aplt.mpl_fig("%s_%s_corr_latency%s" % (fname, fn, fsuffix), args, figsize=(10,8)) as fig:
 
                 i = 0
-                gs = gridspec.GridSpec(3, len(latencies_to_plot)//3)
+                gs = gridspec.GridSpec( *_get_gridspec_rc(len(latencies_to_plot)) )
 
                 for shift in latencies_to_plot:
 
