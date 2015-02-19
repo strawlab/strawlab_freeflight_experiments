@@ -1123,6 +1123,33 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
+    def infer_uuid(self, args, csv_df):
+        """Given args and the csv_df, try to infer a unique UUID."""
+        uuid = None
+        uuids_from_flydra = uuids_from_flydra_h5(self.h5_file, logger=self._warn)  # can be more than one
+        uuids_from_csv = uuids_from_experiment_csv(csv_df)  # can be more than one
+        uuid_candidates_from_files = set(uuids_from_flydra) & set(uuids_from_csv)  # can be more than one
+        uuids_from_args = args.uuid  # can be more than one
+        if len(uuids_from_args) == 1:
+            uuid_candidate = uuids_from_args[0]
+            if uuid_candidate not in uuid_candidates_from_files:  # we do not want to recover from this
+                raise Exception('uuid %s not present in the csv %s' % (uuid_candidate, self.csv_file))
+            uuid = uuid_candidate
+        elif len(uuids_from_args) > 1:
+            uuid_candidates = uuid_candidates_from_files & set(uuids_from_args)
+            if len(uuid_candidates) != 1:
+                self._warn('Chosing none of possible uuids: %s' % ' '.join(sorted(uuid_candidates)))
+            else:
+                uuid = uuid_candidates.pop()
+        else:
+            uuid_candidates = uuid_candidates_from_files
+            if len(uuid_candidates) != 1:
+                self._warn('Chosing none of possible uuids: %s' % ' '.join(sorted(uuid_candidates)))
+            else:
+                uuid = uuid_candidates.pop()
+
+        return uuid
+
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
@@ -1159,20 +1186,7 @@ class CombineH5WithCSV(_Combine):
             csv['framenumber'] = csv['framenumber'].astype(int)
 
         # infer uuid
-        uuids_from_flydra = uuids_from_flydra_h5(self.h5_file, logger=self._warn)
-        uuids_from_csv = uuids_from_experiment_csv(csv)
-
-        if len(uuids_from_csv) > 1:
-            raise Exception('More than one uuid in csv %s' % self.csv_file)
-        if len(uuids_from_csv) == 0 or uuids_from_csv is None:
-            # we are tolerant here, although probably we should not be...
-            self._warn('No uuid found in the csv %s' % self.csv_file)
-            uuid = None
-        else:
-            uuid = uuids_from_csv[0]
-        if uuids_from_flydra is None or uuid not in uuids_from_flydra:
-            self._warn('The uuid %s in the csv %s cannot be found in the h5 file %s' %
-                       (uuid, self.csv_file, self.h5_file))
+        uuid = self.infer_uuid(args, csv)
 
         # open h5 file (TODO: in a with statement, indent all under this)
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
