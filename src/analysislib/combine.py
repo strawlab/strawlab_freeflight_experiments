@@ -1146,6 +1146,10 @@ class CombineH5WithCSV(_Combine):
         uuids_from_csv = uuids_from_experiment_csv(csv_df)  # can be more than one
         uuid_candidates_from_files = set(uuids_from_flydra) & set(uuids_from_csv)  # can be more than one
         uuids_from_args = args.uuid if args.uuid is not None else []  # can be more than one
+
+        self._debug("IO:     h5 uuid(s) %s" % ','.join(uuids_from_flydra))
+        self._debug("IO:     csv uuid(s) %s" % ','.join(uuids_from_csv))
+
         if len(uuids_from_args) == 1:
             uuid_candidate = uuids_from_args[0]
             if uuid_candidate not in uuid_candidates_from_files:  # we do not want to recover from this
