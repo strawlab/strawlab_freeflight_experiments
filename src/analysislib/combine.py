@@ -1015,6 +1015,17 @@ class CombineH5WithCSV(_Combine):
         self._split_bookeeping = {}    # {(uuid, oid, startf) -> (split_num, reason_for_split)}
 
     def split_reason(self, uuid, oid, startf):
+        """Returns a two tuple for the splitting reason (why we changed trail) for the trial at hand.
+          - The first element is the split-number
+          - The second element is one of:
+            - 'marker': the controller explicitly says "new trial"
+            - 'condition': condition switch
+            - 'oid': oid switch
+            - 'frame-diff': the next observation was too far (magic number in the code... ;-))
+            - 'last': the trial was the last one in the CSV
+
+        Raises exception if the trial cannot be found.
+        """
         try:
             return self._split_bookeeping[(uuid, oid, startf)]
         except KeyError:
