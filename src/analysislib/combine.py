@@ -150,8 +150,8 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
         self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v':14,  #bump this version when you change delicate combine machinery
-                            'index':self._index
+        self._configdict = {'v': 14,  # bump this version when you change delicate combine machinery
+                            'index': self._index
         }
 
     def set_index(self, index):
@@ -1011,6 +1011,14 @@ class CombineH5WithCSV(_Combine):
         #use this for keeping track of results that span multiple conditions
         self._results_by_condition = {}
 
+        # split bookkeeping
+        self._split_bookeeping = {}    # {(uuid, oid, startf) -> (split_num, reason_for_split)}
+
+    def split_reason(self, uuid, oid, startf):
+        try:
+            return self._split_bookeeping[(uuid, oid, startf)]
+        except KeyError:
+            raise Exception('The trial (%s, %d, %d) is not in the books' % (uuid, oid, startf))
 
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
@@ -1256,27 +1264,33 @@ class CombineH5WithCSV(_Combine):
                              last_condition=[csv.iloc[0]['condition']],
                              last_framenumber=[csv.iloc[0]['framenumber']],
                              marker_passed=[False],
-                             min_frames_diff_split=10,
-                             max_frames_diff_join=10,
-                             join_close_trials=False):
+                             framenumber0=[csv.iloc[0]['framenumber']],
+                             min_frames_diff_split=10):
+            # for bookeeping
+            if framenumber[0] is None:
+                framenumber0[0] = last_framenumber[0]
             # new style, marker rows
             if oid == IMPOSSIBLE_OBJ_ID or oid == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
                 marker_passed[0] = True
                 trial_count[0] += 1
+                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'marker')
+                framenumber0[0] = None
                 return -1
-            # old style, change of oid or condition
-            if oid != last_oid[0] or condition != last_condition[0]:  # these would never happen on newer CSV versions
+            # old style, change of oid (this would never happen on newer CSV versions)
+            if oid != last_oid[0]:
+                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'oid')
+                framenumber0[0] = None
                 trial_count[0] += 1
-            # heuristic for old CSVs
+            # old style, change of condition (this would never happen on newer CSV versions)
+            if condition != last_condition[0]:
+                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'condition')
+                framenumber0[0] = None
+                trial_count[0] += 1
+            # heuristic for old CSVs (this would never happen on newer CSV versions)
             if framenumber - last_framenumber[0] > min_frames_diff_split:
+                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'frame-diff')
+                framenumber0[0] = None
                 trial_count[0] += 1
-            # heuristic for merging trajectories from "quickly coming back objects"
-            # this actually is almost never correct, so it is disabled and just left as reference
-            if join_close_trials and \
-                    marker_passed[0] and \
-                            oid == last_oid[0] and \
-                                    framenumber - last_framenumber[0] < max_frames_diff_join:
-                trial_count[0] -= 1
             last_oid[0] = oid
             last_condition[0] = condition
             last_framenumber[0] = framenumber
@@ -1284,9 +1298,17 @@ class CombineH5WithCSV(_Combine):
             return trial_count[0]
 
         # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow
-        timeline = [iterative_groups(oid, cond, framenumber) for oid, cond, framenumber in
-                    izip(csv['lock_object'], csv['condition'], csv['framenumber'])]
+        timeline = np.array(
+            [iterative_groups(oid, cond, framenumber) for oid, cond, framenumber in
+             izip(csv['lock_object'], csv['condition'], csv['framenumber'])])
         # compress intervals, save... useful?
+
+        # complete the bookkeeping for the last trial
+        # do not use "if missing, then last" because that would hide bad calls to "split_reason"
+        last_trial_index = timeline.max()
+        last_trial = csv[timeline == last_trial_index].iloc[0]
+        self._split_bookeeping[(uuid, last_trial['lock_object'], last_trial['framenumber'])] = \
+            (last_trial_index, 'last')
 
         # find condition switches, save
         self._condition_switches[uuid] = condition_switches_from_controller_csv(csv)
