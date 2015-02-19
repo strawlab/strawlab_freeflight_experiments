@@ -24,6 +24,8 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
 from strawlab_freeflight_experiments.conditions import Condition
 
+from test_combine_api import _quiet
+
 
 # --- test data generation utils
 
@@ -232,7 +234,7 @@ uncombine = combine2h5csv
 
 
 # --- tests for some combine functionality
-
+#
 class TestCombineFake(unittest.TestCase):
 
     def setUp(self):
@@ -454,6 +456,7 @@ class TestCombineNonContiguous(unittest.TestCase):
         combine.add_csv_and_h5_file(csv_fname=csv,
                                     h5_file=h5,
                                     args=args)
+        _quiet(combine)
         return combine, csv, h5
 
     def _combine_inter_condition(self):
@@ -545,11 +548,9 @@ class TestCombineNonContiguous(unittest.TestCase):
         combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=True)
         test_combine(combine, intermediate=False)
 
-        # Without intermediate trial, without markers
-        # This fails because we do the wrong thing here...
-        # TODO: implement heuristic and test for "old csvs", when we do not have marker rows for lock_object drop
-        # combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
-        # test_combine(combine, intermediate=False)
+        # Without intermediate trial, without markers (using 10-frames heuristic)
+        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
+        test_combine(combine, intermediate=False)
 
 if __name__ == '__main__':
     unittest.main()
