@@ -1248,25 +1248,44 @@ class CombineH5WithCSV(_Combine):
         # (instead of time-travelling).
         #
 
-        def iterative_groups(oid, condition,
+        def iterative_groups(oid, condition, framenumber,
                              # these three keep track of last value, while not poluting outer namespace
                              # only codestyle warning in this whole function ATM, keep it like that! ;-)
                              trial_count=[0],
                              last_oid=[csv.iloc[0]['lock_object']],
-                             last_condition=[csv.iloc[0]['condition']]):
+                             last_condition=[csv.iloc[0]['condition']],
+                             last_framenumber=[csv.iloc[0]['framenumber']],
+                             marker_passed=[False],
+                             min_frames_diff_split=10,
+                             max_frames_diff_join=10,
+                             join_close_trials=False):
             # new style, marker rows
-            if oid == IMPOSSIBLE_OBJ_ID:
+            if oid == IMPOSSIBLE_OBJ_ID or oid == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
+                marker_passed[0] = True
                 trial_count[0] += 1
                 return -1
             # old style, change of oid or condition
             if oid != last_oid[0] or condition != last_condition[0]:  # these would never happen on newer CSV versions
                 trial_count[0] += 1
+            # heuristic for old CSVs
+            if framenumber - last_framenumber[0] > min_frames_diff_split:
+                trial_count[0] += 1
+            # heuristic for merging trajectories from "quickly coming back objects"
+            # this actually is almost never correct, so it is disabled and just left as reference
+            if join_close_trials and \
+                    marker_passed[0] and \
+                            oid == last_oid[0] and \
+                                    framenumber - last_framenumber[0] < max_frames_diff_join:
+                trial_count[0] -= 1
             last_oid[0] = oid
             last_condition[0] = condition
+            last_framenumber[0] = framenumber
+            marker_passed[0] = False
             return trial_count[0]
 
         # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow
-        timeline = [iterative_groups(oid, cond) for oid, cond in izip(csv['lock_object'], csv['condition'])]
+        timeline = [iterative_groups(oid, cond, framenumber) for oid, cond, framenumber in
+                    izip(csv['lock_object'], csv['condition'], csv['framenumber'])]
         # compress intervals, save... useful?
 
         # find condition switches, save
