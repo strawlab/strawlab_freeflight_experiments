@@ -1289,7 +1289,6 @@ class CombineH5WithCSV(_Combine):
                              last_oid=[csv.iloc[0]['lock_object']],
                              last_condition=[csv.iloc[0]['condition']],
                              last_framenumber=[csv.iloc[0]['framenumber']],
-                             marker_passed=[False],
                              framenumber0=[csv.iloc[0]['framenumber']],
                              min_frames_diff_split=10):
             # for bookeeping
@@ -1297,30 +1296,28 @@ class CombineH5WithCSV(_Combine):
                 framenumber0[0] = last_framenumber[0]
             # new style, marker rows
             if oid == IMPOSSIBLE_OBJ_ID or oid == IMPOSSIBLE_OBJ_ID_ZERO_POSE:
-                marker_passed[0] = True
                 trial_count[0] += 1
-                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'marker')
+                self._split_bookeeping[(uuid, last_oid[0], framenumber0[0])] = (trial_count[0], 'marker')
                 framenumber0[0] = None
                 return -1
             # old style, change of oid (this would never happen on newer CSV versions)
             if oid != last_oid[0]:
-                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'oid')
+                self._split_bookeeping[(uuid, last_oid[0], framenumber0[0])] = (trial_count[0], 'oid')
                 framenumber0[0] = None
                 trial_count[0] += 1
             # old style, change of condition (this would never happen on newer CSV versions)
             if condition != last_condition[0]:
-                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'condition')
+                self._split_bookeeping[(uuid, last_oid[0], framenumber0[0])] = (trial_count[0], 'condition')
                 framenumber0[0] = None
                 trial_count[0] += 1
             # heuristic for old CSVs (this would never happen on newer CSV versions)
             if framenumber - last_framenumber[0] > min_frames_diff_split:
-                self._split_bookeeping[(uuid, oid, framenumber0[0])] = (trial_count[0], 'frame-diff')
+                self._split_bookeeping[(uuid, last_oid[0], framenumber0[0])] = (trial_count[0], 'frame-diff')
                 framenumber0[0] = None
                 trial_count[0] += 1
             last_oid[0] = oid
             last_condition[0] = condition
             last_framenumber[0] = framenumber
-            marker_passed[0] = False
             return trial_count[0]
 
         # timeline = csv.apply(iterative_groups, axis=1)  # apply over rows is real slow
