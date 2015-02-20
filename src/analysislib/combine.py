@@ -1432,13 +1432,6 @@ class CombineH5WithCSV(_Combine):
             csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
             trial_framenumbers = csv_df['framenumber'].values
 
-            # if the data range is already too short don't bother doing any more
-            # work / further filtering
-            n_samples = len(trial_framenumbers)
-            if n_samples < dur_samples:
-                self._debug('SKIP:   %d samples for %s' % (n_samples, oid))
-                continue
-
             if original_condition != fixed_condition:
                 self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
                 csv_df = csv_df.copy()  # use copy and not view
