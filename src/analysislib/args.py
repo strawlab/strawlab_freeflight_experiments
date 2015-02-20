@@ -19,6 +19,7 @@ REQUIRED_ARENA_DEFAULTS = ("xfilt_max","xfilt_min","xfilt",
                            "yfilt_max","yfilt_min","yfilt",
                            "zfilt_max","zfilt_min","zfilt",
                            "vfilt_max","vfilt_min","vfilt",
+                           "efilt_max","efilt_min","efilt",
                            "rfilt_max","rfilt",
                            "filter_interval",
                            "trajectory_start_offset")
@@ -62,6 +63,7 @@ DATA_MODIFYING_ARGS = [
     'yfilt','yfilt_min','yfilt_max',
     'zfilt','zfilt_min','zfilt_max',
     'vfilt','vfilt_min','vfilt_max',
+    'efilt','efilt_min','efilt_max',
     'rfilt','rfilt_max',
     'arena',
     'idfilt',
@@ -126,7 +128,7 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
-    for i in 'xyzv':
+    for i in 'xyzve':
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(
                 '--%sfilt' % i, type=str, choices=filt_choices,

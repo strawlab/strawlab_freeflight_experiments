@@ -73,6 +73,7 @@ class FlyCaveCylinder(ArenaBase):
                 "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
                 "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
                 "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
+                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
                 "rfilt_max":0.42,"rfilt":"trim",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
@@ -96,12 +97,26 @@ class FishBowl(ArenaBase):
                 "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
                 "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
                 "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
+                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
                 "rfilt_max":0.17,"rfilt":"none",
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
 
     def apply_geometry_filter(self, args, valid, dt):
         return apply_z_and_r_filter(args, valid, dt)
+
+    def apply_secondary_filter(self, args, df, dt):
+        fif = int(args.filter_interval/dt)
+
+        err = df['err_pos_stddev_m']
+        if np.all(np.isnan(err)):
+            #not computed
+            return np.ones_like(err),np.ones_like(err)
+
+        cond_e = (err > args.efilt_min) & (err < args.efilt_max)
+        valid_e = filter_cond(args.efilt, cond_e, err, filter_interval_frames=fif)
+
+        return valid_e, cond_e
 
 class FlyCube(ArenaBase):
     def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
@@ -152,6 +167,7 @@ class FlyCube(ArenaBase):
                 "xfilt":"none",'xfilt_min':-self.xdim/2.0,'xfilt_max':self.xdim/2.0,
                 "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
                 "vfilt":"none",'vfilt_min':0.05,'vfilt_max':np.inf,
+                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
                 "rfilt_max":np.inf,"rfilt":"none",
                 "filter_interval":0.2,
                 "trajectory_start_offset":0.5}
