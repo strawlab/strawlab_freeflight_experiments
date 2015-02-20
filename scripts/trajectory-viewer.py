@@ -85,8 +85,8 @@ if __name__=='__main__':
 
                 name = analysislib.combine.safe_condition_string(current_condition)
 
-                filename = "%s_%s_%s" % (uuid, obj_id, name)
-                title = "%s: %s" % (obj_id, combine.get_condition_name(current_condition))
+                filename = "%s_%s_%s_%s" % (uuid, obj_id, framenumber0, name)
+                title = "%s: %s (fn0 %d)" % (obj_id, combine.get_condition_name(current_condition), framenumber0)
 
                 if args.animate:
                     args.show = True
