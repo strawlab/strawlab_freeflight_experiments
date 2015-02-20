@@ -1432,6 +1432,14 @@ class CombineH5WithCSV(_Combine):
             csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
             trial_framenumbers = csv_df['framenumber'].values
 
+            # there is sometimes some erronous entries in the csv due to some race
+            # conditions when locking onto new objects. While we guarentee that
+            # framenumbers must be monotonically increasing, perform a weaker version
+            # of that test now and check the last is greater than the first
+            if (len(trial_framenumbers) > 2) and (trial_framenumbers[0] > trial_framenumbers[-1]):
+                self._warn('WARN:   corrupt trial for obj_id %s' % (oid))
+                continue
+
             if original_condition != fixed_condition:
                 self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
                 csv_df = csv_df.copy()  # use copy and not view
@@ -1443,9 +1451,17 @@ class CombineH5WithCSV(_Combine):
             else:
                 start_frame = trial_framenumbers[0]
 
+            # provided that the framenumber[-1] is greater than framenumber[0],
+            # which was ensured in the test above, then if the 'start_frame'
+            # is already past the end frame (due to the frames_start_offset)
+            # then the trajectory is too short
+            if start_frame > trial_framenumbers[-1]:
+                self._debug('SKIP:   0 valid samples for obj_id %d' % oid)
+                continue
+
+            # get trajectory data from flydra
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
                     (oid, start_frame, trial_framenumbers[-1])
-
             valid = trajectories.readWhere(query)
 
             # apply filters based on experimental arena
