@@ -1240,7 +1240,7 @@ class CombineH5WithCSV(_Combine):
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:
                     with open(fn, 'w') as f:
-                        yaml.safe_dump(md, f, default_flow_style=False)
+                        yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
                 except:
                     pass
