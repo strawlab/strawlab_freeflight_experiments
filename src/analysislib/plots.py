@@ -671,7 +671,7 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
 def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None, show_filter_args=None):
     if name is None:
-        name = '%s.infinity' % combine.fname
+        name = '%s_infinity' % combine.fname
 
     if ylimits is None:
         ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1)}

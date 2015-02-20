@@ -59,8 +59,9 @@ class TestScript(unittest.TestCase):
                 cwd=self._sdir)
         stdout,stderr = proc.communicate()
         self.assertEqual(proc.returncode,0,stderr)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_checkerboard16pnginfinitysvg031000102.csv")))
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"checkerboard16pnginfinitysvg031000102.png")))
+        #uuid_obj_id_fn0_condition
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_11902_checkerboard16pnginfinitysvg031000102.csv")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_11902_checkerboard16pnginfinitysvg031000102.png")))
 
     def test_conflict_analysis(self):
         proc = subprocess.Popen(

@@ -103,7 +103,7 @@ if __name__=='__main__':
                     aplt.plot_infinity(
                             combine, args,
                             df,dt,
-                            name=name,
+                            name=filename,
                             plot_axes=plot_axes,
                             title=title,
                             show_filter_args=filt_args
