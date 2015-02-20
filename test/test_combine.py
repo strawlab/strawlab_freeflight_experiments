@@ -41,11 +41,13 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, reindex=False)
         cols = set(combine.get_result_columns())
-        expected = {'cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate', 'trg_x', 'trg_y', 'trg_z',
+
+        required = ['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate', 'trg_x', 'trg_y', 'trg_z',
                     'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az', 'theta',
-                    'dtheta', 'radius', 'omega', 'rcurve', 't_nsec', 'framenumber', 'tns', 't_sec', 'exp_uuid',
-                    'flydra_data_file', 'lock_object', 'condition'}
-        self.assertEqual(cols, expected)
+                    'dtheta', 'radius', 't_nsec', 'framenumber', 'tns', 't_sec', 'exp_uuid',
+                    'flydra_data_file', 'lock_object', 'condition']
+        for r in required:
+            self.assertIn(r,cols)
 
     def _get_comb(self):
         try:
