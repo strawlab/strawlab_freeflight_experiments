@@ -728,19 +728,21 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
                 _y = _df.loc[~cond,'y']
                 _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='fail %s filter' % name)
 
-                try:
+                if np.any(valid):
                     last_valid_frame = _df['framenumber'].values[valid][-1]
                     _axz.axvline(last_valid_frame, color=color, lw=2, label='end of filtered %s' % name)
                     lasts.append(last_valid_frame)
-                except IndexError:
-                    #no valid frames
-                    pass
+                else:
+                    #no valid frames, draw line at start
+                    _axz.axvline(_ts[0], color=color, lw=2, label='end of filtered %s' % name)
 
             if lasts:
-                _axz.axvline(last_valid_frame, color='red', lw=2, label='end of filtered trajectory')
+                _axz.axvline(min(lasts), linestyle='--', color='red', lw=2, label='end of filtered trajectory')
 
             _axxy.set_xlim(1.1*xl0,1.1*xl1)
             _axxy.set_ylim(1.1*yl0,1.1*yl1)
+
+            _axz.set_xlim(_ts[0]-100, _ts[-1]+100)
 
             _axxy.legend(frameon=False,numpoints=1,prop={'size':8})
             _axz.legend(frameon=False,numpoints=1,prop={'size':8})
