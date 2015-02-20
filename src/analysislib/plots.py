@@ -679,7 +679,6 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
     arena = analysislib.arenas.get_arena_from_args(args)
     xl0,xl1,yl0,yl1,zl0,zl1 = arena.get_bounds()
 
-
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)
 
@@ -692,6 +691,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         _axxy.set_xlim(xl0,xl1)
         _axxy.set_ylim(yl0,yl1)
         _axxy.plot(_df['x'], _df['y'], 'k-', label='__nolabel__')
+        _axxy.set_aspect('equal')
         arena.plot_mpl_line_2d(_axxy, 'r-', lw=2, alpha=0.3, clip_on=False )
 
         _axz = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
@@ -768,6 +768,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, f
         ylimits={"omega":(-2,2),"dtheta":(-20,20),"rcurve":(0,1),"rotation_rate":(-10,10)}
 
     arena = analysislib.arenas.get_arena_from_args(args)
+    xl0,xl1,yl0,yl1,zl0,zl1 = arena.get_bounds()
 
     _fig = plt.figure(figsize=figsize)
 
@@ -775,10 +776,12 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, f
         _fig.suptitle(title, fontsize=12)
 
     _ax = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
-    _ax.set_xlim(-0.5, 0.5)
-    _ax.set_ylim(-0.5, 0.5)
+    _ax.set_xlim(xl0,xl1)
+    _ax.set_ylim(yl0,yl1)
+    _ax.set_aspect('equal')
     arena.plot_mpl_line_2d(_ax, 'r-', lw=2, alpha=0.3, clip_on=False )
     _linexy,_linexypt = _ax.plot([], [], 'k-', [], [], 'r.')
+
     if show_trg:
         _linetrgpt, = _ax.plot([], [], 'g.')
     else:
@@ -787,7 +790,7 @@ def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, f
     _ax = plt.subplot2grid((n_plot_axes,2), (n_plot_axes-1,0))
     _linez,_linezpt = _ax.plot([], [], 'k-', [], [], 'r.')
     _ax.set_xlim(_df.index[0], _df.index[-1])
-    _ax.set_ylim(*ylimits.get("z",(0, 1)))
+    _ax.set_ylim(zl0,zl1)
     _ax.set_ylabel("z")
 
     _init_axes = [_linexy,_linexypt,_linez,_linezpt]
