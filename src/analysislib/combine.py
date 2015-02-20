@@ -129,7 +129,7 @@ class _Combine(object):
 
     calc_linear_stats = True
     calc_angular_stats = True
-    calc_turn_stats = True
+    calc_turn_stats = False
 
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)

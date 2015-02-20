@@ -43,7 +43,7 @@ if __name__=='__main__':
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)",
-        default=",".join(["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]))
+        default=",".join(["theta","dtheta","rotation_rate","velocity","ratio","radius"]))
     parser.add_argument(
         "--test-filter-args",
         help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")

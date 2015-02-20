@@ -70,22 +70,19 @@ if __name__=='__main__':
 
     #correlation and histogram plots
     correlations = (('rotation_rate','dtheta'),)
-    histograms = ("velocity","dtheta","rcurve","rotation_rate")
+    histograms = ("velocity","dtheta","rotation_rate")
     correlation_options = {"rotation_rate:dtheta":{"range":[[-1.45,1.45],[-10,10]]},
                            "latencies":set(range(0,40,2) + [40,80]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
     }
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
-                                   "rcurve":True,
                                    "rotation_rate":True},
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
-                                  "rcurve":(0,1),
                                   "rotation_rate":(-1.55,1.55)},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)",
-                                   "rcurve":"radius of curvature (m)",
                                    "rotation_rate":"rotation rate (rad/s)"},
     }
 
