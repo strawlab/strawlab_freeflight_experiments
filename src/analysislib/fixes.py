@@ -130,7 +130,7 @@ class _FixPerturbationConditionName(_DictOrAttr):
                 return c.replace('step|','step_rotation_rate|')
         return c
 
-def load_fixups(**kwargs):
+def load_csv_fixups(**kwargs):
     csv_file = kwargs.get('csv_file')
     h5_file = kwargs.get('h5_file')
 

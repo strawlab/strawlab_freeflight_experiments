@@ -1173,14 +1173,14 @@ class CombineH5WithCSV(_Combine):
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
+        # Update self.csv_file for every csv file, even if we contain
+        # data from many. This for historical reasons as the csv file is used
+        # as the basename for generated plots, so saving a few test
+        # analyses with --outdir /tmp/ gives distinct named plots
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
-        fix = analysislib.fixes.load_fixups(csv_file=self.csv_file,
-                                            h5_file=self.h5_file)
-
         self._debug("IO:     reading %s" % csv_fname)
-        self._debug("IO:     reading %s" % h5_file)
 
         # open the csv file as a dataframe (if memory ever is a problem, look here)
         try:
@@ -1206,12 +1206,6 @@ class CombineH5WithCSV(_Combine):
         # infer uuid
         uuid = self.infer_uuid(args, csv)
 
-        # open h5 file (TODO: in a with statement, indent all under this)
-        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
-        trajectories = self._get_trajectories(h5)
-        dt = 1.0/trajectories.attrs['frames_per_second']
-        tzname = h5.root.trajectory_start_times.attrs['timezone']
-
         # try and open the experiment and condition metadata files
         path, fname = os.path.split(csv_fname)
         try:
@@ -1226,6 +1220,8 @@ class CombineH5WithCSV(_Combine):
                 self._conditions.update(c)
         except:
             self._conditions = {}
+
+        this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
         try:
             # get it from the database, if it fails, try from the yaml
@@ -1250,6 +1246,20 @@ class CombineH5WithCSV(_Combine):
                     self._metadata.append(yaml.safe_load(f))
         except:
             pass
+
+        if this_exp_metadata is None: this_exp_metadata = {}
+        this_exp_metadata['csv_file'] = csv_fname
+        this_exp_metadata['h5_file'] = h5_file
+        fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
+        if fix.active:
+            self._debug("FIX:     fixing data %s" % fix)
+
+        # open h5 file (TODO: in a with statement, indent all under this)
+        self._debug("IO:     reading %s" % h5_file)
+        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
+        trajectories = self._get_trajectories(h5)
+        dt = 1.0/trajectories.attrs['frames_per_second']
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
 
         if self._dt is None:
             self._dt = dt

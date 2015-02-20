@@ -19,7 +19,7 @@ class TestFixes(unittest.TestCase):
         self.h5_file = fm.get_file_model("simple_flydra.h5").fullpath
 
     def test_fix_condition(self):
-        fu = analysislib.fixes.load_fixups(csv_file=self.csv_file,
+        fu = analysislib.fixes.load_csv_fixups(csv_file=self.csv_file,
                                            h5_file=self.h5_file)
         self.assertIsNotNone(fu)
         self.assertTrue(fu.active)
@@ -66,7 +66,7 @@ class TestFixes(unittest.TestCase):
         self.assertTrue(NORMALISED_COND in conds)
         self.assertFalse(ORIG_COND in conds)
 
-        fix = analysislib.fixes.load_fixups(csv_file=combine.csv_file,
+        fix = analysislib.fixes.load_csv_fixups(csv_file=combine.csv_file,
                                             h5_file=combine.h5_file)
         self.assertTrue(fix.active)
 
