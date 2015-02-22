@@ -136,7 +136,6 @@ class _Combine(object):
         self._enable_warn = kwargs.get("warn",True)
         self._dt = None
         self._lenfilt = None
-        self._idfilt = []
         self._skipped = {}
         self._results = {}
         self._tzname = 'Europe/Vienna'
@@ -151,8 +150,8 @@ class _Combine(object):
         self._conditions = {}
         self._condition_names = {}
         self._metadata = []
-        self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v': 14,  # bump this version when you change delicate combine machinery
+        self._condition_switches = {} # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
+        self._configdict = {'v': 15,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
 
@@ -170,7 +169,7 @@ class _Combine(object):
         for k,v in args._get_kwargs():
             if k not in analysislib.args.DATA_MODIFYING_ARGS:
                 continue
-            if k in ('uuid','idfilt') and v is not None and len(v):
+            if k == 'uuid' and v is not None and len(v):
                 self._configdict[k] = sorted(v)
             else:
                 self._configdict[k] = v
@@ -813,7 +812,6 @@ class CombineCSV(_Combine):
         if not csv_suffix:
             csv_suffix = self._csv_suffix
 
-        self._idfilt = args.idfilt
         self._maybe_add_tfilt(args)
 
         if args.uuid:
@@ -867,9 +865,6 @@ class CombineCSV(_Combine):
                     continue
 
                 if obj_id in (IMPOSSIBLE_OBJ_ID,IMPOSSIBLE_OBJ_ID_ZERO_POSE):
-                    continue
-
-                if self._idfilt and (obj_id not in self._idfilt):
                     continue
 
                 if not self._df_ok(odf):
@@ -1418,10 +1413,6 @@ class CombineH5WithCSV(_Combine):
                                 (trial_num, ','.join(csv_df['condition'].unique()), csv_fname))
 
             cond = csv_df['condition'].iloc[0]
-
-            # do we want this object?
-            if args.idfilt and (oid not in args.idfilt):
-                continue
 
             original_condition = cond
 
