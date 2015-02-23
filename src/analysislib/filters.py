@@ -5,6 +5,15 @@ FILTER_TRIM   = "trim"
 FILTER_NOOP   = "none"
 FILTER_TRIM_INTERVAL = "triminterval"
 
+FILTER_TYPES = {
+    "x":"x position (m)",
+    "y":"y position (m)",
+    "z":"z position (m)",
+    "r":"radius, distance from 0,0 (m)",
+    "e":"position error (m)",
+    "v":"velocity (m/s)",
+}
+
 def crossings(x, threshold=0, after=False):
     """Returns the indices of the elements before or after crossing a threshold.
 

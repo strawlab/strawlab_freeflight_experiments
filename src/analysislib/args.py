@@ -12,17 +12,27 @@ import autodata.files
 
 from strawlab.constants import DATE_FMT
 
-from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL
+from .filters import FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL, FILTER_TYPES
 from .arenas import get_arena_from_args
 
-REQUIRED_ARENA_DEFAULTS = ("xfilt_max","xfilt_min","xfilt",
-                           "yfilt_max","yfilt_min","yfilt",
-                           "zfilt_max","zfilt_min","zfilt",
-                           "vfilt_max","vfilt_min","vfilt",
-                           "efilt_max","efilt_min","efilt",
-                           "rfilt_max","rfilt",
-                           "filter_interval",
-                           "trajectory_start_offset")
+def _filter_types_args():
+    a = []
+    for f in FILTER_TYPES:
+        name = "%sfilt" % f
+        a.extend((name, name+"_min", name+"_max"))
+    return a
+
+REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset","filter_interval"]
+REQUIRED_ARENA_DEFAULTS.extend(_filter_types_args())
+
+DATA_MODIFYING_ARGS = [
+    'uuid',
+    'arena',
+    'lenfilt',
+    'trajectory_start_offset',
+    'filter_interval'
+]
+REQUIRED_ARENA_DEFAULTS.extend(_filter_types_args())
 
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
@@ -56,21 +66,6 @@ def get_default_args(**kwargs):
     parser = get_parser(**kwargs)
     args = parser.parse_args('')
     return parser,args
-
-DATA_MODIFYING_ARGS = [
-    'uuid',
-    'xfilt','xfilt_min','xfilt_max',
-    'yfilt','yfilt_min','yfilt_max',
-    'zfilt','zfilt_min','zfilt_max',
-    'vfilt','vfilt_min','vfilt_max',
-    'efilt','efilt_min','efilt_max',
-    'rfilt','rfilt_max',
-    'arena',
-    'idfilt',
-    'lenfilt',
-    'trajectory_start_offset',
-    'filter_interval'
-]
 
 def get_parser(*only_these_options, **defaults):
     """
@@ -128,7 +123,7 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
-    for i in 'xyzver':
+    for i,desc in FILTER_TYPES.iteritems():
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(
                 '--%sfilt' % i, type=str, choices=filt_choices,
@@ -138,12 +133,12 @@ def get_parser(*only_these_options, **defaults):
             parser.add_argument(
                 '--%sfilt-min' % i, type=float,
                 default=defaults.get('%sfilt_min' % i, None),
-                help='minimum %s, metres%s' % (i,'/s' if i == 'v' else ''))
+                help='minimum %s' % desc)
         if not only_these_options or ("%sfilt-max" % i) in only_these_options:
             parser.add_argument(
                 '--%sfilt-max' % i, type=float,
                 default=defaults.get('%sfilt_max' % i, None),
-                help='minimum %s, metres%s' % (i,'/s' if i == 'v' else ''))
+                help='maximum %s' % desc)
     if not only_these_options or "uuid" in only_these_options:
         ud = defaults.get('uuid', None)
         if ud is not None:
