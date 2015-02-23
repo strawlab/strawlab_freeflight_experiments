@@ -34,7 +34,6 @@ class TestCombineData(unittest.TestCase):
                     vfilt='none',
                     rfilt_max=0.17,
                     rfilt='none',
-                    filter_interval=0.3,
                     trajectory_start_offset=0.5
         )
 
@@ -76,6 +75,7 @@ class TestCombineData(unittest.TestCase):
         kwargs = {'arena':'flycube','idfilt':[self._id]}
         kwargs.update(self.filter_args())
         kwargs['vfilt'] = 'triminterval'
+        kwargs['vfilt_interval'] = 0.3
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
@@ -92,7 +92,15 @@ class TestCombineData(unittest.TestCase):
         kwargs = {'arena':'flycube','idfilt':[self._id]}
         kwargs.update(self.filter_args())
         kwargs['xfilt'] = 'triminterval'
+        kwargs['xfilt_interval'] = 0.3
         kwargs['yfilt'] = 'triminterval'
+        kwargs['yfilt_interval'] = 0.3
+
+        d = 0.01
+        kwargs['xfilt_max'] = 0.315 - d
+        kwargs['xfilt_min'] = -0.315 + d
+        kwargs['yfilt_max'] = 0.175 - d
+        kwargs['yfilt_min'] = -0.175 + d
 
         combine.add_from_uuid(self._uuid, **kwargs)
 

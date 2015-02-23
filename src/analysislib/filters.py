@@ -13,6 +13,59 @@ FILTER_TYPES = {
     "e":"position error (m)",
     "v":"velocity (m/s)",
 }
+# if different to above
+FILTER_DF_COLUMNS = {
+    "rfilt":"radius",
+    "efilt":"err_pos_stddev_m",
+    "vfilt":"velocity",
+    "xfilt":"x",
+    "yfilt":"y",
+    "zfilt":"z",
+}
+
+class Filter:
+    def __init__(self,name, colname, trimspec, vmin, vmax, filter_interval):
+        self.name = name
+        self.colname = colname
+        self.vmin = vmin
+        self.vmax = vmax
+        self.trimspec = trimspec
+        self.filter_interval = filter_interval
+
+    def __repr__(self):
+        return "<Filter %s=%s condition=%s < %s < %s interval=%s >" % (self.name,self.trimspec,self.vmin,self.colname,self.vmax,self.filter_interval)
+
+    @staticmethod
+    def from_args_and_defaults(name, args, **defaults):
+
+        def _get_val(_propname, _fallback_default):
+            _val = getattr(args,_propname,None)
+            return defaults.get(_propname,_fallback_default) if _val is None else _val
+
+        return Filter(name,
+                      FILTER_DF_COLUMNS[name],
+                      trimspec=_get_val('%s' % name,'none'),
+                      vmin=_get_val('%s_min' % name,-np.inf),
+                      vmax=_get_val('%s_max' % name,+np.inf),
+                      filter_interval=_get_val('%s_interval' % name,0.0))
+
+    @property
+    def active(self):
+        return self.trimspec != 'none'
+
+    def apply_to_df(self, df, dt, source_column=None,dest_column=None):
+        colname = source_column if source_column is not None else self.colname
+        v = df[colname]
+        cond = (v > self.vmin) & (v < self.vmax)
+        if dest_column:
+            df[dest_column] = cond
+        return cond, filter_cond(self.trimspec, cond, v, int(self.filter_interval/dt))
+
+    def set_on_args(self, args):
+        setattr(args,self.name,self.trimspec)
+        setattr(args,self.name+'_min',self.vmin)
+        setattr(args,self.name+'_max',self.vmax)
+        setattr(args,self.name+'_interval',self.filter_interval)
 
 def crossings(x, threshold=0, after=False):
     """Returns the indices of the elements before or after crossing a threshold.

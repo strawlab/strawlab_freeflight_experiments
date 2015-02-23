@@ -5,6 +5,7 @@ functions for building interactive command line analysis tools
 import os.path
 import argparse
 import datetime
+import numpy as np
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -22,35 +23,33 @@ def _filter_types_args():
         a.extend((name, name+"_min", name+"_max", name+"_interval"))
     return a
 
-REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset","filter_interval"]
-REQUIRED_ARENA_DEFAULTS.extend(_filter_types_args())
+REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset"]
 
 DATA_MODIFYING_ARGS = [
     'uuid',
     'arena',
     'lenfilt',
-    'trajectory_start_offset',
-    'filter_interval'
 ]
-REQUIRED_ARENA_DEFAULTS.extend(_filter_types_args())
+DATA_MODIFYING_ARGS.extend(_filter_types_args())
+DATA_MODIFYING_ARGS.extend(REQUIRED_ARENA_DEFAULTS)
 
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
         args = argparse.ArgumentParser.parse_args(self, *args, **kwargs)
 
-        #set some arena geometry specific defaults
         try:
             arena = get_arena_from_args(args)
         except ValueError, e:
             self.error(e.message)
 
-        rad = set(REQUIRED_ARENA_DEFAULTS)
-        if set(arena.get_filter_properties().keys()) != rad:
-            raise ValueError("Arenas must supply defaults for %s" % ",".join(rad))
+        #for forensics we store all configuration on the args object
+        for f in arena.filters:
+            f.set_on_args(args)
 
-        for k,v in arena.get_filter_properties().items():
-            if getattr(args,k,None) is None:
-                setattr(args,k,v)
+        defaults = arena.get_filter_defaults()
+        for p in REQUIRED_ARENA_DEFAULTS:
+            if getattr(args,p,None) is None:
+                setattr(args,p,defaults[p])
 
         return args
 

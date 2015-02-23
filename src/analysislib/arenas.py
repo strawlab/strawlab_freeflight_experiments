@@ -1,32 +1,33 @@
 import numpy as np
 
-from .filters import filter_cond
+from .filters import filter_cond, FILTER_TYPES, FILTER_DF_COLUMNS, Filter
 
-def get_arena_from_args(args):
-    if args.arena=='flycave':
-        arena = FlyCaveCylinder(radius=0.5)
-    elif args.arena=='flycube':
-        arena = FlyCube()
-    elif args.arena=='fishbowl':
-        arena = FishBowl()
+def get_arena(name, args=None):
+    if name =='flycave':
+        arena = FlyCaveCylinder(args)
+    elif name == 'flycube':
+        arena = FlyCube(args)
+    elif name =='fishbowl':
+        arena = FishBowl(args)
     else:
         raise ValueError('unknown arena %r'%args.arena)
     return arena
 
-def apply_z_and_r_filter(args, valid, dt):
-    fif = int(args.filter_interval/dt)
-    #filter the trajectories based on Z value
-    cond_z = (args.zfilt_min < valid['z']) & (valid['z'] < args.zfilt_max)
-    valid_z = filter_cond(args.zfilt, cond_z, valid['z'], filter_interval_frames=fif)
-    try:
-        #filter based on radius
-        cond_r = valid['radius'] < args.rfilt_max
-    except KeyError:
-        cond_r = np.sqrt(valid['x']**2 + valid['y']**2) < args.rfilt_max
-    valid_r = filter_cond(args.rfilt, cond_r, valid['x'], filter_interval_frames=fif)
-    return valid_z & valid_r, cond_z & cond_r
+def get_arena_from_args(args):
+    return get_arena(args.arena, args)
 
 class ArenaBase(object):
+    def __init__(self, arg_object):
+        self._args = arg_object
+
+        #build a list of all enabled filters based on the command line args
+        #and the default values for this arena
+        default = self.get_filter_defaults()
+        self.filters = []
+        for i in FILTER_TYPES:
+            f = Filter.from_args_and_defaults('%sfilt' % i, self._args, **self.get_filter_defaults())
+            self.filters.append(f)
+
     def get_xtick_locations(self):
         # override to specify tick locations, otherwise, auto-determined
         return None
@@ -40,15 +41,26 @@ class ArenaBase(object):
         pass
     def plot_mpl_3d(self, ax, *args, **kwargs):
         pass
-    def get_filter_properties(self):
-        raise NotImplementedError
-    def apply_filters(self, args, valid, dt):
-        return np.ones_like(valid['framenumber']),np.ones_like(valid['framenumber'])
+    def get_filter_defaults(self):
+        return {}
+
+    def apply_filters(self, args, df, dt):
+        cond = np.ones_like(df['framenumber'], dtype=bool)
+        valid = np.ones_like(df['framenumber'], dtype=bool)
+
+        for f in self.filters:
+            if f.active:
+                _cond, _valid = f.apply_to_df(df, dt)
+                cond &= _cond
+                valid &= _valid
+
+        return valid, cond
 
 class FlyCaveCylinder(ArenaBase):
-    def __init__(self,radius=0.5,height=1.0):
+    def __init__(self,args,radius=0.5,height=1.0):
         self.radius = radius
         self.height = height
+        ArenaBase.__init__(self, args)
     def plot_mpl_line_2d(self,ax,*args,**kwargs):
         rad = self.radius
         theta = np.linspace(0, 2*np.pi, 100)
@@ -69,23 +81,16 @@ class FlyCaveCylinder(ArenaBase):
         return [-self.radius,0.0,self.radius]
     def get_ztick_locations(self):
         return [self.height/2.0,self.height]
-    def get_filter_properties(self):
+    def get_filter_defaults(self):
         return {"zfilt":"trim","zfilt_min":0.1,"zfilt_max":0.9,
-                "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
-                "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
-                "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
-                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt":"trim",'rfilt_min':-np.inf,'rfilt_max':0.42,
-                "filter_interval":0.0,
+                "rfilt":"trim","rfilt_max":0.42,
                 "trajectory_start_offset":0.0}
 
-    def apply_filters(self, args, valid, dt):
-        return apply_z_and_r_filter(args, valid, dt)
-
 class FishBowl(ArenaBase):
-    def __init__(self,radius=0.175,height=0.08):
+    def __init__(self,args,radius=0.175,height=0.08):
         self.radius = radius
         self.height = height
+        ArenaBase.__init__(self, args)
     def plot_mpl_line_2d(self,ax,*args,**kwargs):
         rad = self.radius
         theta = np.linspace(0, 2*np.pi, 100)
@@ -93,32 +98,17 @@ class FishBowl(ArenaBase):
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
-    def get_filter_properties(self):
+    def get_filter_defaults(self):
         return {"zfilt":"none","zfilt_min":0.1,"zfilt_max":0.9,
-                "xfilt":"none",'xfilt_min':-np.inf,'xfilt_max':np.inf,
-                "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
-                "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
-                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt":"none",'rfilt_min':-np.inf,'rfilt_max':0.17,
-                "filter_interval":0.0,
+                "rfilt":"none",'rfilt_min':-np.inf,"rfilt_max":0.17,
                 "trajectory_start_offset":0.0}
 
-    def apply_filters(self, args, valid, dt):
-        fif = int(args.filter_interval/dt)
-
-        err = valid['err_pos_stddev_m']
-        cond_e = (err > args.efilt_min) & (err < args.efilt_max)
-        valid_e = filter_cond(args.efilt, cond_e, err, filter_interval_frames=fif)
-
-        valid_zr, cond_zr = apply_z_and_r_filter(args, valid, dt)
-
-        return valid_e & valid_zr, cond_e & cond_zr
-
 class FlyCube(ArenaBase):
-    def __init__(self,xdim=0.63,ydim=0.35,zdim=0.4):
+    def __init__(self,args,xdim=0.63,ydim=0.35,zdim=0.4):
         self.xdim=xdim
         self.ydim=ydim
         self.zdim=zdim
+        ArenaBase.__init__(self, args)
     def plot_mpl_line_2d(self,ax,*args,**kwargs):
         x = self.xdim/2.0
         y = self.ydim/2.0
@@ -158,31 +148,11 @@ class FlyCube(ArenaBase):
         return [-y, y]
     def get_ztick_locations(self):
         return [self.zdim/2.0,self.zdim]
-    def get_filter_properties(self):
-        return {"zfilt":"trim","zfilt_min":0.05,"zfilt_max":0.365,
-                "xfilt":"none",'xfilt_min':-self.xdim/2.0,'xfilt_max':self.xdim/2.0,
-                "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
-                "vfilt":"none",'vfilt_min':0.05,'vfilt_max':np.inf,
-                "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt":"none",'rfilt_min':-np.inf,'rfilt_max':np.inf,
-                "filter_interval":0.2,
-                "trajectory_start_offset":0.5}
-
-    def apply_filters(self, args, valid, dt):
-        fif = int(args.filter_interval/dt)
-
-        cond_z = (args.zfilt_min < valid['z']) & (valid['z'] < args.zfilt_max)
-        valid_z = filter_cond(args.zfilt, cond_z, valid['z'], filter_interval_frames=fif)
-
+    def get_filter_defaults(self):
         d = 0.01    #exclusion area around wall
-        cond_x = (valid['x'] > args.xfilt_min+d) & (valid['x'] < args.xfilt_max-d)
-        valid_x = filter_cond(args.xfilt, cond_x, valid['x'], filter_interval_frames=fif)
-
-        cond_y = (valid['y'] > args.yfilt_min+d) & (valid['y'] < args.yfilt_max-d)
-        valid_y = filter_cond(args.yfilt, cond_y, valid['y'], filter_interval_frames=fif)
-
-        cond_v = (valid['velocity'] > args.vfilt_min) & (valid['velocity'] < args.vfilt_max)
-        valid_v = filter_cond(args.vfilt, cond_v, valid['velocity'], filter_interval_frames=fif)
-
-        return valid_x & valid_y & valid_z & valid_v, cond_x & cond_y & cond_z & cond_v
+        return {"zfilt":"trim","zfilt_min":0.05,"zfilt_max":0.365,
+                "xfilt":"none",'xfilt_min':(-self.xdim/2.0)+d,'xfilt_max':(self.xdim/2.0)-d,'xfilt_interval':0.2,
+                "yfilt":"none",'yfilt_min':(-self.ydim/2.0)+d,'yfilt_max':(self.ydim/2.0)-d,'yfilt_interval':0.2,
+                "vfilt":"none","vfilt_min":0.05,'vfilt_interval':0.2,
+                "trajectory_start_offset":0.5}
 
