@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import numpy as np
 import unittest
-from analysislib.combine import check_combine_health
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.util as autil
-
+from analysislib.combine import check_combine_health
 
 def _quiet(combine):
     combine.disable_debug()
@@ -15,8 +14,8 @@ class TestCombineData(unittest.TestCase):
 
     def setUp(self):
         self._uuid = "7683fa3ca18d11e4abc3bcee7bdac428"
-        self._id = 14897
-        self._framenumber0 = 5511581
+        self._id = 18106
+        self._framenumber0 = 6019973
 
     def filter_args(self):
         #disable all filters
@@ -40,7 +39,6 @@ class TestCombineData(unittest.TestCase):
         )
 
 
-    @unittest.expectedFailure
     def test_old_defaults(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
@@ -54,9 +52,8 @@ class TestCombineData(unittest.TestCase):
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
-        self.assertEqual(len(df), 571)  # here the trajectory has already been removed, too short, change lenfilt?
+        self.assertEqual(len(df), 161)
 
-    @unittest.expectedFailure
     def test_no_filt(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
@@ -70,9 +67,8 @@ class TestCombineData(unittest.TestCase):
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
-        self.assertEqual(len(df), 666)  # this is 92 out of the new combine
+        self.assertEqual(len(df), 301)
 
-    @unittest.expectedFailure
     def test_vfilt_filt(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
@@ -87,9 +83,8 @@ class TestCombineData(unittest.TestCase):
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
-        self.assertEqual(len(df), 103)  # here it says 91
+        self.assertEqual(len(df), 71)  # here it says 91
 
-    @unittest.expectedFailure
     def test_xyfilt_filt(self):
         combine = autil.get_combiner_for_uuid(self._uuid)
         _quiet(combine)
@@ -103,7 +98,7 @@ class TestCombineData(unittest.TestCase):
 
         df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
 
-        self.assertEqual(len(df), 90)  # here it says 91
+        self.assertEqual(len(df), 57)
 
 if __name__=='__main__':
     unittest.main()
