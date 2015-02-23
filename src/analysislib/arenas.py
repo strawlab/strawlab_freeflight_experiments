@@ -111,7 +111,7 @@ class FishBowl(ArenaBase):
         err = df['err_pos_stddev_m']
         if np.all(np.isnan(err)):
             #not computed
-            return np.ones_like(err),np.ones_like(err)
+            raise NotImplementedError
 
         cond_e = (err > args.efilt_min) & (err < args.efilt_max)
         valid_e = filter_cond(args.efilt, cond_e, err, filter_interval_frames=fif)
