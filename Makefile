@@ -4,7 +4,7 @@ test:
 	NOSETEST_FLAG=1 nosetests -w test/
 
 test-parallel:
-	NOSETEST_FLAG=1 nosetests -s --processes=4 --process-restartworker --process-timeout=1000 -w test/
+	NOSETEST_FLAG=1 nosetests --processes=6 --process-restartworker --process-timeout=1000 -w test/
 
 
 doc:
