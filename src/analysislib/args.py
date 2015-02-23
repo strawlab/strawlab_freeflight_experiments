@@ -19,7 +19,7 @@ def _filter_types_args():
     a = []
     for f in FILTER_TYPES:
         name = "%sfilt" % f
-        a.extend((name, name+"_min", name+"_max"))
+        a.extend((name, name+"_min", name+"_max", name+"_interval"))
     return a
 
 REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset","filter_interval"]
@@ -139,6 +139,13 @@ def get_parser(*only_these_options, **defaults):
                 '--%sfilt-max' % i, type=float,
                 default=defaults.get('%sfilt_max' % i, None),
                 help='maximum %s' % desc)
+        if not only_these_options or ("%sfilt-interval" % i) in only_these_options:
+            parser.add_argument(
+                '--%sfilt-interval' % i, type=float,
+                default=defaults.get('%sfilt_interval' % i, None),
+                help="when using 'triminterval' filter methods, the length over "\
+                     "which the filter must match in order for data to be trimmed. ")
+
     if not only_these_options or "uuid" in only_these_options:
         ud = defaults.get('uuid', None)
         if ud is not None:
@@ -176,12 +183,6 @@ def get_parser(*only_these_options, **defaults):
                  '(i.e. from the csv) trajectory from which to keep data. if negative '\
                  'this means include data before the trial began. if positive this '\
                  'ignores data at the start of a trajectory')
-    if not only_these_options or "filter-interval" in only_these_options:
-        parser.add_argument(
-            '--filter-interval', type=float,
-            default=defaults.get('filter_interval',0.3),
-            help="when using 'triminterval' filter methods, the length over "\
-                 "which the filter must match in order for data to be trimmed. ")
     if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
             '--arena', type=str,
