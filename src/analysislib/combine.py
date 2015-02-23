@@ -1481,23 +1481,18 @@ class CombineH5WithCSV(_Combine):
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
                     (oid, start_frame, trial_framenumbers[-1])
             valid = trajectories.readWhere(query)
-
-            # apply filters based on experimental arena
-            filter_cond, _ = arena.apply_geometry_filter(args, valid, self._dt)
-            validframenumber = valid['framenumber'][filter_cond]
+            validframenumber = valid['framenumber']
 
             n_samples = len(validframenumber)
             if n_samples < dur_samples:
-                self._debug('FILT1:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
+                self._debug('SKIP:   %d valid samples for obj_id %d' % (n_samples, oid))
                 self._skipped[cond] += 1
                 continue
-            if n_samples != len(valid):
-                self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
 
             flydra_series = []
             for a in ('x', 'y', 'z', 'covariance_x', 'covariance_y', 'covariance_z'):
                 try:
-                    avalid = valid[a][filter_cond]
+                    avalid = valid[a]
                     flydra_series.append(pd.Series(avalid, name=a, index=validframenumber))
                 except ValueError:
                     self._warn_once('WARN: %s lacks %s data' % (h5_file, a))
@@ -1508,6 +1503,7 @@ class CombineH5WithCSV(_Combine):
             flydra_series.append(framenumber_series)
 
             h5_df = pd.concat(flydra_series, axis=1)
+            n_samples_before = len(h5_df)
 
             try:
                 dt = self._dt
@@ -1517,20 +1513,17 @@ class CombineH5WithCSV(_Combine):
                 self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
 
-            n_samples_before = len(h5_df)
-            try:
-                filter_cond, _ = arena.apply_secondary_filter(args, h5_df, dt)
-                h5_df = h5_df.iloc[filter_cond]
-            except NotImplementedError:
-                pass
+            # apply filters
+            filter_cond, _ = arena.apply_filters(args, h5_df, dt)
+            h5_df = h5_df.iloc[filter_cond]
 
             n_samples = len(h5_df)
             if n_samples < dur_samples:
-                self._debug('FILT2:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
+                self._debug('FILT:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
                 self._skipped[cond] += 1
                 continue
             if n_samples != n_samples_before:
-                self._debug('TRIM2:   removed %d frames' % (n_samples_before - n_samples))
+                self._debug('TRIM:   removed %d frames' % (n_samples_before - n_samples))
 
             traj_start_frame = h5_df['framenumber'].values[0]
             traj_stop_frame = h5_df['framenumber'].values[-1]
