@@ -624,7 +624,9 @@ class _Combine(object):
                 #covariance is m**2, hence 2 sqrt
                 df['err_pos_stddev_m'] = np.sqrt( np.sqrt( df['covariance_x']**2 + df['covariance_y']**2 + df['covariance_z']**2 ) )
             except KeyError:
-                df['err_pos_stddev_m'] = np.nan
+                #if not set, range type filters compare against +/- np.inf, so set the error
+                #to a real number (comparisons with nan are false) 
+                df['err_pos_stddev_m'] = 0
 
         if self.calc_angular_stats:
             acurve.calc_angular_velocities(df, dt)

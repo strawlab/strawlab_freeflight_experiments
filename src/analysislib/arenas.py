@@ -106,11 +106,7 @@ class FishBowl(ArenaBase):
     def apply_filters(self, args, valid, dt):
         fif = int(args.filter_interval/dt)
 
-        err = df['err_pos_stddev_m']
-        if np.all(np.isnan(err)):
-            #not computed
-            raise NotImplementedError
-
+        err = valid['err_pos_stddev_m']
         cond_e = (err > args.efilt_min) & (err < args.efilt_max)
         valid_e = filter_cond(args.efilt, cond_e, err, filter_interval_frames=fif)
 
