@@ -75,7 +75,7 @@ class FlyCaveCylinder(ArenaBase):
                 "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
                 "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
                 "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt_max":0.42,"rfilt":"trim",
+                "rfilt":"trim",'rfilt_min':-np.inf,'rfilt_max':0.42,
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
 
@@ -99,7 +99,7 @@ class FishBowl(ArenaBase):
                 "yfilt":"none",'yfilt_min':-np.inf,'yfilt_max':np.inf,
                 "vfilt":"none",'vfilt_min':-np.inf,'vfilt_max':np.inf,
                 "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt_max":0.17,"rfilt":"none",
+                "rfilt":"none",'rfilt_min':-np.inf,'rfilt_max':0.17,
                 "filter_interval":0.0,
                 "trajectory_start_offset":0.0}
 
@@ -168,7 +168,7 @@ class FlyCube(ArenaBase):
                 "yfilt":"none",'yfilt_min':-self.ydim/2.0,'yfilt_max':self.ydim/2.0,
                 "vfilt":"none",'vfilt_min':0.05,'vfilt_max':np.inf,
                 "efilt":"none",'efilt_min':-np.inf,'efilt_max':np.inf,
-                "rfilt_max":np.inf,"rfilt":"none",
+                "rfilt":"none",'rfilt_min':-np.inf,'rfilt_max':np.inf,
                 "filter_interval":0.2,
                 "trajectory_start_offset":0.5}
 

@@ -128,7 +128,7 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
-    for i in 'xyzve':
+    for i in 'xyzver':
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(
                 '--%sfilt' % i, type=str, choices=filt_choices,
@@ -163,16 +163,6 @@ def get_parser(*only_these_options, **defaults):
             '--outdir', type=str,
             default=defaults.get('outdir', None),
             help='directory to save plots')
-    if not only_these_options or "rfilt" in only_these_options:
-        parser.add_argument(
-            '--rfilt', type=str, choices=filt_choices,
-            default=defaults.get('rfilt', None),
-            help='method to filter trajectory data based on radius from centre values')
-    if not only_these_options or "rfilt-max" in only_these_options:
-        parser.add_argument(
-            '--rfilt-max', type=float,
-            default=defaults.get('rfilt_max', None),
-            help='maximum r, metres,')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
             '--lenfilt', type=float,
