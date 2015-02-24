@@ -36,9 +36,9 @@ import strawlab_freeflight_experiments.sid as sfe_sid
 
 def _load_matlab_variable_as_same_name(fobj, path, name):
     TMPL = """
-inf = whos('-file','%(path)s');
+info = whos('-file','%(path)s');
 dat = load('%(path)s', '-mat');
-%(name)s = dat.(inf.name);
+%(name)s = dat.(info.name);
 """
     fobj.write(TMPL % {'path':path,'name':name})
 
