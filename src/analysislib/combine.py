@@ -1599,8 +1599,8 @@ class CombineH5WithCSV(_Combine):
                         # add a tns column
                         csv_df['tns'] = np.array((csv_df['t_sec'].values * 1e9) + csv_df['t_nsec'], dtype=np.uint64)
 
-                    # we still must trim the original dataframe by the trim conditions (framenumber)
-                    odf_fns = h5_df['framenumber'].values
+                    # we still must trim the csv dataframe by the trim conditions (framenumber)
+                    odf_fns = csv_df['framenumber'].values
                     odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   # first frame
                     odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   # last frame
 

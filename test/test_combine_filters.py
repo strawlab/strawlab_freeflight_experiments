@@ -100,6 +100,27 @@ class TestCombineData(unittest.TestCase):
 
         self.assertEqual(len(df), 57)
 
+    def test_filters_time_index(self):
+        oid = 3696
+        uuid = '03077ed4baac11e4854f6c626d3a008a'
+        combine = autil.get_combiner_for_uuid(uuid)
+        combine.set_index('time+10L')
+        _quiet(combine)
+
+        kwargs = {'arena':'flycave','idfilt':[oid]}
+        kwargs['rfilt'] = 'trim'
+        kwargs['rfilt_max'] = 0.42
+
+        combine.add_from_uuid(uuid, **kwargs)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(oid)
+
+        self.assertEqual(len(df), 881)
+        self.assertEqual(df['framenumber'].max(), 801530)
+        self.assertEqual(df['framenumber'].values[-1], 801530)
+        self.assertEqual(df['framenumber'].min(), 800650)
+        self.assertEqual(df['framenumber'].values[0], 800650)
+
 if __name__=='__main__':
     unittest.main()
 
