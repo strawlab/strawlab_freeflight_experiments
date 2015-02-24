@@ -144,6 +144,8 @@ class Node(nodelib.node.Experiment):
         else:
             self.svg_fn = ''
 
+        self.rotation_rate_max = self.condition.get('rotation_rate_max', MAX_ROTATION_RATE)
+
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
 
@@ -209,7 +211,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y
 
