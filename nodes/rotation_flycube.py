@@ -61,7 +61,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 3
 
 REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
                                               "data","replay_experiments",

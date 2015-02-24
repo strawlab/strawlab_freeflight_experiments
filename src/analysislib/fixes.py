@@ -157,3 +157,32 @@ def load_csv_fixups(**kwargs):
 
     return _Fixup(None, None)
 
+def get_rotation_rate_limit_for_plotting(combine, cond=None):
+    #the value of rotation_rate_max has changed over time. now it can be specified
+    #in the condition. find the max value in the data
+    rr_abs_max = {}
+    for _cond in combine.get_conditions():
+        obj = combine.get_condition_object(_cond)
+        try:
+            rr_abs_max[_cond] = obj['rotation_rate_max']
+        except KeyError:
+            pass
+    if rr_abs_max:
+        #return the value for just this condition if specified
+        try:
+            return rr_abs_max[cond]
+        except KeyError:
+            return max(rr_abs_max.values())
+
+    #else gues the max from the arena(s)
+    rr_abs_max = [0]
+    for m in combine.get_experiment_metadata():
+        if m.get('arena') == 'flycave':
+            rr_abs_max.append(10)
+        elif m.get('arena') == 'flycube':
+            rr_abs_max.append(5)
+    return max(rr_abs_max)
+
+
+
+

@@ -60,13 +60,14 @@ def get_default_condition_filename(argv):
                         'data','conditions',
                         '%s.yaml' % fn)
 
-class ConditionCompat:
+class ConditionCompat(OrderedDict):
 
     ROTATION_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}$")
     CONFLICT_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}\/\w+\.osg(?:\|[\d.+-]+)+$")
     PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
 
     def __init__(self, slash_string):
+        OrderedDict.__init__(self)
         self._s = slash_string
 
     def is_type(self, *names):
