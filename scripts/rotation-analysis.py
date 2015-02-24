@@ -139,17 +139,15 @@ if __name__=='__main__':
                         f.add_subplot(1,2,2))
 
     #correlation and histogram plots
+    rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
+    rrate_lim = (-rrate_max_abs,rrate_max_abs)
+
     correlations = (('rotation_rate','dtheta'),)
-    correlation_options = {"rotation_rate:dtheta":{"range":[[-1.45,1.45],[-10,10]]},
+    correlation_options = {"rotation_rate:dtheta":{"range":[rrate_lim,[-10,10]]},
                            "latencies":set(range(0,40,2) + [40,80]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
     }
     histograms = ("velocity","dtheta","rotation_rate","v_offset_rate")
-
-    if 'tnfcontrol' in combine.csv_file:
-        rrate_lim = (-15,15)
-    else:
-        rrate_lim = (-10,10)
 
     histogram_options = {"normed":{"velocity":True,
                                    "dtheta":True,
