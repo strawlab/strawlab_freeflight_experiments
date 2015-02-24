@@ -66,6 +66,7 @@ DATA_MODIFYING_ARGS = [
     'efilt','efilt_min','efilt_max',
     'rfilt','rfilt_max',
     'arena',
+    'idfilt',
     'lenfilt',
     'trajectory_start_offset',
     'filter_interval'
