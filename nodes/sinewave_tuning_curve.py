@@ -53,7 +53,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 3
 
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -179,6 +179,8 @@ class Node(nodelib.node.Experiment):
 
             self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
 
+        self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
+
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
@@ -294,7 +296,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y,np.nan
 

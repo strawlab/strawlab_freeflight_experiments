@@ -188,6 +188,8 @@ class Node(nodelib.node.Experiment):
                 #but when the perturbation starts
                 self.conflict_and_perturb_model_filename = str(model_filename)
 
+        self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
+
         #set the model in all cases
         self.model_filename = str(model_filename)
         model_x = float(model_x)
@@ -288,7 +290,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y
 
