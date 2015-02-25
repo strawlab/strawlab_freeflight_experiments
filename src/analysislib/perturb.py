@@ -45,8 +45,6 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
         for _df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
 
-            _df.to_html('/tmp/originaldf_%d.html' % int(obj_id))
-
             df = _df.fillna(method='ffill')
             df['condition'] = cond
 
@@ -90,7 +88,6 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
                 ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
 
-                df.to_html('/tmp/perturbdf_%d.html' % int(obj_id))
                 perturbations[cond][obj_id] = ph_obj
 
     return perturbations, perturbation_objects
