@@ -8,7 +8,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio, perturbation_length, trajectory_length, condition')
+PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed completed_pct start_ratio, perturbation_length, trajectory_length, condition')
 
 def collect_perturbation_traces(combine, completion_threshold=0.98):
     results,dt = combine.get_results()
@@ -72,6 +72,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 traj_length = tmax - df['talign'].min()
 
                 completed = step_obj.completed_perturbation(tmax, completion_threshold) and (lidx > fidx)
+                completed_pct = step_obj.completed_perturbation_pct(tmax, completion_threshold)
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 
@@ -86,8 +87,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
                 df['ratio_range_start_id'] = start_id
 
-                ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
-
+                ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, completed_pct, start_ratio, tmax, traj_length, cond)
                 perturbations[cond][obj_id] = ph_obj
 
     return perturbations, perturbation_objects
