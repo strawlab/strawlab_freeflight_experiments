@@ -487,13 +487,14 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
 
-            name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
-            title = 'Step response (ind. model fit > %.1f%%): %s->%s\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,perturbation_obj)
-            with mlab.fig(name+'.png') as f:
-                sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
-            if EPS:
-                with mlab.fig(name+'.eps',driver='epsc2') as f:
-                    sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
+#            name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
+#            title = 'Step response (ind. model fit > %.1f%%): %s->%s\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,perturbation_obj)
+#            with mlab.fig(name+'.png') as f:
+#                print "GGGGGGGGGG", alldata_models
+#                sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
+#            if EPS:
+#                with mlab.fig(name+'.eps',driver='epsc2') as f:
+#                    sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
 
             name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
             with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
