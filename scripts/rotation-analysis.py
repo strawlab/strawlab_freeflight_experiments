@@ -138,14 +138,19 @@ if __name__=='__main__':
                         f.add_subplot(1,2,1),
                         f.add_subplot(1,2,2))
 
-    #correlation and histogram plots
+    def _get_rrate_lim(_comb, _cond, _corrname):
+        if _corrname == 'rotation_rate':
+            _rrmax = analysislib.fixes.get_rotation_rate_limit_for_plotting(_comb, _cond)
+            return (-_rrmax,_rrmax)
+        return None
+    
     rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
-    rrate_lim = (-rrate_max_abs,rrate_max_abs)
 
     correlations = (('rotation_rate','dtheta'),)
-    correlation_options = {"rotation_rate:dtheta":{"range":[rrate_lim,[-10,10]]},
+    correlation_options = {"rotation_rate:dtheta":{"range":[_get_rrate_lim,[-10,10]]},
                            "latencies":set(range(0,40,2) + [40,80]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
+        
     }
     histograms = ("velocity","dtheta","rotation_rate","v_offset_rate")
 
@@ -156,7 +161,7 @@ if __name__=='__main__':
                          "ylogscale":{"v_offset_rate":True},
                          "range":{"velocity":(0,1),
                                   "dtheta":(-20,20),
-                                  "rotation_rate":rrate_lim},
+                                  "rotation_rate":(-rrate_max_abs,rrate_max_abs)},
                          "xlabel":{"velocity":"velocity (m/s)",
                                    "dtheta":"turn rate (rad/s)",
                                    "rotation_rate":"rotation rate (rad/s)"},
