@@ -1396,21 +1396,21 @@ class CombineH5WithCSV(_Combine):
             if uuid is not None:
                 exp_uuids = csv_df['exp_uuid'].dropna().unique()
                 if not len(exp_uuids):
-                    #normal case, the first few rows before a uuid was assigned.
-                    #assume everything is ok....
+                    # normal case, the first few rows before a uuid was assigned.
+                    # assume everything is ok....
                     pass
                 else:
-                    #I can perform stricter checks because in the general case 
-                    #(i.e. not when someone has done add_uuid_to_csv) because
-                    #nodelib writes the uuid on every line so we can check if we should
-                    #query the h5 file
+                    # I can perform stricter checks because in the general case
+                    # (i.e. not when someone has done add_uuid_to_csv) because
+                    # nodelib writes the uuid on every line so we can check if we should
+                    # query the h5 file
                     if len(exp_uuids) > 1:
-                        self._warn("WARN: object id %d in multiple possible h5 files (%s)" % (oid,','.join(exp_uuids)))
+                        self._warn("WARN: object id %d in multiple possible h5 files (%s)" % (oid, ','.join(exp_uuids)))
                         continue
 
-                    #length of exp_uuids must be 1
+                    # length of exp_uuids must be 1
                     if uuid not in exp_uuids:
-                        self._warn("SKIP: object id %d in another h5 file (%s)" % (oid,exp_uuids[0]))
+                        self._warn("SKIP: object id %d in another h5 file (%s)" % (oid, exp_uuids[0]))
                         continue
 
             if not csv_df['condition'].nunique() == 1:
@@ -1455,7 +1455,7 @@ class CombineH5WithCSV(_Combine):
             # framenumbers must be monotonically increasing, perform a weaker version
             # of that test now and check the last is greater than the first
             if (len(trial_framenumbers) > 2) and (trial_framenumbers[0] > trial_framenumbers[-1]):
-                self._warn('WARN:   corrupt trial for obj_id %s' % (oid))
+                self._warn('WARN:   corrupt trial for obj_id %s' % oid)
                 continue
 
             if original_condition != fixed_condition:
@@ -1495,12 +1495,12 @@ class CombineH5WithCSV(_Combine):
                 self._debug('TRIM1:   removed %d frames' % (len(valid) - n_samples))
 
             flydra_series = []
-            for a in ('x','y','z','covariance_x','covariance_y','covariance_z'):
+            for a in ('x', 'y', 'z', 'covariance_x', 'covariance_y', 'covariance_z'):
                 try:
                     avalid = valid[a][filter_cond]
                     flydra_series.append(pd.Series(avalid, name=a, index=validframenumber))
                 except ValueError:
-                    self._warn_once('WARN: %s lacks %s data' % (h5_file,a))
+                    self._warn_once('WARN: %s lacks %s data' % (h5_file, a))
 
             # we can now create a dataframe that has the flydra data, and the
             # original index of the csv dataframe
