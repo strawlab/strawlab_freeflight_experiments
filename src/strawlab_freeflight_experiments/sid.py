@@ -46,6 +46,9 @@ class _SIDResult(object):
         self.sid_data = sid_data
         self.sid_model = sid_model
 
+        assert self._fitpct != None
+        assert self._fitmse != None
+
         self._abrv = abrv
         self._est_args = est_args
 
@@ -99,7 +102,10 @@ end""", self.sid_model, nout=2)
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,np,nz,iod)
 
-        if iscell(trial_data.Ts)
+        %does this contain multi experiment data
+        multi_exp = size(trial_data,4) > 1;
+
+        if multi_exp
             tss = cell2mat(trial_data.Ts);
         else
             tss = trial_data.Ts;
