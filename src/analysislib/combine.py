@@ -1600,15 +1600,15 @@ class CombineH5WithCSV(_Combine):
                         csv_df['tns'] = np.array((csv_df['t_sec'].values * 1e9) + csv_df['t_nsec'], dtype=np.uint64)
 
                     # we still must trim the csv dataframe by the trim conditions (framenumber)
-                    odf_fns = csv_df['framenumber'].values
-                    odf_fn0_idx = np.where(odf_fns >= traj_start_frame)[0][0]   # first frame
-                    odf_fnN_idx = np.where(odf_fns <= traj_stop_frame)[0][-1]   # last frame
+                    csv_fns = csv_df['framenumber'].values
+                    csv_fn0_idx = np.where(csv_fns >= traj_start_frame)[0][0]   # first frame
+                    csv_fnN_idx = np.where(csv_fns <= traj_stop_frame)[0][-1]   # last frame
 
                     # in this case we want to keep all the rows (outer)
                     # but the two dataframes should remain sorted by
                     # framenumber because we use that for building a new time index
                     # if we resample
-                    df = pd.merge(csv_df.iloc[odf_fn0_idx:odf_fnN_idx], h5_df,  # trim as filtered
+                    df = pd.merge(csv_df.iloc[csv_fn0_idx:csv_fnN_idx], h5_df,  # trim as filtered
                                   suffixes=("_csv", "_h5"),
                                   on='framenumber',
                                   left_index=False, right_index=False,
