@@ -383,9 +383,14 @@ if __name__=='__main__':
 
                         individual_models[pm].append(mdl)
 
-                        print "\tindividual model: %s (%.1f%%, %s frames)" % (mdl, mdl.fitpct,idlen)
+                        print "\tindividual model oid %d %.0f%% complete: %s (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, mdl, mdl.fitpct, idlen)
+                    else:
+                        print "\tindividual model oid %d %.0f%% complete: %s FAIL (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, pm.spec, mdl.fitpct, idlen)
 
                 if individual_models[pm]:
+
+                    print "\t%d (%.1f%%) models passed individual fit criteria" % (len(individual_models[pm]), 100.0*len(individual_models[pm])/len(individual_iddata))
+
                     extra_models = []
 
                     #create a merged model from the individual models (mean of models)
