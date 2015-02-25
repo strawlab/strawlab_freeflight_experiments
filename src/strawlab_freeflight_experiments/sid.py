@@ -115,8 +115,17 @@ end""", self.sid_model, nout=2)
 
         mdl = tfest(trial_data,np,nz,iod,'Ts',ts);
         mdl.name = ['tf' num2str(np) num2str(nz)];
+
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
+
+        if multi_exp
+            fitmse = mean(fitmse(isfinite(fitmse)));
+            fitpct = mean(fitpct(isfinite(fitpct)));
+        end
+
+        assert(all(isfinite(fitmse)) & all(isfinite(fitpct)), 'model not fit');
+
         [z p k] = zpkdata(mdl);
     end""",iddata,np,nz,iod,
             nout=6,
@@ -138,12 +147,25 @@ class MATLABIdpoly(_SIDResult):
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk)
+
+        %does this contain multi experiment data
+        multi_exp = size(trial_data,4) > 1;
+
         Opt = oeOptions;                       
         Opt.Focus = 'simulation';
         mdl = oe(trial_data,[nb nf nk],Opt);
         mdl.name = ['oe' num2str(nb) num2str(nf) num2str(nk)];
+
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
+
+        if multi_exp
+            fitmse = mean(fitmse(isfinite(fitmse)));
+            fitpct = mean(fitpct(isfinite(fitpct)));
+        end
+
+        assert(all(isfinite(fitmse)) & all(isfinite(fitpct)), 'model not fit');
+
         [z p k] = zpkdata(mdl);
     end""",iddata,nb,nf,nk,
             nout=6,
@@ -160,12 +182,25 @@ class MATLABIdpoly(_SIDResult):
         try:
             z, p, k, fitpct, fitmse, sid_model = mlab.run_code("""
     function [z p k fitpct fitmse mdl] = do_est(trial_data,nb,nf,nk,iod)
+
+        %does this contain multi experiment data
+        multi_exp = size(trial_data,4) > 1;
+
         Opt = arxOptions;
         Opt.Focus = 'simulation';
         mdl = arx(trial_data,[nb nf nk],'ioDelay',iod,Opt);
         mdl.name = ['arx' num2str(nb) num2str(nf) num2str(nk)];
+
         fitmse = mdl.Report.Fit.MSE;
         fitpct = mdl.Report.Fit.FitPercent;
+
+        if multi_exp
+            fitmse = mean(fitmse(isfinite(fitmse)));
+            fitpct = mean(fitpct(isfinite(fitpct)));
+        end
+
+        assert(all(isfinite(fitmse)) & all(isfinite(fitpct)), 'model not fit');
+
         [z p k] = zpkdata(mdl);
     end""",iddata,nb,nf,nk,iod,
             nout=6,
