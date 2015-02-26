@@ -761,7 +761,7 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     sfe_frequency.plot_amp_spectrum(ax,y,fs)
     ax.set_xlim(0,maxfreq)
 
-def plot_perturbation_frequency_characteristics(fig,obj):
+def plot_perturbation_frequency_characteristics(fig,obj,fs=100,maxfreq=12):
     gs = matplotlib.gridspec.GridSpec(2,2)
     ax = fig.add_subplot(gs[0,:])
     obj.plot(ax, t_extra=0.5)
@@ -769,9 +769,9 @@ def plot_perturbation_frequency_characteristics(fig,obj):
     ax.set_xlabel('t (s)')
     ax.set_ylabel(str(obj.what))
     ax = fig.add_subplot(gs[1,0])
-    plot_spectum(ax, obj)
+    plot_spectum(ax, obj, fs, maxfreq)
     ax = fig.add_subplot(gs[1,1])
-    plot_amp_spectrum(ax, obj)
+    plot_amp_spectrum(ax, obj, fs, maxfreq)
 
 PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberRBS, PerturberIDINPUT)
 
@@ -786,8 +786,8 @@ if __name__ == "__main__":
     parser.add_argument('--save-svg', action='store_true')
     args = parser.parse_args()
 
-    def _plot(f,obj):
-        plot_perturbation_frequency_characteristics(f,obj)
+    def _plot(f,obj,f1):
+        plot_perturbation_frequency_characteristics(f,obj, fs=100, maxfreq=f1)
         fn = analysislib.plots.get_safe_filename(repr(obj),allowed_spaces=False)
         if args.save:
             f.savefig(fn+".png",bbox_inches='tight')
@@ -804,7 +804,12 @@ if __name__ == "__main__":
             condition = p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC
             obj = p(condition)
             f = plt.figure(repr(obj), figsize=(8,8))
-            _plot(f,obj)
+
+            f0,f1 = obj.get_frequency_limits()
+            if np.isnan(f1):
+                f1 = 12 #historical
+
+            _plot(f,obj,1.5*f1)
 
             obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
             print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1),condition
