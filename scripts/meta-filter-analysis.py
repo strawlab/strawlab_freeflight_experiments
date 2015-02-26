@@ -24,9 +24,12 @@ if __name__=='__main__':
         l = "effect of filters on flight data"
         f.write("%s\n"%l)
         f.write("%s\n\n"%('-'*len(l)))
-        for a in analysislib.args.REQUIRED_ARENA_DEFAULTS:
-            f.write(" * %s = %s\n" % (a,getattr(args,a)))
+
+        for k,v in args._get_kwargs():
+            if ('filt' in k) or (k in analysislib.args.REQUIRED_ARENA_DEFAULTS):
+                f.write(" * %s = %s\n" % (k,v))
         f.write("\n\n")
+
         f.write("| condition | total trials | kept trials | skipped trials | kept data (s) |\n")
         f.write("| --- | --- | --- | --- | --- |\n")
 
