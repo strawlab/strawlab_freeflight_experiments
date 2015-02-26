@@ -685,6 +685,9 @@ class PerturberIDINPUT(_PerturberInterpolation):
         if self.type == 'sine':
             self.f0 = float(b0)
             self.f1 = float(b1)
+        elif self.type == 'prbs':
+            self.f0 = 0.0
+            self.f1 = FS/2.0
         else:
             self.f0 = 0.0
             self.f1 = float(b1)
