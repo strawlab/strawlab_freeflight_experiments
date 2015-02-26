@@ -262,7 +262,6 @@ function g = do_spa(trial_data,title,f1)
     end
     opt.Title.Interpreter = 'none';
     opt.FreqUnits = 'Hz';
-    opt.PhaseWrapping = 'on';
     h = bodeplot(g,w,opt);
     showConfidence(h,1);
 
@@ -312,7 +311,6 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
     mlab.run_code("""
 opt = bodeoptions;
 opt.FreqUnits = 'Hz';
-opt.PhaseWrapping = 'on';
 opt.Title.String = figtitle;
 opt.Title.Interpreter = 'none';
 h = bodeplot(%s,w,opt);
