@@ -167,7 +167,7 @@ if __name__=='__main__':
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title, -1)#float(np.deg2rad(360*f1)))
+                idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title, -1)
 
             title = '%s' % perturbation_obj
             name = combine.get_plot_filename('%%s_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
