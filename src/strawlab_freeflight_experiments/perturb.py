@@ -786,7 +786,13 @@ if __name__ == "__main__":
     parser.add_argument('--save-svg', action='store_true')
     args = parser.parse_args()
 
-    def _plot(f,obj,f1):
+    def _plot(f,obj):
+        f0,f1 = obj.get_frequency_limits()
+        if np.isnan(f1):
+            f1 = 12 #historical
+        #show a little more than the max freq to allow for leakage, etc
+        f1 *= 1.5
+
         plot_perturbation_frequency_characteristics(f,obj, fs=100, maxfreq=f1)
         fn = analysislib.plots.get_safe_filename(repr(obj),allowed_spaces=False)
         if args.save:
@@ -804,13 +810,7 @@ if __name__ == "__main__":
             condition = p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC
             obj = p(condition)
             f = plt.figure(repr(obj), figsize=(8,8))
-
-            f0,f1 = obj.get_frequency_limits()
-            if np.isnan(f1):
-                f1 = 12 #historical
-
-            _plot(f,obj,1.5*f1)
-
+            _plot(f,obj)
             obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
             print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1),condition
 
