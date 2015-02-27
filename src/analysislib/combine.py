@@ -1482,7 +1482,11 @@ class CombineH5WithCSV(_Combine):
             # get trajectory data from flydra
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
                     (oid, start_frame, trial_framenumbers[-1])
-            valid = trajectories.readWhere(query)
+            try:
+                valid = trajectories.readWhere(query)
+            except:
+                self._warn("ERROR: PYTABLES CRASHED QUERY")
+                continue
             validframenumber = valid['framenumber']
 
             n_samples = len(validframenumber)
