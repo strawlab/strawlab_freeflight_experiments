@@ -2,7 +2,12 @@ rotation_1:
     cylinder_image: checkerboard16.png
     radius_when_locked: -10.0
     z_gain: 0.20
+    u0: -1000.0
+    u1: +1000.0
 rotation_zero_texture_control:
     cylinder_image: gray.png
     radius_when_locked: -10.0
     z_gain: 0.20
+    u0: -1000.0
+    u1: +1000.0
+
