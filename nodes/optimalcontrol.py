@@ -98,7 +98,6 @@ class Node(nodelib.node.Experiment):
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
         self.log.ratio = 0 #backwards compatibility - see path_theta for mpc path parameter
 
         #setup the MPC controller
@@ -182,7 +181,7 @@ class Node(nodelib.node.Experiment):
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked))
+        rospy.loginfo('condition: %s (svg=%s, rad locked=%.1f)' % (self.condition,os.path.basename(self.svg_fn),self.rad_locked))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)
