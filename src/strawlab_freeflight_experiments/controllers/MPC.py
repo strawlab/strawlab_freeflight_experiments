@@ -4,12 +4,13 @@ import numpy as np
 import numpy.ctypeslib
 import ctypes as ct
 import ctypes.util
+import threading
 
 lib = numpy.ctypeslib.load_library("libmpc", os.path.join(os.path.dirname(os.path.abspath(__file__)),'mpc'))
 clib = ct.cdll.LoadLibrary(ctypes.util.find_library("c"))
 
 class MPC:
-    def __init__(self, ts_ekf, ts_c, ts_d, ts_ci):
+    def __init__(self, u0, u1, ts_ekf, ts_c, ts_d, ts_ci):
 
         #these values are shared between python and C, and I need to know their
         #value
@@ -65,8 +66,10 @@ class MPC:
         self._cins = lib.calcinput_new_state()
 
         lib.init_par_cInpF_decF_ekf_subopt_MPC_model2.argtypes = [ct.c_void_p, ct.c_void_p, ct.c_void_p, ct.c_void_p,
+                                                                  ct.c_double, ct.c_double,
                                                                   ct.c_double, ct.c_double, ct.c_double, ct.c_double]
-        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp, ts_ekf, ts_c, ts_d, ts_ci)
+
+        lib.init_par_cInpF_decF_ekf_subopt_MPC_model2(self._conp, self._ekfp, self._decp, self._cinp, u0, u1, ts_ekf, ts_c, ts_d, ts_ci)
 
         #allocate memory for internal controller variables:
         lib.allocate_memory_controller(self._prjs, self._conp)

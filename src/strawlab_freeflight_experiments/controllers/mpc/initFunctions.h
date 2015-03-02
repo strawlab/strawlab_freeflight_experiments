@@ -7,6 +7,6 @@
 
 #include "calculateInput.h"
 
-void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp);
+void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double, double, double, double, double, double);
 
 void allocate_memory_controller (projGrState_t *projGrState, contrp_t *cp);

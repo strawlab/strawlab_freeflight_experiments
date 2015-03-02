@@ -63,6 +63,10 @@ class Node(nodelib.node.Experiment):
     TS_CONTROL      = 0.05
     TS_EKF          = 0.005
 
+    #original defaults
+    U0 = -1000.0
+    U1 = +1000.0
+
     def __init__(self, args):
         super(Node, self).__init__(args=args,
                                    state=("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","j","w","path_theta","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4"))
@@ -100,7 +104,7 @@ class Node(nodelib.node.Experiment):
         #setup the MPC controller
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = MPC.MPC(ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control = MPC.MPC(u0=self.U0,u1=self.U1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
             #rotation_rate = omega
 
