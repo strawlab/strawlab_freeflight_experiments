@@ -62,6 +62,11 @@ class Node(nodelib.node.Experiment):
     TS_CONTROL      = 0.0125
     TS_EKF          = 0.005
 
+    #original defaults
+    K0 = -0.1
+    K1 = -1.2
+    K2 = -2.1
+
     def __init__(self, args):
         super(Node, self).__init__(args=args,
                                    state=("rotation_rate","trg_x","trg_y","trg_z","cyl_x","cyl_y","cyl_r","ratio","v_offset_rate","w","ekf_en","control_en","t2_5ms","xest0","xest1","xest2","xest3","xest4","zeta0","zeta1","xi0","xi1","xi2","xi3","intstate0","intstate1"))
@@ -99,7 +104,7 @@ class Node(nodelib.node.Experiment):
         #setup the MPC controller in switch conditions
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = TNF.TNF(k0=-0.1, k1=-1.2, k2=-2.1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control = TNF.TNF(k0=self.K0,k1=self.K1,k2=self.K2,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
