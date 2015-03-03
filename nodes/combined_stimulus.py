@@ -235,11 +235,13 @@ class Node(nodelib.node.Experiment):
         if could_perturb:
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
-                                             now, framenumber, currently_locked_obj_id):
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id):
 
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                             now, framenumber, currently_locked_obj_id)
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id)
 
                 #show the post at the start
                 if state=='starting':

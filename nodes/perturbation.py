@@ -180,14 +180,17 @@ class Node(nodelib.node.Experiment):
         if self.is_perturbation_experiment('z'):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
-                                             now, framenumber, currently_locked_obj_id):
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id):
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                             now, framenumber, currently_locked_obj_id)
-
-                if state=='finished':
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id)
+                if state=='starting':
+                    rospy.loginfo("'%s' perturbation starting" % self.perturber.what)
+                elif state=='finished':
                     self.drop_lock_on(blacklist=True)
-                    rospy.loginfo("'z' perturbation finished")
+                    rospy.loginfo("'%s' perturbation finished" % self.perturber.what)
 
                 return rate
 
@@ -216,16 +219,20 @@ class Node(nodelib.node.Experiment):
         if could_perturb:
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
-                                             now, framenumber, currently_locked_obj_id):
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id):
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                             now, framenumber, currently_locked_obj_id)
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id)
 
-                if state=='finished':
+                if state=='starting':
+                    rospy.loginfo("'%s' perturbation starting" % self.perturber.what)
+                elif state=='finished':
                     self.drop_lock_on(blacklist=True)
                     if abs(fly_z-self.z_target) < 0.1:
                         self.save_cool_condition(currently_locked_obj_id, note="Fly %s completed perturbation" % currently_locked_obj_id)
-                    rospy.loginfo('perturbation finished')
+                    rospy.loginfo("'%s' perturbation finished" % self.perturber.what)
 
                 return rate, self.trg_x,self.trg_y
 

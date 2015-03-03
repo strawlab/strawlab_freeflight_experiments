@@ -64,6 +64,8 @@ def is_perturb_condition_string(desc):
     return get_perturb_class(desc.rsplit('/',1)[-1]) != NoPerturb
 
 def get_perturb_object(perturb_descriptor, debug=False):
+    if not perturb_descriptor:
+        return NoPerturb()
     cls = get_perturb_class(perturb_descriptor, debug=debug)
     desc,criteria = cls.split_perturb_descriptor(perturb_descriptor)
     return cls(desc,criteria)
@@ -72,22 +74,42 @@ class Perturber:
 
     DEFAULT_CRITERIA = "0.4|0|1"
 
+    CRITERIA_TYPE_NONE  = 'none'
+    CRITERIA_TYPE_RATIO = 'ratio'
+    CRITERIA_TYPE_TIME  = 'time'
+
     is_single_valued = True
+    what = '?'
 
     def __init__(self, descriptor, criteria, duration):
+        """
+        descriptor is implementation specific and is opaque to
+        us (except for the first component that says what we perturb)
+
+        criteria specifies when the perturbation starts
+        """
         name_parts = descriptor.split('|')[0].split('_')
         self.what = '_'.join(name_parts[1:])
 
         self.descriptor = descriptor
 
-        ratio_min,chunks = criteria.split('|',1)
-        if chunks:
-            self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
+        if not criteria:
+            self.criteria_type = self.CRITERIA_TYPE_NONE
+        elif criteria[0] == 't':
+            self.criteria_type = self.CRITERIA_TYPE_TIME
+            self.time_min = float(criteria[1:])
         else:
-            self.in_ratio_funcs = []
+            self.criteria_type = self.CRITERIA_TYPE_RATIO
+
+            ratio_min,chunks = criteria.split('|',1)
+            if chunks:
+                self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
+            else:
+                self.in_ratio_funcs = []
+
+            self.ratio_min = float(ratio_min)
 
         self.duration = float(duration)
-        self.ratio_min = float(ratio_min)
         self.reset()
 
     def __hash__(self):
@@ -144,17 +166,25 @@ class Perturber:
         self._frame0 = 0
         self._started = False
 
-    def should_perturb(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, ratio, ratio_total, now, framenumber, currently_locked_obj_id):
+    def _should_perturb(self, ratio, ratio_total, flight_time):
+        if self.criteria_type == self.CRITERIA_TYPE_TIME:
+            return flight_time >= self.time_min
+        elif self.criteria_type == self.CRITERIA_TYPE_RATIO:
+            should = False
+            if ratio_total > self.ratio_min:
+                for f in self.in_ratio_funcs:
+                    should |= f(ratio)
+            return should
+        else:
+            return False
+
+    def should_perturb(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, ratio, ratio_total, now, flight_time, framenumber, currently_locked_obj_id):
         if self._started:
             return (now - self.now) < self.duration
 
-        should = False
-        if ratio_total > self.ratio_min:
-            for f in self.in_ratio_funcs:
-                should |= f(ratio)
-
-            if not self._started and should:
-                self._start(now, framenumber, currently_locked_obj_id)
+        should = self._should_perturb(ratio, ratio_total, flight_time)
+        if not self._started and should:
+            self._start(now, framenumber, currently_locked_obj_id)
 
         if should:
             return (now - self.now) < self.duration
@@ -244,7 +274,7 @@ class PerturberStep(Perturber):
     def __repr__(self):
         return "<PerturberStep what=%s val=%.1f dur=%.1fs>" % (self.what, self.value, self.duration)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -328,7 +358,7 @@ class PerturberStepN(Perturber):
         return description, criteria
 
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -411,7 +441,7 @@ class _PerturberInterpolation(Perturber):
                                   bounds_error=False,
                                   fill_value=0.0)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         dt = now - self.now
         finished = dt >= (0.99*self.duration)
@@ -618,7 +648,7 @@ class PerturberRBS(Perturber):
 
         return t,v
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -801,6 +831,6 @@ if __name__ == "__main__":
             f = plt.figure(repr(obj), figsize=(8,8))
             _plot(f,obj)
             obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
-            print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1),condition
+            print obj,obj.step(0,0,0,0,0,0, now=0.3074, flight_time=1, framenumber=17, currently_locked_obj_id=1),condition
 
     plt.show()
