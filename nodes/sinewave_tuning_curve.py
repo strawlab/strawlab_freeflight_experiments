@@ -177,7 +177,7 @@ class Node(nodelib.node.Experiment):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
+            self.perturber = sfe_perturb.get_perturb_object(perturb_desc)
 
         self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
 

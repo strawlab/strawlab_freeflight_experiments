@@ -178,7 +178,7 @@ class Node(nodelib.node.Experiment):
 
         if self.condition.is_type('perturbation'):
             perturb_desc = str(self.condition['perturb_desc'])
-            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
+            self.perturber = sfe_perturb.get_perturb_object(perturb_desc)
 
         if self.condition.is_type('conflict'):
             model_descriptor = str(self.condition['model_descriptor'])

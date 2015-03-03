@@ -30,13 +30,11 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
             #was assumed to be the last element in the condition string
             perturb_desc = cond.split("/")[-1]
 
-        pklass = sfe_perturb.get_perturb_class(perturb_desc)
+        step_obj = sfe_perturb.get_perturb_object(perturb_desc)
 
         #only plot perturbations
-        if pklass == sfe_perturb.NoPerturb:
+        if isinstance(step_obj,sfe_perturb.NoPerturb):
             continue
-
-        step_obj = pklass(perturb_desc)
 
         perturbations[cond] = {}
         perturbation_objects[cond] = step_obj
