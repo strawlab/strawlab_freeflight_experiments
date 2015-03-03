@@ -524,9 +524,9 @@ class PerturberTone(_PerturberInterpolation):
         tone_WHAT|magnitude|duration|phase_offset|freq
 
         magnitude is the amplitude of the signal
-        duration is its duration
-        phase_offset
-        freq is the tone frequency
+        duration is its duration (seconds)
+        phase_offset (degrees)
+        freq is the tone frequency (hz)
 
         """
         if not descriptor.startswith('tone'):
