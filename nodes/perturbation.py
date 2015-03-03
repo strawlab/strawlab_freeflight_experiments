@@ -149,10 +149,6 @@ class Node(nodelib.node.Experiment):
         self.rad_locked = float(self.condition['radius_when_locked'])
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = 0.7
-        if self.condition.is_type('perturbation'):
-            perturb_desc = str(self.condition['perturb_desc'])
-        else:
-            perturb_desc = None
 
         self.log.cyl_r = self.rad_locked
 
@@ -165,7 +161,8 @@ class Node(nodelib.node.Experiment):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-            self.perturber = sfe_perturb.get_perturb_object(perturb_desc)
+        if self.condition.is_type('perturbation'):
+            self.perturber = sfe_perturb.get_perturb_object_from_condition(self.condition)
 
         self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
 

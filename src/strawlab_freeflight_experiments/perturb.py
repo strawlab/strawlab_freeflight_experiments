@@ -70,6 +70,15 @@ def get_perturb_object(perturb_descriptor, debug=False):
     desc,criteria = cls.split_perturb_descriptor(perturb_descriptor)
     return cls(desc,criteria)
 
+def get_perturb_object_from_condition(cond_object):
+    try:
+        desc = cond_object['perturb_desc']
+        crit = cond_object['perturb_criteria']
+        cls = get_perturb_class(desc)
+        return cls(desc,crit)
+    except KeyError:
+        return get_perturb_object(cond_object.get('perturb_desc'))
+
 class Perturber:
 
     DEFAULT_CRITERIA = "0.4|0|1"
