@@ -16,9 +16,11 @@ import strawlab.constants
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
+import analysislib.fixes
 import analysislib.plots as aplt
 import analysislib.curvature as acurve
 import analysislib.util as autil
+
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
@@ -47,6 +49,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--test-filter-args",
         help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
+    parser.add_argument(
+        "--ylimits", help="y-axis limits name:min:max,[name2:min2:max2]")
+
     
     args = parser.parse_args()
 
@@ -78,10 +83,21 @@ if __name__=='__main__':
     else:
         filt_args = None
 
+    cmdline_limits = {}
+    if args.ylimits:
+        for field in args.ylimits.split(','):
+            n,m,M = field.split(":")
+            cmdline_limits[n] = (float(m),float(M))
+
     anims = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
         for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
             if obj_id in obj_ids:
+
+                rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
+
+                ylimits = {"dtheta":(-20,20),"rcurve":(0,1), "rotation_rate":(-rrate_max_abs,rrate_max_abs)}
+                ylimits.update(cmdline_limits)
 
                 name = analysislib.combine.safe_condition_string(current_condition)
 
@@ -93,6 +109,7 @@ if __name__=='__main__':
                     anim = aplt.animate_infinity(
                             combine, args,
                             df,dt,
+                            ylimits=ylimits,
                             plot_axes=plot_axes,
                             title=title,
                             show_trg=args.show_target and ('trg_x' in df.columns),
@@ -103,6 +120,7 @@ if __name__=='__main__':
                     aplt.plot_infinity(
                             combine, args,
                             df,dt,
+                            ylimits=ylimits,
                             name=filename,
                             plot_axes=plot_axes,
                             title=title,
