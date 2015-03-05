@@ -51,9 +51,6 @@ TIMEOUT             = 0.5
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
-
-
 class Node(nodelib.node.Experiment):
 
     #from environmentSfct
