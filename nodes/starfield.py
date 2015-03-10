@@ -30,7 +30,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
-MAX_ROTATION_RATE   = 10.0      # may not be the optimal value but gives excellent results with a rotational gain equal to 3
+MAX_ROTATION_RATE   = 15.0      # may not be the optimal value but gives excellent results with a rotational gain equal to 3
 
 ADVANCE_RATIO       = 1/100.0
 
