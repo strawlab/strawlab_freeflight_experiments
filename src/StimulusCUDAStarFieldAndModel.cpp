@@ -261,7 +261,7 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 2000;
+    unsigned int numPtcls = 2500;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
