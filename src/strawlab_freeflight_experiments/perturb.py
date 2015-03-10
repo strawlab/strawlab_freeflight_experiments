@@ -719,6 +719,11 @@ class PerturberIDINPUT(_PerturberInterpolation):
             self.f0 = 0.0
             self.f1 = float(b1)
 
+        if self.type == 'sine':
+            self.band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
+        else:
+            self.band = [0, float(b1)]
+
         #look for the cached data object
         fn = '_'.join([str(i) for i in ('idinput',self.type,dur,b0,b1,value,s0,s1,s2,seed)])
         fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
@@ -738,11 +743,6 @@ class PerturberIDINPUT(_PerturberInterpolation):
                 except ImportError:
                     raise ValueError("%s not cached and matlab not available" % fn)
 
-            if self.type == 'sine':
-                band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
-            else:
-                band = [0, float(b1)]
-
             lvls = [-self.value,self.value]
             if s0 and s1 and s2:
                 sindata = [int(s0),int(s1),int(s2)]
@@ -752,7 +752,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
             N = self.t1*100*OS
 
             _mlab.rng(int(seed))
-            u = _mlab.idinput(int(N),self.type,band,lvls,sindata,nout=1)
+            u = _mlab.idinput(int(N),self.type,self.band,lvls,sindata,nout=1)
             w = np.squeeze(u.T)
 
             t = np.linspace(0, self.t1, len(w))
@@ -762,7 +762,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
     def __repr__(self):
-        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.f0,self.f1)
+        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs bw=%f...%f f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
