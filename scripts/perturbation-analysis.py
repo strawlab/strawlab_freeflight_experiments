@@ -124,10 +124,18 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                     ax.set_ylabel(to_plot)
                     ax.set_xlabel('t (s)')
 
-                    #plot from one second before to one second after
+                    #plot from one second before to one second after if the perturbation
                     step_obj.plot(ax2, t_extra=1, ylabel=str(step_obj), linestyle='-')
                     t0,t1 = step_obj.get_time_limits()
-                    t0 -= 1; t1 += 1
+
+                    #if the perturbation is more than 3x longer than the longest trial
+                    #then don't adjust axis limits
+                    if t1 > (5*np.nanmax(m['talign'].values)):
+                        t1 = np.nanmax(m['talign'].values) + 1
+                        t0 = np.nanmin(m['talign'].values) - 1
+                    else:
+                        #otherwise plot the whole perturbation
+                        t0 -= 1; t1 += 1
                     ax.set_xlim(t0,t1)
 
                     if "ylim" in perturbation_options[to_plot]:
