@@ -31,9 +31,11 @@ if __name__ == "__main__":
         adir = os.path.join(fm.get_plot_dir(), args.type)
 
         if os.path.isdir(adir):
-            if not args.dry_run:
+            if args.dry_run:
+                print "Will remove %s" % adir
+            else:
                 shutil.rmtree(adir)
                 print "Removed %s" % adir
-            print "Will remove %s" % adir
+    
 
 
