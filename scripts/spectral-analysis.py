@@ -13,9 +13,6 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
-import pymatbridge
-import control.pzmap
-
 import matplotlib.pyplot as plt
 
 import roslib
@@ -33,6 +30,7 @@ import analysislib.combine as acombine
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 import strawlab_freeflight_experiments.frequency as sfe_frequency
 import strawlab_freeflight_experiments.sid as sfe_sid
+import strawlab_freeflight_experiments.matlab as sfe_matlab
 
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
@@ -78,8 +76,7 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args)
 
-    mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
-    mlab.start()
+    mlab = sfe_matlab.get_mlab_instance(args.show)
 
     #we use underscores etc in our matlab variable titles, etc, so turn them off
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
