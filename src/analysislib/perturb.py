@@ -21,7 +21,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
         condition_conf = combine.get_condition_configuration(combine.get_condition_name(cond))
         if condition_conf:
             try:
-                perturb_desc = condition_conf['perturb_desc']
+                step_obj = sfe_perturb.get_perturb_object_from_condition(condition_conf)
             except KeyError:
                 #new style yaml experiment, not a perturbation condition
                 continue
@@ -29,8 +29,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
             #backwards compatibility for old pre-yaml experiments where the perturb_descripor
             #was assumed to be the last element in the condition string
             perturb_desc = cond.split("/")[-1]
-
-        step_obj = sfe_perturb.get_perturb_object(perturb_desc)
+            step_obj = sfe_perturb.get_perturb_object(perturb_desc)
 
         #only plot perturbations
         if isinstance(step_obj,sfe_perturb.NoPerturb):
