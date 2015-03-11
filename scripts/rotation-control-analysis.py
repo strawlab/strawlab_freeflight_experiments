@@ -38,15 +38,16 @@ def plot_control_action(combine, args, name=None):
 
         all_data[current_condition] = np.hstack(data)
 
-    with aplt.mpl_fig(name,args) as fig:
-        ax = fig.add_subplot(1,1,1)
-        for c in all_data:
-            ax.hist(all_data[c],bins=20,normed=True,histtype='step',label=combine.get_condition_name(c))
-        ax.legend(numpoints=1,
-                  prop={'size':aplt.LEGEND_TEXT_SML})
-        ax.set_title('control action')
-        ax.set_xlabel('mean action per trial (AU)')
-        ax.set_ylabel('probability')
+    if all_data:
+        with aplt.mpl_fig(name,args) as fig:
+            ax = fig.add_subplot(1,1,1)
+            for c in all_data:
+                ax.hist(all_data[c],bins=20,normed=True,histtype='step',label=combine.get_condition_name(c))
+            ax.legend(numpoints=1,
+                      prop={'size':aplt.LEGEND_TEXT_SML})
+            ax.set_title('control action')
+            ax.set_xlabel('mean action per trial (AU)')
+            ax.set_ylabel('probability')
 
 def plot_rr(combine, args, name=None):
     if name is None:
@@ -54,7 +55,6 @@ def plot_rr(combine, args, name=None):
     results,dt = combine.get_results()
 
     all_data = {}
-
     for i,(current_condition,r) in enumerate(results.iteritems()):
         if not r['count']:
             continue
@@ -70,15 +70,16 @@ def plot_rr(combine, args, name=None):
 
         all_data[current_condition] = np.hstack(data)
 
-    with aplt.mpl_fig(name,args) as fig:
-        ax = fig.add_subplot(1,1,1)
-        for c in all_data:
-            ax.hist(all_data[c],bins=50,normed=True,histtype='step',label=combine.get_condition_name(c))
-        ax.legend(numpoints=1,
-                  prop={'size':aplt.LEGEND_TEXT_SML})
-        ax.set_title('control action')
-        ax.set_xlabel('absolute rotation rate (rad/s)')
-        ax.set_ylabel('probability')
+    if all_data:
+        with aplt.mpl_fig(name,args) as fig:
+            ax = fig.add_subplot(1,1,1)
+            for c in all_data:
+                ax.hist(all_data[c],bins=50,normed=True,histtype='step',label=combine.get_condition_name(c))
+            ax.legend(numpoints=1,
+                      prop={'size':aplt.LEGEND_TEXT_SML})
+            ax.set_title('control action')
+            ax.set_xlabel('absolute rotation rate (rad/s)')
+            ax.set_ylabel('probability')
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -103,8 +104,10 @@ if __name__=='__main__':
     c2 = combine.filter_trials(lambda _cond, _df, _start_obj_id, _uuid, _dt: combine.get_condition_object(_cond).is_type('rotation'))
     ncond = c2.get_num_conditions()
 
-    aplt.plot_histograms(c2, args, figncols=ncond)
-    aplt.plot_traces(c2, args, figncols=ncond, in3d=False)
+    if ncond:
+        #check there were some rotation experiments
+        aplt.plot_histograms(c2, args, figncols=ncond)
+        aplt.plot_traces(c2, args, figncols=ncond, in3d=False)
 
     if args.show:
         aplt.show_plots()
