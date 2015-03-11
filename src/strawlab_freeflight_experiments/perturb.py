@@ -154,9 +154,10 @@ class Perturber:
             return np.nan,np.nan
 
     def get_perturb_range_identifier(self, v):
-        for i,f in enumerate(self.in_ratio_funcs):
-            if f(v):
-                return i
+        if self.criteria_type == self.CRITERIA_TYPE_RATIO:
+            for i,f in enumerate(self.in_ratio_funcs):
+                if f(v):
+                    return i
         return -1
 
     def completed_perturbation(self, t, thresh=0.98):
