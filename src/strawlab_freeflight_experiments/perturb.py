@@ -763,7 +763,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
     def __repr__(self):
-        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs bw=%f...%f f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
+        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs bw=%.2f...%.2f f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
