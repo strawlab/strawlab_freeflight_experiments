@@ -14,6 +14,9 @@ if __name__ == "__main__":
         '-t', '--type', required=True,
         help='delete the plots from this experiment type')
     parser.add_argument(
+        '-o', '--outdir',
+        help='directory to save plots')
+    parser.add_argument(
         '--uuid', type=str, nargs='*', required=True,
         help='experiment uuids')
     parser.add_argument('-d','--dry-run', default=False, action='store_true',
@@ -25,16 +28,20 @@ if __name__ == "__main__":
         parser.error("--type must end with '.py'")
 
     for u in args.uuid:
-        fm = autodata.files.FileModel()
-        fm.select_uuid(u)
+        if args.outdir:
+            plotdir = os.path.abspath(os.path.expanduser(args.outdir))
+        else:
+            fm = autodata.files.FileModel()
+            fm.select_uuid(u)
+            plotdir = fm.get_plot_dir()
 
-        adir = os.path.join(fm.get_plot_dir(), args.type)
+        adir = os.path.join(plotdir, args.type)
 
         if os.path.isdir(adir):
             if args.dry_run:
                 print "Will remove %s" % adir
             else:
-                shutil.rmtree(adir)
+                shutil.rmtree(adir, ignore_errors=True)
                 print "Removed %s" % adir
     
 
