@@ -1,4 +1,6 @@
 import datetime
+import os.path
+
 import numpy as np
 import numpy.random
 import scipy.signal
@@ -47,6 +49,8 @@ def get_perturb_class(perturb_descriptor, debug=False):
             return PerturberTone
         elif name == 'rbs':
             return PerturberRBS
+        elif name == 'idinput':
+            return PerturberIDINPUT
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
@@ -56,23 +60,65 @@ def get_perturb_class(perturb_descriptor, debug=False):
 
     return NoPerturb
 
+def is_perturb_condition_string(desc):
+    return get_perturb_class(desc.rsplit('/',1)[-1]) != NoPerturb
+
+def get_perturb_object(perturb_descriptor, debug=False):
+    if not perturb_descriptor:
+        return NoPerturb()
+    cls = get_perturb_class(perturb_descriptor, debug=debug)
+    desc,criteria = cls.split_perturb_descriptor(perturb_descriptor)
+    return cls(desc,criteria)
+
+def get_perturb_object_from_condition(cond_object):
+    try:
+        desc = cond_object['perturb_desc']
+        crit = cond_object['perturb_criteria']
+        cls = get_perturb_class(desc)
+        return cls(desc,crit)
+    except KeyError:
+        return get_perturb_object(cond_object.get('perturb_desc'))
+
 class Perturber:
 
-    DEFAULT_RATIO_MIN = "0.4"
-    DEFAULT_CHUNK_DESC = "0|1"
+    DEFAULT_CRITERIA = "0.4|0|1"
+
+    CRITERIA_TYPE_NONE  = 'none'
+    CRITERIA_TYPE_RATIO = 'ratio'
+    CRITERIA_TYPE_TIME  = 'time'
 
     is_single_valued = True
+    what = '?'
 
-    def __init__(self, chunks, ratio_min, duration, descriptor):
+    def __init__(self, descriptor, criteria, duration):
+        """
+        descriptor is implementation specific and is opaque to
+        us (except for the first component that says what we perturb)
+
+        criteria specifies when the perturbation starts
+        """
+        name_parts = descriptor.split('|')[0].split('_')
+        self.what = '_'.join(name_parts[1:])
+
         self.descriptor = descriptor
 
-        if chunks:
-            self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
+        if not criteria:
+            self.criteria_type = self.CRITERIA_TYPE_NONE
+        elif criteria[0] == 't':
+            self.criteria_type = self.CRITERIA_TYPE_TIME
+            self.time_min = float(criteria[1:])
         else:
-            self.in_ratio_funcs = []
+            self.criteria_type = self.CRITERIA_TYPE_RATIO
+
+            ratio_min,chunks = criteria.split('|',1)
+            if chunks:
+                self.in_ratio_funcs = get_ratio_ragefuncs( *map(float,chunks.split('|')) )
+            else:
+                self.in_ratio_funcs = []
+
+            self.ratio_min = float(ratio_min)
 
         self.duration = float(duration)
-        self.ratio_min = float(ratio_min)
         self.reset()
 
     def __hash__(self):
@@ -87,6 +133,26 @@ class Perturber:
     def _get_duration_discrete(self, Fs, thresh=0.98):
         return int(self._get_duration(thresh)*Fs)
 
+    @classmethod
+    def split_perturb_descriptor(cls, desc):
+        bits = desc.split("|",cls.N_PARAMS)
+        description = "|".join(bits[:cls.N_PARAMS])
+        criteria = bits[cls.N_PARAMS]
+        return description, criteria
+
+    def get_time_limits(self):
+        raise NotImplementedError
+
+    def get_value_limits(self):
+        raise NotImplementedError
+
+    def get_frequency_limits(self):
+        try:
+            return self.f0,self.f1
+        except AttributeError:
+            #not present in subclasses
+            return np.nan,np.nan
+
     def get_perturb_range_identifier(self, v):
         for i,f in enumerate(self.in_ratio_funcs):
             if f(v):
@@ -95,6 +161,9 @@ class Perturber:
 
     def completed_perturbation(self, t, thresh=0.98):
         return t >= self._get_duration(thresh)
+
+    def completed_perturbation_pct(self, t, thresh=0.98):
+        return 100.0*t / self.duration
 
     def completed_perturbation_discrete(self, lidx, fidx, Fs, thresh=0.98):
         return (lidx > fidx) and ((lidx - fidx) > self._get_duration_discrete(Fs,thresh))
@@ -106,17 +175,25 @@ class Perturber:
         self._frame0 = 0
         self._started = False
 
-    def should_perturb(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, ratio, ratio_total, now, framenumber, currently_locked_obj_id):
+    def _should_perturb(self, ratio, ratio_total, flight_time):
+        if self.criteria_type == self.CRITERIA_TYPE_TIME:
+            return flight_time >= self.time_min
+        elif self.criteria_type == self.CRITERIA_TYPE_RATIO:
+            should = False
+            if ratio_total > self.ratio_min:
+                for f in self.in_ratio_funcs:
+                    should |= f(ratio)
+            return should
+        else:
+            return False
+
+    def should_perturb(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, ratio, ratio_total, now, flight_time, framenumber, currently_locked_obj_id):
         if self._started:
             return (now - self.now) < self.duration
 
-        should = False
-        if ratio_total > self.ratio_min:
-            for f in self.in_ratio_funcs:
-                should |= f(ratio)
-
-            if not self._started and should:
-                self._start(now, framenumber, currently_locked_obj_id)
+        should = self._should_perturb(ratio, ratio_total, flight_time)
+        if not self._started and should:
+            self._start(now, framenumber, currently_locked_obj_id)
 
         if should:
             return (now - self.now) < self.duration
@@ -158,13 +235,14 @@ class Perturber:
 
 class NoPerturb(Perturber):
 
-    DEFAULT_DESC = "noperturb"
+    DEFAULT_DESC = "noperturb_WHAT"
+    N_PARAMS = 1
 
     progress = -1
     what = None
 
-    def __init__(self, *args):
-        Perturber.__init__(self, '', 0, 0, self.DEFAULT_DESC)
+    def __init__(self, descriptor='', criteria=''):
+        Perturber.__init__(self, descriptor, criteria, 0)
     def __repr__(self):
         return "<NoPerturb>"
     def step(self, *args, **kwargs):
@@ -175,40 +253,37 @@ class NoPerturb(Perturber):
         return 0,0
     def get_value_limits(self):
         return 0,0
+    def get_frequency_limits(self):
+        pass
+    def get_frequency_limits(self):
+        return np.nan, np.nan
 
 class PerturberStep(Perturber):
 
     DEFAULT_DESC = "step_WHAT|1.8|3"
+    N_PARAMS = 3
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        'step_WHAT'|value|duration|ratio_min|a|b|c|d|e|f
+        'step_WHAT'|value|duration
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
-
         value is the magnitude of the step
-
         duration is the duration of the step.
-
-        ratio_min is the minimum amount of the path the target must have flown
-
-        a,b c,d e,f are pairs or ranges in the ratio
         """
-        name,value,duration,ratio_min,chunks = descriptor.split('|', 4)
-        name_parts = name.split('_')
-        me = name_parts[0]
-        self.what = '_'.join(name_parts[1:])
-        if me != 'step':
+        if not descriptor.startswith('step'):
             raise Exception("Incorrect PerturberStep configuration")
+
+        name,value,duration = descriptor.split('|')
         self.value = float(value)
 
-        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
+        Perturber.__init__(self, descriptor, criteria, duration)
 
     def __repr__(self):
         return "<PerturberStep what=%s val=%.1f dur=%.1fs>" % (self.what, self.value, self.duration)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -244,51 +319,55 @@ class PerturberStep(Perturber):
     def get_value_limits(self):
         return min(self.value,0),max(self.value,0)
 
+    def get_frequency_limits(self):
+        return np.nan, np.nan
+
 class PerturberStepN(Perturber):
 
     DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|1.8|0.9|3"
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        'stepn_WHAT'|n_args|value0...valuen-1|duration|ratio_min|a|b|c|d|e|f
+        'stepn_WHAT1_WHAT2'|n_args|value0...valuen-1|duration
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
-
         n_args is the number of arguments
-
         value0, value1, ... are the magnitudes
-
         duration is the duration of the step.
-
-        ratio_min is the minimum amount of the path the target must have flown
-
-        a,b c,d e,f are pairs or ranges in the ratio
         """
+        if not descriptor.startswith('stepn'):
+            raise Exception("Incorrect PerturberStepN configuration")
+
         parts = descriptor.split('|')
         name,n_args=parts[:2]
         n_args = int(n_args)
         values = parts[2:2+n_args]
-        duration,ratio_min,chunks = parts[2+n_args], parts[2+n_args+1], parts[2+n_args+2:]
-        chunks = '|'.join(chunks)
-        name_parts = name.split('_')
-        me = name_parts[0]
-
-        self.what_parts = name_parts[1:]
-        self.what = '_'.join(self.what_parts)
-
-        if me != 'stepn':
-            raise Exception("Incorrect PerturberStepN configuration")
+        duration = parts[2+n_args]
         self.values = map(float,values)
 
         self.is_single_valued = len(self.values) == 1
 
-        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
+        Perturber.__init__(self, descriptor, criteria, duration)
+
+        self.what_parts = name.split('_')[1:]
+        self.what = '_'.join(self.what_parts)
 
     def __repr__(self):
         return "<PerturberStepN what=%r values=%s dur=%.1fs>" % (self.what, self.values, self.duration)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    @classmethod
+    def split_perturb_descriptor(cls, desc):
+        bits = desc.split('|')
+        n_args = int(bits[1])
+        total_args = 1+1+n_args+1
+        bits = desc.split("|",total_args)
+        description = "|".join(bits[:total_args])
+        criteria = bits[total_args]
+        return description, criteria
+
+
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -349,6 +428,9 @@ class PerturberStepN(Perturber):
 
         self._plot_ylabel(ax, ylabel, **plot_kwargs)
 
+    def get_frequency_limits(self):
+        return np.nan, np.nan
+
 class _PerturberInterpolation(Perturber):
     """
     Base class for perturbation experiments that consist of a waveform against
@@ -356,8 +438,8 @@ class _PerturberInterpolation(Perturber):
     frequency
     """
 
-    def __init__(self, t, w, chunks, ratio_min, duration, descriptor):
-        Perturber.__init__(self, chunks, ratio_min, self.t1, descriptor)
+    def __init__(self, descriptor, criteria, duration, t, w):
+        Perturber.__init__(self, descriptor, criteria, duration)
         self._t = t
         self._w = w
 
@@ -368,7 +450,7 @@ class _PerturberInterpolation(Perturber):
                                   bounds_error=False,
                                   fill_value=0.0)
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         dt = now - self.now
         finished = dt >= (0.99*self.duration)
@@ -395,25 +477,22 @@ class _PerturberInterpolation(Perturber):
 class PerturberChirp(_PerturberInterpolation):
 
     DEFAULT_DESC = "chirp_WHAT|linear|1.8|3|1.0|5.0"
+    N_PARAMS = 6
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        chirp_WHAT|method|magnitude|duration|f0|f1|ratio_min|a|b|c|d|e|f
+        chirp_WHAT|method|magnitude|duration|f0|f1
 
         method is 'linear','quadratic','logarithmic'
         magnitude is the amplitude of the signal
         duration is its duration
         f0 and f1 are the frequency limites the signal changes between
-        ratio_min is the minimum amount of the path the target must have flown
-        a,b c,d e,f are pairs or ranges in the ratio
         """
-        name,method,value,t1,f0,f1,ratio_min,chunks = descriptor.split('|', 7)
-        name_parts = name.split('_')
-        me = name_parts[0]
-        if me != 'chirp':
+        if not descriptor.startswith('chirp'):
             raise Exception("Incorrect PerturberChirp configuration %s" % descriptor)
-        self.what = '_'.join(name_parts[1:])
+
+        name,method,value,t1,f0,f1 = descriptor.split('|')
         self.method = str(method)
         self.value = float(value)
         self.t1 = float(t1)
@@ -429,7 +508,7 @@ class PerturberChirp(_PerturberInterpolation):
                            phi=90,
                            method=self.method) * self.value
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
+        _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
     def __repr__(self):
         return "<PerturberChirp %s what=%s val=%.1f dur=%.1fs f=%.1f-%.1f>" % (self.method,self.what,self.value,self.duration,self.f0,self.f1)
@@ -437,35 +516,32 @@ class PerturberChirp(_PerturberInterpolation):
 class PerturberTone(_PerturberInterpolation):
 
     DEFAULT_DESC = "tone_WHAT|1.8|3|0|3"
+    N_PARAMS = 5
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        tone_WHAT|magnitude|duration|phase_offset|freq|ratio_min|a|b|c|d|e|f
+        tone_WHAT|magnitude|duration|phase_offset|freq
 
         magnitude is the amplitude of the signal
-        duration is its duration
-        phase_offset
-        freq is the tone frequency
-        ratio_min is the minimum amount of the path the target must have flown
-        a,b c,d e,f are pairs or ranges in the ratio
+        duration is its duration (seconds)
+        phase_offset (degrees)
+        freq is the tone frequency (hz)
 
         """
-        name,value,t1,po,f0,ratio_min,chunks = descriptor.split('|', 6)
-        name_parts = name.split('_')
-        me = name_parts[0]
-        if me != 'tone':
+        if not descriptor.startswith('tone'):
             raise Exception("Incorrect PerturberTone configuration")
-        self.what = '_'.join(name_parts[1:])
+
+        name,value,t1,po,f0 = descriptor.split('|')
         self.value = float(value)
         self.t1 = float(t1)
-        self.f0 = float(f0)
+        self.f0 = self.f1 = float(f0)
         self.po = float(po)
 
         t = np.linspace(0, self.t1, int(10*100*self.t1) + 1)
         w = abs(self.value) * np.sin((t*self.f0*2*np.pi) + np.deg2rad(self.po))
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
+        _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
     def __repr__(self):
         return "<PerturberTone what=%s val=%.1f dur=%.1fs f=%.1f p=%.1f>" % (self.what,self.value,self.duration,self.f0,self.po)
@@ -473,28 +549,28 @@ class PerturberTone(_PerturberInterpolation):
 class PerturberMultiTone(_PerturberInterpolation):
 
     DEFAULT_DESC = "multitone_WHAT|rudinshapiro|1.8|3|1|5|"
+    N_PARAMS = 7
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        multitone_WHAT|type|magnitude|duration|tone0|Ntones|seed|ratio_min|a|b|c|d|e|f
+        multitone_WHAT|type|magnitude|duration|tone0|Ntones|seed
 
         seed is the random seen (can be omitted)
-        ratio_min is the minimum amount of the path the target must have flown
-        a,b c,d e,f are pairs or ranges in the ratio
         """
-        name,method,value,t1,tone0,Ntones,seed,ratio_min,chunks = descriptor.split('|', 8)
-        name_parts = name.split('_')
-        me = name_parts[0]
-        if me != 'multitone':
+        if not descriptor.startswith('multitone'):
             raise Exception("Incorrect PerturberMultiTone configuration")
-        self.what = '_'.join(name_parts[1:])
+
+        name,method,value,t1,tone0,Ntones,seed = descriptor.split('|')
         self.method = str(method)
         self.value = float(value)
         self.t1 = float(t1)
         self.tone0 = int(tone0)
         self.Ntones = int(Ntones)
         self.seed = str(seed) if seed else None
+
+        self.f0 = float(tone0)
+        self.f1 = self.f0 + float(Ntones) - 1
 
         #oversample by 10 times the framerate (100)
         fs = 10*100
@@ -509,7 +585,7 @@ class PerturberMultiTone(_PerturberInterpolation):
                                         ns,
                                         self.value)
 
-        _PerturberInterpolation.__init__(self, t, w, chunks, ratio_min, self.t1, descriptor)
+        _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
@@ -517,35 +593,27 @@ class PerturberMultiTone(_PerturberInterpolation):
 class PerturberRBS(Perturber):
 
     DEFAULT_DESC = "rbs_WHAT|-0.4|0.4|0.03|3|"
+    N_PARAMS = 6
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, criteria):
         """
         descriptor is
-        'rbs_WHAT'|value_min|value_max|bw|duration|seed|ratio_min|a|b|c|d|e|f
+        'rbs_WHAT'|value_min|value_max|bw|duration|seed
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
-
         value is the magnitude of the step
-
         duration is the duration of the step.
-
-        ratio_min is the minimum amount of the path the target must have flown
-
-        a,b c,d e,f are pairs or ranges in the ratio
         """
-        name,value_min,value_max,bw,duration,seed,ratio_min,chunks = descriptor.split('|', 7)
-        name_parts = name.split('_')
-        me = name_parts[0]
-        self.what = '_'.join(name_parts[1:])
-        if me != 'rbs':
+        if not descriptor.startswith('rbs'):
             raise Exception("Incorrect PerturberRBS configuration")
 
+        name,value_min,value_max,bw,duration,seed = descriptor.split('|')
         self.seed = int(seed) if seed else None
         self.value_min = float(value_min)
         self.value_max = float(value_max)
         self.bw = float(bw)
 
-        Perturber.__init__(self, chunks, ratio_min, duration, descriptor)
+        Perturber.__init__(self, descriptor, criteria, duration)
 
         #build a dataframe that we can resample or index into while maintaining
         #the correct seed
@@ -589,7 +657,7 @@ class PerturberRBS(Perturber):
 
         return t,v
 
-    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+    def step(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, flight_time, framenumber, currently_locked_obj_id):
         self.progress = framenumber - self._frame0
         finished = (now - self.now) >= (0.99*self.duration)
         if framenumber==self._frame0:
@@ -610,6 +678,91 @@ class PerturberRBS(Perturber):
 
     def get_value_limits(self):
         return min(self.value_min,0),max(self.value_max,0)
+
+
+class PerturberIDINPUT(_PerturberInterpolation):
+
+    DEFAULT_DESC = "idinput_WHAT|sine|3|0|5|1.8||||1"
+    N_PARAMS = 10
+
+    _mlab = None
+
+    def __init__(self, descriptor, criteria):
+        """
+        descriptor is
+        'idinput_WHAT'|type|dur|band0|band1|value|s0|s1|s2|seed
+
+        WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
+        """
+        if not descriptor.startswith('idinput'):
+            raise Exception("Incorrect PerturberIDINPUT configuration")
+
+        OS = 1.0    #over sample
+        FS = 100.0
+
+        def freq_to_bw(f):
+            nf = FS*0.5
+            return f/nf
+
+        name,self.type,dur,b0,b1,value,s0,s1,s2,seed = descriptor.split('|')
+        self.t1 = float(dur)
+        self.value = float(value)
+
+
+        if self.type == 'sine':
+            self.f0 = float(b0)
+            self.f1 = float(b1)
+        elif self.type == 'prbs':
+            self.f0 = 0.0
+            self.f1 = FS/2.0
+        else:
+            self.f0 = 0.0
+            self.f1 = float(b1)
+
+        if self.type == 'sine':
+            self.band = [freq_to_bw(float(b0)),freq_to_bw(float(b1))]
+        else:
+            self.band = [0, float(b1)]
+
+        #look for the cached data object
+        fn = '_'.join([str(i) for i in ('idinput',self.type,dur,b0,b1,value,s0,s1,s2,seed)])
+        fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
+
+        fn_exists = os.path.isfile(fn)
+
+        if fn_exists:
+            w = np.load(fn)
+            t = np.linspace(0, self.t1, len(w))
+        else:
+            if PerturberIDINPUT._mlab == None:
+                try:
+                    import pymatbridge
+                    PerturberIDINPUT._mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', log=False, capture_stdout=True)
+                    PerturberIDINPUT._mlab.start()
+                    _mlab = PerturberIDINPUT._mlab
+                except ImportError:
+                    raise ValueError("%s not cached and matlab not available" % fn)
+
+            lvls = [-self.value,self.value]
+            if s0 and s1 and s2:
+                sindata = [int(s0),int(s1),int(s2)]
+            else:
+                sindata = [10,10,1]
+
+            N = self.t1*100*OS
+
+            _mlab.rng(int(seed))
+            u = _mlab.idinput(int(N),self.type,self.band,lvls,sindata,nout=1)
+            w = np.squeeze(u.T)
+
+            t = np.linspace(0, self.t1, len(w))
+
+            np.save(fn,w)
+
+        _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
+
+    def __repr__(self):
+        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs bw=%f...%f f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
@@ -635,7 +788,7 @@ def plot_amp_spectrum(ax, obj, fs=100, maxfreq=12):
     sfe_frequency.plot_amp_spectrum(ax,y,fs)
     ax.set_xlim(0,maxfreq)
 
-def plot_perturbation_frequency_characteristics(fig,obj):
+def plot_perturbation_frequency_characteristics(fig,obj,fs=100,maxfreq=12):
     gs = matplotlib.gridspec.GridSpec(2,2)
     ax = fig.add_subplot(gs[0,:])
     obj.plot(ax, t_extra=0.5)
@@ -643,11 +796,11 @@ def plot_perturbation_frequency_characteristics(fig,obj):
     ax.set_xlabel('t (s)')
     ax.set_ylabel(str(obj.what))
     ax = fig.add_subplot(gs[1,0])
-    plot_spectum(ax, obj)
+    plot_spectum(ax, obj, fs, maxfreq)
     ax = fig.add_subplot(gs[1,1])
-    plot_amp_spectrum(ax, obj)
+    plot_amp_spectrum(ax, obj, fs, maxfreq)
 
-PERTURBERS = (PerturberStep, PerturberChirp, NoPerturb, PerturberStepN, PerturberTone, PerturberMultiTone, PerturberRBS)
+PERTURBERS = (PerturberStepN, PerturberStep, PerturberChirp, NoPerturb, PerturberTone, PerturberMultiTone, PerturberRBS, PerturberIDINPUT)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -661,7 +814,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     def _plot(f,obj):
-        plot_perturbation_frequency_characteristics(f,obj)
+        f0,f1 = obj.get_frequency_limits()
+        if np.isnan(f1):
+            f1 = 12 #historical
+        #show a little more than the max freq to allow for leakage, etc
+        f1 *= 1.5
+
+        plot_perturbation_frequency_characteristics(f,obj, fs=100, maxfreq=f1)
         fn = analysislib.plots.get_safe_filename(repr(obj),allowed_spaces=False)
         if args.save:
             f.savefig(fn+".png",bbox_inches='tight')
@@ -670,16 +829,17 @@ if __name__ == "__main__":
 
     if args.condition:
         condition = args.condition.rsplit('/',1)[-1]
-        obj = get_perturb_class(condition, debug=True)(condition)
+        obj = get_perturb_object(condition)
         f = plt.figure(repr(obj), figsize=(8,8))
         _plot(f,obj)
     else:
         for p in PERTURBERS:
-            obj = p(p.DEFAULT_DESC + "|" + p.DEFAULT_RATIO_MIN + "|" + p.DEFAULT_CHUNK_DESC)
+            condition = p.DEFAULT_DESC + "|" + p.DEFAULT_CRITERIA
+            desc,criteria = p.split_perturb_descriptor(condition)
+            obj = p(desc,criteria)
             f = plt.figure(repr(obj), figsize=(8,8))
             _plot(f,obj)
-
             obj._start(now=0, framenumber=1, currently_locked_obj_id=1)
-            print obj,obj.step(0,0,0,0,0,0, now=0.3074, framenumber=17, currently_locked_obj_id=1)
+            print obj,obj.step(0,0,0,0,0,0, now=0.3074, flight_time=1, framenumber=17, currently_locked_obj_id=1),condition
 
     plt.show()

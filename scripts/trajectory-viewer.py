@@ -16,13 +16,18 @@ import strawlab.constants
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
+import analysislib.fixes
 import analysislib.plots as aplt
 import analysislib.curvature as acurve
 import analysislib.util as autil
 
+
 if __name__=='__main__':
     parser = analysislib.args.get_parser(
+                    xfilt='none',
+                    yfilt='none',
                     zfilt='none',
+                    vfilt='none',
                     rfilt='none',
                     lenfilt=0,
                     trajectory_start_offset=0.0
@@ -40,9 +45,13 @@ if __name__=='__main__':
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)",
-        default=",".join(["theta","dtheta","rotation_rate","velocity","rcurve","ratio","radius"]))
+        default=",".join(["theta","dtheta","rotation_rate","velocity","ratio","radius"]))
     parser.add_argument(
-        "--test-filter-args")
+        "--test-filter-args",
+        help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
+    parser.add_argument(
+        "--ylimits", help="y-axis limits name:min:max,[name2:min2:max2]")
+
     
     args = parser.parse_args()
 
@@ -74,21 +83,33 @@ if __name__=='__main__':
     else:
         filt_args = None
 
+    cmdline_limits = {}
+    if args.ylimits:
+        for field in args.ylimits.split(','):
+            n,m,M = field.split(":")
+            cmdline_limits[n] = (float(m),float(M))
+
     anims = {}
     for i,(current_condition,r) in enumerate(results.iteritems()):
         for df,(x0,y0,obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
             if obj_id in obj_ids:
 
+                rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
+
+                ylimits = {"dtheta":(-20,20),"rcurve":(0,1), "rotation_rate":(-rrate_max_abs,rrate_max_abs)}
+                ylimits.update(cmdline_limits)
+
                 name = analysislib.combine.safe_condition_string(current_condition)
 
-                filename = "%s_%s_%s" % (uuid, obj_id, name)
-                title = "%s: %s" % (obj_id, current_condition)
+                filename = "%s_%s_%s_%s" % (uuid, obj_id, framenumber0, name)
+                title = "%s: %s (fn0 %d)" % (obj_id, combine.get_condition_name(current_condition), framenumber0)
 
                 if args.animate:
                     args.show = True
                     anim = aplt.animate_infinity(
                             combine, args,
                             df,dt,
+                            ylimits=ylimits,
                             plot_axes=plot_axes,
                             title=title,
                             show_trg=args.show_target and ('trg_x' in df.columns),
@@ -99,7 +120,8 @@ if __name__=='__main__':
                     aplt.plot_infinity(
                             combine, args,
                             df,dt,
-                            name=name,
+                            ylimits=ylimits,
+                            name=filename,
                             plot_axes=plot_axes,
                             title=title,
                             show_filter_args=filt_args

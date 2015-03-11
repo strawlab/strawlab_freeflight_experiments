@@ -21,7 +21,7 @@
 #define VZ 1e-10
 
 
-void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double ts_ekf, double ts_c, double ts_d, double ts_ci) {
+void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decfp_t *decfp, cInputp_t *cInputp, double u0, double u1, double ts_ekf, double ts_c, double ts_d, double ts_ci) {
 
 	/* the operator -> references to an element of a pointer to a 
      * struct, instead of, e.g., cp->Nx also (*cp).Nx could be used, but 
@@ -62,8 +62,8 @@ void init_par_cInpF_decF_ekf_subopt_MPC_model2 (contrp_t *cp, ekfp_t *ekfp, decf
 	cp->Qy[3] = 10000;
 	cp->Ru = 1;
 	cp->Rw = 1;
-	cp->ulim[0] = -1000;
-	cp->ulim[1] = 1000;
+	cp->ulim[0] = u0;
+	cp->ulim[1] = u1;
 	cp->ulim[2] = -1000;
 	cp->ulim[3] = 1000;
 	cp->wdes = V0;

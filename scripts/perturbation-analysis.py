@@ -30,18 +30,17 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
 
     pid = args.only_perturb_start_id
 
-    #perturb_obj: {obj_id:Perturbation,...}
-    #condition:(perturb_obj,obj_id,perturbation_length,trajectory_length)
-    #perturb_obj:cond
-
-    perturbations, perturbation_conditions = aperturb.collect_perturbation_traces(combine,
+    perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
                                                     completion_threshold=args.perturb_completion_threshold)
+    #perturbations {cond: {obj_id:PerturbationHolder,...}}
+    #perturbation_objects {cond: perturb_obj}
 
-    for step_obj in perturbations:
-        phs = perturbations[step_obj]
+    for cond in perturbations:
 
-        cond = perturbation_conditions[step_obj]
-        condn = aplt.get_safe_filename(repr(cond),allowed_spaces=False)
+        step_obj = perturbation_objects[cond]
+        phs = perturbations[cond]
+
+        condn = aplt.get_safe_filename(cond,allowed_spaces=False)
         if pid is not None:
             condn = 'p%d_%s' % (pid,condn)
 
@@ -146,10 +145,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         f.write("| --- | --- | --- | --- |\n")
 
         i = 0
-        for perturb_obj in perturbations:
-            cond = perturbation_conditions[perturb_obj]
+        for cond in perturbations:
+            perturb_obj = perturbation_objects[cond]
             scond = combine.get_condition_name(cond)
-            for response_obj in perturbations[perturb_obj].itervalues():
+            for response_obj in perturbations[cond].itervalues():
                 if response_obj.completed:
                     f.write("| %s | %s | %.1f | %.1f |\n" % (scond, response_obj.obj_id, response_obj.perturbation_length, response_obj.trajectory_length))
                     i += 1

@@ -1,0 +1,26 @@
+rotation_infinity:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+perturbation_additive_tone_05_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+    perturb_desc: tone_rotation_rate|0.5|300|180|5
+    perturb_criteria: t1.0
+    perturb_additive: true
+perturbation_tone_05_5hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 0.3
+    radius_when_locked: -10.0
+    advance_threshold: 0.1
+    z_gain: 0.20
+    perturb_desc: tone_rotation_rate|0.5|10|180|5
+    perturb_criteria: t5.0

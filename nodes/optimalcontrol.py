@@ -51,8 +51,6 @@ TIMEOUT             = 0.5
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
-
 CONTROL_IN_PARALLEL = True
 
 class Node(nodelib.node.Experiment):
@@ -62,6 +60,10 @@ class Node(nodelib.node.Experiment):
     TS_CALC_INPUT   = 0.0125
     TS_CONTROL      = 0.05
     TS_EKF          = 0.005
+
+    #original defaults
+    U0 = -1000.0
+    U1 = +1000.0
 
     def __init__(self, args):
         super(Node, self).__init__(args=args,
@@ -94,13 +96,12 @@ class Node(nodelib.node.Experiment):
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
         self.log.ratio = 0 #backwards compatibility - see path_theta for mpc path parameter
 
         #setup the MPC controller
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = MPC.MPC(ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control = MPC.MPC(u0=self.U0,u1=self.U1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
             #rotation_rate = omega
 
@@ -178,7 +179,7 @@ class Node(nodelib.node.Experiment):
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
-        rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f)' % (self.condition,self.p_const,os.path.basename(self.svg_fn),self.rad_locked))
+        rospy.loginfo('condition: %s (svg=%s, rad locked=%.1f)' % (self.condition,os.path.basename(self.svg_fn),self.rad_locked))
 
     def get_v_rate(self,fly_z):
         return self.v_gain*(fly_z-self.z_target)

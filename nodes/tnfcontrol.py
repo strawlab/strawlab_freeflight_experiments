@@ -51,9 +51,6 @@ TIMEOUT             = 0.5
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
-
-
 class Node(nodelib.node.Experiment):
 
     #from environmentSfct
@@ -61,6 +58,11 @@ class Node(nodelib.node.Experiment):
     TS_CALC_INPUT   = 0.0125
     TS_CONTROL      = 0.0125
     TS_EKF          = 0.005
+
+    #original defaults
+    K0 = -0.1
+    K1 = -1.2
+    K2 = -2.1
 
     def __init__(self, args):
         super(Node, self).__init__(args=args,
@@ -93,13 +95,12 @@ class Node(nodelib.node.Experiment):
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
         self.log.ratio = 0 #backwards compatibility
 
         #setup the MPC controller in switch conditions
         self.controllock = threading.Lock()
         with self.controllock:
-            self.control = TNF.TNF(k0=-0.1, k1=-1.2, k2=-2.1,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
+            self.control = TNF.TNF(k0=self.K0,k1=self.K1,k2=self.K2,ts_d=self.TS_DEC_FCT,ts_ci=self.TS_CALC_INPUT,ts_c=self.TS_CONTROL,ts_ekf=self.TS_EKF)
             self.control.reset()
 
         #protect the tracked id and fly position between the time syncronous main loop and the asyn

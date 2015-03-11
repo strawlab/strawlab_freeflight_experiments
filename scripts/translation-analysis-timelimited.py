@@ -11,13 +11,12 @@ if not os.environ.get('DISPLAY'):
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
-from autodata.model import find_experiment
+from strawlab.constants import find_experiment
 import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
-import analysislib.curvature as curve
 import analysislib.util as autil
 
 
@@ -31,7 +30,7 @@ def filter_trials_after_start(combine,
     # retrieve the experiment start times
     datetime_limits = {}
 
-    def keep_before(unused1, soid, uuid, unused2):
+    def keep_before(unused0, unused1, soid, uuid, unused2):
         if uuid is None:
             return False  # Can happen even in basic examples, probably because of race conditions
                           # FIXME: infer better the uuid in combine (easier if we assume only one exp at a time)

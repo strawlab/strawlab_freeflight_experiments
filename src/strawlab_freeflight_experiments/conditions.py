@@ -1,6 +1,7 @@
 import os.path
 import itertools
 import random
+import re
 
 import yaml
 import yaml.constructor
@@ -59,6 +60,45 @@ def get_default_condition_filename(argv):
                         'data','conditions',
                         '%s.yaml' % fn)
 
+class ConditionCompat(OrderedDict):
+
+    ROTATION_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}$")
+    CONFLICT_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}\/\w+\.osg(?:\|[\d.+-]+)+$")
+    PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
+
+    def __init__(self, slash_string):
+        OrderedDict.__init__(self)
+        self._s = slash_string
+
+    def is_type(self, *names):
+        fake_names = []
+        #rotation experiments look like this
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2
+        # gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
+        # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
+        if ConditionCompat.ROTATION_RE.match(self._s):
+            fake_names.append('rotation')
+
+        #conflict experiments look like this
+        # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0
+        if ConditionCompat.CONFLICT_RE.match(self._s):
+            fake_names.append('conflict')
+
+        #perturb experiments look like this
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
+        # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06
+        if ConditionCompat.PERTURB_RE.match(self._s):
+            #let the validation logic in sfe.perturb do the heavy work here.
+            #lazy import for Santi
+            from .perturb import is_perturb_condition_string
+            if is_perturb_condition_string(self._s):
+                fake_names.append('perturbation')
+
+        return any(name in fake_names for name in names)
+
+    def to_slash_separated(self):
+        return self._s
+
 class Condition(OrderedDict, _YamlMixin):
 
     def __init__(self, *args, **kwargs):
@@ -81,41 +121,67 @@ class Condition(OrderedDict, _YamlMixin):
     def is_type(self, *names):
         return any(name in self.name for name in names)
 
+
 class Conditions(OrderedDict, _YamlMixin):
 
-    def __init__(self, text_or_file_like):
+    def __init__(self, text_or_file_like, switch_order='seq', rng_seed=42):
+
+        OrderedDict.__init__(self)
+
         try:
             txt = text_or_file_like.read()
         except AttributeError:
             txt = text_or_file_like
 
+        VALID_SWITCH_STRATEGIES = {'seq', 'randstart', 'fullrand'}
+        if switch_order not in VALID_SWITCH_STRATEGIES:
+            raise ValueError('switch order must be one of %r, not "%s"' %
+                             (VALID_SWITCH_STRATEGIES, switch_order))
+
         d = yaml.load(txt, _OrderedDictYAMLLoader)
 
-        OrderedDict.__init__(self)
-        for k,v in d.iteritems():
+        # provenance
+        self.rng_seed = rng_seed
+        self.switch_order = switch_order
+        keys = d.keys()
+        if self.switch_order != 'seq':
+            self.rng = random.Random(rng_seed if rng_seed >= 0 else None)
+            if self.switch_order == 'randstart':
+                self.rng.shuffle(keys)
+        else:
+            self.rng = None
+
+        for k in keys:
+            v = d[k]
             if k.startswith('_') or k == 'uuid':
                 continue
+
             c = Condition(v)
             c.name = k
+
+            if c in self.values():
+                raise ValueError("duplicate condition %s" % k)
+
             self[k] = c
 
     @staticmethod
     def from_base64(txt):
-         return Conditions(txt.decode('base64_codec').decode('zlib_codec'))
+        return Conditions(txt.decode('base64_codec').decode('zlib_codec'))
 
     def next_condition(self, last_condition):
-        d = itertools.cycle(self)
-        for c in d:
-            if last_condition is None:
-                return self[c]
-            if self[c] == last_condition:
-                return self[d.next()]
+        if self.switch_order == 'fullrand':
+            return self[self.rng.choice(self.keys())]
+        else:
+            d = itertools.cycle(self)
+            for c in d:
+                if last_condition is None:
+                    return self[c]
+                if self[c] == last_condition:
+                    return self[d.next()]
 
     def first_condition(self):
         return self[self.keys()[0]]
 
-    def random_condition(self):
-        return self[random.choice(self.keys())]
 
 def _yaml_ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):

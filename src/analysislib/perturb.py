@@ -8,28 +8,36 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed start_ratio, perturbation_length, trajectory_length, condition')
+PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed completed_pct start_ratio, perturbation_length, trajectory_length, condition')
 
 def collect_perturbation_traces(combine, completion_threshold=0.98):
     results,dt = combine.get_results()
 
-    perturbations = collections.OrderedDict()           #perturb_obj: {obj_id:PerturbationHolder,...}
-    perturbation_conditions = {}                        #perturb_obj: cond
+    perturbations = collections.OrderedDict()           #cond: {obj_id:PerturbationHolder,...}
+    perturbation_objects = {}                           #cond: perturb_obj
 
     for cond in sorted(results):
 
-        perturb_desc = cond.split("/")[-1]
+        condition_conf = combine.get_condition_configuration(combine.get_condition_name(cond))
+        if condition_conf:
+            try:
+                perturb_desc = condition_conf['perturb_desc']
+            except KeyError:
+                #new style yaml experiment, not a perturbation condition
+                continue
+        else:
+            #backwards compatibility for old pre-yaml experiments where the perturb_descripor
+            #was assumed to be the last element in the condition string
+            perturb_desc = cond.split("/")[-1]
 
-        pklass = sfe_perturb.get_perturb_class(perturb_desc)
+        step_obj = sfe_perturb.get_perturb_object(perturb_desc)
 
         #only plot perturbations
-        if pklass == sfe_perturb.NoPerturb:
+        if isinstance(step_obj,sfe_perturb.NoPerturb):
             continue
 
-        step_obj = pklass(perturb_desc)
-        perturbations[step_obj] = {}
-
-        perturbation_conditions[step_obj] = cond
+        perturbations[cond] = {}
+        perturbation_objects[cond] = step_obj
 
         r = results[cond]
 
@@ -50,7 +58,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 #ensure we get a unique obj_id for later grouping. That is not necessarily
                 #guarenteed because obj_ids may be in multiple conditions, so if need be
                 #create a new one
-                if obj_id in perturbations[step_obj]:
+                if obj_id in perturbations[cond]:
                     obj_id = int(time.time()*1e6)
                 df['obj_id'] = obj_id
 
@@ -62,6 +70,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 traj_length = tmax - df['talign'].min()
 
                 completed = step_obj.completed_perturbation(tmax, completion_threshold) and (lidx > fidx)
+                completed_pct = step_obj.completed_perturbation_pct(tmax, completion_threshold)
 
                 df['align'] = np.array(range(len(df)), dtype=int) - fidx
 
@@ -72,13 +81,14 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 #if the fly started its perturbation with a ratio of 0.55 the range
                 #chunk identifier is 1 (the 2nd pair in the range string).
                 start_ratio = df.iloc[fidx]['ratio']
-                df['ratio_range_start_id'] = step_obj.get_perturb_range_identifier(start_ratio)
+                start_id = step_obj.get_perturb_range_identifier(start_ratio)
 
-                ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, start_ratio, tmax, traj_length, cond)
+                df['ratio_range_start_id'] = start_id
 
-                perturbations[step_obj][obj_id] = ph_obj
+                ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, completed_pct, start_ratio, tmax, traj_length, cond)
+                perturbations[cond][obj_id] = ph_obj
 
-    return perturbations, perturbation_conditions
+    return perturbations, perturbation_objects
 
 def get_input_output_columns(step_obj):
     if step_obj.what == 'rotation_rate':

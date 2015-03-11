@@ -1,0 +1,16 @@
+_ros_sql_timestamp_nsecs: 654721021
+_ros_sql_timestamp_secs: 1422722439
+age: 4
+arena: flycube8
+description: 7 female flies, 17:40-11:00
+genotype: nsyb-GAL4 x PDFR KH012
+hidden: false
+id: 145
+start_nsecs: 654424905
+start_secs: 1422722439
+stop_nsecs: 0
+stop_secs: 1422784800
+tags: ''
+title: combined_stimulus
+user: KH
+uuid: e3ccf472a96711e48156bcee7bdac428

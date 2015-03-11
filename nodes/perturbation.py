@@ -149,15 +149,12 @@ class Node(nodelib.node.Experiment):
         self.rad_locked = float(self.condition['radius_when_locked'])
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = 0.7
-        if self.condition.is_type('perturbation'):
-            perturb_desc = str(self.condition['perturb_desc'])
-        else:
-            perturb_desc = None
 
         self.log.cyl_r = self.rad_locked
 
         #default to no perturb
         self.perturber = sfe_perturb.NoPerturb()
+        self.perturber_additive = False
 
         self.svg_fn = ''
         if ssvg:
@@ -165,7 +162,11 @@ class Node(nodelib.node.Experiment):
             self.model = flyflypath.model.MovingPointSvgPath(self.svg_fn)
             self.svg_pub.publish(self.svg_fn)
 
-            self.perturber = sfe_perturb.get_perturb_class(perturb_desc)(perturb_desc)
+        if self.condition.is_type('perturbation'):
+            self.perturber = sfe_perturb.get_perturb_object_from_condition(self.condition)
+            self.perturber_additive = self.condition.get('perturb_additive',False)
+
+        self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
@@ -174,28 +175,35 @@ class Node(nodelib.node.Experiment):
         rospy.loginfo('perturbation: %r' % self.perturber)
 
     def get_v_rate(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        perturb_rate = 0.0
         #return early if open loop
         if self.is_perturbation_experiment('z'):
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
-                                             now, framenumber, currently_locked_obj_id):
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id):
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                             now, framenumber, currently_locked_obj_id)
-
-                if state=='finished':
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id)
+                if state=='starting':
+                    rospy.loginfo("'%s' perturbation starting" % self.perturber.what)
+                elif state=='finished':
                     self.drop_lock_on(blacklist=True)
-                    rospy.loginfo("'z' perturbation finished")
+                    rospy.loginfo("'%s' perturbation finished" % self.perturber.what)
 
-                return rate
+                perturb_rate = rate
+                if not self.perturber_additive:
+                    return rate
 
         #return early if this is a replay experiment
         if self.is_replay_experiment('z'):
             return self.replay_z.next()
 
-        return self.v_gain*(fly_z-self.z_target)
+        return perturb_rate + (self.v_gain*(fly_z-self.z_target))
 
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
+        perturb_rate = 0.0
         could_perturb = False
         if self.svg_fn and (not self.is_replay_experiment('rotation_rate')):
             could_perturb = self.is_perturbation_experiment('rotation_rate')
@@ -214,18 +222,24 @@ class Node(nodelib.node.Experiment):
         if could_perturb:
             if self.perturber.should_perturb(fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
                                              self.model.ratio, self.ratio_total,
-                                             now, framenumber, currently_locked_obj_id):
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id):
                 rate,state = self.perturber.step(
                                              fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz,
-                                             now, framenumber, currently_locked_obj_id)
+                                             now, now - self.first_seen_time,
+                                             framenumber, currently_locked_obj_id)
 
-                if state=='finished':
+                if state=='starting':
+                    rospy.loginfo("'%s' perturbation starting" % self.perturber.what)
+                elif state=='finished':
                     self.drop_lock_on(blacklist=True)
                     if abs(fly_z-self.z_target) < 0.1:
                         self.save_cool_condition(currently_locked_obj_id, note="Fly %s completed perturbation" % currently_locked_obj_id)
-                    rospy.loginfo('perturbation finished')
+                    rospy.loginfo("'%s' perturbation finished" % self.perturber.what)
 
-                return rate, self.trg_x,self.trg_y
+                perturb_rate = rate
+                if not self.perturber_additive:
+                    return rate, self.trg_x,self.trg_y
 
         #return early if this is a replay experiment
         if self.is_replay_experiment('rotation_rate'):
@@ -259,9 +273,9 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
-        return val,self.trg_x,self.trg_y
+        return perturb_rate + val, self.trg_x, self.trg_y
 
     def run(self):
         rospy.loginfo('running stimulus')

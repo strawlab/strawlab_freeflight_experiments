@@ -81,8 +81,6 @@ class Node(nodelib.node.Experiment):
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
-        self.log = Logger(wait=wait_for_flydra, use_tmpdir=use_tmpdir, continue_existing=continue_existing)
-
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
@@ -143,6 +141,8 @@ class Node(nodelib.node.Experiment):
             self.svg_pub.publish(self.svg_fn)
         else:
             self.svg_fn = ''
+
+        self.rotation_rate_max = self.condition.get('rotation_rate_max', MAX_ROTATION_RATE)
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
@@ -209,7 +209,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y
 

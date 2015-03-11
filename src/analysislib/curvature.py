@@ -239,14 +239,14 @@ def calc_interpolate_dataframe(df,dt,columns):
             #no such column
             pass
 
-def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',correlation_options=None):
+def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',limits=None):
     if title:
         ax.set_title(title)
     if note:
         aplt.make_note(ax,note)
     ax.plot(corra,corrb,'k.')
-    if correlation_options is not None:
-        xlim,ylim = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',(None,None))
+    if limits is not None:
+        xlim,ylim = limits
         if xlim is not None:
             ax.set_xlim(*xlim)
         if ylim is not None:
@@ -254,7 +254,7 @@ def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,titl
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,correlation_options=None):
+def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,limits=None):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -281,8 +281,8 @@ def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',
     ax.set_ylabel(corrb_name)
 
     hkwargs = {}
-    if correlation_options is not None:
-        hkwargs["range"] = correlation_options.get("%s:%s"%(corra_name,corrb_name),{}).get('range',None)
+    if limits is not None and all(limits):
+        hkwargs["range"] = limits
 
     try:
         func = ax.hist2d
@@ -323,6 +323,11 @@ def _shift_pool_and_flatten_correlation_data(results, condition, shift, corra, c
 
 def _correlate(df, cola, colb, shift=0):
     return df[cola].shift(shift).corr(df[colb])
+
+def _get_gridspec_rc(n):
+    r = np.floor(np.sqrt(n))
+    c = np.ceil(n/r)
+    return int(r),int(c)
 
 def plot_correlation_analysis(args, combine, correlations, correlation_options, conditions=None):
     results,dt = combine.get_results()
@@ -417,13 +422,27 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                                                 corra, corrb)
 
             fn = aplt.get_safe_filename(_current_condition)
+
             with aplt.mpl_fig("%s_%s_maxcorrelation" % (fname,fn), args) as fig:
+
+                #limit can be overrided in options, else comes from condition itself
+                xlimit,ylimit = correlation_options.get("%s:%s"%(corra,corrb),{}).get('range',(None,None))
+                #limits can be functions
+                try:
+                    xlimit = xlimit(combine,_current_condition,corra)
+                except TypeError:
+                    pass
+                try:
+                    ylimit = ylimit(combine,_current_condition,corrb)
+                except TypeError:
+                    pass
+
                 plot_hist_corra_vs_corrb_pooled(
                         all_corra,all_corrb,corra,corrb,
                         fig.gca(),
                         title=combine.get_condition_name(_current_condition),
                         note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens),
-                        correlation_options=correlation_options
+                        limits=(xlimit,ylimit)
                 )
 
             corr_latencies[_current_condition]["%s:%s" % (corra,corrb)] = ccef
@@ -435,7 +454,7 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
             with aplt.mpl_fig("%s_%s_corr_latency%s" % (fname, fn, fsuffix), args, figsize=(10,8)) as fig:
 
                 i = 0
-                gs = gridspec.GridSpec(3, len(latencies_to_plot)//3)
+                gs = gridspec.GridSpec( *_get_gridspec_rc(len(latencies_to_plot)) )
 
                 for shift in latencies_to_plot:
 
@@ -448,10 +467,22 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                     ax = fig.add_subplot(gs[i])
                     aplt.make_note(ax,"%.3fs" % (shift*dt),color='white',fontsize=8)
 
+                    #limit can be overrided in options, else comes from condition itself
+                    xlimit,ylimit = correlation_options.get("%s:%s"%(corra,corrb),{}).get('range',(None,None))
+                    #limits can be functions
+                    try:
+                        xlimit = xlimit(combine,_current_condition,corra)
+                    except TypeError:
+                        pass
+                    try:
+                        ylimit = ylimit(combine,_current_condition,corrb)
+                    except TypeError:
+                        pass
+
                     if hist2d:
-                        plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,correlation_options=correlation_options)
+                        plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
                     else:
-                        plot_scatter_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,correlation_options=correlation_options)
+                        plot_scatter_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
 
                     i += 1
 

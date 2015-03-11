@@ -24,6 +24,8 @@ from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
 from strawlab_freeflight_experiments.conditions import Condition
 
+from test_combine_api import _quiet
+
 
 # --- test data generation utils
 
@@ -47,6 +49,52 @@ def simple_flydra_datatypes():
     ]
 
     return traj_datatypes, traj_start_datatypes
+
+
+def select_h5csv_oids(h5_file='/mnt/strawscience/data/csv-test-case-deleteme/katja-exp/'
+                              '20150131_174031.simple_flydra.h5',
+                      csv_file='/mnt/strawscience/data/csv-test-case-deleteme/katja-exp/'
+                               'overlap-e3ccf472a96711e48156bcee7bdac428-5537-595668.csv',
+                      h5_dest=None,
+                      csv_dest=None,
+                      oids=(5537, 5547),
+                      keep_in_between=False,
+                      frames_before=None,
+                      frames_after=None,
+                      csv_cols=('condition', 'lock_object', 'framenumber', 't_sec', 't_nsec', 'exp_uuid')):
+    """Combine-independent selection of object ids in csv and simple-flydra files."""
+    # Most probably there is something like this in flydra
+    # Here we do not even bother to use pytables or be nice in memory
+    if keep_in_between or frames_before is not None or frames_after is not None:
+        raise NotImplementedError('This would surely be convenient and it is should be easy to do...')
+    import h5py
+    with h5py.File(h5_file, 'r') as h5:
+        # obj_id -> (first_timestamp_secs, first_timestamp_nsecs)
+        starts = pd.DataFrame(h5['trajectory_start_times'][:])
+        # obj_id -> (obj_id, framenumber, x, y, z)
+        trajs = pd.DataFrame(h5['trajectories'][:])
+
+        if h5_dest is None:
+            h5_dest = op.join(op.dirname(h5_file), 'slim-' + op.basename(h5_file))
+
+        with h5py.File(h5_dest, 'w') as h5_slim:
+            h5_slim['experiment_info'] = h5['experiment_info'][:]  # uuid
+            h5_slim['trajectories'] = trajs[trajs['obj_id'].isin(oids)].to_records()
+            for k, v in h5['trajectories'].attrs.iteritems():
+                h5_slim['trajectories'].attrs[k] = v
+            h5_slim['trajectory_start_times'] = starts[starts['obj_id'].isin(oids)].to_records()
+            for k, v in h5['trajectory_start_times'].attrs.iteritems():
+                h5_slim['trajectory_start_times'].attrs[k] = v
+
+    csv = pd.read_csv(csv_file)
+    csv = csv[csv['lock_object'].isin(oids)]
+    if csv_dest is None:
+        csv_dest = op.join(op.dirname(csv_file), 'slim-' + op.basename(csv_file))
+    if csv_cols is None:
+        csv.to_csv(csv_dest, index=False)
+    else:
+        csv[list(csv_cols)].to_csv(csv_dest, index=False)
+    # TODO: allow to add number of frames before and after
 
 
 def combine2h5csv(combine,
@@ -120,8 +168,16 @@ def combine2h5csv(combine,
                 df = df.head(n=trim_trajs_to)
 
             # prepare the csv logger
+            # we need to fake a condition object
+            class FakeCondition(Condition):
+                def __init__(self, slash_separated_cond, *args, **kwargs):
+                    super(FakeCondition, self).__init__(*args, **kwargs)
+                    self.cond = slash_separated_cond
 
-            log.condition = combine.get_condition_configuration(cond)
+                def to_slash_separated(self):
+                    return self.cond
+
+            log.condition = FakeCondition(cond)  # combine.get_condition_configuration()
             log.lock_object = obj_id
             log._exp_uuid = uuid  # dirty
             # write the csv rows for this trial
@@ -178,7 +234,7 @@ uncombine = combine2h5csv
 
 
 # --- tests for some combine functionality
-
+#
 class TestCombineFake(unittest.TestCase):
 
     def setUp(self):
@@ -215,47 +271,6 @@ class TestCombineFake(unittest.TestCase):
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
         self.assertEqual(time0, self.combine._t0 + self.combine._dt)
-
-    def test_custom_filter(self):
-        # FIXME: this tests some stuff that should not be used, as create holes in trajectories
-        #        just remove custom_filt
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['ratio']>0.2)&(df['ratio']<0.8)]", 2.0)
-        c1.add_from_args(self.args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
-
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity']>1.22)]", 3.0)
-        c1.add_from_args(self.args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
-
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        c1.add_custom_filter("df[(df['velocity']>9999)]", 1.0)
-        c1.add_from_args(self.args)
-
-        #no data left after filtering
-        self.assertRaises(ValueError, c1.get_one_result, 1)
-
-    def test_load_from_args(self):
-        c1 = analysislib.combine._CombineFakeInfinity(nconditions=1,ntrials=1)
-        parser,args = analysislib.args.get_default_args(
-                outdir='/tmp/',
-                show='--show' in sys.argv,
-                customfilt="df[(df['ratio']>0.2)&(df['ratio']<0.8)]",
-                customfilt_len=1.0,
-                lenfilt=1
-        )
-        c1.add_from_args(args)
-
-        #the filtered dataframe should be shorter than the original one
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1)
-        self.assertLess(len(df), len(self.df0))
 
     def test_export(self):
         d = os.path.join(self._tdir, "export")
@@ -395,7 +410,11 @@ class TestCombineFake2(unittest.TestCase):
 
         parser,args = analysislib.args.get_default_args(
                         outdir=self._tdir,
-                        rfilt='none',zfilt='none')
+                        xfilt='none',
+                        yfilt='none',
+                        zfilt='none',
+                        vfilt='none',
+                        rfilt='none')
 
         for index,csv_rate in itertools.product(('none','framenumber','time','time+1L'),(0.5,2.0)):
             h5_fname, csv_fname = self._create_h5(200,1,csv_rate=csv_rate,framenumber0=14)
@@ -415,15 +434,37 @@ class TestCombineNonContiguous(unittest.TestCase):
     """
     Tests that combine separates correctly trajectories where  the same object_id
     contains trials with the same condition appearing several times.
-    These happen when trials are long, for example within fish experiments
+    These happen when trials are long, for example within fish experiments.
+
+    It also tests when the same condition interval contains different trials
+    with the same oid, which happens everywhere.
     """
 
-    def _combine_for_test(self):
-        """Returns a combine object useful for testing proper splitting of non-contiguous condition blocks
-        within the same trial.
-        """
+    def _combine_from_csv_h5(self, csv, h5):
+        # combine the test csv/h5
+        combine = get_combiner_for_csv(csv)
+        combine.calc_turn_stats = False
+        combine.calc_linear_stats = False
+        combine.calc_angular_stats = False
+        _, args = analysislib.args.get_default_args(xfilt='none',
+                                                    yfilt='none',
+                                                    zfilt='none',
+                                                    vfilt='none',
+                                                    rfilt='none',
+                                                    lenfilt=0)
+
+        combine.add_csv_and_h5_file(csv_fname=csv,
+                                    h5_file=h5,
+                                    args=args)
+        _quiet(combine)
+        return combine, csv, h5
+
+    def _combine_inter_condition(self):
+        """Returns a combine object useful for testing proper splitting of same-oid trajectories spanning
+        more than one block with the same condition."""
 
         MAX_TEST_UUID = '6d7142fc643d11e4be3d60a44c2451e5'
+
         DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous', MAX_TEST_UUID))
         csv = op.join(DATA_ROOT, 'data.csv')
         h5 = op.join(DATA_ROOT, 'data.simple_flydra.h5')
@@ -435,27 +476,32 @@ class TestCombineNonContiguous(unittest.TestCase):
             combine.calc_turn_stats = False
             combine.calc_linear_stats = False
             combine.calc_angular_stats = False
-            combine.add_from_uuid(MAX_TEST_UUID, rfilt='none', zfilt='none')
+            combine.add_from_uuid(MAX_TEST_UUID,
+                                  xfilt='none',
+                                  yfilt='none',
+                                  zfilt='none',
+                                  vfilt='none',
+                                  rfilt='none')
             combine2h5csv(combine,
                           tempdir=DATA_ROOT,
                           columns_for_csv=('stim_x',))
 
-        # combine the test csv/h5
-        combine = get_combiner_for_csv(csv)
-        combine.calc_turn_stats = False
-        combine.calc_linear_stats = False
-        combine.calc_angular_stats = False
-        _, args = analysislib.args.get_default_args(rfilt='none',
-                                                    zfilt='none',
-                                                    lenfilt=0)
+        return self._combine_from_csv_h5(csv, h5)
 
-        combine.add_csv_and_h5_file(csv_fname=csv,
-                                    h5_file=h5,
-                                    args=args)
-        return combine, csv, h5
+    def _combine_intra_condition(self, continuous_oids, with_markers):
+        # 'non-contiguous-same-oid-consecutive-no-markers.csv'
+        # 'non-contiguous-same-oid-consecutive-with-markers.csv'
+        DATA_ROOT = op.abspath(op.join(op.dirname(__file__), 'data', 'contiguous'))
+        base = 'non-contiguous-same-oid'
+        if continuous_oids:
+            base += '-consecutive'
+        base += '-with-markers' if with_markers else '-no-markers'
+        csv = op.join(DATA_ROOT, base + '.csv')
+        h5 = op.join(DATA_ROOT, 'non-contiguous-same-oid.h5')
+        return self._combine_from_csv_h5(csv, h5)
 
-    def test_correct_noncontiguous_split(self):
-        combine, csv, h5 = self._combine_for_test()
+    def test_correct_intercondition_split(self):
+        combine, csv, h5 = self._combine_inter_condition()
         results, dt = combine.get_results()
         self.assertAlmostEqual(dt, 0.01)
         self.assertEqual(len(results), 6)
@@ -468,6 +514,43 @@ class TestCombineNonContiguous(unittest.TestCase):
         self.assertEquals(20, len(dfs))
         # there must be 200 observations
         self.assertEquals(sum(map(len, dfs)), 200)
+
+    def test_correct_intracondition_split(self):
+        # Expectations...
+        # There needs to be two trials for oid 5537: (595668, len=50 and 596002, len=180)
+        # There needs to be one trial for oid 5547: (595784, len=213)
+        def test_combine(combine, intermediate=True):
+            valid_trials = (
+                (5537, 595668, 50),
+                (5537, 596002, 180),
+            )
+            if intermediate:
+                valid_trials += ((5547, 595784, 213),)
+            results, dt = combine.get_results()
+            self.assertAlmostEqual(dt, 0.01)
+            self.assertEqual(len(results), 1)  # 1 condition
+            trials = results['gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2']
+            for df, (x0, y0, obj_id, framenumber0, time0), uuid in zip(trials['df'],
+                                                                       trials['start_obj_ids'],
+                                                                       trials['uuids']):
+                self.assertIn((obj_id, framenumber0, len(df)), valid_trials)
+                self.assertEquals(uuid, 'e3ccf472a96711e48156bcee7bdac428')
+
+        # With intermediate trial, with markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=True)
+        test_combine(combine, intermediate=True)
+
+        # With intermediate trial, without markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=False, with_markers=False)
+        test_combine(combine, intermediate=True)
+
+        # Without intermediate trial, with markers
+        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=True)
+        test_combine(combine, intermediate=False)
+
+        # Without intermediate trial, without markers (using 10-frames heuristic)
+        combine, _, _ = self._combine_intra_condition(continuous_oids=True, with_markers=False)
+        test_combine(combine, intermediate=False)
 
 if __name__ == '__main__':
     unittest.main()

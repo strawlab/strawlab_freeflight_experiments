@@ -61,7 +61,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 1.5
+MAX_ROTATION_RATE = 3
 
 REPLAY_ARGS_ROTATION = dict(filename=os.path.join(pkg_dir,
                                               "data","replay_experiments",
@@ -162,6 +162,8 @@ class Node(nodelib.node.Experiment):
         else:
             self.svg_fn = ''
 
+        self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
+
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
         
@@ -214,7 +216,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y
 
