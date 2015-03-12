@@ -30,7 +30,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
-MAX_ROTATION_RATE   = 15.0      # may not be the optimal value but gives excellent results with a rotational gain equal to 3
+#MAX_ROTATION_RATE  = 15.0
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -222,7 +222,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+#        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
 
         return val,self.trg_x,self.trg_y
 
