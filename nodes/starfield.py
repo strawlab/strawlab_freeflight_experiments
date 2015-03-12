@@ -30,7 +30,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
-#MAX_ROTATION_RATE  = 15.0
+MAX_ROTATION_RATE  = 100.0
 
 ADVANCE_RATIO       = 1/100.0
 
@@ -152,6 +152,8 @@ class Node(nodelib.node.Experiment):
         else:
             self.svg_fn = ''
 
+        self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
+
         self.pub_star_size.publish(star_size)
 
         rospy.loginfo('condition: %s' % (self.condition))
@@ -222,7 +224,7 @@ class Node(nodelib.node.Experiment):
         else:
             val = 0.0
 
-#        val = np.clip(val,-MAX_ROTATION_RATE,MAX_ROTATION_RATE)
+        val = np.clip(val,-self.rotation_rate_max,self.rotation_rate_max)
 
         return val,self.trg_x,self.trg_y
 
