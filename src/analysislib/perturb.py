@@ -19,6 +19,23 @@ PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'df')
 
 
+def find_step_obj(cond, condition_conf=None):
+
+    if condition_conf:
+        try:
+            step_obj = sfe_perturb.get_perturb_object_from_condition(condition_conf)
+        except KeyError:
+            # new style yaml experiment, not a perturbation condition
+            return None
+    else:
+        # backwards compatibility for old pre-yaml experiments where the perturb_descripor
+        # was assumed to be the last element in the condition string
+        perturb_desc = cond.split("/")[-1]
+        step_obj = sfe_perturb.get_perturb_object(perturb_desc)
+
+    return None if isinstance(step_obj, sfe_perturb.NoPerturb) else step_obj
+
+
 def collect_perturbation_traces(combine, completion_threshold=0.98):
 
     results, dt = combine.get_results()
@@ -28,24 +45,12 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
     for cond in sorted(results):
 
-        condition_conf = combine.get_condition_configuration(combine.get_condition_name(cond))
-        if condition_conf:
-            try:
-                step_obj = sfe_perturb.get_perturb_object_from_condition(condition_conf)
-            except KeyError:
-                # new style yaml experiment, not a perturbation condition
-                continue
-        else:
-            # backwards compatibility for old pre-yaml experiments where the perturb_descripor
-            # was assumed to be the last element in the condition string
-            perturb_desc = cond.split("/")[-1]
-            step_obj = sfe_perturb.get_perturb_object(perturb_desc)
+        condconf = combine.get_condition_configuration(combine.get_condition_name(cond))
+        step_obj = find_step_obj(cond, condconf)
 
-        # only plot perturbations
-        if isinstance(step_obj, sfe_perturb.NoPerturb):
+        if None == step_obj:
             continue
 
-        perturbations[cond] = {}
         perturbation_objects[cond] = step_obj
 
         r = results[cond]
