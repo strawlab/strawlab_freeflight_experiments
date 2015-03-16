@@ -395,7 +395,7 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
                 else:
                     spine.set_color('none') # don't draw spine
 
-def plot_histograms(combine, args, figncols, name=None, colorbar=False):
+def plot_histograms(combine, args, figncols, name=None, colorbar=False, nbins=20.0):
     figsize = (5.0*figncols,(2*5.0) + 2)     #2 rows
     if name is None:
         name = '%s.hist' % combine.fname
@@ -409,12 +409,12 @@ def plot_histograms(combine, args, figncols, name=None, colorbar=False):
         x_range = xmax-xmin
         y_range = ymax-ymin
         max_range = max(y_range,x_range)
-        binsize = max_range/20.0
+        binsize = max_range/float(nbins)
         eps = 1e-10
         xbins = np.arange(xmin,xmax+eps,binsize)
         ybins = np.arange(ymin,ymax+eps,binsize)
-        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/20.0)
-        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/20.0)
+        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/float(nbins))
+        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/float(nbins))
 
         cmap=plt.get_cmap('jet')
         valmax=0

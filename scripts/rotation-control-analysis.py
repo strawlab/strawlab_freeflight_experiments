@@ -106,7 +106,7 @@ if __name__=='__main__':
 
     if ncond:
         #check there were some rotation experiments
-        aplt.plot_histograms(c2, args, figncols=ncond)
+        aplt.plot_histograms(c2, args, figncols=ncond, nbins=40)
         aplt.plot_traces(c2, args, figncols=ncond, in3d=False)
 
     if args.show:
