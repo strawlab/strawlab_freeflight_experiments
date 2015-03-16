@@ -48,7 +48,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
         condconf = combine.get_condition_configuration(combine.get_condition_name(cond))
         step_obj = find_step_obj(cond, condconf)
 
-        if None == step_obj:
+        if step_obj is None:
             continue
 
         perturbation_objects[cond] = step_obj
