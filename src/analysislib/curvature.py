@@ -10,6 +10,7 @@ import scipy.optimize
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from matplotlib import gridspec
+from matplotlib.colors import LogNorm
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
@@ -254,7 +255,7 @@ def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,titl
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,limits=None):
+def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,limits=None,**hkwargs):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -275,12 +276,11 @@ def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',
     if title:
         ax.set_title(title)
     if note:
-        aplt.make_note(ax,note,color='white')
+        aplt.make_note(ax,note,color='white',backgroundcolor="#5f5f5f")
 
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-    hkwargs = {}
     if limits is not None and all(limits):
         hkwargs["range"] = limits
 
@@ -437,13 +437,16 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                 except TypeError:
                     pass
 
-                plot_hist_corra_vs_corrb_pooled(
+                ax = fig.add_subplot(1,1,1)
+                H, xedges, yedges, img = plot_hist_corra_vs_corrb_pooled(
                         all_corra,all_corrb,corra,corrb,
-                        fig.gca(),
+                        ax,
                         title=combine.get_condition_name(_current_condition),
                         note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens),
-                        limits=(xlimit,ylimit)
+                        limits=(xlimit,ylimit),
+                        norm=LogNorm(),
                 )
+                fig.colorbar(img)
 
             corr_latencies[_current_condition]["%s:%s" % (corra,corrb)] = ccef
 
@@ -480,8 +483,9 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                         pass
 
                     if hist2d:
-                        plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
+                        H, xedges, yedges, img = plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
                     else:
+                        img = None
                         plot_scatter_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
 
                     i += 1
@@ -495,6 +499,9 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
 
                 NAMES = {"dtheta":r'turn rate ($\mathrm{d}\theta / dt$)',
                          "rotation_rate":r'rotation rate ($\mathrm{rad} s^{-1}$)'}
+
+                #if img:
+                #    fig.colorbar(img)
 
                 fig.subplots_adjust(wspace=0.1,hspace=0.1,top=0.92)
                 fig.suptitle('Correlation between %s and %s per latency correction \n%s' % (
