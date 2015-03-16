@@ -105,7 +105,8 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                                             completed=completed, completed_pct=completed_pct,
                                             perturbation_length=tmax, trajectory_length=traj_length,
                                             df=df)
-                perturbations[cond][obj_id] = ph_obj
+
+                perturbations.append(ph_obj)
 
     return perturbations, perturbation_objects
 
