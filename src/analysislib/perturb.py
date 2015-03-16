@@ -10,6 +10,7 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'uuid, obj_id, start_frame, '
+                                            'perturb_id, '
                                             'condition, '
                                             'start_ratio, '
                                             'start_idx, end_idx, '
@@ -92,6 +93,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 df['ratio_range_start_id'] = start_id
 
                 ph_obj = PerturbationHolder(uuid=uuid, obj_id=obj_id, start_frame=framenumber0,
+                                            perturb_id=0,
                                             condition=cond,
                                             start_ratio=start_ratio,
                                             start_idx=fidx, end_idx=lidx,
