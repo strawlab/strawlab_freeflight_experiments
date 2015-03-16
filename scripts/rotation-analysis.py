@@ -83,7 +83,7 @@ def plot_distance_from_path(combine, args, name=None):
     with aplt.mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
         for c in all_dists:
-            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=c,range=(0.1,0.2))
+            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=combine.get_condition_name(c),range=(0.1,0.2))
         ax.legend(numpoints=1,
                   prop={'size':aplt.LEGEND_TEXT_SML})
         ax.set_title('distance from path')
