@@ -1,6 +1,7 @@
 import collections
 
 import numpy as np
+import pandas as pd
 
 import roslib
 
@@ -122,3 +123,15 @@ def get_input_output_columns(step_obj):
         raise Exception("Not supported: %s" % step_obj.what)
 
     return system_u, system_y
+
+
+def perturbations2df(perturbations, short_names=True, keep_df=True):
+    if perturbations is None or 0 == len(perturbations):
+        return None
+    df = pd.DataFrame(perturbations, columns=perturbations[0]._fields)
+    if short_names:
+        df = df.rename(columns={'start_frame': 'startf',
+                                'obj_id': 'oid'})
+    if not keep_df:
+        del df['df']
+    return df
