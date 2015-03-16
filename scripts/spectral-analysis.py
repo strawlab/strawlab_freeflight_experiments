@@ -35,7 +35,7 @@ import strawlab_freeflight_experiments.matlab as sfe_matlab
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, basefn):
-    h1,h2,h3 = mlab.run_func(os.path.join(pkg_dir,'src','matlab','sid_spectrum_plots.m'),
+    h1,h2,h3 = mlab.run_func(os.path.join(pkg_dir,'data','matlab','sid_spectrum_plots.m'),
                         iddata,f0,f1,FS,title,system_u_name,system_y_name,nout=3)
 
     fn = basefn % "cohere"
