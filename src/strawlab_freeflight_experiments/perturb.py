@@ -125,6 +125,8 @@ class Perturber:
         return hash((self.descriptor,self.progress))
 
     def __eq__(self, o):
+        if not hasattr(o, 'progress') or not hasattr(o, 'descriptor'):
+            return False
         return (self.progress == o.progress) and (self.descriptor == o.descriptor)
 
     def _get_duration(self, thresh=0.98):
