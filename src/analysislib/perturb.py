@@ -13,7 +13,7 @@ PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'uuid, obj_id, start_frame, '
                                             'perturb_id, '
                                             'condition, '
-                                            'start_ratio, '
+                                            'start_ratio, start_id, '
                                             'start_idx, end_idx, '
                                             'completed, completed_pct, '
                                             'perturbation_length, trajectory_length, '
@@ -82,15 +82,12 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         # if the fly started its perturbation with a ratio of 0.55 the range
         # chunk identifier is 1 (the 2nd pair in the range string).
         start_ratio = df.iloc[fidx]['ratio']
-        start_id = step_obj.get_perturb_range_identifier(start_ratio)
-
-        # FIXME: this probably does not need to be in df, but in PerturbationHolder
-        df['ratio_range_start_id'] = start_id
+        ratio_range_start_id = step_obj.get_perturb_range_identifier(start_ratio)
 
         ph_obj = PerturbationHolder(uuid=uuid, obj_id=obj_id, start_frame=framenumber0,
                                     perturb_id=0,
                                     condition=cond,
-                                    start_ratio=start_ratio,
+                                    start_ratio=start_ratio, start_id=ratio_range_start_id,
                                     start_idx=fidx, end_idx=lidx,
                                     completed=completed, completed_pct=completed_pct,
                                     perturbation_length=tmax, trajectory_length=traj_length,
