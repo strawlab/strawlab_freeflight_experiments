@@ -415,6 +415,12 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
 
         #plot the maximally correlated latency
         for _current_condition,(shift,ccef) in max_latencies_shift.iteritems():
+
+            #can override with command line options
+            if args.force_max_latency is not None:
+                shift = args.force_max_latency
+                ccef = ccef_m.loc[shift]
+
             all_corra, all_corrb, nens = _shift_pool_and_flatten_correlation_data(
                                                 results,
                                                 _current_condition,

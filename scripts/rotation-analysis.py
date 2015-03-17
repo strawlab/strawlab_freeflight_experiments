@@ -93,6 +93,9 @@ def plot_distance_from_path(combine, args, name=None):
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
+    parser.add_argument(
+        "--force-max-latency", type=int, default=None,
+        help='plot latency at this many frames (rather than plotting the max)')
 
     args = parser.parse_args()
 
@@ -146,9 +149,13 @@ if __name__=='__main__':
     
     rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
 
+    fml = args.force_max_latency
+
     correlations = (('rotation_rate','dtheta'),)
     correlation_options = {"rotation_rate:dtheta":{"range":[_get_rrate_lim,[-10,10]]},
-                           "latencies":set(range(0,40,2) + [40,80]),
+                           "latencies":set(range(0,40,2) +\
+                                           [40,80] +\
+                                           [fml if fml is not None else 0]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
         
     }
