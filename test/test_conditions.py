@@ -118,6 +118,23 @@ cond3:
         self.assertEquals(cond_names1, cond_names2)
         self.assertEquals(cond_names1[0:3] * 3333, cond_names1)
 
+    def test_compat(self):
+        TO_TEST = {'rotation':['checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2',
+                               'gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2',
+                               'checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2'],
+                   'conflict':['checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0'],
+                   'perturbation':['checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06',
+                                   'checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06']
+        }
+
+        for t,conds in TO_TEST.iteritems():
+            for cond in conds:
+                cc = sfe_conditions.ConditionCompat(cond)
+                self.assertTrue(cc.is_type(t))
+                self.assertEqual(cond, cc.to_slash_separated())
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
