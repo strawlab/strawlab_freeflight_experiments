@@ -39,7 +39,18 @@ def find_step_obj(cond, condition_conf=None):
 
 def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                           step_obj, completion_threshold=0.98):
-    """Returns a list with the perturbations for a single trial."""
+    """Returns a list of PerturbationHolder objects with the perturbations for a single trial.
+
+    The dataframe of the perturbations:
+      - have missing values imputed using ffill
+      - have a few new columns:
+        - time: a time index, based on time0 and dt
+        - talign: time - time[perturbation_start]
+        - align: a 0-based frame-align index,
+                 0 is the perturbation start, negative numbers indicate pre-perturbation
+        - ratio_range_start_id: a constant int identifying because of which of n-trigger-conditions
+                                the perturbation started
+    """
 
     df = df.fillna(method='ffill')
 
@@ -73,6 +84,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         start_ratio = df.iloc[fidx]['ratio']
         start_id = step_obj.get_perturb_range_identifier(start_ratio)
 
+        # FIXME: this probably does not need to be in df, but in PerturbationHolder
         df['ratio_range_start_id'] = start_id
 
         ph_obj = PerturbationHolder(uuid=uuid, obj_id=obj_id, start_frame=framenumber0,
