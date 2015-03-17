@@ -66,7 +66,11 @@ def is_perturb_condition_string(desc):
 def get_perturb_object(perturb_descriptor, debug=False):
     if not perturb_descriptor:
         return NoPerturb()
+
     cls = get_perturb_class(perturb_descriptor, debug=debug)
+    if cls is NoPerturb:
+        return cls
+
     desc,criteria = cls.split_perturb_descriptor(perturb_descriptor)
     return cls(desc,criteria)
 
