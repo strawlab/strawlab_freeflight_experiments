@@ -38,11 +38,12 @@ def find_step_obj(cond, condition_conf=None):
 
 
 def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
-                          step_obj, completion_threshold=0.98):
+                          step_obj, completion_threshold=0.98,
+                          impute_missings=True):
     """Returns a list of PerturbationHolder objects with the perturbations for a single trial.
 
     The dataframe of the perturbations:
-      - have missing values imputed using ffill
+      - have missing values on ratio and perturb_progress imputed (ffill + bfill)
       - have a few new columns:
         - time: a time index, based on time0 and dt
         - talign: time - time[perturbation_start]
@@ -52,7 +53,10 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                                 the perturbation started
     """
 
-    df = df.fillna(method='ffill')
+    # impute missing values on the controller columns we use
+    if impute_missings:
+        for col in ('perturb_progress', 'ratio'):
+            df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
 
     # find the start of the perturbation (where perturb_progress == 0)
     z = np.where(df['perturb_progress'].values == 0)
@@ -97,7 +101,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
     return []
 
 
-def collect_perturbation_traces(combine, completion_threshold=0.98):
+def collect_perturbation_traces(combine, completion_threshold=0.98, impute_missings=True):
 
     results, dt = combine.get_results()
 
@@ -130,7 +134,8 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                                                        time0,
                                                        dt,
                                                        step_obj,
-                                                       completion_threshold))
+                                                       completion_threshold=completion_threshold,
+                                                       impute_missings=impute_missings))
 
     return perturbations, perturbation_objects
 
