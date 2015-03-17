@@ -49,8 +49,6 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         - talign: time - time[perturbation_start]
         - align: a 0-based frame-align index,
                  0 is the perturbation start, negative numbers indicate pre-perturbation
-        - ratio_range_start_id: a constant int identifying because of which of n-trigger-conditions
-                                the perturbation started
     """
 
     # impute missing values on the controller columns we use
