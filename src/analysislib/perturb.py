@@ -42,7 +42,6 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
     """Returns a list with the perturbations for a single trial."""
 
     df = df.fillna(method='ffill')
-    df['condition'] = cond
 
     # find the start of the perturbation (where perturb_progress == 0)
     z = np.where(df['perturb_progress'].values == 0)
