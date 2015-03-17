@@ -26,7 +26,7 @@ import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False):
+def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False, max_plot=np.inf):
 
     pid = args.only_perturb_start_id
 
@@ -66,7 +66,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                 ax = fig.add_subplot(1,1,1)
                 ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
-                for oid,_df in grouped_oid:
+                for n,(oid,_df) in enumerate(grouped_oid):
+
+                    if n > max_plot:
+                        continue
 
                     ph = phs[oid]
                     pdf = _df.iloc[ph.start_idx:ph.end_idx]
@@ -109,7 +112,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                             transform=ax.transAxes,
                             color='k')
 
-                    for oid,_df in grouped_oid:
+                    for n,(oid,_df) in enumerate(grouped_oid):
+
+                        if n > max_plot:
+                            continue
 
                         t = _df['talign'].values
                         v = _df[to_plot].values
