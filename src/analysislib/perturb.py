@@ -65,7 +65,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         l = np.where(df['perturb_progress'].values == df['perturb_progress'].max())
         lidx = l[0][0]
 
-        t = time0 + (np.arange(0, len(df), dtype=float) * dt)
+        t = time0 + (np.arange(len(df), dtype=float) * dt)
         df['time'] = t
         df['talign'] = t - t[fidx]
 
@@ -75,7 +75,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         completed = step_obj.completed_perturbation(tmax, completion_threshold) and (lidx > fidx)
         completed_pct = step_obj.completed_perturbation_pct(tmax, completion_threshold)
 
-        df['align'] = np.array(range(len(df)), dtype=int) - fidx
+        df['align'] = np.arange(len(df), dtype=int) - fidx
 
         # save both the exact value, and an identifier to signify which
         # part of the arena the perturbation started in. The identifier
