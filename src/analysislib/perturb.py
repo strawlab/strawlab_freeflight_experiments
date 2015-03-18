@@ -39,7 +39,7 @@ def find_step_obj(cond, condition_conf=None):
 
 def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                           step_obj, completion_threshold=0.98,
-                          impute_missings=True):
+                          impute_missings=True, inplace=False):
     """Returns a list of PerturbationHolder objects with the perturbations for a single trial.
 
     The dataframe of the perturbations:
@@ -51,10 +51,15 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                  0 is the perturbation start, negative numbers indicate pre-perturbation
     """
 
+    # make a copy of the dataframe?
+    if not inplace:
+        df = df.copy(deep=True)
+
     # impute missing values on the controller columns we use
     if impute_missings:
         for col in ('perturb_progress', 'ratio'):
-            df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+            df[col].fillna(method='ffill', inplace=True)
+            df[col].fillna(method='bfill', inplace=True)
 
     # find the start of the perturbation (where perturb_progress == 0)
     z = np.where(df['perturb_progress'].values == 0)
