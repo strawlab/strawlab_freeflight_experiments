@@ -13,6 +13,7 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 # perturb_id: placeholder in case there can be more than one perturbation per trial
 # condition: the condition string
 # start_reason, start_id: why and where the perturbation started
+# start_idx, end_idx: interval where the perturbation took place (half-closed [start_idx, end_idx), ala python)
 # completed, completed_pct: is the perturbation considered to be complete and which percentage was completed?
 # perturbation_length, trajectory_length: lengths, in seconds
 # df: the series dataframe, may or may not contain alignment columns
