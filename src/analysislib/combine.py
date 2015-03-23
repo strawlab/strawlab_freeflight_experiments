@@ -279,7 +279,9 @@ def combine2h5csv(combine,
 
     # combine expects a CSV sorted by framenumber, which is not the case
     # (objects have been shuffled in the result dictionary)
-    # this is the easiest way of getting there...
+    # this is the easiest way of getting there
+    # it is not the best, because we betray nodelib.logger
+    # time allowing, rework by just pooling all trials and sorting them by framenumber0
     pd.read_csv(csv_fname).sort('framenumber').to_csv(csv_fname, index=False, na_rep='nan')
     log.close()
 
