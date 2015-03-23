@@ -67,7 +67,7 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
             system_us = []
             system_ys = []
 
-            for ph in phs.itervalues():
+            for ph in phs:
                 if ph.completed:
                     any_completed_perturbations = True
 
@@ -213,7 +213,7 @@ if __name__=='__main__':
             individual_iddata = []          #[(iddata_object,perturbation_holder,len_data),...]
             individual_iddata_mean = None
 
-            for ph in phs.itervalues():
+            for ph in phs:
                 #any perturbations completed
                 if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
                     any_completed_perturbations = True

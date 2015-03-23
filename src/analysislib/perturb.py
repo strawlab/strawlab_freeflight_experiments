@@ -44,7 +44,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
         if isinstance(step_obj,sfe_perturb.NoPerturb):
             continue
 
-        perturbations[cond] = {}
+        perturbations[cond] = []
         perturbation_objects[cond] = step_obj
 
         r = results[cond]
@@ -63,11 +63,8 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 l = np.where(df['perturb_progress'].values == df['perturb_progress'].max())
                 lidx = l[0][0]
 
-                #ensure we get a unique obj_id for later grouping. That is not necessarily
-                #guarenteed because obj_ids may be in multiple conditions, so if need be
-                #create a new one
-                if obj_id in perturbations[cond]:
-                    obj_id = int(time.time()*1e6)
+                #FIXME: obj_id might not be unique here if later grouping occurs.
+                #should use a strong uuid as per Santi
                 df['obj_id'] = obj_id
 
                 t = time0 + (np.arange(0,len(df),dtype=float) * dt)
@@ -94,7 +91,7 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
                 df['ratio_range_start_id'] = start_id
 
                 ph_obj = PerturbationHolder(df, fidx, lidx, obj_id, completed, completed_pct, start_ratio, tmax, traj_length, cond)
-                perturbations[cond][obj_id] = ph_obj
+                perturbations[cond].append(ph_obj)
 
     return perturbations, perturbation_objects
 

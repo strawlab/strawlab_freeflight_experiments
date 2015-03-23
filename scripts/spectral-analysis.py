@@ -96,7 +96,7 @@ if __name__=='__main__':
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
                                                     completion_threshold=args.perturb_completion_threshold)
 
-    #perturbations {cond: {obj_id:PerturbationHolder,...}}
+    #perturbations {cond: [PerturbationHolder,...]}
     #perturbation_objects {cond: perturb_obj}
 
     pid = args.only_perturb_start_id
@@ -130,7 +130,7 @@ if __name__=='__main__':
             individual_iddata = []          #[(iddata_object,perturbation_holder,len_data),...]
             individual_iddata_mean = None
 
-            for ph in phs.itervalues():
+            for ph in phs:
                 #any perturbations completed
                 if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
                     any_completed_perturbations = True
