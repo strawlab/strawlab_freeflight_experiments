@@ -4,7 +4,6 @@ import os.path
 import os.path
 import sys
 import random
-import tempfile
 import time
 import cPickle
 import pickle
@@ -15,7 +14,6 @@ import datetime
 import calendar
 import collections
 import copy
-import itertools
 from pandas.tseries.index import DatetimeIndex
 
 import tables
@@ -24,8 +22,6 @@ import numpy as np
 import pytz
 import scipy.io
 import yaml
-from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
-import nodelib
 
 import roslib
 
@@ -127,168 +123,6 @@ def check_combine_health(combine, min_length_f=100):
     if len(with_missing) > 0:
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
                         with_missing[['uuid', 'oid', 'frame0']].to_string())
-
-
-# --- Generation of hdf5/csv from combine objects
-
-def simple_flydra_datatypes():
-    """Returns a 2-tuple (traj_datatypes, traj_start_datatypes).
-    Useful to store trajectories ala flydra.
-    """
-
-    traj_datatypes = [
-        ("x", np.float64),
-        ("y", np.float64),
-        ("z", np.float64),
-        ("obj_id", np.uint32),
-        ("framenumber", np.int64),
-    ]
-
-    traj_start_datatypes = [
-        ("obj_id", np.uint32),
-        ("first_timestamp_secs", np.uint64),
-        ("first_timestamp_nsecs", np.uint64),
-    ]
-
-    return traj_datatypes, traj_start_datatypes
-
-
-def combine2h5csv(combine,
-                  trim_trajs_to=10,
-                  columns_for_csv=('rotation_rate', 'ratio'),
-                  tempdir=None,
-                  file_prefix='data',
-                  fps=100):
-    """
-    Generates ".simple.flydra.h5" and ".csv" files from combine objects.
-
-    Heavily inspired by "TestCombineFake2._create_h5".
-
-    Parameters
-    ----------
-    combine: combine.CombineH5WithCSV object
-      where to get the data from
-
-    trim_trajs_to: int, default 10
-      only the first trim_trajs_to of each trial is stored
-
-    columns_for_csv: string list-like, default ('rotation_rate', 'ratio')
-      the extra columns that will be saved from each trial into the CSV file
-
-    tempdir: path, default None
-      directory where to save the two files, if not a tempdir will be created
-
-    file_prefix: string, default 'data'
-      how csv and h5 files will be named
-
-    fps: int, default 100
-      sampling speed for this fake experiment
-
-    Returns
-    -------
-    (csv_path, h5_path).
-    """
-    # There is danger of creating unrealistic csv/h5 files.
-    # That is why, even if writing them directly is not a big deal,
-    # we better pass by:
-    #    - nodelib.CSVLogger to write the CSV
-    #    - flydra save_as_flydra_hdf5 to write the H5 file
-
-    # dest files
-    if tempdir is None:
-        tempdir = tempfile.mkdtemp()
-    h5_fname = os.path.join(tempdir, "%s.simple_flydra.h5" % file_prefix)
-    csv_fname = os.path.join(tempdir, "%s.csv" % file_prefix)
-
-    # fake csv
-    log_state = columns_for_csv
-    log = nodelib.log.CsvLogger(fname=csv_fname,
-                                wait=False, debug=False, warn=False,
-                                state=log_state)
-    # N.B. we are not populating the "flydra_data_file" field
-
-    # fake h5 file
-    traj_datatypes, traj_start_datatypes = simple_flydra_datatypes()
-    traj_data = {k[0]: [] for k in traj_datatypes}
-    oid_starts = {}
-    traj_starts_data = {k[0]: [] for k in traj_start_datatypes}
-
-    # populate and write
-    results, dt = combine.get_results()
-    for cond, condtrials in results.iteritems():
-        for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(condtrials['uuids'],
-                                                                   condtrials['start_obj_ids'],
-                                                                   condtrials['df']):
-            # select only the first n observations
-            if trim_trajs_to is not None:
-                df = df.head(n=trim_trajs_to)
-
-            # prepare the csv logger
-            # we need to fake a condition object
-            class FakeCondition(Condition):
-                def __init__(self, slash_separated_cond, *args, **kwargs):
-                    super(FakeCondition, self).__init__(*args, **kwargs)
-                    self.cond = slash_separated_cond
-
-                def to_slash_separated(self):
-                    return self.cond
-
-            log.condition = FakeCondition(cond)  # combine.get_condition_configuration()
-            log.lock_object = obj_id
-            log._exp_uuid = uuid  # dirty
-            # write the csv rows for this trial
-            for framenumber, row in df.iterrows():
-                for col in columns_for_csv:
-                    setattr(log, col, row[col])
-                log.framenumber = framenumber
-                log.update()
-
-            # accummulate the data to write the h5 at the end
-            for col in 'xyz':
-                traj_data[col].extend(df[col].values)
-            traj_data['framenumber'].extend(df.index.values)  # this could be easily generalized to other index types
-            traj_data['obj_id'].extend(itertools.repeat(obj_id, len(df)))
-            oid_starts[obj_id] = min((log.last_tsecs, log.last_tnsecs),
-                                     oid_starts.get(obj_id, (np.inf, np.inf)))
-
-    # write too the start of each object lock
-    for obj_id, (tsecs, tnsecs) in sorted(oid_starts.items()):
-        traj_starts_data["obj_id"].append(obj_id)
-        traj_starts_data["first_timestamp_secs"].append(tsecs)
-        traj_starts_data["first_timestamp_nsecs"].append(tnsecs)
-
-    # flatten all the data lists into numpy arrays
-
-    npts = len(traj_data['obj_id'])
-    traj_arr = np.zeros(npts, dtype=traj_datatypes)
-    for k in traj_data:
-        traj_arr[k] = traj_data[k]
-
-    npts = len(traj_starts_data['obj_id'])
-    traj_start_arr = np.zeros(npts, dtype=traj_start_datatypes)
-    for k in traj_starts_data:
-        traj_start_arr[k] = traj_starts_data[k]
-
-    # save to "simple flydra h5"
-    # N.B. this compresses using gzip+9; that is slow, is all saved like this?
-    # N.B. this does not save "experiment_info", a table with the uuid, which seems optional
-    save_as_flydra_hdf5(h5_fname,
-                        {"trajectories": traj_arr, "trajectory_start_times": traj_start_arr},
-                        "US/Pacific",
-                        fps)
-
-    # combine expects a CSV sorted by framenumber, which is not the case
-    # (objects have been shuffled in the result dictionary)
-    # this is the easiest way of getting there
-    # it is not the best, because we betray nodelib.logger
-    # time allowing, rework by just pooling all trials and sorting them by framenumber0
-    pd.read_csv(csv_fname).sort('framenumber').to_csv(csv_fname, index=False, na_rep='nan')
-    log.close()
-
-    return csv_fname, h5_fname
-
-# alias
-uncombine = combine2h5csv
 
 
 class _Combine(object):
@@ -1862,19 +1696,6 @@ class CombineH5WithCSV(_Combine):
                 self._results[cond]['uuids'].append(uuid)
 
         h5.close()  # maybe this should go in a finally?
-
-    def uncombine(self,
-                  trim_trajs_to=None,
-                  columns_for_csv=('rotation_rate', 'ratio'),
-                  tempdir=None,
-                  file_prefix='data',
-                  fps=None):
-        return uncombine(self,
-                         trim_trajs_to=trim_trajs_to,
-                         columns_for_csv=columns_for_csv,
-                         tempdir=tempdir,
-                         file_prefix=file_prefix,
-                         fps=1 / self.dt if fps is None else fps)
 
 
 FORMAT_DOCS = """
