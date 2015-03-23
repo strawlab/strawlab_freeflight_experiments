@@ -1411,11 +1411,15 @@ class CombineH5WithCSV(_Combine):
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:
+                    try:
+                        os.unlink(fn)
+                    except:
+                        pass
                     with open(fn, 'w') as f:
                         yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
-                except:
-                    pass
+                except Exception, e:
+                    self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
             except:
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
