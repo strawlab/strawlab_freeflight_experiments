@@ -48,17 +48,13 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
             n_completed = 0
 
             to_pool = []
-            for ph in phs.itervalues():
+            for ph in phs:
                 if pid is None or (ph.df['ratio_range_start_id'].values[0] == pid):
                     to_pool.append(ph.df)
                     if ph.completed:
                         n_completed += 1
 
             pool = pd.concat(to_pool,join="outer",axis=0)
-            pool.to_pickle(
-                    combine.get_plot_filename("pool_%s" % condn) + '.df')
-
-            grouped_oid = pool.groupby('obj_id')
 
             #plot x-y trajectories while under perturbation
             name = combine.get_plot_filename('xy_%s' % condn)
@@ -66,13 +62,16 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                 ax = fig.add_subplot(1,1,1)
                 ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
-                for n,(oid,_df) in enumerate(grouped_oid):
+                for n,ph in enumerate(phs):
 
                     if n > max_plot:
                         continue
 
-                    ph = phs[oid]
-                    pdf = _df.iloc[ph.start_idx:ph.end_idx]
+                    if (pid is not None) and (ph.df['ratio_range_start_id'].values[0] == pid):
+                        continue
+
+                    #ph = phs[oid]
+                    pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
 
                     xv = pdf['x'].values
                     yv = pdf['y'].values
@@ -83,7 +82,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                         ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
                     if plot_pre_perturbation:
-                        pdf = _df.iloc[:ph.start_idx]
+                        pdf = ph.df.iloc[:ph.start_idx]
                         xv = pdf['x'].values
                         yv = pdf['y'].values
                         if len(xv):
@@ -112,13 +111,16 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                             transform=ax.transAxes,
                             color='k')
 
-                    for n,(oid,_df) in enumerate(grouped_oid):
+                    for n,ph in enumerate(phs):
 
                         if n > max_plot:
                             continue
 
-                        t = _df['talign'].values
-                        v = _df[to_plot].values
+                        if (pid is not None) and (ph.df['ratio_range_start_id'].values[0] == pid):
+                            continue
+
+                        t = ph.df['talign'].values
+                        v = ph.df[to_plot].values
 
                         ax.plot(t, v, 'k-', alpha=0.1)
                         ax.plot(t[-1], v[-1], 'ko', alpha=0.4, markersize=2)
@@ -162,7 +164,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         for cond in perturbations:
             perturb_obj = perturbation_objects[cond]
             scond = combine.get_condition_name(cond)
-            for response_obj in perturbations[cond].itervalues():
+            for response_obj in perturbations[cond]:
                 if response_obj.completed:
                     f.write("| %s | %s | %.1f | %.1f |\n" % (scond, response_obj.obj_id, response_obj.perturbation_length, response_obj.trajectory_length))
                     i += 1
