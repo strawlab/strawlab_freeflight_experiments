@@ -270,7 +270,7 @@ if __name__=='__main__':
 
             for ph in phs:
                 #any perturbations completed
-                if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
+                if ph.completed and ((pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid)):
                     any_completed_perturbations = True
 
                     #take out the perturbation period only (for the mean response)
