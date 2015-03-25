@@ -12,7 +12,7 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 # uuid, obj_id, start_frame: trial id
 # perturb_id: placeholder in case there can be more than one perturbation per trial
 # condition: the condition string
-# start_reason, start_id: why and where the perturbation started
+# start_criteria, start_reason, start_id: the type, why and where the perturbation started
 # start_idx, end_idx: interval where the perturbation took place (half-closed [start_idx, end_idx), ala python)
 # completed, completed_pct: is the perturbation considered to be complete and which percentage was completed?
 # perturbation_length, trajectory_length: lengths, in seconds
@@ -21,7 +21,7 @@ PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'uuid, obj_id, start_frame, '
                                             'perturb_id, '
                                             'condition, '
-                                            'start_reason, start_id, '
+                                            'start_criteria, start_reason, start_id, '
                                             'start_idx, end_idx, '
                                             'completed, completed_pct, '
                                             'perturbation_length, trajectory_length, '
@@ -79,7 +79,6 @@ def extract_perturbation_interval(df, step_obj, dt, completion_threshold=0.98):
 def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                           step_obj,
                           completion_threshold=0.98,
-                          start_by_ratio=True,
                           save_alignment=True):
     """Returns a list of PerturbationHolder objects with the perturbations for a single trial.
 
@@ -99,9 +98,6 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
 
     completion_threshold: float in [0, 1], default 0.98
       the percentage at which a perturbation is considered to be "completed"
-
-    start_by_ratio: boolean, default True
-      whether the perturbation start and location wer specified by a rule on ratio
 
     save_alignment: boolean, default True
       if True, df is copied and 3 new perturbation alignment columns are added:
@@ -128,7 +124,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
     # (for example, now start can be time-triggered)
     start_id = None
     start_ratio = None
-    if start_by_ratio:
+    if step_obj.criteria_type == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO:
         # save both the exact value, and an identifier to signify which
         # part of the arena the perturbation started in. The identifier
         # is based on the ratio range_funcs, range_chunks magic. A range string
@@ -151,7 +147,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
     return [PerturbationHolder(uuid=uuid, obj_id=obj_id, start_frame=framenumber0,
                                perturb_id=0,
                                condition=cond,
-                               start_reason=start_ratio, start_id=start_id,
+                               start_criteria=step_obj.criteria_type, start_reason=start_ratio, start_id=start_id,
                                start_idx=first_idx, end_idx=last_idx,
                                completed=completed, completed_pct=completed_pct,
                                perturbation_length=perturbation_length, trajectory_length=traj_length,
