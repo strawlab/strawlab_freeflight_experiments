@@ -157,7 +157,7 @@ if __name__=='__main__':
 
             for ph in phs:
                 #any perturbations completed
-                if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
+                if ph.completed and ((pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid)):
                     any_completed_perturbations = True
 
                     #upload to matlab the data for this perturbation and also including
@@ -177,6 +177,8 @@ if __name__=='__main__':
             print "%s: NO COMPLETED PERTURBATIONS" % combine.get_condition_name(cond)
 
         if any_completed_perturbations:
+            print "%s: %d completed perturbations" % (cond_name, len(individual_iddata))
+
             #create a iddata object that contains all complete perturbations
             pooled_id_varname = mlab.varname('iddata')
             mlab.run_code("%s = merge(%s);" % (
