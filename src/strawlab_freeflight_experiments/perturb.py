@@ -169,7 +169,7 @@ class Perturber:
     def completed_perturbation(self, t, thresh=0.98):
         return t >= self._get_duration(thresh)
 
-    def completed_perturbation_pct(self, t):
+    def completed_perturbation_pct(self, t, thresh=0.98):
         return 100.0*t / self.duration
 
     def completed_perturbation_discrete(self, lidx, fidx, Fs, thresh=0.98):
