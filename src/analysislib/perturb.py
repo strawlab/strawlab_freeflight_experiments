@@ -158,7 +158,31 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
                                df=df)]
 
 
-def collect_perturbation_traces(combine, allowed_perturbation_types=None, extractor=extract_perturbations):
+def collect_perturbation_traces(combine,
+                                as_dictionary=True,
+                                allowed_perturbation_types=None,
+                                extractor=extract_perturbations,
+                                **extractor_params):
+    """
+    Returns a two-tuple (perturbations, perturbation_objects) with the perturbations in the combine object.
+     - perturbations is either a dictionary {condition: [PerturbationHolder]} or a list of PerturbationHolder objects.
+     - perturbation_objects is a dictionary {condition: Perturber}
+
+    Parameters
+    ----------
+    combine: Combine object
+
+    as_dictionary: boolean, default True
+      if True, perturbations is a dictionary; if False, perturbations is a list
+
+    allowed_perturbation_types: list of strings (or None-like), default None
+      if supplied, a list of perturbation types to analyse ('idinput', 'step', for example)      
+
+    extractor: a function with the same signature as extract_perturbation, returning a list of perturbations per trial
+      see the extract_perturbations method
+
+    extractor_params: keyword arguments passed to "extractor" on each trial
+    """
 
     results, dt = combine.get_results()
 
@@ -194,7 +218,16 @@ def collect_perturbation_traces(combine, allowed_perturbation_types=None, extrac
                                            uuid, obj_id, framenumber0,
                                            cond,
                                            time0, dt,
-                                           step_obj))
+                                           step_obj,
+                                           **extractor_params))
+
+    if as_dictionary:
+        perturbations_dict = {}
+        for ph in perturbations:
+            if ph.condition not in perturbations_dict:
+                perturbations_dict[ph.condition] = []
+            perturbations_dict[ph.condition].append(ph)
+        return perturbations_dict, perturbation_objects
 
     return perturbations, perturbation_objects
 
