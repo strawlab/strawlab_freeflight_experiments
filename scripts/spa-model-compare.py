@@ -49,7 +49,7 @@ if __name__=='__main__':
     parser.add_argument('--title',type=str)
     args = parser.parse_args()
 
-    mlab = mlab = sfe_matlab.get_mlab_instance(args.show)
+    mlab = sfe_matlab.get_mlab_instance(args.show)
 
     #we use underscores etc in our matlab variable titles, etc, so turn them off
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
