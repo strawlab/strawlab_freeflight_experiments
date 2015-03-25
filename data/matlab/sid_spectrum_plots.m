@@ -11,15 +11,20 @@ end
 
 ni = length(i);
 
-%choose a window such that we have 20 cycles of the lowest frequency
+dF0 = 1;  %min resolvable frequency
+
+%http://support.ircam.fr/docs/AudioSculpt/3.0/co/Window%20Size.html
+nfft = max(256,2^nextpow2(ni));
+%choose a window such that we have 5 cycles of the lowest frequency
 %for our given Fs
-ws = max(f0,0.1)*20*fs;
+ws = floor(5*fs/dF0);
+
+overlappct = 75;        %75% overlap
 
 ts=1/fs;
 
 window = hamming(ws);
-noverlap = round(0.75*ws);          %75% overlap
-nfft = max(256,2^nextpow2(ni));
+noverlap = round((overlappct/100.0)*ws);
 
 h1 = figure(1);
 
@@ -39,21 +44,27 @@ h3 = figure(3);
 
 subplot(211);
 
-%periodogram(i,[],nfft,fs);
-Hs1 = spectrum.mtm(3,'adapt');
-psd(Hs1,i,'Fs',fs,'NFFT',nfft)
+%share the psd method for input and output
+Hs = spectrum.welch('hamming',ws);
 
+Hpsdi=psd(Hs,i,'Fs',fs,'NFFT',nfft);
+
+plot(Hpsdi)
 xlim([0 fs/4]);
 ylim([-50 25])
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
-title({'Periodogram Power Spectral Density Estimate',subtitle},'interpreter', 'none');
+title({'Power Spectral Density Estimate',subtitle},'interpreter', 'none');
+
+text(0.01,0.99,...
+    sprintf('fs: %.1f ws: %d nfft: %d',fs,ws,nfft),...
+    'Units','normalized','VerticalAlignment','top');
+
 legend(u_name)
 subplot(212);
 
-periodogram(o,[],nfft,fs);
-Hs1 = spectrum.mtm(3,'adapt');
-psd(Hs1,o,'Fs',fs,'NFFT',nfft)
+Hpsdo=psd(Hs,o,'Fs',fs,'NFFT',nfft);
 
+plot(Hpsdo);
 xlim([0 fs/4]);
 ylim([-50 25])
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
