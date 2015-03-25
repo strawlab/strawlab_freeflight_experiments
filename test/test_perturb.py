@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from functools import partial
 import os.path
 from time import sleep
 import unittest
@@ -132,7 +133,7 @@ class TestExtractPerturbations(unittest.TestCase):
         pos = perturbation_objects[self._cond]
         phs = perturbations[self._cond]
 
-        self.assertIsInstance(pos,sfe_perturb.PerturberIDINPUT)
+        self.assertIsInstance(pos, sfe_perturb.PerturberIDINPUT)
 
         self.assertEqual(len(phs), 10)
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)
@@ -140,23 +141,25 @@ class TestExtractPerturbations(unittest.TestCase):
 
         ph = self._get_ph(phs,79)
         self.assertEqual(ph.start_idx, 244)
-        self.assertEqual(ph.end_idx, 392)
+        self.assertEqual(ph.end_idx, 393)
         self.assertEqual(ph.completed, False)
         self.assertAlmostEqual(ph.perturbation_length,1.48,4)
         self.assertAlmostEqual(ph.trajectory_length,3.92,4)
 
-        #differet completion_thresh
+        # different completion_thresh
         perturbations, perturbation_objects = aperturb.collect_perturbation_traces(c, completion_threshold=0.98)
         pos = perturbation_objects[self._cond]
         phs = perturbations[self._cond]
 
+        self.assertIsInstance(pos, sfe_perturb.PerturberIDINPUT)
+
         self.assertEqual(len(phs), 10)
-        self.assertEqual(sum(len(ph.df) for ph in phs), 7419)   #same as before
-        self.assertEqual(sum(ph.completed for ph in phs), 4)    #less should complete
+        self.assertEqual(sum(len(ph.df) for ph in phs), 7419)   # same as before
+        self.assertEqual(sum(ph.completed for ph in phs), 4)    # less should complete
 
         ph = self._get_ph(phs,79)
         self.assertEqual(ph.start_idx, 244)
-        self.assertEqual(ph.end_idx, 392)
+        self.assertEqual(ph.end_idx, 393)
         self.assertEqual(ph.completed, False)
         self.assertAlmostEqual(ph.perturbation_length,1.48,4)
         self.assertAlmostEqual(ph.trajectory_length,3.92,4)
@@ -181,7 +184,7 @@ class TestExtractPerturbations(unittest.TestCase):
 
         ph = self._get_ph(phs,79)
         self.assertEqual(ph.start_idx, 244)
-        self.assertEqual(ph.end_idx, 391)
+        self.assertEqual(ph.end_idx, 393)
         self.assertEqual(ph.completed, False)
         self.assertAlmostEqual(ph.perturbation_length,1.48,4)
         self.assertAlmostEqual(ph.trajectory_length,3.92,4)
