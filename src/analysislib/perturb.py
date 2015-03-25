@@ -35,13 +35,17 @@ def find_step_obj(cond, condition_conf=None):
         try:
             step_obj = sfe_perturb.get_perturb_object_from_condition(condition_conf)
         except KeyError:
-            # new style yaml experiment, not a perturbation condition
             return None
     else:
         # backwards compatibility for old pre-yaml experiments where the perturb_descripor
         # was assumed to be the last element in the condition string
         perturb_desc = cond.split("/")[-1]
         step_obj = sfe_perturb.get_perturb_object(perturb_desc)
+
+        # add a sanity check as we want to improve the degree we trust ConditionCompat
+        # to do the backwards compatibility for us
+        if isinstance(step_obj, sfe_perturb.NoPerturb):
+            print "WARNING: WE THOUGHT %s WAS A PERTURBATION BUT IT IS NOT. UPDATE ConditionCompat.PERTURB_RE" % cond
 
     return None if isinstance(step_obj, sfe_perturb.NoPerturb) else step_obj
 
@@ -162,6 +166,10 @@ def collect_perturbation_traces(combine, extractor=extract_perturbations):
     perturbation_objects = {}   # cond: perturb_obj
 
     for cond in sorted(results):
+
+        condition_obj = combine.get_condition_object(cond)
+        if not condition_obj.is_type('perturbation'):
+            continue
 
         condconf = combine.get_condition_configuration(combine.get_condition_name(cond))
         step_obj = find_step_obj(cond, condconf)
