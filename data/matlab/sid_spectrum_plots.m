@@ -1,4 +1,5 @@
-function [h1,h2,h3] = do_freq_plots(iddata, f0, f1, fs, subtitle, u_name, y_name)
+function [h1,h2,h3,indata,outdata] = do_freq_plots(iddata, f0, f1, fs, subtitle, u_name, y_name)
+
 id = iddata.InputData(:);
 
 if iscell(id)
@@ -8,6 +9,9 @@ else
     i = id;
     o = iddata.OutputData(:);
 end
+
+indata = i;
+outdata = o;
 
 ni = length(i);
 
@@ -26,21 +30,21 @@ ts=1/fs;
 window = hamming(ws);
 noverlap = round((overlappct/100.0)*ws);
 
-h1 = figure(1);
+h1 = figure;
 
 mscohere(i,o,window,noverlap,nfft,fs);
 xlim([0 fs/4]);
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
 title({['Coherence Estimate ' u_name ':' y_name],subtitle},'interpreter', 'none');
 
-h2 = figure(2);
+h2 = figure;
 
 tfestimate(i,o,window,noverlap,nfft,fs);
 xlim([0 fs/4]);
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
 title({['Transfer Function Estimate ' u_name ':' y_name],subtitle},'interpreter', 'none');
 
-h3 = figure(3);
+h3 = figure;
 
 subplot(211);
 

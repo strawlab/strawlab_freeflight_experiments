@@ -35,8 +35,9 @@ import strawlab_freeflight_experiments.matlab as sfe_matlab
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, basefn):
-    h1,h2,h3 = mlab.run_func(os.path.join(pkg_dir,'data','matlab','sid_spectrum_plots.m'),
-                        iddata,f0,f1,FS,title,system_u_name,system_y_name,nout=3)
+    h1,h2,h3,idata,odata = mlab.run_func(os.path.join(pkg_dir,'data','matlab','sid_spectrum_plots.m'),
+                           iddata,f0,f1,FS,title,system_u_name,system_y_name,
+                           nout=5,saveout=('h1','h2','h3',mlab.varname('idata'),mlab.varname('odata')))
 
     fn = basefn % "cohere"
     mlab.saveas(h1,fn,'png')
@@ -49,6 +50,8 @@ def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, 
     fn = basefn % "psd"
     mlab.saveas(h3,fn,'png')
     print "WROTE", fn
+
+    return idata,odata
 
 if __name__=='__main__':
 
@@ -169,7 +172,12 @@ if __name__=='__main__':
             title = '%s' % perturbation_obj
             name = combine.get_plot_filename('%%s_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
 
-            plot_spectrum(mlab,pooled_id, f0, f1, FS, title, system_u_name, system_y_name, name)
+            indata,outdata = plot_spectrum(mlab,pooled_id, f0, f1, FS, title, system_u_name, system_y_name, name)
+
+            name = combine.get_plot_filename('input_data_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
+            mlab.run_code("save('%s','%s');" % (name,indata))
+            name = combine.get_plot_filename('output_data_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
+            mlab.run_code("save('%s','%s');" % (name,outdata))
 
 
     if args.show:
