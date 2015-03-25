@@ -59,7 +59,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
 
             to_pool = []
             for ph in phs:
-                if (pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid):
+                if (pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid):
                     to_pool.append(ph.df)
                     if ph.completed:
                         n_completed += 1
@@ -77,8 +77,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                     if n > max_plot:
                         continue
 
-                    if (pid is not None) and (ph.df['ratio_range_start_id'].values[0] != pid):
-                        continue
+                    if pid is not None:
+                        if ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO:
+                            if ph.start_id != pid:
+                                continue
 
                     #ph = phs[oid]
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
@@ -126,8 +128,10 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                         if n > max_plot:
                             continue
 
-                        if (pid is not None) and (ph.df['ratio_range_start_id'].values[0] != pid):
-                            continue
+                        if pid is not None:
+                            if ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO:
+                                if ph.start_id != pid:
+                                    continue
 
                         t = ph.df['talign'].values
                         v = ph.df[to_plot].values
