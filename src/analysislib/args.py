@@ -26,6 +26,7 @@ def _filter_types_args():
 REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset"]
 
 DATA_MODIFYING_ARGS = [
+    'idfilt',
     'uuid',
     'arena',
     'lenfilt',
