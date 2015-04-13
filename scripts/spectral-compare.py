@@ -8,10 +8,12 @@ import re
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
+import strawlab.constants
+
 import strawlab_freeflight_experiments.sid as sfe_sid
 import strawlab_freeflight_experiments.matlab as sfe_matlab
 
-import strawlab.constants
+from strawlab_freeflight_experiments.sid import VERSION
 
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
@@ -65,7 +67,7 @@ if __name__=='__main__':
     fs = set(fs).pop()
 
     h = mlab.run_func(os.path.join(pkg_dir,'data','matlab','multi_data_psd_plot.m'),
-                       pobj, args.f0, args.f1, fs, args.title,
+                       pobj, args.f0, args.f1, fs, args.title + ' v%d' % VERSION,
                        nout=1)
 
     mlab.saveas(h,args.save+'.png','png')

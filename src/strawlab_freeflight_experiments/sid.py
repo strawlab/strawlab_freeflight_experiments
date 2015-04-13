@@ -28,6 +28,9 @@ import analysislib.plots as aplt
 
 import matplotlib.pyplot as plt
 
+# show the version of analysis in all plots for easier updating documents
+VERSION = 1
+
 def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                         'src','strawlab_freeflight_experiments','matlab',name)

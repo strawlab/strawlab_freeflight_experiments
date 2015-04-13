@@ -32,6 +32,8 @@ import strawlab_freeflight_experiments.frequency as sfe_frequency
 import strawlab_freeflight_experiments.sid as sfe_sid
 import strawlab_freeflight_experiments.matlab as sfe_matlab
 
+from strawlab_freeflight_experiments.sid import VERSION
+
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, basefn):
@@ -54,9 +56,6 @@ def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, 
     return idata,odata
 
 if __name__=='__main__':
-
-    # show the version of analysis in all plots for easier updating documents
-    VERSION = 1
 
     EPS = False
 

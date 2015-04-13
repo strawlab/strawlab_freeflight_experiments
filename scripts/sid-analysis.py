@@ -32,6 +32,8 @@ import strawlab_freeflight_experiments.frequency as sfe_frequency
 import strawlab_freeflight_experiments.sid as sfe_sid
 import strawlab_freeflight_experiments.matlab as sfe_matlab
 
+from strawlab_freeflight_experiments.sid import VERSION
+
 def _load_matlab_variable_as_same_name(fobj, path, name):
     TMPL = """
 info = whos('-file','%(path)s');
@@ -106,9 +108,6 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
                     fig.suptitle('%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (perturbation_obj,100,nfft_desc))
 
 if __name__=='__main__':
-
-    # show the version of analysis in all plots for easier updating documents
-    VERSION = 1
 
     EPS = False
     DETREND = True
