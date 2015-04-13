@@ -17,6 +17,10 @@
   <node name="camera_position" pkg="rostopic" type="rostopic" args="pub --once -f $(find strawlab_freeflight_experiments)/data/test/camera_position.yaml /ds_replay/trackball_manipulator_state  flyvr/TrackballManipulatorState">
   </node>
 
+  <!-- Show a model. -->
+  <node name="stimulus_model" pkg="rostopic" type="rostopic" args="pub --once /model_filename std_msgs/String post.osg">
+  </node>
+
   <group>
     <remap from="pose" to="model_pose"/>
     <node name="set_model" pkg="flyvr" type="send_pose">
