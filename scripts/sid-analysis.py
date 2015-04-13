@@ -107,6 +107,9 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
 
 if __name__=='__main__':
 
+    # show the version of analysis in all plots for easier updating documents
+    VERSION = 1
+
     EPS = False
     DETREND = True
 
@@ -186,8 +189,11 @@ if __name__=='__main__':
     mfile = combine.get_plot_filename('variables.m')
     mfile = open(mfile,'w')
 
+    good_models = {}
+
     #loop per condition
     for cond in perturbations:
+        good_models[cond] = []
 
         any_completed_perturbations = False
 
@@ -276,7 +282,7 @@ if __name__=='__main__':
             _load_matlab_variable_as_same_name(mfile,dest,'iddata_all_%s' % cond_name)
 
             #name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            #title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            #title = 'Bode (from all data): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             #with mlab.fig(name+'.png') as f:
             #    idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
@@ -290,7 +296,7 @@ if __name__=='__main__':
 
             #plot the mean timeseries and any model fits using matplotlib
             name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Model Comparison (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Model Comparison (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
 
                 ax = fig.add_subplot(1,1,1)
@@ -344,7 +350,7 @@ if __name__=='__main__':
                 continue
 
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Model Comparison (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Model Comparison (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
             if EPS:
@@ -352,7 +358,7 @@ if __name__=='__main__':
                     sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
 
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Bode (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Bode (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
             if EPS:
@@ -360,7 +366,7 @@ if __name__=='__main__':
                     sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Pole Zero Plot (mean response): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Pole Zero Plot (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
             if EPS:
@@ -456,7 +462,7 @@ if __name__=='__main__':
                     extra_desc = 'r=model(mean perturb),b=merge(%d good ind. models),g=model(%d all ind. data),m=model(%d good ind. data) ' % (len(individual_models[pm]),len(individual_iddata), len(individual_models[pm]))
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    title = 'Bode %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
                     if EPS:
@@ -464,7 +470,7 @@ if __name__=='__main__':
                             sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
 
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Pole Zero Plot %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    title = 'Pole Zero Plot %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
                     if EPS:
@@ -472,7 +478,7 @@ if __name__=='__main__':
                             sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
 
                     name = combine.get_plot_filename('pz_merge_and_means_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Pole Zero Plot %s (merge>%.1f%%/means): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    title = 'Pole Zero Plot %s (merge>%.1f%%/means): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
                     if EPS:
@@ -480,7 +486,7 @@ if __name__=='__main__':
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
                     name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Bode %s (individual>%.1f%%): %s->%s\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name, perturbation_obj,extra_desc)
+                    title = 'Bode %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
                     if EPS:
@@ -488,7 +494,7 @@ if __name__=='__main__':
                             sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
 
 #            name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
-#            title = 'Step response (ind. model fit > %.1f%%): %s->%s\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,perturbation_obj)
+#            title = 'Step response (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj)
 #            with mlab.fig(name+'.png') as f:
 #                print "GGGGGGGGGG", alldata_models
 #                sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
@@ -520,7 +526,7 @@ if __name__=='__main__':
 
                 ax.set_ylim(-1,100)
                 ax.set_ylabel('fit to data (pct)')
-                ax.set_title('Individual model fits (ind. model fit > %.1f%%)\n%s' % (args.min_fit_pct_individual,combine.get_condition_name(cond)))
+                ax.set_title('Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond)))
 
 
     if args.show:
