@@ -231,6 +231,11 @@ class Node(nodelib.node.Experiment):
 
                 if state=='starting':
                     rospy.loginfo("'%s' perturbation starting" % self.perturber.what)
+                    try:
+                        img = str(self.condition['perturbation_image'])
+                        self.pub_image.publish(img)
+                    except KeyError:
+                        pass
                 elif state=='finished':
                     self.drop_lock_on(blacklist=True)
                     if abs(fly_z-self.z_target) < 0.1:
