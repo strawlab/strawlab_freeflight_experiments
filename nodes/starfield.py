@@ -14,7 +14,7 @@ roslib.load_manifest(PACKAGE)
 
 import rospy
 import flyvr.display_client as display_client
-from std_msgs.msg import UInt32, Bool, Float32, String
+from std_msgs.msg import UInt32, Bool, Float32, String, Int32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
@@ -81,6 +81,8 @@ class Node(nodelib.node.Experiment):
         self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32, latch=True, tcp_nodelay=True)
         self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
 
+        self.pub_num_particles = rospy.Publisher(TOPIC_NUM_PARTICLES, Int32, latch=True, tcp_nodelay=True)
+
         self.pub_star_velocity.publish(0,0,0)
         self.pub_star_size.publish(5.0)
 
@@ -141,6 +143,7 @@ class Node(nodelib.node.Experiment):
         self.p_const    = float(self.condition['gain'])
         self.v_gain     = float(self.condition['z_gain'])
         star_size       = float(self.condition['star_size'])
+        num_particles   = int(self.condition['num_particles'])
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = float(self.condition['z_target'])
         self.rotation_gain = float(self.condition['star_rotation_rate'])
@@ -155,6 +158,7 @@ class Node(nodelib.node.Experiment):
         self.rotation_rate_max = float(self.condition.get('rotation_rate_max', MAX_ROTATION_RATE))
 
         self.pub_star_size.publish(star_size)
+        self.pub_num_particles.publish(num_particles)
 
         rospy.loginfo('condition: %s' % (self.condition))
 
