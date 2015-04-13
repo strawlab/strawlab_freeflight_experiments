@@ -5,7 +5,7 @@ import sys
 # ROS imports ############################
 import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 import rospy
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int32, Bool
 from geometry_msgs.msg import Vector3
 
 import flyvr.display_client as display_client
@@ -18,9 +18,25 @@ class Node(object):
         self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3)
         self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32)
         self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32)
+        self.pub_particles_angular_size_fixed = rospy.Publisher("particles_angular_size_fixed", Bool)
+        self.pub_bbsize = rospy.Publisher("bb_size", Float32)
+        self.pub_num_particles = rospy.Publisher("num_particles", Int32)
 
     def run(self):
         r = rospy.Rate(200) # 200hz
+        t_last_bb_switch = rospy.get_time()
+        bbsize = 10.0
+        rospy.loginfo( 'bbsize: %s'%(bbsize,))
+        self.pub_bbsize.publish( Float32 (bbsize ) )
+
+        t_last_num_particles_switch = rospy.get_time()
+        num_particles = 2500
+        rospy.loginfo( 'num_particles: %s'%(num_particles,))
+        self.pub_num_particles.publish( Int32 (num_particles ) )
+
+        do_switch_angular_size = False
+        do_change_bbsize = False
+        do_change_num_particles = True
         while not rospy.is_shutdown():
             #self.step()
             t = rospy.get_time()
@@ -31,6 +47,30 @@ class Node(object):
             self.pub_star_velocity.publish(msg)
             self.pub_star_rotation_rate.publish( Float32( 1.0) )
             self.pub_star_size.publish( Float32( 50*(np.sin(2*np.pi*t/10.0)+1) ))
+
+            if do_switch_angular_size:
+                if (t % 2.0) < 1.0:
+                    self.pub_particles_angular_size_fixed.publish( Bool( True ))
+                else:
+                    self.pub_particles_angular_size_fixed.publish( Bool( False ))
+
+            if do_change_bbsize:
+                t_since_last_bb = t - t_last_bb_switch
+                if t_since_last_bb >= 10.0:
+                    t_last_bb_switch = t
+                    bbsize = bbsize * 0.5
+                    rospy.loginfo( 'bbsize: %s'%(bbsize,))
+                    self.pub_bbsize.publish( Float32 (bbsize ) )
+
+            if do_change_num_particles:
+                t_since_last_bb = t - t_last_bb_switch
+                if t_since_last_bb >= 1.0:
+                    t_last_bb_switch = t
+                    num_particles = num_particles //2
+                    rospy.loginfo( 'num_particles: %s'%(num_particles,))
+                    self.pub_num_particles.publish( Int32 (num_particles ) )
+
+
             r.sleep()
 
 def main():

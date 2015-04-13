@@ -247,21 +247,22 @@ public:
 
 class ParticleNode : public osg::Group {
 public:
-    ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color);
+    ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin_, osg::Vec3 bbmax_, osg::Vec3 color, int numPtcls);
     virtual void setVelocity( const osg::Vec3& v );
     virtual void setRotationRate( const double& rate );
     virtual void setObserverPosition( const osg::Vec3& v );
     virtual void setPixelSize( float size );
+    virtual void setAngularSizeFixed( bool is_fixed );
 private:
     particleDataType* _pd;
     osg::ref_ptr<osg::Uniform> _pixelsize;
+    osg::ref_ptr<osg::Uniform> _angular_size_fixed;
 };
 
-ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color){
+ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 bbmax, osg::Vec3 color, int numPtcls ){
     /////////////////////
     // PARTICLE BUFFER //
     /////////////////////
-    unsigned int numPtcls = 2500;
     osg::ref_ptr<osgCuda::Geometry> geom = new osgCuda::Geometry;
     geom->setName("Particles");
     geom->addIdentifier( "PARTICLE BUFFER" );
@@ -293,6 +294,8 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
     _pixelsize = new osg::Uniform( "pixelsize", 101.0f );
     geode->getOrCreateStateSet()->addUniform( _pixelsize );
+    _angular_size_fixed  = new osg::Uniform( "angular_size_fixed", false );
+    geode->getOrCreateStateSet()->addUniform( _angular_size_fixed );
     geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
     //geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
@@ -327,6 +330,10 @@ void ParticleNode::setPixelSize( float size ) {
     _pixelsize->set(size);
 }
 
+void ParticleNode::setAngularSizeFixed( bool is_fixed ) {
+    _angular_size_fixed->set(is_fixed);
+}
+
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
 public:
@@ -347,6 +354,7 @@ public:
 
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
+    void _did_dirty_particles();
 
 private:
     osg::ref_ptr<osg::Group> _group;
@@ -355,13 +363,24 @@ private:
     osg::Quat model_attitude;
 
     osg::ref_ptr<ParticleNode> pn_white;
+    osg::ref_ptr<osg::Geode> pn_geode;
 
-    osg::Vec3f bbmin;
-    osg::Vec3f bbmax;
+    // These state variables can be updated immediately for all particles.
+    osg::Vec3f star_translation_vel;
+    float star_rotation_rate;
+    float star_size;
+    bool particles_angular_size_fixed;
 
+    // These require redrawing all particles and hence we have "dirty_particles".
+    float bb_size;
+    int num_particles;
+
+    bool dirty_particles;
 };
 
-StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() {
+StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
+    star_rotation_rate(0.0f), star_size(101.0f), particles_angular_size_fixed(false),
+    bb_size(10.0f), num_particles(2500), dirty_particles(true) {
     flyvr_assert( is_CUDA_available()==true );
 
     _group = new osg::Group;
@@ -369,9 +388,7 @@ StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() {
     _update_pat();
     _group->addChild(switch_node);
 
-    bbmin = osg::Vec3f(-10,-10,-10);
-    bbmax = osg::Vec3f(10,10,10);
-
+    star_translation_vel = osg::Vec3f(0.0f, 0.0f, 0.0f);
 }
 
 void StimulusCUDAStarFieldAndModel::_update_pat() {
@@ -403,30 +420,55 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
     _group->addChild(switch_node);
 }
 
-void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
-    //std::string osg_filename = "post.osg";
-    //_load_stimulus_filename( osg_filename );
+void StimulusCUDAStarFieldAndModel::_did_dirty_particles() {
+    dirty_particles=true;
 
-    pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1));
+    if (pn_white) {
+        // We previously created and added a particle node to this
+        // group. Now remove it.
+        _group->removeChild( pn_white.get() );
+    }
 
-    _group->addChild( pn_white.get() );
+    osg::Vec3f bbmin = osg::Vec3f(-bb_size,-bb_size,-bb_size);
+    osg::Vec3f bbmax = osg::Vec3f(bb_size,bb_size,bb_size);
 
-    /////////////////////////
-    // CREATE BOUNDING BOX //
-    /////////////////////////
+    if (num_particles >= 1) {
+        pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1), num_particles);
+        // Add our new particle node to the group.
+        _group->addChild( pn_white.get() );
+    }
+
+    if (pn_geode) {
+        // We previously created and added a geode to this
+        // group. Now remove it.
+        _group->removeChild( pn_geode.get() );
+    }
 
     // XXX FIXME. This is somehow required to fix opengl state after
     // drawing OSG model.
 
-    osg::Geode* bbox = new osg::Geode;
+    pn_geode = new osg::Geode;
     osg::ShapeDrawable* sd = new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints());
     sd->setColor(get_clear_color());
-    bbox->addDrawable(sd);
-    bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-    bbox->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
+    pn_geode->addDrawable(sd);
+    pn_geode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    pn_geode->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
 
-    _group->addChild( bbox );
+    _group->addChild( pn_geode.get() );
 
+    if (pn_white) {
+        // Now apply our state variables to the new particle node.
+        pn_white->setVelocity(star_translation_vel);
+        pn_white->setRotationRate(star_rotation_rate);
+        pn_white->setPixelSize(star_size);
+        pn_white->setAngularSizeFixed(particles_angular_size_fixed);
+    }
+
+    dirty_particles=false;
+}
+
+void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
+    _did_dirty_particles();
     _group->setName("StimulusCUDAStarFieldAndModel._group");
 }
 
@@ -445,7 +487,11 @@ std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const 
     result.push_back("star_velocity");
     result.push_back("star_rotation_rate");
     result.push_back("star_size");
+    result.push_back("model_filename");
     result.push_back("model_pose");
+    result.push_back("bb_size");
+    result.push_back("particles_angular_size_fixed");
+    result.push_back("num_particles");
     return result;
 }
 
@@ -464,20 +510,29 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
     }
 
     if (topic_name=="star_velocity") {
-        osg::Vec3 vel = parse_vec3(root);
+        star_translation_vel = parse_vec3(root);
+        // This can be updated without redrawing all stars, do not
+        // call _did_dirty_pixels().
         if (pn_white) {
-            pn_white->setVelocity(vel);
+            pn_white->setVelocity(star_translation_vel);
         }
     } else if (topic_name=="star_rotation_rate") {
-        float rate = parse_float(root);
+        star_rotation_rate = parse_float(root);
+        // This can be updated without redrawing all stars, do not
+        // call _did_dirty_pixels().
         if (pn_white) {
-            pn_white->setRotationRate(rate);
+            pn_white->setRotationRate(star_rotation_rate);
         }
     } else if (topic_name=="star_size") {
-        float size = parse_float(root);
+        star_size = parse_float(root);
+        // This can be updated without redrawing all stars, do not
+        // call _did_dirty_pixels().
         if (pn_white) {
-            pn_white->setPixelSize(size);
+            pn_white->setPixelSize(star_size);
         }
+    } else if (topic_name=="model_filename") {
+        std::string osg_filename = parse_string(root);
+        _load_stimulus_filename( osg_filename );
     } else if (topic_name=="model_pose") {
         json_t *data_json;
 
@@ -487,6 +542,19 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
         data_json = json_object_get(root, "orientation");
         model_attitude = parse_quat(data_json);
         _update_pat();
+    } else if (topic_name=="bb_size") {
+        bb_size = parse_float(root);
+        _did_dirty_particles();
+    } else if (topic_name=="particles_angular_size_fixed") {
+        particles_angular_size_fixed = parse_bool(root);
+        // This can be updated without redrawing all stars, do not
+        // call _did_dirty_pixels().
+        if (pn_white) {
+            pn_white->setAngularSizeFixed(particles_angular_size_fixed);
+        }
+    } else if (topic_name=="num_particles") {
+        num_particles = parse_int(root);
+        _did_dirty_particles();
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -503,8 +571,16 @@ std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& t
         result = "std_msgs/Float32";
     } else if (topic_name=="star_size") {
         result = "std_msgs/Float32";
+    } else if (topic_name=="model_filename") {
+        result = "std_msgs/String";
     } else if (topic_name=="model_pose") {
         result = "geometry_msgs/Pose";
+    } else if (topic_name=="bb_size") {
+        result = "std_msgs/Float32";
+    } else if (topic_name=="particles_angular_size_fixed") {
+        result = "std_msgs/Bool";
+    } else if (topic_name=="num_particles") {
+        result = "std_msgs/Int32";
     } else {
         throw std::runtime_error("unknown topic name");
     }
