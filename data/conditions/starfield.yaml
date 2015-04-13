@@ -1,11 +1,12 @@
 starfield_translation_infinity:
     svg_path: infinity07.svg
-    gain: 0.0
+    gain: 30.0
     advance_threshold: 0.1
     z_gain: 50.0
     star_size: 170.0
     num_particles: 2500
     bb_size: 10.0
+    particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0
 starfield_rotation_infinity:
@@ -16,8 +17,9 @@ starfield_rotation_infinity:
     star_size: 170.0
     num_particles: 2500
     bb_size: 10.0
+    particles_angular_size_fixed: false
     z_target: 0.12
-    star_rotation_rate: 0.0
+    star_rotation_rate: 3.0
 starfield_control:
     svg_path: infinity07.svg
     gain: 0.0
@@ -26,5 +28,6 @@ starfield_control:
     star_size: 170.0
     num_particles: 2500
     bb_size: 10.0
+    particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0

@@ -82,6 +82,7 @@ class Node(nodelib.node.Experiment):
         self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
         self.pub_num_particles = rospy.Publisher(TOPIC_NUM_PARTICLES, Int32, latch=True, tcp_nodelay=True)
         self.pub_bb_size = rospy.Publisher(TOPIC_BB_SIZE, Float32, latch=True, tcp_nodelay=True)
+        self.pub_particles_angular_size_fixed = rospy.Publisher(TOPIC_PARTICLES_ANGULAR_SIZE_FIXED, Bool, latch=True, tcp_nodelay=True)
 
         self.pub_star_velocity.publish(0,0,0)
         self.pub_star_size.publish(5.0)
@@ -145,6 +146,10 @@ class Node(nodelib.node.Experiment):
         star_size       = float(self.condition['star_size'])
         num_particles   = int(self.condition['num_particles'])
         bb_size         = float(self.condition['bb_size'])  # size of the stars cloud
+
+        # If false: size inversely proportional to distance; if true: size remains constant
+        particles_angular_size_fixed = bool(self.condition['particles_angular_size_fixed'])
+
         self.advance_px = XFORM.m_to_pixel(float(self.condition['advance_threshold']))
         self.z_target   = float(self.condition['z_target'])
         self.rotation_gain = float(self.condition['star_rotation_rate'])
@@ -161,6 +166,7 @@ class Node(nodelib.node.Experiment):
         self.pub_star_size.publish(star_size)
         self.pub_num_particles.publish(num_particles)
         self.pub_bb_size.publish(bb_size)
+        self.pub_particles_angular_size_fixed.publish(particles_angular_size_fixed)
 
         rospy.loginfo('condition: %s' % (self.condition))
 
