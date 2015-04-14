@@ -49,8 +49,8 @@ class ArenaBase(object):
         return {}
 
     def apply_filters(self, args, df, dt):
-        cond = np.ones_like(df['framenumber'], dtype=bool)
-        valid = np.ones_like(df['framenumber'], dtype=bool)
+        cond = np.ones(len(df), dtype=bool)
+        valid = np.ones_like(cond, dtype=bool)
 
         for f in self.filters:
             if f.active:
