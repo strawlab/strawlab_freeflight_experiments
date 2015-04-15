@@ -705,23 +705,26 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
-
             trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
 
-            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
+            filters = filt_arena.active_filters
 
-            filt2_valid,filt2_cond = filt_arena.apply_secondary_filter(show_filter_args, _df, dt)
+            filt_cmap = plt.get_cmap('brg')
+            colors = [filt_cmap(i) for i in np.linspace(0,1.0,len(filters))]
 
             lasts = []
-
             i = 0
-            for color,name,cond,valid in (('b','geometry',filt_cond,filt_valid),('g','secondary',filt2_cond,filt2_valid)):
+            for filt,color in zip(filters,colors):
+                name = filt.name
+                cond, valid = filt.apply_to_df(_df, dt)
+
                 _axz.fill_between(cond.index.values,
                                  i, i+0.5,
                                  ~cond.values,
                                  edgecolor=color,
                                  facecolor=color,
                                  alpha=0.4, transform=trans)
+
                 i+=0.5
 
                 #use _cond to draw because we want to plot where the condition is not true

@@ -28,6 +28,10 @@ class ArenaBase(object):
             f = Filter.from_args_and_defaults('%sfilt' % i, self._args, **self.get_filter_defaults())
             self.filters.append(f)
 
+    @property
+    def active_filters(self):
+        return [f for f in self.filters if f.active]
+
     def get_xtick_locations(self):
         # override to specify tick locations, otherwise, auto-determined
         return None
