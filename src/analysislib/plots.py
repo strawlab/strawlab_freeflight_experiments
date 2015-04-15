@@ -705,40 +705,45 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
-
             trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
 
-            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
+            filters = filt_arena.active_filters
 
-            filt2_valid,filt2_cond = filt_arena.apply_secondary_filter(show_filter_args, _df, dt)
+            filt_cmap = plt.get_cmap('brg')
+            colors = [filt_cmap(i) for i in np.linspace(0,1.0,len(filters))]
 
             lasts = []
-
             i = 0
-            for color,name,cond,valid in (('b','geometry',filt_cond,filt_valid),('g','secondary',filt2_cond,filt2_valid)):
+            di = 1.0/len(filters)
+
+            for filt,color in zip(filters,colors):
+                name = filt.name
+                cond, valid = filt.apply_to_df(_df, dt)
+
                 _axz.fill_between(cond.index.values,
-                                 i, i+0.5,
+                                 i, i+di,
                                  ~cond.values,
                                  edgecolor=color,
                                  facecolor=color,
                                  alpha=0.4, transform=trans)
-                i+=0.5
+
+                i+=di
 
                 #use _cond to draw because we want to plot where the condition is not true
                 _x = _df.loc[~cond,'x']
                 _y = _df.loc[~cond,'y']
-                _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='fail %s filter' % name)
+                _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='FAIL %s' % filt.condition_desc)
 
                 if np.any(valid):
                     last_valid_frame = _df['framenumber'].values[valid][-1]
-                    _axz.axvline(last_valid_frame, color=color, lw=2, label='end of filtered %s' % name)
+                    _axz.axvline(last_valid_frame, color=color, lw=2, label='filter %s' % filt.filter_desc)
                     lasts.append(last_valid_frame)
                 else:
                     #no valid frames, draw line at start
-                    _axz.axvline(_ts[0], color=color, lw=2, label='end of filtered %s' % name)
+                    _axz.axvline(_ts[0], color=color, lw=2, label='no valid data for %s' % name)
 
             if lasts:
-                _axz.axvline(min(lasts), linestyle='--', color='red', lw=2, label='end of filtered trajectory')
+                _axz.axvline(min(lasts), linestyle='--', color='grey', lw=2, label='end of filtered trajectory')
 
             _axxy.set_xlim(1.1*xl0,1.1*xl1)
             _axxy.set_ylim(1.1*yl0,1.1*yl1)
