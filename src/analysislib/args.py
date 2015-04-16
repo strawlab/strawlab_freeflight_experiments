@@ -143,7 +143,7 @@ def get_parser(*only_these_options, **defaults):
             parser.add_argument(
                 '--%sfilt-interval' % i, type=float,
                 default=defaults.get('%sfilt_interval' % i, None),
-                help="when using 'triminterval' filter methods, the length over "\
+                help="when using 'triminterval' filter methods, the number of seconds over "\
                      "which the filter must match in order for data to be trimmed. ")
 
     if not only_these_options or "uuid" in only_these_options:
