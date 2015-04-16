@@ -124,6 +124,8 @@ def check_combine_health(combine, min_length_f=100):
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
                         with_missing[['uuid', 'oid', 'frame0']].to_string())
 
+class CacheError(Exception):
+    pass
 
 class _Combine(object):
 
@@ -218,6 +220,7 @@ class _Combine(object):
                     except Exception, e:
                         self._warn('Could not unpickle %s, recombining and recaching' % pkl)
                         self._warn('The error was %s' % str(e))
+                        raise CacheError(pkl)
         return None
 
     def get_data_dictionary(self):
@@ -1080,7 +1083,14 @@ class CombineH5WithCSV(_Combine):
         """
         self._args_to_configuration(args)
         if args.cached:
-            d = self._get_cache_file()
+
+            try:
+                d = self._get_cache_file()
+                cache_error = False
+            except CacheError:
+                d = None
+                cache_error = True
+                
             if d is not None:
                 self._results = d['results']
                 self._dt = d['dt']
@@ -1136,7 +1146,7 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-        if not os.path.isfile(self._get_cache_name()):
+        if cache_error or (not os.path.isfile(self._get_cache_name())):
             if args.cached:
                 self._save_cache_file()
         elif args.recache:
