@@ -33,7 +33,18 @@ class Filter:
         self.filter_interval = filter_interval
 
     def __repr__(self):
-        return "<Filter %s=%s condition=%s < %s < %s interval=%s >" % (self.name,self.trimspec,self.vmin,self.colname,self.vmax,self.filter_interval)
+        return "<Filter %s condition=%s>" % (self.filter_desc,self.condition_desc)
+
+    @property
+    def condition_desc(self):
+        return "%s < %s < %s" % (self.vmin,self.colname,self.vmax)
+
+    @property
+    def filter_desc(self):
+        s = "%s=%s" % (self.name, self.trimspec)
+        if self.trimspec == FILTER_TRIM_INTERVAL:
+            s += " (%.1fs)" % self.filter_interval
+        return s
 
     @staticmethod
     def from_args_and_defaults(name, args, **defaults):
