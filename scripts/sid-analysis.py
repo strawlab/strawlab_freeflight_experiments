@@ -188,11 +188,10 @@ if __name__=='__main__':
     mfile = combine.get_plot_filename('variables.m')
     mfile = open(mfile,'w')
 
-    good_models = {}
+    all_models = {}
 
     #loop per condition
     for cond in perturbations:
-        good_models[cond] = []
 
         any_completed_perturbations = False
 
@@ -248,6 +247,7 @@ if __name__=='__main__':
             print "%s: NO COMPLETED PERTURBATIONS" % combine.get_condition_name(cond)
 
         if any_completed_perturbations:
+
             #upload the pooled
             system_u_df = pd.concat(system_us,axis=1)
             system_y_df = pd.concat(system_ys,axis=1)
@@ -372,6 +372,10 @@ if __name__=='__main__':
                 with mlab.fig(name+'.eps',driver='epsc2') as f:
                     sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
 
+            #save all model fits and object ids for cluster analysis
+            all_models[cond_name] = {_m.spec:[] for _m in possible_models}
+            all_models[cond_name]['obj_id'] = [_ph.obj_id for _i,_ph,_idlen in individual_iddata]
+
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
             for pm in possible_models:
@@ -380,8 +384,10 @@ if __name__=='__main__':
 
                 for i,ph,idlen in individual_iddata:
                     mdl = sfe_sid.run_model_from_specifier(mlab,i,pm.spec,IODELAY)
+                    fitpct = mdl.fitpct
+
                     #accept a lower fit due to noise on the individual trajectories
-                    if not mdl.failed and mdl.fitpct > (args.min_fit_pct_individual):
+                    if not mdl.failed and fitpct > (args.min_fit_pct_individual):
                         mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
                         mdl.matlab_color = 'k'
                         mdl.perturb_holder = ph
@@ -390,10 +396,13 @@ if __name__=='__main__':
 
                         print "\tindividual model oid %d %.0f%% complete: %s (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, mdl, mdl.fitpct, idlen)
                     else:
+                        if mdl.failed:
+                            fitpct = np.nan
                         print "\tindividual model oid %d %.0f%% complete: %s FAIL (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, pm.spec, mdl.fitpct, idlen)
 
-                if individual_models[pm]:
+                    all_models[cond_name][pm.spec].append(fitpct)
 
+                if individual_models[pm]:
                     print "\t%d (%.1f%%) models passed individual fit criteria" % (len(individual_models[pm]), 100.0*len(individual_models[pm])/len(individual_iddata))
 
                     extra_models = []
@@ -527,6 +536,12 @@ if __name__=='__main__':
                 ax.set_ylabel('fit to data (pct)')
                 ax.set_title('Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond)))
 
+    name = combine.get_plot_filename(aplt.get_safe_filename('all_mdlfits', **plot_fn_kwargs))
+    with open(name+'.pkl', 'wb') as f:
+        pickle.dump({"data":all_models,
+                     "metadata":combine.get_experiment_metadata(),
+                     "conditions":combine.get_experiment_conditions()},
+                    f)
 
     if args.show:
         t = threading.Thread(target=sfe_sid.show_mlab_figures, args=(mlab,))
