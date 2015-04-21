@@ -328,6 +328,12 @@ class _Combine(object):
                     return None
         return None
 
+    def __repr__(self):
+        if not self._results:
+            return "<Combine NO_DATA>"
+        else:
+           return "<Combine %s idx=%s dt=%s>" % (os.path.basename(self.csv_file),self._index,self.dt)
+
     @property
     def dt(self):
         if not self._results:
