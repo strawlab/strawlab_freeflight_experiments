@@ -95,8 +95,10 @@ class TestExtractPerturbations(unittest.TestCase):
         self._cond = 'checkerboard16.png/infinity.svg/0.3/3/-10.0/0.1/0.2/idinput_rotation_rate|sine|3|0|5|1.8||||1|0.4|0.46|0.56|0.96|1.0|0.0|0.06'
         self._uuid = 'b4208cdabc4411e49c956c626d3a008a'
 
-    def _get_combine(self):
+    def _get_combine(self, index=None):
         combine = autil.get_combiner_for_uuid(self._uuid)
+        if index:
+            combine.set_index(index)
         combine.disable_debug()
         combine.add_from_uuid(self._uuid, reindex=False)
         return combine
@@ -122,6 +124,19 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertEqual(len(phs), 10)
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)   #same as before
         self.assertEqual(sum(ph.completed for ph in phs), 4)    #less should complete
+
+    def test_collect_perturbation_traces_time(self):
+        c = self._get_combine(index='time+10L')
+
+        perturbations, perturbation_objects = aperturb.collect_perturbation_traces(c, completion_threshold=0.5)
+        pos = perturbation_objects[self._cond]
+        phs = perturbations[self._cond]
+
+        self.assertIsInstance(pos,sfe_perturb.PerturberIDINPUT)
+
+        self.assertEqual(len(phs), 10)
+        self.assertEqual(sum(len(ph.df) for ph in phs), 7419)
+        self.assertEqual(sum(ph.completed for ph in phs), 7)
 
 
 if __name__ == '__main__':
