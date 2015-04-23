@@ -1088,11 +1088,12 @@ class CombineH5WithCSV(_Combine):
         arguments given
         """
         self._args_to_configuration(args)
+
+        cache_error = False
         if args.cached:
 
             try:
                 d = self._get_cache_file()
-                cache_error = False
             except CacheError:
                 d = None
                 cache_error = True
