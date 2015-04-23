@@ -191,6 +191,18 @@ class TestCombineData(unittest.TestCase):
         self.assertEqual(args.lenfilt, 0)
         self.assertEqual(args.trajectory_start_offset, 0)
 
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs['disable_filters'] = True
+
+        parser = analysislib.args.get_parser(**kwargs)
+        args = parser.parse_args()
+        arena = aarenas.get_arena_from_args(args)
+
+        self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
+        self.assertEqual(len(arena.active_filters), 0)
+
+        self.assertEqual(args.lenfilt, 0)
+        self.assertEqual(args.trajectory_start_offset, 0)
 
 if __name__=='__main__':
     unittest.main()
