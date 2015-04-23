@@ -33,7 +33,7 @@ class Filter:
         self.filter_interval = filter_interval
 
     def __repr__(self):
-        return "<Filter %s condition=%s>" % (self.filter_desc,self.condition_desc)
+        return "<Filter %s condition='%s'>" % (self.filter_desc,self.condition_desc)
 
     @property
     def condition_desc(self):
