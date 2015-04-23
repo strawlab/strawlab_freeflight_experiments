@@ -16,15 +16,8 @@ import analysislib.util as autil
 import analysislib.combine as acombine
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser(
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none',
-                    lenfilt=0,
-                    trajectory_start_offset=0.0
-    )
+    parser = analysislib.args.get_parser(disable_filters=True)
+
     parser.add_argument(
         '--n-longest', type=int, default=100,
         help='save only the N longest trajectories')

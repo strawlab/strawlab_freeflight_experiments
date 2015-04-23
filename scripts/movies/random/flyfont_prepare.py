@@ -89,12 +89,7 @@ def get_trajs(df, max_good_dist=0.11, start_thresh=0.2):
 
 if __name__ == "__main__":
     parser = analysislib.args.get_parser(
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none',
-                    trajectory_start_offset=0.0,
+                    disable_filters=True,
                     outdir=tempfile.mkdtemp()
     )
 

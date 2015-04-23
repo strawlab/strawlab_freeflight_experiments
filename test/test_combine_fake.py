@@ -410,11 +410,7 @@ class TestCombineFake2(unittest.TestCase):
 
         parser,args = analysislib.args.get_default_args(
                         outdir=self._tdir,
-                        xfilt='none',
-                        yfilt='none',
-                        zfilt='none',
-                        vfilt='none',
-                        rfilt='none')
+                        disable_filters=True)
 
         for index,csv_rate in itertools.product(('none','framenumber','time','time+1L'),(0.5,2.0)):
             h5_fname, csv_fname = self._create_h5(200,1,csv_rate=csv_rate,framenumber0=14)
@@ -446,12 +442,7 @@ class TestCombineNonContiguous(unittest.TestCase):
         combine.calc_turn_stats = False
         combine.calc_linear_stats = False
         combine.calc_angular_stats = False
-        _, args = analysislib.args.get_default_args(xfilt='none',
-                                                    yfilt='none',
-                                                    zfilt='none',
-                                                    vfilt='none',
-                                                    rfilt='none',
-                                                    lenfilt=0)
+        _, args = analysislib.args.get_default_args(disable_filters=True)
 
         combine.add_csv_and_h5_file(csv_fname=csv,
                                     h5_file=h5,
@@ -477,11 +468,7 @@ class TestCombineNonContiguous(unittest.TestCase):
             combine.calc_linear_stats = False
             combine.calc_angular_stats = False
             combine.add_from_uuid(MAX_TEST_UUID,
-                                  xfilt='none',
-                                  yfilt='none',
-                                  zfilt='none',
-                                  vfilt='none',
-                                  rfilt='none')
+                                  disable_filters=True)
             combine2h5csv(combine,
                           tempdir=DATA_ROOT,
                           columns_for_csv=('stim_x',))
