@@ -43,6 +43,11 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
         except ValueError, e:
             self.error(e.message)
 
+        #disable-filters can override
+        if getattr(args,"disable_filters",False):
+            for f in arena.filters:
+                f.disable()
+
         #for forensics we store all configuration on the args object
         for f in arena.filters:
             f.set_on_args(args)
@@ -123,6 +128,12 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
+
+    if not only_these_options or "disable-filters" in only_these_options:
+        parser.add_argument(
+            '--disable-filters', action='store_true',
+            default=defaults.get('disable_filters',False),
+            help='disables all filters (overrides other command line options)')
     for i,desc in FILTER_TYPES.iteritems():
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(

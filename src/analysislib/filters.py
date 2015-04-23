@@ -46,6 +46,10 @@ class Filter:
             s += " (%.1fs)" % self.filter_interval
         return s
 
+    @property
+    def active(self):
+        return self.trimspec != FILTER_NOOP
+
     @staticmethod
     def from_args_and_defaults(name, args, **defaults):
 
@@ -60,9 +64,8 @@ class Filter:
                       vmax=_get_val('%s_max' % name,+np.inf),
                       filter_interval=_get_val('%s_interval' % name,0.0))
 
-    @property
-    def active(self):
-        return self.trimspec != 'none'
+    def disable(self):
+        self.trimspec = FILTER_NOOP
 
     def apply_to_df(self, df, dt, source_column=None,dest_column=None):
         colname = source_column if source_column is not None else self.colname
