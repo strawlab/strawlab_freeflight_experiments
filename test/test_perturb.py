@@ -164,7 +164,7 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertAlmostEqual(ph.perturbation_length,1.48,4)
         self.assertAlmostEqual(ph.trajectory_length,3.92,4)
 
-        ids = [ph.df['ratio_range_start_id'].values[0] for ph in phs]
+        ids = [ph.start_id for ph in phs]
         self.assertEqual(ids.count(2), 1)
         self.assertEqual(ids.count(1), 1)
         self.assertEqual(ids.count(0), 8)
