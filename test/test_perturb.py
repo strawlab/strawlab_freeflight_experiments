@@ -12,6 +12,22 @@ import analysislib.fixes as afixes
 import analysislib.util as autil
 import analysislib.perturb as aperturb
 
+class TestPerturbConstruct(unittest.TestCase):
+
+    def test_construct(self):
+        self.assertEqual(len(sfe_perturb.PERTURBERS), 8)
+
+        for p in sfe_perturb.PERTURBERS:
+            condition = p.DEFAULT_DESC + "|" + p.DEFAULT_CRITERIA
+            desc,criteria = p.split_perturb_descriptor(condition)
+            obj = p(desc,criteria)
+
+            p2 = sfe_perturb.get_perturb_class(condition)
+
+            self.assertEqual(p,p2)
+            self.assertEqual(p.NAME,p2.NAME)
+
+
 class TestConditions(unittest.TestCase):
 
     def setUp(self):
