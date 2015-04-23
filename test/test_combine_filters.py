@@ -150,6 +150,8 @@ class TestCombineData(unittest.TestCase):
 
     def test_arena_defaults(self):
 
+        fargs = self.filter_args()
+
         kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
         kwargs.update(self.filter_args())
         parser = analysislib.args.get_parser(**kwargs)
@@ -160,7 +162,7 @@ class TestCombineData(unittest.TestCase):
         self.assertEqual(len(arena.active_filters), 0)
 
         kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
-        kwargs.update(self.filter_args())
+        kwargs.update(fargs)
         kwargs['zfilt'] = 'trim'
         kwargs['rfilt'] = 'trim'
         parser = analysislib.args.get_parser(**kwargs)
@@ -170,10 +172,14 @@ class TestCombineData(unittest.TestCase):
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
         self.assertEqual(len(arena.active_filters), 2)
 
+        self.assertEqual(args.lenfilt, fargs['lenfilt'])
+        self.assertEqual(args.trajectory_start_offset, fargs['trajectory_start_offset'])
+
         kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
-        kwargs.update(self.filter_args())
+        kwargs.update(fargs)
         kwargs['zfilt'] = 'trim'
         kwargs['rfilt'] = 'trim'
+        kwargs['trajectory_start_offset'] = 0.1
         kwargs['disable_filters'] = True
         parser = analysislib.args.get_parser(**kwargs)
         args = parser.parse_args()
@@ -181,6 +187,9 @@ class TestCombineData(unittest.TestCase):
 
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
         self.assertEqual(len(arena.active_filters), 0)
+
+        self.assertEqual(args.lenfilt, 0)
+        self.assertEqual(args.trajectory_start_offset, 0)
 
 
 if __name__=='__main__':

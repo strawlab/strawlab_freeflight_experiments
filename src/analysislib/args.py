@@ -48,6 +48,9 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
             for f in arena.filters:
                 f.disable()
 
+            args.lenfilt = 0
+            args.trajectory_start_offset = 0.0
+
         #for forensics we store all configuration on the args object
         for f in arena.filters:
             f.set_on_args(args)
