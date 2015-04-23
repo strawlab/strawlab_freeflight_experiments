@@ -141,6 +141,11 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)   #same as before
         self.assertEqual(sum(ph.completed for ph in phs), 4)    #less should complete
 
+        ids = [ph.df['ratio_range_start_id'].values[0] for ph in phs]
+        self.assertEqual(ids.count(2), 1)
+        self.assertEqual(ids.count(1), 1)
+        self.assertEqual(ids.count(0), 8)
+
     def test_collect_perturbation_traces_time(self):
         c = self._get_combine(index='time+10L')
 
