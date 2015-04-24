@@ -76,10 +76,26 @@ if __name__=='__main__':
     parser.add_argument(
         "--detrend", type=int, default=1, choices=(1,0),
         help='detrend data')
+    parser.add_argument(
+        "--only-conditions", type=str, metavar='CONDITION_NAME',
+        help='only analyze perturbations in these conditions')
+    parser.add_argument(
+        "--only-perturbations", type=str,
+        default=','.join(sfe_sid.PERTURBERS_FOR_SID),
+        help='only analyze perturbations of this type')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
+
+    try:
+        only_conditions = args.only_conditions.split(',')
+    except AttributeError:
+        only_conditions = None
+    try:
+        only_perturbations = args.only_perturbations.split(',')
+    except AttributeError:
+        only_perturbations = None
 
     mlab = sfe_matlab.get_mlab_instance(args.show)
 
@@ -99,7 +115,8 @@ if __name__=='__main__':
     aplt.save_args(combine, args)
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
-                                                    completion_threshold=args.perturb_completion_threshold)
+                                                    completion_threshold=args.perturb_completion_threshold,
+                                                    allowed_perturbation_types=only_perturbations)
 
     #perturbations {cond: [PerturbationHolder,...]}
     #perturbation_objects {cond: perturb_obj}
@@ -113,6 +130,9 @@ if __name__=='__main__':
 
         perturbation_obj = perturbation_objects[cond]
         cond_name = combine.get_condition_name(cond)
+
+        if only_conditions and (cond_name not in only_conditions):
+            continue
 
         f0,f1 = perturbation_obj.get_frequency_limits()
         if np.isnan(f1):
