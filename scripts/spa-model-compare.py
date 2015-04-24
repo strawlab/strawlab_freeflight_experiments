@@ -13,6 +13,8 @@ import strawlab_freeflight_experiments.matlab as sfe_matlab
 
 import strawlab.constants
 
+from strawlab_freeflight_experiments.sid import VERSION
+
 def get_genotype(path):
     try:
         uuid = re.search('\/(?P<uuid>[a-f0-9]{32})\/',path).groupdict()['uuid']
@@ -46,7 +48,7 @@ if __name__=='__main__':
     parser.add_argument('--save', help='save figure', default='/tmp/spa_model_compare')
     parser.add_argument('--labels', nargs='+', metavar='L')
     parser.add_argument('--show', action='store_true')
-    parser.add_argument('--title',type=str)
+    parser.add_argument('--title',type=str,default='')
     args = parser.parse_args()
 
     mlab = sfe_matlab.get_mlab_instance(args.show)
@@ -70,7 +72,7 @@ if __name__=='__main__':
         model = sfe_sid.run_spa(mlab,idobj,"%s (n=%d)" % (lbl,int(n)),w)
         models.append(model)
 
-    title = "Bode (using SPA on all data)"
+    title = "Bode (using SPA on all data) %s" % VERSION
     if args.title:
         title += ('\n' + args.title)
     with mlab.fig(args.save+'.png') as f:

@@ -31,7 +31,7 @@ if __name__=='__main__':
     parser.add_argument('--save', help='save figure', default='/tmp/spectrum_model_compare')
     parser.add_argument('--labels', nargs='+', metavar='L', required=True)
     parser.add_argument('--show', action='store_true')
-    parser.add_argument('--title',type=str)
+    parser.add_argument('--title',type=str,default='')
     parser.add_argument('--f0',type=float,default=0.,help='lower freq limit')
     parser.add_argument('--f1',type=float,default=100.,help='upper freq limit')
     args = parser.parse_args()
