@@ -10,7 +10,8 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 PerturbationHolder = collections.namedtuple('PerturbationHolder', 'df start_idx end_idx obj_id completed completed_pct start_ratio, perturbation_length, trajectory_length, condition')
 
-def collect_perturbation_traces(combine, completion_threshold=0.98):
+def collect_perturbation_traces(combine, completion_threshold=0.98, allowed_perturbation_types=None):
+
     results,dt = combine.get_results()
 
     perturbations = collections.OrderedDict()           #cond: {obj_id:PerturbationHolder,...}
@@ -42,6 +43,9 @@ def collect_perturbation_traces(combine, completion_threshold=0.98):
 
         #only plot perturbations
         if isinstance(step_obj,sfe_perturb.NoPerturb):
+            continue
+
+        if allowed_perturbation_types and (step_obj.NAME not in allowed_perturbation_types):
             continue
 
         perturbations[cond] = []

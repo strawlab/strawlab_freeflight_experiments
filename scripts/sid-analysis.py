@@ -141,6 +141,10 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-conditions", type=str,
         help='only analyze perturbations in these conditions')
+    parser.add_argument(
+        "--only-perturbations", type=str,
+        default=','.join(sfe_sid.PERTURBERS_FOR_SID),
+        help='only analyze perturbations of this type')
 
 
     args = parser.parse_args()
@@ -154,6 +158,10 @@ if __name__=='__main__':
         only_conditions = args.only_conditions.split(',')
     except AttributeError:
         only_conditions = None
+    try:
+        only_perturbations = args.only_perturbations.split(',')
+    except AttributeError:
+        only_perturbations = None
 
     IODELAY = args.iod
     MODEL_SPECS_TO_TEST = args.models.split(',')
@@ -176,7 +184,8 @@ if __name__=='__main__':
     aplt.save_args(combine, args)
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
-                                                    completion_threshold=args.perturb_completion_threshold)
+                                                    completion_threshold=args.perturb_completion_threshold,
+                                                    allowed_perturbation_types=only_perturbations)
 
     #perturbations {cond: {obj_id:PerturbationHolder,...}}
     #perturbation_objects {cond: perturb_obj}

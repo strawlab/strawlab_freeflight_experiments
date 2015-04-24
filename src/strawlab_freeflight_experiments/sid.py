@@ -31,6 +31,9 @@ import matplotlib.pyplot as plt
 # show the version of analysis in all plots for easier updating documents
 VERSION = 1
 
+# these perturb classes are spectrally interesting enough for system identification
+PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME, sfe_perturb.PerturberIDINPUT.NAME]
+
 def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                         'src','strawlab_freeflight_experiments','matlab',name)
