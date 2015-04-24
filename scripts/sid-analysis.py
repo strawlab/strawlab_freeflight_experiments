@@ -139,7 +139,7 @@ if __name__=='__main__':
         "--iod", type=int, default=9,
         help='io delay')
     parser.add_argument(
-        "--only-conditions", type=str,
+        "--only-conditions", type=str, metavar='CONDITION_NAME',
         help='only analyze perturbations in these conditions')
     parser.add_argument(
         "--only-perturbations", type=str,
