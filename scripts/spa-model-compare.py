@@ -72,9 +72,11 @@ if __name__=='__main__':
         model = sfe_sid.run_spa(mlab,idobj,"%s (n=%d)" % (lbl,int(n)),w)
         models.append(model)
 
-    title = "Bode (using SPA on all data) %s" % VERSION
+    title = "Bode (using SPA on all data)"
     if args.title:
         title += ('\n' + args.title)
+    title += (" v%s" % VERSION)
+
     with mlab.fig(args.save+'.png') as f:
         sfe_sid.bode_models(mlab,title,True,'SouthWest',False,models,w)
 
