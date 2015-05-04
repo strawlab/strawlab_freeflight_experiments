@@ -119,6 +119,12 @@ class TestExtractPerturbations(unittest.TestCase):
         combine.add_from_uuid(self._uuid, reindex=False)
         return combine
 
+    def _get_ph(self, phs, obj_id):
+        for ph in phs:
+            if ph.obj_id == obj_id:
+                return ph
+        return None
+
     def test_collect_perturbation_traces(self):
         c = self._get_combine()
 
@@ -132,6 +138,13 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)
         self.assertEqual(sum(ph.completed for ph in phs), 7)
 
+        ph = self._get_ph(phs,79)
+        self.assertEqual(ph.start_idx, 244)
+        self.assertEqual(ph.end_idx, 392)
+        self.assertEqual(ph.completed, False)
+        self.assertAlmostEqual(ph.perturbation_length,1.48,4)
+        self.assertAlmostEqual(ph.trajectory_length,3.92,4)
+
         #differet completion_thresh
         perturbations, perturbation_objects = aperturb.collect_perturbation_traces(c, completion_threshold=0.98)
         pos = perturbation_objects[self._cond]
@@ -140,6 +153,13 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertEqual(len(phs), 10)
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)   #same as before
         self.assertEqual(sum(ph.completed for ph in phs), 4)    #less should complete
+
+        ph = self._get_ph(phs,79)
+        self.assertEqual(ph.start_idx, 244)
+        self.assertEqual(ph.end_idx, 392)
+        self.assertEqual(ph.completed, False)
+        self.assertAlmostEqual(ph.perturbation_length,1.48,4)
+        self.assertAlmostEqual(ph.trajectory_length,3.92,4)
 
         ids = [ph.df['ratio_range_start_id'].values[0] for ph in phs]
         self.assertEqual(ids.count(2), 1)
@@ -158,6 +178,13 @@ class TestExtractPerturbations(unittest.TestCase):
         self.assertEqual(len(phs), 10)
         self.assertEqual(sum(len(ph.df) for ph in phs), 7419)
         self.assertEqual(sum(ph.completed for ph in phs), 7)
+
+        ph = self._get_ph(phs,79)
+        self.assertEqual(ph.start_idx, 244)
+        self.assertEqual(ph.end_idx, 391)
+        self.assertEqual(ph.completed, False)
+        self.assertAlmostEqual(ph.perturbation_length,1.48,4)
+        self.assertAlmostEqual(ph.trajectory_length,3.92,4)
 
 
 if __name__ == '__main__':
