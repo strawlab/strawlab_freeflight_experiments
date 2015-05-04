@@ -2,7 +2,7 @@ INVALID_VALUE = 0xDEADBEEF
 
 COLUMN_NAMES_TO_HUMAN_NAMES = {
     'rotation_rate':'Stimulus angular velocity',
-    'dtheta':'Stimulus angular velocity',
+    'dtheta':'Fly angular velocity',
 }
 
 COLUMN_NAMES_TO_UNITS = {
