@@ -28,6 +28,11 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False, max_plot=np.inf):
 
+    try:
+        only_conditions = args.only_conditions.split(',')
+    except AttributeError:
+        only_conditions = None
+
     pid = args.only_perturb_start_id
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
@@ -39,6 +44,11 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
 
         step_obj = perturbation_objects[cond]
         phs = perturbations[cond]
+
+        cond_name = combine.get_condition_name(cond)
+
+        if only_conditions and (cond_name not in only_conditions):
+            continue
 
         condn = aplt.get_safe_filename(cond,allowed_spaces=False)
         if pid is not None:
@@ -183,6 +193,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--perturb-completion-threshold", type=float, default=0.98,
         help='perturbations must be this complete to be counted')
+    parser.add_argument(
+        "--only-conditions", type=str, metavar='CONDITION_NAME',
+        help='only analyze perturbations in these conditions')
 
     args = parser.parse_args()
 
