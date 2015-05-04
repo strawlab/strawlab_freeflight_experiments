@@ -75,7 +75,7 @@ def get_perturb_object_from_condition(cond_object):
     except KeyError:
         return get_perturb_object(cond_object.get('perturb_desc'))
 
-class Perturber:
+class Perturber(object):
 
     DEFAULT_CRITERIA = "0.4|0|1"
 
@@ -117,6 +117,8 @@ class Perturber:
         self.duration = float(duration)
         self.reset()
 
+        self.analysis_hints = {}
+
     def __hash__(self):
         return hash((self.descriptor,self.progress))
 
@@ -146,6 +148,13 @@ class Perturber:
     def check_descriptor(cls, descriptor):
         if not descriptor.startswith(cls.NAME):
             raise Exception("Incorrect %s configuration: %s" % (cls, descriptor))
+
+    def get_analysis_hints(self, **defaults):
+        h = self.analysis_hints.copy()
+        for k,v in defaults.iteritems():
+            if v is not None:
+                h[k] = v
+        return h
 
     def get_time_limits(self):
         raise NotImplementedError
@@ -597,6 +606,8 @@ class PerturberMultiTone(_PerturberInterpolation):
 
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
+        self.analysis_hints["lookback"] = 4.0
+
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
 
@@ -624,6 +635,8 @@ class PerturberRBS(Perturber):
         self.bw = float(bw)
 
         Perturber.__init__(self, descriptor, criteria, duration)
+
+        self.analysis_hints["lookback"] = 0.0
 
         #build a dataframe that we can resample or index into while maintaining
         #the correct seed
@@ -772,6 +785,11 @@ class PerturberIDINPUT(_PerturberInterpolation):
             np.save(fn,w)
 
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
+
+        if self.type == 'prbs':
+            self.analysis_hints["lookback"] = 0.0
+        else:
+            self.analysis_hints["lookback"] = 4.0
 
     def __repr__(self):
         return "<PerturberIDINPUT what=%s val=%.1f type=%s dur=%.1fs bw=%.2f...%.2f f=%.1f...%.1f>" % (self.what,self.value,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)

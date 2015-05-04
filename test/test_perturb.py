@@ -34,6 +34,13 @@ class TestPerturbConstruct(unittest.TestCase):
         self.assertEqual(p.name, 'idinputsine')
         self.assertEqual(p.NAME, 'idinput')
 
+        h = p.get_analysis_hints()
+
+    def test_hints(self):
+        p = sfe_perturb.NoPerturb()
+        self.assertDictEqual(p.get_analysis_hints(), {})
+        self.assertDictEqual(p.get_analysis_hints(foo='bar'), {'foo':'bar'})
+
 class TestConditions(unittest.TestCase):
 
     def setUp(self):
