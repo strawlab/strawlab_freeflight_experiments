@@ -110,8 +110,6 @@ if __name__=='__main__':
     FS = 1/TS
     print "DATA FS=%sHz (TS=%fs)" % (FS,TS)
 
-    lookback_frames = int(args.lookback / combine.dt)
-
     aplt.save_args(combine, args)
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
@@ -121,14 +119,14 @@ if __name__=='__main__':
     #perturbations {cond: [PerturbationHolder,...]}
     #perturbation_objects {cond: perturb_obj}
 
-    pid = args.only_perturb_start_id
-
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS), 'dt':args.detrend}
-
     #loop per condition
     for cond in perturbations:
-
         perturbation_obj = perturbation_objects[cond]
+
+        pid = args.only_perturb_start_id
+        lookback_frames = int(args.lookback / combine.dt)
+        plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS), 'dt':args.detrend}
+
         cond_name = combine.get_condition_name(cond)
 
         if only_conditions and (cond_name not in only_conditions):

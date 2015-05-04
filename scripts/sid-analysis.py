@@ -221,8 +221,6 @@ if __name__=='__main__':
     FS = 1/TS
     print "DATA FS=%sHz (TS=%fs)" % (FS,TS)
 
-    lookback_frames = int(args.lookback / combine.dt)
-
     aplt.save_args(combine, args)
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
@@ -232,10 +230,6 @@ if __name__=='__main__':
     #perturbations {cond: {obj_id:PerturbationHolder,...}}
     #perturbation_objects {cond: perturb_obj}
 
-    pid = args.only_perturb_start_id
-
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod, 'fs':int(FS)}
-
     mfile = combine.get_plot_filename('variables.m')
     mfile = open(mfile,'w')
 
@@ -243,14 +237,17 @@ if __name__=='__main__':
 
     #loop per condition
     for cond in perturbations:
+        perturbation_obj = perturbation_objects[cond]
+
+        pid = args.only_perturb_start_id
+        lookback_frames = int(args.lookback / combine.dt)
+        plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod, 'fs':int(FS)}
+
+        cond_name = combine.get_condition_name(cond)
 
         any_completed_perturbations = False
-
         individual_models = {}
         alldata_models = {}
-
-        perturbation_obj = perturbation_objects[cond]
-        cond_name = combine.get_condition_name(cond)
 
         if only_conditions and (cond_name not in only_conditions):
             continue
