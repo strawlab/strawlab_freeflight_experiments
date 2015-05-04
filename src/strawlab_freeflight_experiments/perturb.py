@@ -131,6 +131,10 @@ class Perturber:
     def _get_duration_discrete(self, Fs, thresh=0.98):
         return int(self._get_duration(thresh)*Fs)
 
+    @property
+    def name(self):
+        return self.NAME
+
     @classmethod
     def split_perturb_descriptor(cls, desc):
         bits = desc.split("|",cls.N_PARAMS)
@@ -692,6 +696,8 @@ class PerturberIDINPUT(_PerturberInterpolation):
     DEFAULT_DESC = "idinput_WHAT|sine|3|0|5|1.8||||1"
     N_PARAMS = 10
 
+    TYPES = ("sine","prbs")
+
     _mlab = None
 
     def __init__(self, descriptor, criteria):
@@ -769,6 +775,10 @@ class PerturberIDINPUT(_PerturberInterpolation):
 
     def __repr__(self):
         return "<PerturberIDINPUT what=%s val=%.1f type=%s dur=%.1fs bw=%.2f...%.2f f=%.1f...%.1f>" % (self.what,self.value,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
+
+    @property
+    def name(self):
+        return self.NAME + self.type
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:

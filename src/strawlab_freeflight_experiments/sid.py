@@ -32,7 +32,8 @@ import matplotlib.pyplot as plt
 VERSION = 1
 
 # these perturb classes are spectrally interesting enough for system identification
-PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME, sfe_perturb.PerturberIDINPUT.NAME]
+PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME]
+PERTURBERS_FOR_SID.extend(sfe_perturb.PerturberIDINPUT.NAME + t for t in sfe_perturb.PerturberIDINPUT.TYPES)
 
 def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),

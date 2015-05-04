@@ -197,7 +197,7 @@ def collect_perturbation_traces(combine,
         if step_obj is None:
             continue
 
-        if allowed_perturbation_types and (step_obj.NAME not in allowed_perturbation_types):
+        if allowed_perturbation_types and (step_obj.name not in allowed_perturbation_types):
             continue
 
         perturbation_objects[cond] = step_obj

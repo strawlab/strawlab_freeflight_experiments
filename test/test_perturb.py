@@ -28,6 +28,11 @@ class TestPerturbConstruct(unittest.TestCase):
             self.assertEqual(p,p2)
             self.assertEqual(p.NAME,p2.NAME)
 
+    def test_construct_idinput(self):
+        cond = sfe_perturb.PerturberIDINPUT.DEFAULT_DESC + "|" + sfe_perturb.PerturberIDINPUT.DEFAULT_CRITERIA
+        p = sfe_perturb.get_perturb_object(cond)
+        self.assertEqual(p.name, 'idinputsine')
+        self.assertEqual(p.NAME, 'idinput')
 
 class TestConditions(unittest.TestCase):
 
