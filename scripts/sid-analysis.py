@@ -42,6 +42,48 @@ dat = load('%(path)s', '-mat');
 """
     fobj.write(TMPL % {'path':path,'name':name})
 
+def plot_model_fits(all_models, ax):
+
+    #put it in a dataframe for easier seaborn support
+    df = pd.DataFrame(all_models)
+    df.drop('obj_id',axis=1,inplace=True)
+    df[df < 0] = 0.0
+
+    try:
+        import seaborn as sns
+        new_seaborn = int(sns.__version__.split('.')[1]) > 5
+    except ImportError:
+        sns = None
+
+    if sns is not None:
+        if new_seaborn:
+            sns.boxplot(data=df, ax=ax)
+            sns.stripplot(data=df, size=3, jitter=True, color="white", edgecolor="gray", ax=ax)
+        else:
+            sns.boxplot(df, ax=ax)
+    else:
+        data = []
+        locs = []
+        lbls = []
+        for i,col in enumerate(df):
+            data.append( df[col].values )
+            locs.append(i+1)
+            lbls.append(col)
+
+        try:
+            #matplotlib >= 1.4
+            ax.boxplot(data,labels=lbls)
+        except TypeError:
+            #matplotlib <1.4
+            ax.boxplot(data,positions=locs)
+            ax.set_xticks(locs)
+            ax.set_xticklabels(lbls)
+            ax.set_xlim(0,locs[-1]+1)
+
+        ax.set_ylim(0,75)
+
+    ax.set_ylabel('fit to data (pct)')
+
 def plot_perturbation_signal(combine, args, perturbations, perturbation_objects):
     for cond in perturbations:
         perturbation_obj = perturbation_objects[cond]
@@ -510,40 +552,12 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
 
-#            name = combine.get_plot_filename('mdlstep_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
-#            title = 'Step response (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj)
-#            with mlab.fig(name+'.png') as f:
-#                print "GGGGGGGGGG", alldata_models
-#                sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
-#            if EPS:
-#                with mlab.fig(name+'.eps',driver='epsc2') as f:
-#                    sfe_sid.step_response_models(mlab,title,False,True,False,1.8,2.5,alldata_models.values())
-
             name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
+            title = 'Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond))
             with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
                 ax = fig.add_subplot(1,1,1)
-
-                lbls = []
-                locs = []
-                data = []
-
-                for i,pm in enumerate(sorted(individual_models, key=lambda x: x.spec)):
-                    data.append( [max(-1,mdl.fitpct) for mdl in individual_models[pm]] )
-                    locs.append(i+1)
-                    lbls.append(pm.spec)
-
-                try:
-                    ax.boxplot(data,labels=lbls)
-                except TypeError:
-                    #old mpl version
-                    ax.boxplot(data,positions=locs)
-                    ax.set_xticks(locs)
-                    ax.set_xticklabels(lbls)
-                    ax.set_xlim(0,locs[-1]+1)
-
-                ax.set_ylim(-1,100)
-                ax.set_ylabel('fit to data (pct)')
-                ax.set_title('Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond)))
+                plot_model_fits(all_models[cond_name], ax)
+                ax.set_title(title)
 
     name = combine.get_plot_filename(aplt.get_safe_filename('all_mdlfits', **plot_fn_kwargs))
     with open(name+'.pkl', 'wb') as f:
