@@ -141,7 +141,7 @@ def calc_circle_leastsq(x,y):
 
     return R_2
 
-def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurve'):
+def calc_curvature(df, dt, NPTS=3, method="leastsq", clip=None, colname='rcurve'):
     method = {"leastsq":calc_circle_leastsq,
               "algebraic":calc_circle_algebraic}[method]
 
