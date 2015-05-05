@@ -14,42 +14,35 @@ from matplotlib.colors import LogNorm
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+
 import analysislib.plots as aplt
-from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
+
+from .plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
+from .filters import find_intervals
 
 DEBUG = False
 
 class NotEnoughDataError(Exception):
     pass
 
-def calc_saccades(df, dt, min_dtheta=10, min_consecutive_dtheta=7):
+def calc_saccades(df, dt, min_dtheta=8.7, max_velocity=np.inf, min_saccade_time=0.07):
 
-    a = pd.rolling_apply(df['dtheta'],min_consecutive_dtheta,lambda v: np.abs(v).mean() > min_dtheta,center=True)
-    a.fillna(0,inplace=True)
+    min_saccade_time_f = min_saccade_time / dt  # in frames, as the index of df
 
-    H = False
-    idxs = []
-    i0 = None
+    cond = (np.abs(df['dtheta'].values) >= min_dtheta) & (df['velocity'].values < max_velocity)
 
-    for idx,r in a.iteritems():
-        if not H and r == 1:
-            i0 = idx
-            H = True
-        elif H and r == 0:
-            H = False
-            if (idx - i0) > min_consecutive_dtheta:
-                idxs.append( (i0,idx) )
+    # create a list of tuples delimiting the saccades (intervals)
+    saccade_intervals = []    
+    for interval in find_intervals(cond):
+        if (interval[1] - interval[0]) >= min_saccade_time_f:
+            saccade_intervals += [interval]
 
     df['saccade'] = False
-
-    for i0,i1 in idxs:
-        i = ((i1-i0) // 2) + i0
-        try:
-            df['saccade'][i] = True
-        except KeyError:
-            df['saccade'][i0] = True
+    for interval in saccade_intervals:
+        df['saccade'][interval[0]:interval[1]] = True
 
     return ['saccade']
+
 
 def calc_velocities(df, dt):
     vx = np.gradient(df['x'].values) / dt
