@@ -74,9 +74,8 @@ def calc_angular_velocities(df, dt):
     df['theta']     = theta
     df['dtheta']    = dtheta
     df['radius']    = radius
-    df['omega']     = (velocity*np.cos(theta))/radius
 
-    return ['theta','dtheta','radius','omega']
+    return ['theta','dtheta','radius']
 
 
 def calc_circle_algebraic(x,y):
@@ -198,40 +197,6 @@ def calc_unwrapped_ratio(df, data):
         return ['ratiouw']
 
     return []
-
-def _strictly_increasing(L):
-    return all(x<y for x, y in zip(L, L[1:]))
-
-def calc_interpolate_dataframe(df,dt,columns):
-    #where data is measured at a lower rate, such as from the csv file,
-    #it should be interpolated or filled as appropriate as later analysis may
-    #not handle NaNs correctly.
-    #
-    #after filling, we should only have nans at the start. for performance (and
-    #animated plotting reasons) I scrub these only when needed, like to calculate
-    #correlations, but enable DEBUG to test that here.
-    for c in columns:
-        try:
-            if DEBUG:
-                bf = np.sum(np.isnan(df[c].values))
-
-            vals = df[c].interpolate().values
-            df[c] = vals
-
-            if DEBUG:
-                ldf = len(df)
-                print "INTERPOLATED %.1f%% of %d %s values" % (
-                            (bf/float(ldf)) * 100, ldf, c)
-
-                idx, = np.where(np.isnan(vals))
-                if len(idx):
-                    assert _strictly_increasing(idx)
-        except ValueError:
-            #not enough/any points to interpolate
-            pass
-        except KeyError:
-            #no such column
-            pass
 
 def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',limits=None):
     if title:
