@@ -81,7 +81,7 @@ class Filter:
         setattr(args,self.name+'_max',self.vmax)
         setattr(args,self.name+'_interval',self.filter_interval)
 
-def crossings(x, threshold=0, after=False):
+def crossings(x, threshold=0, after=False, only_positive=False, only_negative=False):
     """Returns the indices of the elements before or after crossing a threshold.
 
     N.B. touching the threshold itself is considered a cross.
@@ -96,6 +96,12 @@ def crossings(x, threshold=0, after=False):
 
     after: bool, default False
     If True, the indices represent the elements after the cross, if False the elements before the cross.
+
+    only_positive: bool, default False
+    If True only consider positive crossings
+
+    only_negative: bool, default False
+    If True only consider negative crossings
 
     Returns
     -------
@@ -117,7 +123,18 @@ def crossings(x, threshold=0, after=False):
     """
     if len(x.shape) > 1:
         raise Exception('Only 1D arrays, please (you gave me %d dimensions)' % len(x.shape))
-    where_crosses = np.where(np.diff(np.sign(x - threshold)))[0]
+
+    if only_positive and only_negative:
+        raise ValueError("Can't get only postivie AND only negative crossings")
+
+    crosses = np.diff(np.sign(x - threshold))
+
+    if only_positive:
+        crosses = crosses > 0
+    if only_negative:
+        crosses = crosses < 0
+
+    where_crosses = np.where(crosses)[0]
     if after:
         return where_crosses + 1
     return where_crosses
