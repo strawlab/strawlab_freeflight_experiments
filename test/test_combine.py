@@ -43,7 +43,7 @@ class TestCombineData(unittest.TestCase):
         cols = set(combine.get_result_columns())
 
         required = ['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate', 'trg_x', 'trg_y', 'trg_z',
-                    'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az', 'theta',
+                    'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'theta',
                     'dtheta', 'radius', 't_nsec', 'framenumber', 'tns', 't_sec', 'exp_uuid',
                     'flydra_data_file', 'lock_object', 'condition']
         for r in required:

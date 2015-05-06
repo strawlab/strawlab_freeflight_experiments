@@ -12,26 +12,6 @@ import matplotlib.pyplot as plt
 
 class TestCurvature(unittest.TestCase):
 
-    def test_velocity(self):
-        EXPECTED_V = 100.0
-
-        dt = 1/100.0
-        x = np.array(range(100))
-        y = np.array(range(100))
-        z = np.array(range(100))
-        df = pd.DataFrame({"x":x,"y":y,"z":z})
-
-        cols = curve.calc_velocities(df, dt)
-        self.assertEqual(cols, ["vx","vy","vz","velocity"])
-
-        for i in ('vx','vy','vz'):
-            #all velocity is the same
-            self.assertTrue( np.allclose(df[i].values,EXPECTED_V) )
-
-        #velocity in xy is 
-        vxy = np.sqrt((EXPECTED_V**2) + (EXPECTED_V**2))
-        self.assertTrue( np.allclose(df['velocity'].values,vxy) )
-
     def test_rcurve(self):
         dt = 1/100.0
         rad = 0.5
@@ -74,24 +54,6 @@ class TestCurvature(unittest.TestCase):
             self.assertTrue( np.allclose(v[0:half//2],rad2) )
             #second quarter has beg radius
             self.assertTrue( np.allclose(v[-half//2:],rad) )
-
-    def test_dtheta(self):
-        # 2*pi in 10 sec --> 0.628319 rad/s
-        phi = np.linspace(0,2*np.pi, 1000)
-        t = np.linspace(0,10, 1000) 
-        dt = t[1]-t[0] 
-
-        x = np.cos(phi)
-        y = np.sin(phi)
-        z = y*0
-        df = pd.DataFrame({'x': x, 'y': y, 'z':z})
-
-        curve.calc_velocities(df, dt)
-        curve.calc_angular_velocities(df, dt)
-
-        dtheta = df['dtheta'].values
-
-        self.assertTrue( np.allclose(dtheta[10:90],0.628319) )
 
 if __name__=='__main__':
     unittest.main()

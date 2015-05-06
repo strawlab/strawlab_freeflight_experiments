@@ -43,41 +43,6 @@ def calc_saccades(df, dt, min_dtheta=8.7, max_velocity=np.inf, min_saccade_time=
 
     return ['saccade']
 
-
-def calc_velocities(df, dt):
-    vx = np.gradient(df['x'].values) / dt
-    vy = np.gradient(df['y'].values) / dt
-    vz = np.gradient(df['z'].values) / dt
-    velocity = np.sqrt( (vx**2) + (vy**2) )
-
-    df['vx'] = vx
-    df['vy'] = vy
-    df['vz'] = vz
-    df['velocity'] = velocity
-
-    return ['vx','vy','vz', 'velocity']
-
-def calc_accelerations(df, dt):
-    df['ax'] = np.gradient(df['vx'].values) / dt
-    df['ay'] = np.gradient(df['vy'].values) / dt
-    df['az'] = np.gradient(df['vz'].values) / dt
-
-    return ['ax','ay','az']
-
-def calc_angular_velocities(df, dt):
-    velocity = df['velocity'].values
-
-    theta       = np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
-    dtheta      = np.gradient(theta) / dt
-    radius      = np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
-
-    df['theta']     = theta
-    df['dtheta']    = dtheta
-    df['radius']    = radius
-
-    return ['theta','dtheta','radius']
-
-
 def calc_circle_algebraic(x,y):
     # derivation
     # http://mathforum.org/library/drmath/view/55239.html

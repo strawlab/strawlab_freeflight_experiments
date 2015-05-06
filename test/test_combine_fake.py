@@ -415,9 +415,6 @@ class TestCombineFake2(unittest.TestCase):
         for index,csv_rate in itertools.product(('none','framenumber','time','time+1L'),(0.5,2.0)):
             h5_fname, csv_fname = self._create_h5(200,1,csv_rate=csv_rate,framenumber0=14)
             cn = analysislib.util.get_combiner_for_csv(csv_fname)
-            cn.calc_angular_stats = False
-            cn.calc_turn_stats = False
-            cn.calc_linear_stats = False
             cn.set_index(index)
 
             cn.add_csv_and_h5_file(csv_fname, h5_fname, args)
@@ -439,9 +436,6 @@ class TestCombineNonContiguous(unittest.TestCase):
     def _combine_from_csv_h5(self, csv, h5):
         # combine the test csv/h5
         combine = get_combiner_for_csv(csv)
-        combine.calc_turn_stats = False
-        combine.calc_linear_stats = False
-        combine.calc_angular_stats = False
         _, args = analysislib.args.get_default_args(disable_filters=True)
 
         combine.add_csv_and_h5_file(csv_fname=csv,
@@ -464,9 +458,6 @@ class TestCombineNonContiguous(unittest.TestCase):
         if not op.isfile(csv) or not op.isfile(h5):
             # generate smaller test files we can fit in our repo
             combine = get_combiner_for_uuid(MAX_TEST_UUID)
-            combine.calc_turn_stats = False
-            combine.calc_linear_stats = False
-            combine.calc_angular_stats = False
             combine.add_from_uuid(MAX_TEST_UUID,
                                   disable_filters=True)
             combine2h5csv(combine,
