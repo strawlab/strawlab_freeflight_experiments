@@ -145,24 +145,6 @@ def remove_pre_infinity(df):
                 return df[i:]
             last = r
 
-def calc_unwrapped_ratio(df, data):
-    if 'ratio' in df.columns:
-        #unwrap the ratio
-        wrap = 0.0
-        last = df['ratio'][df.index[0]]
-        ratiouw = []
-        for i,r in enumerate(df['ratio']):
-            if not np.isnan(r):
-                if (r - last) < 0:
-                    wrap += 1
-                last = r
-            ratiouw.append(r+wrap)
-        df['ratiouw'] = ratiouw
-
-        return ['ratiouw']
-
-    return []
-
 def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',limits=None):
     if title:
         ax.set_title(title)

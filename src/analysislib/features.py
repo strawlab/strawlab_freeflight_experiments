@@ -148,6 +148,22 @@ class RCurveFeature(_Feature):
     def _compute_from_df(self,df,dt,**kwargs):
         return calc_curvature(df, dt,npts,method,clip,colname='rcurve')
 
+class RatioUnwrappedFeature(_Feature):
+    name = 'ratiouw'
+    depends = 'ratio',
+    def _compute_from_df(self,df,dt):
+        #unwrap the ratio
+        wrap = 0.0
+        prev = df['ratio'].dropna().iloc[0]
+        ratiouw = []
+        for r in df['ratio'].values:
+            if not np.isnan(r):
+                if (r - prev) < -0.9:
+                    wrap += 1
+                prev = r
+            ratiouw.append(r+wrap)
+        return np.array(ratiouw)
+
 ALL_FEATURES = [cls for cls in (_all_subclasses(_Feature) + _all_subclasses(_Measurement)) if cls.name is not None]
 
 def get_feature_class(name):
