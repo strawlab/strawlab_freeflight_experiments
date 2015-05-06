@@ -31,7 +31,7 @@ import autodata.files
 
 import analysislib.fixes
 import analysislib.args
-import analysislib.curvature as acurve
+import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
@@ -129,9 +129,7 @@ class CacheError(Exception):
 
 class _Combine(object):
 
-    calc_linear_stats = True
-    calc_angular_stats = True
-    calc_turn_stats = False
+    DEFAULT_FEATURES = ('vx','vy','vz','velocity','dtheta','radius','err_pos_stddev_m')
 
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)
@@ -157,6 +155,24 @@ class _Combine(object):
         self._configdict = {'v': 16,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
+
+        self.features = afeat.MultiFeatureComputer(*kwargs.get("features",self.DEFAULT_FEATURES))
+        self._configdict['features'] = self.features    #is whatable
+
+    def add_feature(self, feature_name=None, column_name=None):
+        if feature_name and column_name:
+            raise ValueError('Only one of feature_name and column_name may be provided')
+        elif feature_name:
+            self.features.add_feature(feature_name)
+        elif column_name:
+            self.features.add_feature_by_column_added(column_name)
+        else:
+            raise ValueError('feature_name or column_name are required')
+        self._configdict['features'] = self.features
+
+    def set_features(self, *features):
+        self.features.set_features(*features)
+        self._configdict['features'] = self.features
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -318,14 +334,18 @@ class _Combine(object):
             self._warn_cache[m] = 0
         self._warn_cache[m] += 1
 
-    def _get_df_sample_interval(self):
-        for cond,r in self._results.iteritems():
-            for _df in r['df']:
-                try:
-                    return _df.index.freq.nanos / 1e9
-                except AttributeError:
-                    #not datetime index
-                    return None
+    def _get_df_sample_interval(self, df=None):
+        try:
+            if df is not None:
+                return df.index.freq.nanos / 1e9
+            else:
+                #take the first dataframe as all must have the same index
+                for cond,r in self._results.iteritems():
+                    for df in r['df']:
+                        return df.index.freq.nanos / 1e9
+        except AttributeError:
+            #not datetime index
+            pass
         return None
 
     def __repr__(self):
@@ -618,32 +638,6 @@ class _Combine(object):
     def close(self):
         pass
 
-    def _calc_other_series(self, df, dt):
-        """Computes other time series for the trial.
-        In particular:
-          - velocities and accelerations
-          - angular velocities
-          - turn stats (careful, time consuming!)
-        """
-        if self.calc_linear_stats:
-            acurve.calc_velocities(df, dt)
-            acurve.calc_accelerations(df, dt)
-
-            try:
-                #compute a position error estimate from the observed covariances
-                #covariance is m**2, hence 2 sqrt
-                df['err_pos_stddev_m'] = np.sqrt( np.sqrt( df['covariance_x']**2 + df['covariance_y']**2 + df['covariance_z']**2 ) )
-            except KeyError:
-                #if not set, range type filters compare against +/- np.inf, so set the error
-                #to a real number (comparisons with nan are false) 
-                df['err_pos_stddev_m'] = 0
-
-        if self.calc_angular_stats:
-            acurve.calc_angular_velocities(df, dt)
-        if self.calc_turn_stats:
-            acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0, 1))
-
-
 class _CombineFakeInfinity(_Combine):
 
     CONDITION_FMT_STRING = "tex%d/svg/1.0/1.0/adv/..."
@@ -696,7 +690,7 @@ class _CombineFakeInfinity(_Combine):
                     continue
 
                 dt = self._dt
-                self._calc_other_series(df, dt)
+                self.features.process(df, dt)
 
                 first = df.irow(0)
                 last = df.irow(-1)
@@ -769,9 +763,8 @@ class _CombineFakeInfinity(_Combine):
 
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
-        cols = []
-        cols.extend( acurve.calc_velocities(df, dt) )
-        cols.extend( acurve.calc_angular_velocities(df, dt) )
+        m = afeat.MultiFeatureComputer('dtheta')
+        m.process(df, dt)
 
         #add some uncorrelated noise to rrate
         rrate = (df['dtheta'].values * 10.0) + (0.0 * (np.random.random(len(df)) - 0.5))
@@ -787,7 +780,8 @@ class _CombineFakeInfinity(_Combine):
         df['rotation_rate'] = rrate
         df['v_offset_rate'] = np.zeros_like(rrate)
 
-        for c in cols:
+        #remove the added colums
+        for c in m.get_columns_added():
             del df[c]
 
         return df
@@ -903,7 +897,7 @@ class CombineCSV(_Combine):
                         pass
 
                 dt = self._dt
-                self._calc_other_series(df, dt)
+                self.features.process(df, dt)
 
                 self._results[cond]['df'].append(odf)
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
@@ -1018,7 +1012,7 @@ class CombineH5(_Combine):
         )
 
         dt = self._dt
-        self._calc_other_series(df, dt)
+        self.features.process(df, dt)
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
 
@@ -1536,12 +1530,12 @@ class CombineH5WithCSV(_Combine):
             h5_df = pd.concat(flydra_series, axis=1)
             n_samples_before = len(h5_df)
 
+            #compute those features we can (such as those that only need x,y,z)
             try:
-                dt = self._dt
-                self._calc_other_series(h5_df, dt)
+                computed,not_computed,missing = self.features.process(h5_df, self._dt)
             except Exception, e:
                 self._skipped[cond] += 1
-                self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
 
             # apply filters
@@ -1685,6 +1679,18 @@ class CombineH5WithCSV(_Combine):
                             except IndexError, e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
+
+                #compute the remaining features (which might have come from the CSV)
+                try:
+                    dt = self._get_df_sample_interval(df) or self._dt
+                    computed,not_computed,missing = self.features.process(df, dt)
+                    if missing:
+                        for m in missing:
+                            self._warn_once("ERROR: column/feature '%s' missing from dataframe" % m)
+                except Exception, e:
+                    self._skipped[cond] += 1
+                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                    continue
 
                 # the start time and the start framenumber are defined by the experiment,
                 # so they come from the csv
