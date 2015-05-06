@@ -1,0 +1,1 @@
+mcc -v -N -p optim -m Inverse_dyn.m get_tau.m  get_tau_red.m make.m  myfilter.m  readData.m
