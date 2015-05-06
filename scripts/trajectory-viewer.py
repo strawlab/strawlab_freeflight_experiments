@@ -52,9 +52,12 @@ if __name__=='__main__':
 
     uuid = args.uuid[0]
     obj_ids = map(int,args.idfilt)
+    plot_axes = args.plot_values.split(',')
 
     combine = autil.get_combiner_for_args(args)
     combine.set_index(args.index)
+    for p in plot_axes:
+        combine.add_feature(column_name=p)
     combine.add_from_args(args)
 
     if args.outdir:
@@ -65,8 +68,6 @@ if __name__=='__main__':
             os.makedirs(basedir)
     else:
         basedir = combine.plotdir
-
-    plot_axes = args.plot_values.split(',')
 
     results, dt = combine.get_results()
 
