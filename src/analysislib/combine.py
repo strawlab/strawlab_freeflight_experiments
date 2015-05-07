@@ -524,8 +524,9 @@ class _Combine(object):
 
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
-        if (not condition) and (obj_id in self.get_spanned_results()):
-            raise ValueError("obj_id: %s exists in multiple conditions - please specify which one" % obj_id)
+        spanned = self.get_spanned_results()
+        if (not condition) and (obj_id in spanned):
+            raise ValueError("obj_id %s exists in multiple conditions: %s" % (obj_id,','.join(self.get_condition_name(d[0]) for d in spanned[obj_id])))
 
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
             for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
