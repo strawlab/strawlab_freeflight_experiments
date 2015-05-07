@@ -139,7 +139,7 @@ class TestCombineData(unittest.TestCase):
         kwargs.update(self.filter_args())
         parser = analysislib.args.get_parser(**kwargs)
 
-        args = parser.parse_args()
+        args = parser.parse_args('')
         combine = autil.get_combiner_for_args(args)
         _quiet(combine)
         combine.add_from_args(args)
@@ -155,7 +155,7 @@ class TestCombineData(unittest.TestCase):
         kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
         kwargs.update(self.filter_args())
         parser = analysislib.args.get_parser(**kwargs)
-        args = parser.parse_args()
+        args = parser.parse_args('')
         arena = aarenas.get_arena_from_args(args)
 
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
@@ -166,7 +166,7 @@ class TestCombineData(unittest.TestCase):
         kwargs['zfilt'] = 'trim'
         kwargs['rfilt'] = 'trim'
         parser = analysislib.args.get_parser(**kwargs)
-        args = parser.parse_args()
+        args = parser.parse_args('')
         arena = aarenas.get_arena_from_args(args)
 
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
@@ -182,7 +182,7 @@ class TestCombineData(unittest.TestCase):
         kwargs['trajectory_start_offset'] = 0.1
         kwargs['disable_filters'] = True
         parser = analysislib.args.get_parser(**kwargs)
-        args = parser.parse_args()
+        args = parser.parse_args('')
         arena = aarenas.get_arena_from_args(args)
 
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
@@ -195,7 +195,7 @@ class TestCombineData(unittest.TestCase):
         kwargs['disable_filters'] = True
 
         parser = analysislib.args.get_parser(**kwargs)
-        args = parser.parse_args()
+        args = parser.parse_args('')
         arena = aarenas.get_arena_from_args(args)
 
         self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
