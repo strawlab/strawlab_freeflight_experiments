@@ -154,6 +154,7 @@ class RCurveFeature(_Feature):
 class RatioUnwrappedFeature(_Feature):
     name = 'ratiouw'
     depends = 'ratio',
+
     def compute_from_df(self,df,dt):
         #unwrap the ratio
         wrap = 0.0
