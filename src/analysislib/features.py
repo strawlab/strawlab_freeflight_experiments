@@ -4,6 +4,7 @@ import numpy as np
 from whatami import What
 
 from .curvature import calc_curvature
+from .compute import find_intervals
 
 class Node:
     def __init__(self, name):
@@ -167,6 +168,31 @@ class RatioUnwrappedFeature(_Feature):
                 prev = r
             ratiouw.append(r+wrap)
         return np.array(ratiouw)
+
+class SaccadeFeature(_Feature):
+    name = 'saccade'
+    depends = ('dtheta','velocity')
+
+    def __init__(self, min_dtheta=8.7, max_velocity=np.inf, min_saccade_time=0.07):
+        _Feature.__init__(self, min_dtheta=min_dtheta, max_velocity=max_velocity, min_saccade_time=min_saccade_time)
+
+    def compute_from_df(self,df,dt, min_dtheta, max_velocity, min_saccade_time):
+        min_saccade_time_f = min_saccade_time / dt  # in frames, as the index of df
+
+        cond = (np.abs(df['dtheta'].values) >= min_dtheta) & (df['velocity'].values < max_velocity)
+        saccade = np.zeros(len(df), dtype=bool)
+
+        # create a list of tuples delimiting the saccades (intervals)
+        saccade_intervals = []
+        for interval in find_intervals(cond):
+            if (interval[1] - interval[0]) >= min_saccade_time_f:
+                saccade_intervals += [interval]
+
+        df['saccade'] = False
+        for interval in saccade_intervals:
+            saccade[interval[0]:interval[1]] = True
+
+        return saccade
 
 ALL_FEATURES = [cls for cls in (_all_subclasses(_Feature) + _all_subclasses(_Measurement)) if cls.name is not None]
 

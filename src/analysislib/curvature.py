@@ -18,30 +18,11 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.plots as aplt
 
 from .plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
-from .filters import find_intervals
 
 DEBUG = False
 
 class NotEnoughDataError(Exception):
     pass
-
-def calc_saccades(df, dt, min_dtheta=8.7, max_velocity=np.inf, min_saccade_time=0.07):
-
-    min_saccade_time_f = min_saccade_time / dt  # in frames, as the index of df
-
-    cond = (np.abs(df['dtheta'].values) >= min_dtheta) & (df['velocity'].values < max_velocity)
-
-    # create a list of tuples delimiting the saccades (intervals)
-    saccade_intervals = []    
-    for interval in find_intervals(cond):
-        if (interval[1] - interval[0]) >= min_saccade_time_f:
-            saccade_intervals += [interval]
-
-    df['saccade'] = False
-    for interval in saccade_intervals:
-        df['saccade'][interval[0]:interval[1]] = True
-
-    return ['saccade']
 
 def calc_circle_algebraic(x,y):
     # derivation
