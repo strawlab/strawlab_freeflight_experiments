@@ -106,7 +106,7 @@ def calc_circle_leastsq(x,y):
 
     return R_2
 
-def calc_curvature(df, dt, NPTS=3, method="leastsq", clip=None, colname='rcurve'):
+def calc_curvature(df, dt, npts=3, method="leastsq", clip=None):
     method = {"leastsq":calc_circle_leastsq,
               "algebraic":calc_circle_algebraic}[method]
 
@@ -114,12 +114,12 @@ def calc_curvature(df, dt, NPTS=3, method="leastsq", clip=None, colname='rcurve'
     d.fill(np.nan)
     c = np.nan
 
-    for i in range(0,len(df)+1,NPTS):
-        x = df['x'][i:i+NPTS].values
-        y = df['y'][i:i+NPTS].values
-        if len(x) == NPTS:
+    for i in range(0,len(df)+1,npts):
+        x = df['x'][i:i+npts].values
+        y = df['y'][i:i+npts].values
+        if len(x) == npts:
             c = method(x,y)
-            d[i:i+NPTS] = c
+            d[i:i+npts] = c
 
     #handle the last value for curves not divisible by NPTS
     if i < len(d):
@@ -129,9 +129,7 @@ def calc_curvature(df, dt, NPTS=3, method="leastsq", clip=None, colname='rcurve'
     if clip is not None:
         d = np.clip(d,*clip)
 
-    df[colname] = d
-
-    return [colname]
+    return d
 
 def remove_pre_infinity(df):
     if 'ratio' not in df.columns:

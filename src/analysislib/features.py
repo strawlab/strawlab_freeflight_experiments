@@ -146,7 +146,7 @@ class RCurveFeature(_Feature):
     def __init__(self, npts=10,method='leastsq',clip=(0, 1)):
         _Feature.__init__(self,npts=npts,method=method,clip=clip)
     def _compute_from_df(self,df,dt,**kwargs):
-        return calc_curvature(df, dt,npts,method,clip,colname='rcurve')
+        return calc_curvature(df, dt, **kwargs)
 
 class RatioUnwrappedFeature(_Feature):
     name = 'ratiouw'
