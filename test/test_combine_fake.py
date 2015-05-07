@@ -315,7 +315,7 @@ class TestCombineFake2(unittest.TestCase):
                                     wait=False, debug=False, warn=False,
                                     state=log_state)
 
-        cond_obj = Condition(value=1)
+        cond_obj = Condition(value='foo',value2='bar')
         cond_obj.name = 'test'
 
         log.condition = cond_obj

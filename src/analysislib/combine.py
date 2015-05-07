@@ -645,6 +645,9 @@ class _Combine(object):
 
 
 class _CombineFakeInfinity(_Combine):
+
+    CONDITION_FMT_STRING = "tex%d/svg/1.0/1.0/adv/..."
+
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
         self._nconditions = kwargs.get('nconditions',1)
@@ -661,7 +664,7 @@ class _CombineFakeInfinity(_Combine):
         framenumber = 1
 
         for c in range(self._nconditions):
-            cond = "tex%d/svg/1.0/1.0/adv/..." % c
+            cond = self.CONDITION_FMT_STRING % c
 
             try:
                 self._results[cond]
