@@ -31,6 +31,9 @@ if __name__=='__main__':
     parser.add_argument(
         "--animate", action="store_true")
     parser.add_argument(
+        "--no-h264", action="store_true",
+        help="don't save h264 format movie (because your ffmpeg is too old)")
+    parser.add_argument(
         "--save-data", action="store_true", help="save a csv of this trajectory")
     parser.add_argument(
         "--save-animation", action="store_true", help="save an mp4 of this trajectory")
@@ -132,14 +135,17 @@ if __name__=='__main__':
             title = "%s: obj_id %s (condition %s)" % (uuid, obj_id, current_condition)
             filename = os.path.join(basedir,filename + ".mp4")
             print "WRITING MP4:",filename
-            try:
-                writer = Writer(fps=15, metadata=dict(title=title), extra_args=['-vcodec', 'h264', '-pix_fmt', 'yuv420p'])
-                anim.save(filename, writer=writer)
-                print "WROTE h264"
-            except RuntimeError:
+            if args.no_h264:
                 writer = Writer(fps=15, metadata=dict(title=title), bitrate=1800)
                 anim.save(filename, writer=writer)
                 print "WROTE mp4v"
+            else:
+                try:
+                    writer = Writer(fps=15, metadata=dict(title=title), extra_args=['-vcodec', 'h264', '-pix_fmt', 'yuv420p'])
+                    anim.save(filename, writer=writer)
+                    print "WROTE h264"
+                except RuntimeError:
+                    print "FAILED TO WRITE h264: Your FFMPEG is too old. Upgrade or call with --no-h264"
 
     if (not args.save_animation) and args.show:
         aplt.show_plots()
