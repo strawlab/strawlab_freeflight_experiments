@@ -47,8 +47,12 @@ class _DfDepAddMixin:
 
 class _Feature(object, _DfDepAddMixin):
 
+    DEFAULT_OPTS = {}
+
     def __init__(self, **kwargs):
-        self._kwargs = kwargs
+        opts = self.DEFAULT_OPTS.copy()
+        opts.update(kwargs)
+        self._kwargs = opts
 
     def __repr__(self):
         return self.what().id()
@@ -61,7 +65,7 @@ class _Feature(object, _DfDepAddMixin):
     def process(self, df, dt):
         df[self.name] = self.compute_from_df(df,dt,**self._kwargs)
 
-    def compute_from_df(self, *args, **kwargs):
+    def compute_from_df(self, **kwargs):
         raise NotImplementedError
 
 class _GradientFeature(_Feature):
@@ -147,8 +151,9 @@ class RadiusFeature(_Feature):
 class RCurveFeature(_Feature):
     name = 'rcurve'
     depends = ('x','y')
-    def __init__(self, npts=10,method='leastsq',clip=(0, 1)):
-        _Feature.__init__(self,npts=npts,method=method,clip=clip)
+
+    DEFAULT_OPTS = {'npts':10,'method':'leastsq','clip':(0, 1)}
+
     def compute_from_df(self,df,dt,**kwargs):
         return calc_curvature(df, dt, **kwargs)
 
@@ -173,8 +178,7 @@ class SaccadeFeature(_Feature):
     name = 'saccade'
     depends = ('dtheta','velocity')
 
-    def __init__(self, min_dtheta=8.7, max_velocity=np.inf, min_saccade_time=0.07):
-        _Feature.__init__(self, min_dtheta=min_dtheta, max_velocity=max_velocity, min_saccade_time=min_saccade_time)
+    DEFAULT_OPTS = {'min_dtheta':8.7, 'max_velocity':np.inf, 'min_saccade_time':0.07}
 
     def compute_from_df(self,df,dt, min_dtheta, max_velocity, min_saccade_time):
         min_saccade_time_f = min_saccade_time / dt  # in frames, as the index of df
