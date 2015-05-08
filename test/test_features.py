@@ -185,6 +185,14 @@ class TestSomeFeatures(unittest.TestCase):
 
         self.assertTrue( np.allclose(df['rcurve'].values,rcurve_array) )
 
+    def test_all_features_and_deps(self):
+        for name in afeat.ALL_FEATURE_NAMES:
+            m = afeat.MultiFeatureComputer(name)
+            df = self._df.copy()
+            computed, not_computed, missing = m.process(df, self._dt)
+            self.assertNotEqual(len(computed), 0)
+            self.assertTupleEqual(missing,())
+
 if __name__=='__main__':
     unittest.main()
 

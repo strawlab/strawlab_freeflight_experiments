@@ -198,7 +198,8 @@ class SaccadeFeature(_Feature):
 
         return saccade
 
-ALL_FEATURES = [cls for cls in (_all_subclasses(_Feature) + _all_subclasses(_Measurement)) if cls.name is not None]
+ALL_FEATURES = [cls for cls in _all_subclasses(_Feature) if cls.name is not None]
+ALL_FEATURE_NAMES = [cls.name for cls in ALL_FEATURES]
 
 def get_feature_class(name):
     for f in ALL_FEATURES:
@@ -212,11 +213,14 @@ def get_feature(name,**kwargs):
 class MultiFeatureComputer(object):
 
     def __init__(self, *features):
+        all_measurements = [cls for cls in _all_subclasses(_Measurement) if cls.name is not None]
+        all_fandm = ALL_FEATURES + all_measurements
+
         #build a dict of all features
-        self._feats = {f.name:f for f in ALL_FEATURES}
+        self._feats = {f.name:f for f in all_fandm}
 
         #build a graph of all feature dependencies
-        self._nodes = {f.name:Node(f.name) for f in ALL_FEATURES}
+        self._nodes = {f.name:Node(f.name) for f in all_fandm}
         for n in self._nodes.itervalues():
             for dep in self._feats[n.name].get_depends():
                 n.add_edge(self._nodes[dep])
