@@ -206,6 +206,9 @@ def get_feature_class(name):
             return f
     return None
 
+def get_feature(name,**kwargs):
+    return get_feature_class(name)(**kwargs)
+
 class MultiFeatureComputer(object):
 
     def __init__(self, *features):
