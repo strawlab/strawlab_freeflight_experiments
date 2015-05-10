@@ -169,10 +169,9 @@ class Node(nodelib.node.Experiment):
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
 
-            #don't need to record anything at the control rate
-            #self.log.framenumber = framenumber
-            #self.log.update()
-
+            #new combine needs data recorded at the framerate
+            self.log.framenumber = framenumber
+            self.log.update()
 
             self.ack_pub.publish(active)
 
