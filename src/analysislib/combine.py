@@ -1064,6 +1064,16 @@ class CombineH5WithCSV(_Combine):
         except KeyError:
             raise Exception('The trial (%s, %d, %d) is not in the books' % (uuid, oid, startf))
 
+    def get_split_reason_dataframe(self):
+        d = {k:[] for k in ('uuid', 'oid', 'startf', 'split_num', 'reason_for_split')}
+        for (uuid, oid, startf), (split_num, reason_for_split) in self._split_bookeeping.iteritems():
+            d['uuid'].append(uuid)
+            d['oid'].append(oid)
+            d['startf'].append(startf)
+            d['split_num'].append(split_num)
+            d['reason_for_split'].append(reason_for_split)
+        return pd.DataFrame(d)
+
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid.
