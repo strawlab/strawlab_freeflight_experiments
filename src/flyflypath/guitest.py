@@ -25,7 +25,6 @@ class TestView(view.SvgPathWidget):
         self._mousex = event.x
         self._mousey = event.y
         self.queue_draw()
-        return True
 
     def _on_button_press_event(self, da, event):
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 1:
@@ -93,10 +92,24 @@ class Tester:
         self._step = 0.01
         GLib.timeout_add(200, self._move_along)
 
+        try:
+            self._hit = model.HitManager(self._model, transform_to_world=False, validate=True)
+            self._view.connect('motion-notify-event', self._on_motion_notify_event)
+        except ImportError:
+            pass
+        except ValueError, e:
+            print "Could not initialize hit tester: %s" % e.message
+
     def _move_along(self):
         self._model.advance_point(self._step, wrap=True)
         self._view.queue_draw()
         return True
+
+    def _on_motion_notify_event(self, v, event):
+        if (self._hit is not None) and self._hit.contains(event.x, event.y):
+            print "IN"
+        else:
+            print "OUT"
 
 if __name__ == "__main__":
     import os.path
