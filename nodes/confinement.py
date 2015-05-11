@@ -5,6 +5,7 @@ import numpy as np
 import threading
 import argparse
 import os.path
+import collections
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -19,11 +20,14 @@ from geometry_msgs.msg import Vector3, Pose, Polygon
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.transform
+import flyflypath.model
 import nodelib.node
 import nodelib.visualization
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
+
+Pos = collections.namedtuple('Pos', ('x', 'y', 'z'))
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -48,7 +52,7 @@ XFORM = flyflypath.transform.SVGTransform()
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("stimulus_filename","startr"))
+                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
@@ -95,6 +99,15 @@ class Node(nodelib.node.Experiment):
         msg.orientation.w = 1
         return msg
 
+    def _get_trigger_area(self):
+        if self.hitm_start is not None:
+            x,y = self.hitm_start.points
+            return nodelib.visualization.get_trigger_volume_polygon(XFORM,zip(x,y))
+        else:
+            return nodelib.visualization.get_circle_trigger_volume_polygon(
+                                        XFORM,
+                                        self.startr,self.x0,self.y0)
+
     def switch_conditions(self):
 
         self.drop_lock_on()
@@ -103,20 +116,52 @@ class Node(nodelib.node.Experiment):
         self.x0                = float(self.condition['x0'])
         self.y0                = float(self.condition['y0'])
         self.lag               = float(self.condition['lag'])
-        self.startr            = float(self.condition['start_radius'])
+        try:
+            self.startr        = float(self.condition['start_radius'])
+        except KeyError:
+            self.startr        = None
+        try:
+            self.stopr         = float(self.condition['stop_radius'])
+        except KeyError:
+            self.stopr         = None
 
+
+        #conditional and backwards compatible handling for specifying start and
+        #stop conditions relative to a buffer around the svg
+        svg_path = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
+        if os.path.isfile(svg_path):
+            svg_filename = os.path.basename(svg_path)
+        else:
+            svg_filename = None
+        try:
+            startbuf            = float(self.condition['start_buffer'])
+            self.hitm_start     = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=startbuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError), e:
+            startbuf            = None
+            self.hitm_start     = None
+        try:
+            stopbuf             = float(self.condition['stop_buffer'])
+            self.hitm_stop      = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=stopbuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError):
+            stopbuf             = None
+            self.hitm_stop      = None
 
         self.log.stimulus_filename = self.stimulus_filename
+        self.log.svg_filename = svg_filename
         self.log.startr = self.startr
+        self.log.stopr = self.stopr
+        self.log.startbuf = startbuf
+        self.log.stopbuf = stopbuf
 
         self.pub_lag.publish(self.lag)
         self.pub_model_pose.publish( self.get_model_pose_msg() )
-        self.svg_pub.publish(os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4]))
-        self.trigarea_pub.publish(
-                nodelib.visualization.get_circle_trigger_volume_polygon(
-                                        XFORM,
-                                        self.startr,self.x0,self.y0)
-        )
+        self.svg_pub.publish(svg_path)
+
+        self.trigarea_pub.publish( self._get_trigger_area() )
 
         rospy.loginfo('condition: %s (%f,%f)' % (self.condition.name,self.x0,self.y0))
 
@@ -146,6 +191,10 @@ class Node(nodelib.node.Experiment):
 
                 if np.isnan(fly_x):
                     #we have a race  - a fly to track with no pose yet
+                    continue
+
+                if self.has_left_stop_volume(Pos(fly_x,fly_y,fly_z)):
+                    self.drop_lock_on()
                     continue
 
                 active = True
@@ -179,13 +228,30 @@ class Node(nodelib.node.Experiment):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def is_in_trigger_volume(self,pos):
+    def _is_in_circle_at_origin(self,pos,rad):
         c = np.array( (self.x0,self.y0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < self.startr) and (abs(pos.z-START_Z) < START_ZDIST):
+        if (dist < rad) and (abs(pos.z-START_Z) < START_ZDIST):
             return True
         return False
+
+
+    def is_in_trigger_volume(self,pos):
+        if self.hitm_start is not None:
+            return self.hitm_start.contains(pos.x, pos.y) and (abs(pos.z-START_Z) < START_ZDIST)
+        else:
+            return self._is_in_circle_at_origin(pos,self.startr)
+
+    def has_left_stop_volume(self,pos):
+        if self.hitm_stop is not None:
+            print self.hitm_stop.contains(pos.x, pos.y)
+            return False#(not self.hitm_stop.contains(pos.x, pos.y)) or (abs(pos.z-START_Z) > START_ZDIST)
+        else:
+            if self.stopr is not None:
+                return not self._is_in_circle_at_origin(pos,self.stopr)
+            else:
+                return False
 
     def on_flydra_mainbrain_super_packets(self,data):
         now = rospy.get_time()
