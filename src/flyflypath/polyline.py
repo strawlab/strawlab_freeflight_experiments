@@ -1,3 +1,16 @@
+"""
+Classes to represent beziers as segments of straight lines, and thus
+be able to iterate along them and find the closest point along the
+path to another point.
+
+refs:
+https://github.com/sporritt/jsBezier/blob/master/js/0.4/jsBezier-0.4.js
+http://perrygeo.googlecode.com/svn/trunk/gis-bin/bezier_smooth.py
+http://paulbourke.net/geometry/bezier/cubicbezier.html
+http://www.lemoda.net/maths/bezier-length/index.html
+http://www.antigrain.com/__code/src/agg_curves.cpp.html
+"""
+
 import numpy as np
 
 from euclid import Point2, LineSegment2, Vector2
@@ -230,83 +243,3 @@ def polyline_from_svg_path(path_iterator, points_per_bezier=10):
 
     return PolyLine2(*pts)
 
-if __name__ == "__main__":
-
-    p00 = Point2(0,0)
-
-    p0 = Point2(1,1)
-    p1 = Point2(1,2)
-    p1b = Point2(1,2)
-    p2 = Point2(2,2)
-    p4 = Point2(3,3)
-    p4b = Point2(3,3)
-
-    assert p1 == p1b
-
-    polyl = PolyLine2(p0,p1,p1b,p2)
-
-    assert polyl.p1 == p0
-
-    assert polyl.length == 2
-
-    assert polyl.along(0.5) == p1
-    assert polyl.along(0.75) == Point2(1.5,2)
-
-    polyreverse = PolyLine2(p2,p1b,p1,p0)
-    assert polyl.length == polyreverse.length
-    assert polyreverse.along(0.75) == Point2(1,1.5)
-    
-    polya = PolyLine2(p0,p1,p1b,p2,p4,p4b)
-    polyb = PolyLine2(p0,p1,p2,p4)
-    
-    assert polya.length == polyb.length
-    assert polya.num_segments == polyb.num_segments
-    
-    assert (p0-p1).magnitude() == 1
-
-    assert ZeroLineSegment2().length == 0
-    assert ZeroLineSegment2().p1 == p00
-    assert ZeroLineSegment2().v.x == 0
-
-    assert ZeroLineSegment2(p1).p1 == p1
-
-    l0 = LineSegment2(p0,p1)
-    assert l0.p1 == p0
-    assert l0.p2 == p1
-
-    l1 = LineSegment2(p1,p2)
-
-    assert l0.length == 1
-    assert l1.length == 1
-    assert LineSegment2(p0,p2).length == np.sqrt(2)
-    assert (p2-p0).magnitude_squared() == 2
-    
-    tp0 = Point2(0.3,0.4)
-    tp1 = Point2(1.2,2.2)
-    tp2 = Point2(2,2)
-    tp3 = Point2(2.8,2.2)
-    tp4 = Point2(30,40)
-
-    p = PolyLine2(p0,p1,p2,p4)
-
-    print p.connect(tp0)
-    print p.connect(tp1)
-    print p.connect(tp2)
-    print p.connect(tp3)
-    print p.connect(tp4)
-    
-    b = BezierSegment2(
-            Point2(50.507627,77.756235),
-            Point2(160.61426,97.959286),
-            Point2(208.09142,156.54813),
-            Point2(153.54319,215.13698))
-    print b
-    print b.to_polyline(4)
-
-#https://github.com/sporritt/jsBezier/blob/master/js/0.4/jsBezier-0.4.js
-#http://perrygeo.googlecode.com/svn/trunk/gis-bin/bezier_smooth.py
-#http://paulbourke.net/geometry/bezier/cubicbezier.html
-#http://www.lemoda.net/maths/bezier-length/index.html
-#http://www.antigrain.com/__code/src/agg_curves.cpp.html
-
-    

@@ -66,6 +66,14 @@ class MovingPointSvgPath:
         return self._ratio, self._moving_pt
 
     def connect_closest(self, p, px=None, py=None):
+        """
+        finds the closest point on the path to p
+
+        p,px,py are in pixel coordinates. returns the
+        line segment describing the connection between p and
+        the path, and the ratio (0-1) describing how far
+        along the path the closest point it
+        """
         if px is not None and py is not None:
             p = euclid.Point2(px,py)
         closest,ratio = self._model.connect(p)
@@ -76,6 +84,11 @@ class MovingPointSvgPath:
         return seg,ratio
 
     def connect_to_moving_point(self, p, px=None, py=None):
+        """
+        finds the vector connecting p to the moving point
+
+        p,px,py are in pixel coordinates.
+        """
         if px is not None and py is not None:
             p = euclid.Point2(px,py)
         try:
@@ -83,6 +96,5 @@ class MovingPointSvgPath:
         except AttributeError:
             seg = polyline.ZeroLineSegment2(p)
         return seg
-
 
 
