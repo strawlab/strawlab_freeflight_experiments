@@ -187,6 +187,10 @@ class TestSomeFeatures(unittest.TestCase):
 
     def test_all_features_and_deps(self):
         for name in afeat.ALL_FEATURE_NAMES:
+            if name == 'reprojection_error':
+                #needs to load extra h5 data
+                continue
+
             m = afeat.MultiFeatureComputer(name)
             df = self._df.copy()
             computed, not_computed, missing = m.process(df, self._dt)

@@ -1,10 +1,18 @@
 import itertools
 import numpy as np
+import pandas as pd
 
 from whatami import What
 
 from .curvature import calc_curvature
 from .compute import find_intervals
+
+import roslib
+roslib.load_manifest('flycave')
+import autodata.files
+
+class FeatureError(Exception):
+    pass
 
 class Node:
     def __init__(self, name):
@@ -62,7 +70,7 @@ class _Feature(object, _DfDepAddMixin):
         w.update(self._kwargs)
         return What('Feature',w)
 
-    def process(self, df, dt):
+    def process(self, df, dt, **state):
         df[self.name] = self.compute_from_df(df,dt,**self._kwargs)
 
     def compute_from_df(self, **kwargs):
@@ -80,7 +88,7 @@ class _Measurement(object, _DfDepAddMixin):
     def what(self):
         return What('Measurement',{'col':self.name})
 
-    def process(self, df, dt):
+    def process(self, df, dt, **state):
         pass
 
 class XMeasurement(_Measurement):
@@ -93,6 +101,48 @@ class RatioMeasurement(_Measurement):
     name = 'ratio'
 class RotationRateMeasurement(_Measurement):
     name = 'rotation_rate'
+
+class ReproErrorsFeature(_Feature):
+
+    name = 'reprojection_error'
+    adds = ('mean_reproj_error_px', 'visible_in_n_cams')
+
+    def __init__(self, **kwargs):
+        _Feature.__init__(self, **kwargs)
+
+        #map of uuid:pandas.HDFStore
+        self._stores = {}
+
+    def process(self, df, dt, **opts):
+
+        try:
+            uuid = opts['uuid']
+            oid = opts['obj_id']
+            start_fn = opts['start_framenumber']
+            stop_fn = opts['stop_framenumber']
+
+            if uuid not in self._stores:
+                fm = autodata.files.FileModel()
+                fm.select_uuid(uuid)
+                h5_file = fm.get_file_model("repro_errors.h5").fullpath
+                self._stores[uuid] = pd.HDFStore(h5_file, 'r')
+
+        except (KeyError, autodata.files.NoFile):
+            raise FeatureError('Missing options')
+
+        clause = 'obj_id = %d & frame >= %d & frame <= %d' % (int(oid), int(start_fn), int(stop_fn))
+        _df = self._stores[uuid].select('/reprojection', where=clause)
+
+        fns = []
+        dists = []
+        ncams = []
+        for fn,__df in _df.groupby('frame'):
+            fns.append(fn)
+            dists.append(__df['dist'].mean())
+            ncams.append(len(__df['camn'].unique()))
+
+        df['mean_reproj_error_px'] = pd.Series(dists,index=fns)
+        df['visible_in_n_cams'] = pd.Series(ncams,index=fns)
 
 class ErrorPositionStddev(_Feature):
     name = 'err_pos_stddev_m'
@@ -273,15 +323,18 @@ class MultiFeatureComputer(object):
                     return
             raise ValueError("No feature adds the column '%s'" % col_name)
 
-    def process(self, df, dt):
+    def process(self, df, dt, **state):
         computed = []
         for f in self._get_features():
             #has the feature already been computed
             if not all(c in df for c in f.get_adds()):
                 #are all the dependencies satisfied
                 if all(c in df for c in f.get_depends()):
-                    f.process(df,dt)
-                    computed.append(f.name)
+                    try:
+                        f.process(df,dt,**state)
+                        computed.append(f.name)
+                    except FeatureError:
+                        pass
         not_computed = set(f.name for f in self._get_features()) - set(computed)
         missing = set(itertools.chain(self.get_columns_added(),self.get_measurements_required())) - set(df.columns.tolist())
         return tuple(computed), tuple(not_computed), tuple(missing)

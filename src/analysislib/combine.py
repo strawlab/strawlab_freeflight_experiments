@@ -1690,17 +1690,7 @@ class CombineH5WithCSV(_Combine):
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
 
-                #compute the remaining features (which might have come from the CSV)
-                try:
-                    dt = self._get_df_sample_interval(df) or self._dt
-                    computed,not_computed,missing = self.features.process(df, dt)
-                    if missing:
-                        for m in missing:
-                            self._warn_once("ERROR: column/feature '%s' missing from dataframe" % m)
-                except Exception, e:
-                    self._skipped[cond] += 1
-                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
-                    continue
+                stop_framenumber = df['framenumber'].dropna().values[-1]
 
                 # the start time and the start framenumber are defined by the experiment,
                 # so they come from the csv
@@ -1719,6 +1709,26 @@ class CombineH5WithCSV(_Combine):
                 valid = trajectories.readWhere(query)
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
+
+                #compute the remaining features (which might have come from the CSV)
+                try:
+                    dt = self._get_df_sample_interval(df) or self._dt
+
+                    opts = {'uuid':uuid,
+                            'obj_id':oid,
+                            'start_framenumber':start_framenumber,
+                            'stop_framenumber':stop_framenumber,
+                            'start_time':start_time,
+                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt)}
+
+                    computed,not_computed,missing = self.features.process(df, dt, **opts)
+                    if missing:
+                        for m in missing:
+                            self._warn_once("ERROR: column/feature '%s' not computed" % m)
+                except Exception, e:
+                    self._skipped[cond] += 1
+                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                    continue
 
                 # provide a nanoseconds after the epoc column (use at your own risk(TM))
                 if 'tns' not in df.columns:
