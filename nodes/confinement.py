@@ -241,11 +241,8 @@ class Node(nodelib.node.Experiment):
                 self.src_pub.publish(px,py,fly_z)
 
             if active:
-                if self.model_pose_voffset:
-                    dz = self.model_pose_voffset / CONTROL_RATE
-                    self.z0 = (self.z0 + dz) % (np.sign(self.model_pose_voffset)*WRAP_MODEL_H_Z)
-                else:
-                    self.z0 = 0.0
+                dz = self.model_pose_voffset / CONTROL_RATE
+                self.z0 = (self.z0 + dz) % -WRAP_MODEL_H_Z
                 self.pub_model_pose.publish( self.get_model_pose_msg() )
 
             #new combine needs data recorded at the framerate

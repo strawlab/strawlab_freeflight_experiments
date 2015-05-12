@@ -6,7 +6,7 @@ confine_lbox:
     lag: 0.0
     start_buffer: -0.05
     stop_buffer: 0.05
-    model_pose_voffset: 1.0
+    model_pose_voffset: -1.0
 confine_lbox_start_stop_r:
     stimulus_filename: lboxmed.svg.osg
     x0: 0.0
