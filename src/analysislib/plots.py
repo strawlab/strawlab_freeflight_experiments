@@ -243,16 +243,18 @@ def plot_trajectories(ax, r, dt, title, in3d, show_obj_ids, show_starts, show_en
             xv = df['x'].values
             yv = df['y'].values
             zv = df['z'].values
-            ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+            ax.plot(xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE)
     else:
-        for df in r['df']:
+        for i,df in enumerate(r['df']):
             xv = df['x'].values
             yv = df['y'].values
-            ax.plot( xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+            ax.plot(xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE)
             if show_starts:
-                ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+                ax.plot(xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial start' if i == 0 else '__nolabel__')
             if show_ends:
-                ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
+                ax.plot(xv[-1], yv[-1], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial end' if i == 0 else '__nolabel__')
 
     if show_obj_ids:
         if in3d:
