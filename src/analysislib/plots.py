@@ -323,7 +323,6 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
             axes.add( ax )
 
             if not r['count']:
-                print "WARNING: NO DATA TO PLOT"
                 continue
 
             title = combine.get_condition_name(current_condition)
@@ -332,6 +331,44 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
 
         for ax in axes:
             layout_trajectory_plots(ax, arena, in3d)
+
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
+
+def plot_saccades(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s_saccades' % combine.fname
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add(ax)
+
+            if not r['count']:
+                continue
+
+            title = combine.get_condition_name(current_condition)
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            for df in r['df']:
+                xv = df['x'].values
+                yv = df['y'].values
+                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=RASTERIZE )
+
+                xs = df['x'].where(df['saccade'].values).dropna()
+                ys = df['y'].where(df['saccade'].values).dropna()
+                ax.plot(xs,ys,'r.')
+
+            ax.set_title(title, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
+        for ax in axes:
+            layout_trajectory_plots(ax, arena, False)
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
