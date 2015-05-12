@@ -1,10 +1,12 @@
 confine_lbox:
-    stimulus_filename: lboxmed.svg.osg
+    stimulus_filename: lboxmed8x1.osg
+    svg_filename: lboxmed.svg
     x0: 0.0
     y0: 0.0
     lag: 0.0
     start_buffer: -0.05
     stop_buffer: 0.05
+    model_pose_voffset: 1.0
 confine_lbox_start_stop_r:
     stimulus_filename: lboxmed.svg.osg
     x0: 0.0

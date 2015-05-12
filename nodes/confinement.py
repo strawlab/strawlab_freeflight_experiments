@@ -45,6 +45,8 @@ START_Z         = 0.5
 Z_MINIMUM = 0.00
 Z_MAXIMUM = 0.95
 
+WRAP_MODEL_H_Z      = 5.0
+
 TIMEOUT             = 0.5
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -95,7 +97,7 @@ class Node(nodelib.node.Experiment):
         msg = Pose()
         msg.position.x = self.x0
         msg.position.y = self.y0
-        msg.position.z = 0.0
+        msg.position.z = self.z0
         msg.orientation.w = 1
         return msg
 
@@ -124,6 +126,14 @@ class Node(nodelib.node.Experiment):
             self.stopr         = float(self.condition['stop_radius'])
         except KeyError:
             self.stopr         = None
+
+        try:
+            #we can optionally move the model down vertically
+            self.model_pose_voffset = float(self.condition['model_pose_voffset'])
+            if self.model_pose_voffset > 0:
+                raise Exception("NOT TESTED")
+        except:
+            self.model_pose_voffset = 0.0
 
         #settings related to the svg path which defines the confinement or lock on/off region
         try:
@@ -230,6 +240,14 @@ class Node(nodelib.node.Experiment):
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
 
+            if active:
+                if self.model_pose_voffset:
+                    dz = self.model_pose_voffset / CONTROL_RATE
+                    self.z0 = (self.z0 + dz) % (np.sign(self.model_pose_voffset)*WRAP_MODEL_H_Z)
+                else:
+                    self.z0 = 0.0
+                self.pub_model_pose.publish( self.get_model_pose_msg() )
+
             #new combine needs data recorded at the framerate
             self.log.framenumber = framenumber
             self.log.update()
@@ -292,6 +310,8 @@ class Node(nodelib.node.Experiment):
             self.last_check_flying_time = now
             self.fly = obj.position
 
+        self.z0 = 0.0
+        self.pub_model_pose.publish( self.get_model_pose_msg() )        
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
 
@@ -310,6 +330,8 @@ class Node(nodelib.node.Experiment):
 
         if (dt > 30) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
+
+        self.z0 = 0.0
 
         self.pub_stimulus.publish( HOLD_COND )
         self.update()        
