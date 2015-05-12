@@ -8,6 +8,8 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
+import matplotlib.patches
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -17,6 +19,78 @@ import analysislib.combine
 import analysislib.args
 import analysislib.plots as aplt
 import analysislib.util as autil
+
+import flyflypath.model
+import flyflypath.mplview
+
+def _unique_or_none(df,col):
+    s = df[col].dropna().unique()
+    if s and (len(s) == 1):
+        return s[0]
+    return None
+
+def _svg_model(svg_filename):
+    pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
+    path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
+    return flyflypath.model.MovingPointSvgPath(path)
+
+def draw_confinement_area(ax, df, **kwargs):
+    svg_filename = _unique_or_none(df, 'svg_filename')
+    if svg_filename is not None:
+        m = _svg_model(svg_filename)
+        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+
+def draw_lock_area(ax, df, prefix,**kwargs):
+
+    r = _unique_or_none(df, '%sr' % prefix)
+    svg_filename = _unique_or_none(df, 'svg_filename')
+    buf = _unique_or_none(df, '%sbuf' % prefix)
+
+    if r is not None:
+        pat = matplotlib.patches.Circle((0,0),r,**kwargs)
+        ax.add_patch(pat)
+    elif (svg_filename is not None) and (buf is not None):
+        m = _svg_model(svg_filename)
+        kwargs['scale'] = buf
+        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+
+def plot_combine_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with aplt.mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            if in3d:
+                ax = fig.add_subplot(1,figncols,1+i,projection="3d")
+            else:
+                ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add( ax )
+
+            if not r['count']:
+                continue
+
+            title = combine.get_condition_name(current_condition)
+
+            aplt.plot_trajectories(ax, r, dt, title, in3d, args.show_obj_ids, show_starts, show_ends, alpha)
+
+            df = r['df'][0]
+            draw_confinement_area(ax,df,fc='none',ec='red',lw=1.5,fill=False,alpha=0.5,label='confinement area')
+            draw_lock_area(ax, df,'start',fc='none',ec='green',lw=1.5,fill=False,label='start area')
+            draw_lock_area(ax, df,'stop',fc='none',ec='blue',lw=1.5,fill=False,label='stop area')
+
+        for ax in axes:
+            aplt.layout_trajectory_plots(ax, arena, in3d)
+            ax.legend(
+                numpoints=1,
+                columnspacing=0.05,
+                prop={'size':aplt.LEGEND_TEXT_SML})
+
+        if aplt.WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
@@ -41,16 +115,14 @@ if __name__=='__main__':
 
     aplt.plot_trial_times(combine, args)
 
-    aplt.plot_traces(combine, args,
-                figncols=ncond,
-                in3d=False)
+    plot_combine_traces(combine, args, figncols=ncond, in3d=False)
 
     aplt.plot_traces(combine, args,
                 figncols=ncond,
                 in3d=True)
 
     aplt.plot_histograms(combine, args,
-                figncols=ncond)
+                figncols=ncond, nbins=40)
 
     aplt.plot_nsamples(combine, args)
 
