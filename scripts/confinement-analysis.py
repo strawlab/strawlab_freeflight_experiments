@@ -54,7 +54,7 @@ def draw_lock_area(ax, df, prefix,**kwargs):
         kwargs['scale'] = buf
         flyflypath.mplview.plot_polygon(m,ax,**kwargs)
 
-def plot_combine_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
+def plot_confine_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
     figsize = (5.0*figncols,5.0)
     if name is None:
         name = '%s.traces%s' % (combine.fname,'3d' if in3d else '')
@@ -116,7 +116,7 @@ if __name__=='__main__':
 
     aplt.plot_trial_times(combine, args)
 
-    plot_combine_traces(combine, args, figncols=ncond, in3d=False)
+    plot_confine_traces(combine, args, figncols=ncond, show_starts=True, in3d=False)
 
     aplt.plot_traces(combine, args,
                 figncols=ncond,
