@@ -1,0 +1,11 @@
+Make a square texture (32x32px) into a vertically tiled one.
+Make sure the final texture is power-of-two so it is not rescaled
+
+$ montage $(printf 'checkerboard.png%.0s ' {1..8}) -tile 1x8 -geometry +0+0 -background none checkboard8x1.png
+
+Make a vertical world that is tall
+
+$ python make_osg_corridor.py --svg ../data/svgpaths/lboxmed.svg ../data/checkerboard8x1.png --height 8
+
+
+
