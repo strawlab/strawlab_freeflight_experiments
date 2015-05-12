@@ -2,6 +2,7 @@ import os.path
 import sys
 import pickle
 import collections
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -87,7 +88,18 @@ def calc_circle_leastsq(x,y):
 
     return R_2
 
-def calc_curvature(df, dt, npts=3, method="leastsq", clip=None):
+def window(seq, n=2):
+    "Returns a sliding window (of width n) over data from the iterable"
+    "   s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...                   "
+    it = iter(seq)
+    result = tuple(itertools.islice(it, n))
+    if len(result) == n:
+        yield result
+    for elem in it:
+        result = result[1:] + (elem,)
+        yield result
+
+def calc_curvature(df, dt, npts=3, method="leastsq", clip=None, sliding_window=False):
     method = {"leastsq":calc_circle_leastsq,
               "algebraic":calc_circle_algebraic}[method]
 
@@ -95,17 +107,25 @@ def calc_curvature(df, dt, npts=3, method="leastsq", clip=None):
     d.fill(np.nan)
     c = np.nan
 
-    for i in range(0,len(df)+1,npts):
-        x = df['x'][i:i+npts].values
-        y = df['y'][i:i+npts].values
-        if len(x) == npts:
+    if sliding_window:
+        for idxs in window(range(len(df)),npts):
+            s = slice(idxs[0],idxs[-1])
+            x = df['x'][s].values
+            y = df['y'][s].values
             c = method(x,y)
-            d[i:i+npts] = c
+            d[s] = c
+    else:
+        for i in range(0,len(df)+1,npts):
+            x = df['x'][i:i+npts].values
+            y = df['y'][i:i+npts].values
+            if len(x) == npts:
+                c = method(x,y)
+                d[i:i+npts] = c
 
-    #handle the last value for curves not divisible by NPTS
-    if i < len(d):
-        #equiv to -(len(d)-i)
-        d[i-len(d):] = c
+        #handle the last value for curves not divisible by NPTS
+        if i < len(d):
+            #equiv to -(len(d)-i)
+            d[i-len(d):] = c
 
     if clip is not None:
         d = np.clip(d,*clip)

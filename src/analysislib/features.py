@@ -207,6 +207,16 @@ class RCurveFeature(_Feature):
     def compute_from_df(self,df,dt,**kwargs):
         return calc_curvature(df, dt, **kwargs)
 
+class RCurveContFeature(_Feature):
+    name = 'rcurve_cont'
+    depends = ('x','y')
+
+    DEFAULT_OPTS = {'npts':10,'method':'leastsq','clip':(0, 1),'sliding_window':True}
+
+    def compute_from_df(self,df,dt,**kwargs):
+        return calc_curvature(df, dt, **kwargs)
+
+
 class RatioUnwrappedFeature(_Feature):
     name = 'ratiouw'
     depends = 'ratio',
