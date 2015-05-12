@@ -194,12 +194,12 @@ class Node(nodelib.node.Experiment):
             else:
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
-                    self.drop_lock_on()
+                    self.drop_lock_on('timeout')
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
                 if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
-                    self.drop_lock_on()
+                    self.drop_lock_on('z range')
                     continue
 
                 if np.isnan(fly_x):
@@ -207,7 +207,7 @@ class Node(nodelib.node.Experiment):
                     continue
 
                 if self.has_left_stop_volume(Pos(fly_x,fly_y,fly_z)):
-                    self.drop_lock_on()
+                    self.drop_lock_on('left volume')
                     continue
 
                 active = True
@@ -224,8 +224,7 @@ class Node(nodelib.node.Experiment):
                     self.last_check_flying_time = now
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
-                        self.drop_lock_on()
-                        rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
+                        self.drop_lock_on('slow')
                         continue
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -295,13 +294,13 @@ class Node(nodelib.node.Experiment):
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
 
-    def drop_lock_on(self):
+    def drop_lock_on(self, reason=''):
         with self.trackinglock:
             old_id = self.currently_locked_obj_id
             now = rospy.get_time()
             dt = now - self.first_seen_time
 
-            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s %s (tracked for %.1f)' % (old_id,reason,dt))
 
             self.currently_locked_obj_id = None
 
