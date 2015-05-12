@@ -100,6 +100,7 @@ if __name__=='__main__':
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name='saccade')
     combine.add_from_args(args)
 
     fname = combine.fname
@@ -126,6 +127,7 @@ if __name__=='__main__':
 
     aplt.plot_nsamples(combine, args)
 
+    aplt.plot_saccades(combine, args, figncols=ncond)
 
     if args.plot_tracking_stats and len(args.uuid) == 1:
         fplt = autodata.files.FileView(
