@@ -125,14 +125,20 @@ class Node(nodelib.node.Experiment):
         except KeyError:
             self.stopr         = None
 
+        #settings related to the svg path which defines the confinement or lock on/off region
+        try:
+            svg_filename       = str(self.condition['svg_filename'])
+            svg_path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
+        except KeyError:
+            #conditional and backwards compatible handling for specifying start and
+            #stop conditions relative to a buffer around the svg
+            svg_path = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
+            if os.path.isfile(svg_path):
+                svg_filename = os.path.basename(svg_path)
+            else:
+                svg_filename = None
 
-        #conditional and backwards compatible handling for specifying start and
-        #stop conditions relative to a buffer around the svg
-        svg_path = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
-        if os.path.isfile(svg_path):
-            svg_filename = os.path.basename(svg_path)
-        else:
-            svg_filename = None
+        #settings related to a lock on region defined as a buffer around svg_filename
         try:
             startbuf            = float(self.condition['start_buffer'])
             self.hitm_start     = flyflypath.model.HitManager(
@@ -141,6 +147,8 @@ class Node(nodelib.node.Experiment):
         except (KeyError,ValueError,flyflypath.model.SvgError), e:
             startbuf            = None
             self.hitm_start     = None
+
+        #settings related to a lock off region defined as a buffer around svg_filename
         try:
             stopbuf             = float(self.condition['stop_buffer'])
             self.hitm_stop      = flyflypath.model.HitManager(
@@ -149,6 +157,11 @@ class Node(nodelib.node.Experiment):
         except (KeyError,ValueError,flyflypath.model.SvgError):
             stopbuf             = None
             self.hitm_stop      = None
+
+        desc = "start: %s stop: %s" % (('r=%s' % self.startr) if self.startr is not None else \
+                                       ('%s +/- %s' % (svg_filename, startbuf if startbuf is not None else 0)),
+                                       ('r=%s' % self.stopr) if self.stopr is not None else \
+                                       ('%s +/- %s' % (svg_filename, stopbuf if stopbuf is not None else 0)))
 
         self.log.stimulus_filename = self.stimulus_filename
         self.log.svg_filename = svg_filename
@@ -163,7 +176,7 @@ class Node(nodelib.node.Experiment):
 
         self.trigarea_pub.publish( self._get_trigger_area() )
 
-        rospy.loginfo('condition: %s (%f,%f)' % (self.condition.name,self.x0,self.y0))
+        rospy.loginfo('condition: %s (%f,%f) %s' % (self.condition.name,self.x0,self.y0,desc))
 
 
     def run(self):
@@ -236,17 +249,15 @@ class Node(nodelib.node.Experiment):
             return True
         return False
 
-
     def is_in_trigger_volume(self,pos):
         if self.hitm_start is not None:
-            return self.hitm_start.contains(pos.x, pos.y) and (abs(pos.z-START_Z) < START_ZDIST)
+            return self.hitm_start.contains(pos.x, pos.y)
         else:
             return self._is_in_circle_at_origin(pos,self.startr)
 
     def has_left_stop_volume(self,pos):
         if self.hitm_stop is not None:
-            print self.hitm_stop.contains(pos.x, pos.y)
-            return False#(not self.hitm_stop.contains(pos.x, pos.y)) or (abs(pos.z-START_Z) > START_ZDIST)
+            return not self.hitm_stop.contains(pos.x, pos.y)
         else:
             if self.stopr is not None:
                 return not self._is_in_circle_at_origin(pos,self.stopr)
