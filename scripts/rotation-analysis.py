@@ -58,12 +58,16 @@ if __name__=='__main__':
     parser.add_argument(
         "--force-max-latency", type=int, default=None,
         help='plot latency at this many frames (rather than plotting the max)')
+    parser.add_argument(
+        "--plot-saccades", action="store_true")
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+    if args.plot_saccades:
+        combine.add_feature(column_name='saccade')
     combine.add_from_args(args)
 
     fname = combine.fname
@@ -143,7 +147,8 @@ if __name__=='__main__':
 
     plot_distance_from_path(combine, args)
 
-    #plot_saccades(combine, args, ncond)
+    if args.plot_saccades:
+        aplt.plot_saccades(combine, args, ncond)
 
     if args.show:
         aplt.show_plots()
