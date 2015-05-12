@@ -63,10 +63,9 @@ class _Fixup(object):
             return self._rr(row)
 
     def fix_dataframe(self, df):
-        if self._dr is None:
-            return df
-        else:
-            return self._dr(df)
+        #fix in place
+        if self._dr is not None:
+            self._dr(df)
 
     def fix_condition(self, cond):
         if self._rr is None:
@@ -130,6 +129,18 @@ class _FixPerturbationConditionName(_DictOrAttr):
                 return c.replace('step|','step_rotation_rate|')
         return c
 
+def _fix_confinement_add_columns(df):
+    stim_filename = df['stimulus_filename'].dropna().unique()[0]
+    if '.svg' in stim_filename:
+        svg_filename = stim_filename.replace('.osg','')
+    else:
+        svg_filename = ''
+
+    df['svg_filename'] = svg_filename
+    df['stopr'] = np.nan
+    df['startbuf'] = np.nan
+    df['stopbuf'] = np.nan
+
 def load_csv_fixups(**kwargs):
     csv_file = kwargs.get('csv_file')
     h5_file = kwargs.get('h5_file')
@@ -152,7 +163,11 @@ def load_csv_fixups(**kwargs):
                     return _Fixup(row_wrapper=_FixPerturbationConditionName,
                                   dataframe_wrapper=None,
                                   desc='fix perturb descriptors to say what was perturbed')
-
+            if csv_file and ('confinement' in csv_file):
+                if cdt and (cdt < datetime.datetime(year=2015,month=05,day=11)):
+                    return _Fixup(row_wrapper=None,
+                                  dataframe_wrapper=_fix_confinement_add_columns,
+                                  desc='add svg_filename, start/stop_{r,buf} columns')
 
 
     return _Fixup(None, None)

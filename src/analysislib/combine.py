@@ -1689,6 +1689,8 @@ class CombineH5WithCSV(_Combine):
                             except IndexError, e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
+                if fix.should_fix_dataframe:
+                    fix.fix_dataframe(df)
 
                 stop_framenumber = df['framenumber'].dropna().values[-1]
 
