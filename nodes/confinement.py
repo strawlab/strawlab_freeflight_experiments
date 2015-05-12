@@ -290,6 +290,7 @@ class Node(nodelib.node.Experiment):
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
+            self.fly = obj.position
 
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
