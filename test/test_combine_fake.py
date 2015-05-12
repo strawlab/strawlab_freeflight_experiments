@@ -255,6 +255,17 @@ class TestCombineFake(unittest.TestCase):
         self.assertEqual(obj_id, 1)
         self.assertEqual(framenumber0, 1)
 
+    def test_get(self):
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1)
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1, condition='tex0/svg/1.0/1.0/adv/...')
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1, framenumber0=1)
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+
     def test_load(self):
         #be default we have no filter, so we get 300 trials
         self.assertEqual(self.combine.min_num_frames, 0)

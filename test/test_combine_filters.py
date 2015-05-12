@@ -53,7 +53,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 161)
 
@@ -68,7 +68,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 301)
 
@@ -85,7 +85,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 71)  # here it says 91
 
@@ -108,7 +108,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 57)
 
@@ -144,7 +144,7 @@ class TestCombineData(unittest.TestCase):
         _quiet(combine)
         combine.add_from_args(args)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 301)
 
