@@ -34,8 +34,6 @@ if __name__=='__main__':
         "--no-h264", action="store_true",
         help="don't save h264 format movie (because your ffmpeg is too old)")
     parser.add_argument(
-        "--save-data", action="store_true", help="save a csv of this trajectory")
-    parser.add_argument(
         "--save-animation", action="store_true", help="save an mp4 of this trajectory")
     parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
@@ -123,10 +121,6 @@ if __name__=='__main__':
                             title=title,
                             show_filter_args=filt_args
                     )
-
-                if args.save_data:
-                    df.to_csv(os.path.join(basedir,filename + ".csv"))
-                    df.save(os.path.join(basedir,filename + ".df"))
 
     if args.save_animation:
         Writer = animation.writers['ffmpeg']

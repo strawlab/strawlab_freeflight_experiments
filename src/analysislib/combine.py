@@ -1870,7 +1870,7 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
     if to_mat:
         dict_df = df.to_dict('list')
         dict_df['index'] = df.index.values
-        scipy.io.savemat(dest+'.mat', dict_df)
+        scipy.io.savemat(dest+'.mat', dict_df, oned_as='column')
 
     formats = ('csv' if to_csv else '',
                'df' if to_df else '',

@@ -56,11 +56,14 @@ if __name__=='__main__':
                 if len(z[0]):
                     fidx = z[0][0]
                     bdf = df.iloc[:fidx]
-                    acombine.write_result_dataframe(dest+"_before", bdf, args.index)
+                    s = acombine.write_result_dataframe(dest+"_before", bdf, args.index)
+                    print "WROTE", s
                     adf = df.iloc[fidx:]
-                    acombine.write_result_dataframe(dest+"_after", adf, args.index)
+                    s = acombine.write_result_dataframe(dest+"_after", adf, args.index)
+                    print "WROTE", s
             else:
-                acombine.write_result_dataframe(dest, df, args.index)
+                s = acombine.write_result_dataframe(dest, df, args.index)
+                print "WROTE", s
 
             if n >= args.n_longest:
                 break
