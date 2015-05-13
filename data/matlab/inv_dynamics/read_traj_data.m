@@ -1,9 +1,23 @@
-addpath('fly_trajectories');
+function traj = read_traj_data(filename, Ts)
+
+if filename(end-3:end) == '.csv'
+    traj = read_traj_csv(filename, Ts);
+elseif filename(end-3:end) == '.mat'
+    traj = read_traj_mat(filename, Ts);
+else
+    traj = struct;
+end
+
+traj.Ts = Ts;
+
+end
+
+function traj = read_traj_csv(filename, Ts)
 
 start_row = 1; % second row
 start_col = 0; % first column
 
-data = csvread('9b97392ebb1611e2a7e46c626d3a008a_9.csv',start_row,start_col);
+data = csvread(filename,start_row,start_col);
 
 frameno_col = 1; % frame number of the tracking cameras, run with precisely 100Hz -> every 10ms one frame
 ratio_col = 2; % value between 0..1 and represents how far along the infinity path the fly is (it can circle many times)
@@ -26,7 +40,7 @@ omega_col = 18;  % vel*cos(theta)/radius
 rcurve_col = 19; % radius of curvature of the turn the fly might be making, a least squares minimisation fitting a circle every 4 points
 
 
-Ts_cam = 0.01; % sample time of tracking cameras
+Ts_cam = Ts;
 Ts_contr = 1/80; % control loop runs with 80Hz
 
 plot_start = 1;
@@ -63,5 +77,24 @@ vel_val_repr = sqrt(vx_val.^2 + vy_val.^2); % that's the way how vel_val is calc
 % Time-base
 texp = (frameno_val-frameno_val(1))*Ts_cam;
 
+% Assemble returned struct
+traj.x = x_val;
+traj.y = x_val;
+traj.z = z_val;
+traj.vx = vx_val;
+traj.vy = vy_val;
+traj.vz = vz_val;
+traj.ax = ax_val;
+traj.ay = ay_val;
+traj.az = az_val;
+traj.theta = theta_val;
+traj.framenumber = frameno_val;
+traj.t = texp;
 
+end
+
+function traj = read_traj_mat(filename, Ts)
+traj = load(filename, 'x', 'y', 'z', 'vx', 'vy', 'vz', 'ax', 'ay', 'az', 'theta', 'framenumber');
+traj.t = (traj.framenumber-traj.framenumber(1))*Ts;
+end
 

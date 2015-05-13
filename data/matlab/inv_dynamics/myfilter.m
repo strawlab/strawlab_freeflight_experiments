@@ -1,5 +1,4 @@
 function x_filt = myfilter(x,window_size)
-clc
 if mod(window_size,2) == 0
     window_size = window_size + 1;
 end
