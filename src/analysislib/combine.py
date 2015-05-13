@@ -129,7 +129,7 @@ class CacheError(Exception):
 
 class _Combine(object):
 
-    DEFAULT_FEATURES = ('vx','vy','vz','velocity','dtheta','radius','err_pos_stddev_m')
+    DEFAULT_FEATURES = ('vx','vy','vz','ax','ay','az','velocity','dtheta','radius','err_pos_stddev_m')
 
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)
