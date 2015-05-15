@@ -187,7 +187,7 @@ class TestSomeFeatures(unittest.TestCase):
 
     def test_all_features_and_deps(self):
         for name in afeat.ALL_FEATURE_NAMES:
-            if name == 'reprojection_error':
+            if name in ('reprojection_error','inverse_dynamics'):
                 #needs to load extra h5 data
                 continue
 
