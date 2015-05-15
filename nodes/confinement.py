@@ -168,6 +168,17 @@ class Node(nodelib.node.Experiment):
             stopbuf             = None
             self.hitm_stop      = None
 
+        #settings related to a hiding the stimulus when the fly exceeds a
+        #region defined as a buffer around svg_filename
+        try:
+            hidebuf             = float(self.condition['hide_buffer'])
+            self.hitm_hide      = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=hidebuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError):
+            hidebuf             = None
+            self.hitm_hide      = None
+
         desc = "start: %s stop: %s" % (('r=%s' % self.startr) if self.startr is not None else \
                                        ('%s +/- %s' % (svg_filename, startbuf if startbuf is not None else 0)),
                                        ('r=%s' % self.stopr) if self.stopr is not None else \
@@ -241,6 +252,11 @@ class Node(nodelib.node.Experiment):
                 self.src_pub.publish(px,py,fly_z)
 
             if active:
+
+                if self.hitm_hide is not None:
+                    if not self.hitm_hide.contains(fly_x, fly_y):
+                        self.pub_stimulus.publish( HOLD_COND )
+
                 dz = self.model_pose_voffset / CONTROL_RATE
                 self.z0 = (self.z0 + dz) % -WRAP_MODEL_H_Z
                 self.pub_model_pose.publish( self.get_model_pose_msg() )

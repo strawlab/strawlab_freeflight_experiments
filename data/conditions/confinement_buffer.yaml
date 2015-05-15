@@ -22,4 +22,12 @@ confine_zero_texture_control_mixed_start_stop:
     lag: 0.0
     start_buffer: -0.05
     stop_radius: 0.30
-
+confine_lbox_startr_hide_voffset:
+    stimulus_filename: lboxmed8x1.osg
+    svg_filename: lboxmed.svg
+    x0: 0.0
+    y0: 0.0
+    lag: 0.0
+    start_radius: 0.08
+    model_pose_voffset: -0.05
+    hide_buffer: 0.01
