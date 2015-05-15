@@ -74,12 +74,18 @@ class _Feature(object, _DfDepAddMixin):
     def process(self, df, dt, **state):
         df[self.name] = self.compute_from_df(df,dt,**self._kwargs)
 
+    @staticmethod
     def compute_from_df(self, **kwargs):
         raise NotImplementedError
 
 class _GradientFeature(_Feature):
-    def compute_from_df(self,df,dt):
-        return np.gradient(df[self.get_depends()[0]].values) / dt
+
+    def process(self, df, dt, **state):
+        df[self.name] = self.compute_from_df(df,dt,col=self.get_depends()[0])
+
+    @staticmethod
+    def compute_from_df(df,dt,col):
+        return np.gradient(df[col].values) / dt
 
 class _Measurement(object, _DfDepAddMixin):
 
@@ -148,7 +154,9 @@ class ReproErrorsFeature(_Feature):
 class ErrorPositionStddev(_Feature):
     name = 'err_pos_stddev_m'
     depends = ()
-    def compute_from_df(self,df,dt):
+
+    @staticmethod
+    def compute_from_df(df,dt):
         try:
             #compute a position error estimate from the observed covariances
             #covariance is m**2, hence 2 sqrt
@@ -171,7 +179,8 @@ class VzFeature(_GradientFeature):
 class VelocityFeature(_Feature):
     name = 'velocity'
     depends = ('vx','vy')
-    def compute_from_df(self,df,dt):
+    @staticmethod
+    def compute_from_df(df,dt):
         return np.sqrt( (df['vx'].values**2) + (df['vy'].values**2) )
 
 class AxFeature(_GradientFeature):
@@ -187,8 +196,10 @@ class AzFeature(_GradientFeature):
 class ThetaFeature(_Feature):
     name = 'theta'
     depends = ('vx','vy')
-    def compute_from_df(self,df,dt):
+    @staticmethod
+    def compute_from_df(df,dt):
         return np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
+
 class DThetaFeature(_GradientFeature):
     name = 'dtheta'
     depends = 'theta',
@@ -196,7 +207,8 @@ class DThetaFeature(_GradientFeature):
 class RadiusFeature(_Feature):
     name = 'radius'
     depends = ('x','y')
-    def compute_from_df(self,df,dt):
+    @staticmethod
+    def compute_from_df(df,dt):
         return np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
 
 class RCurveFeature(_Feature):
@@ -205,7 +217,8 @@ class RCurveFeature(_Feature):
 
     DEFAULT_OPTS = {'npts':10,'method':'leastsq','clip':(0, 1)}
 
-    def compute_from_df(self,df,dt,**kwargs):
+    @staticmethod
+    def compute_from_df(df,dt,**kwargs):
         return calc_curvature(df, dt, **kwargs)
 
 class RCurveContFeature(_Feature):
@@ -214,7 +227,8 @@ class RCurveContFeature(_Feature):
 
     DEFAULT_OPTS = {'npts':10,'method':'leastsq','clip':(0, 1),'sliding_window':True}
 
-    def compute_from_df(self,df,dt,**kwargs):
+    @staticmethod
+    def compute_from_df(df,dt,**kwargs):
         return calc_curvature(df, dt, **kwargs)
 
 
@@ -222,7 +236,8 @@ class RatioUnwrappedFeature(_Feature):
     name = 'ratiouw'
     depends = 'ratio',
 
-    def compute_from_df(self,df,dt):
+    @staticmethod
+    def compute_from_df(df,dt):
         #unwrap the ratio
         wrap = 0.0
         prev = df['ratio'].dropna().iloc[0]
@@ -241,7 +256,8 @@ class SaccadeFeature(_Feature):
 
     DEFAULT_OPTS = {'min_dtheta':8.7, 'max_velocity':np.inf, 'min_saccade_time':0.07}
 
-    def compute_from_df(self,df,dt, min_dtheta, max_velocity, min_saccade_time):
+    @staticmethod
+    def compute_from_df(df,dt, min_dtheta, max_velocity, min_saccade_time):
         min_saccade_time_f = min_saccade_time / dt  # in frames, as the index of df
 
         cond = (np.abs(df['dtheta'].values) >= min_dtheta) & (df['velocity'].values < max_velocity)
