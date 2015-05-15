@@ -57,19 +57,19 @@ class TestFeaturesAPI(unittest.TestCase):
 
     def test_set(self):
         m = afeat.MultiFeatureComputer('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
 
         m.set_features()
         self.assertListEqual(m.features, [])
 
         m.set_features('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
 
         #no-op
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -78,19 +78,19 @@ class TestFeaturesAPI(unittest.TestCase):
         self.assertListEqual(m.features, [])
 
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
         #add same feature again
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
         #add an already added feature
         m.add_feature('x')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -99,7 +99,7 @@ class TestFeaturesAPI(unittest.TestCase):
         self.assertListEqual(m.features, [])
 
         m.add_feature_by_column_added('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', Feature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -126,10 +126,10 @@ class TestFeaturesAPI(unittest.TestCase):
 
     def test_what(self):
         cls = afeat.get_feature_class('rcurve')
-        self.assertEqual(cls().what().id(), "Feature#clip=(0, 1)#col='rcurve'#method='leastsq'#npts=10")
+        self.assertEqual(cls().what().id(), "RCurveFeature#clip=(0, 1)#col='rcurve'#method='leastsq'#npts=10")
 
         m = afeat.MultiFeatureComputer('vx')
-        self.assertEqual(m.what().id(),"MultiFeatureComputer#features=[Feature#col='vx']")
+        self.assertEqual(m.what().id(),"MultiFeatureComputer#features=[VxFeature#col='vx']")
 
 
     def test_api(self):

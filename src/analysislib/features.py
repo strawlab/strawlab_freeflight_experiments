@@ -69,7 +69,7 @@ class _Feature(object, _DfDepAddMixin):
     def what(self):
         w = {'col':self.name}
         w.update(self._kwargs)
-        return What('Feature',w)
+        return What(self.__class__.__name__,w)
 
     def process(self, df, dt, **state):
         df[self.name] = self.compute_from_df(df,dt,**self._kwargs)
