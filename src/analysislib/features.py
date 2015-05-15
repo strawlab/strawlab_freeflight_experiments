@@ -4,12 +4,13 @@ import pandas as pd
 
 from whatami import What
 
-from .curvature import calc_curvature
-from .compute import find_intervals
-
 import roslib
-roslib.load_manifest('flycave')
+roslib.load_manifest('strawlab_freeflight_experiments')
+
 import autodata.files
+from analysislib.curvature import calc_curvature
+from analysislib.compute import find_intervals
+from strawlab_freeflight_experiments.dynamics.inverse import compute_inverse_dynamics_matlab
 
 class FeatureError(Exception):
     pass
@@ -257,6 +258,14 @@ class SaccadeFeature(_Feature):
             saccade[interval[0]:interval[1]] = True
 
         return saccade
+
+class InverseDynamicsFeature(_Feature):
+    name = 'inverse_dynamics'
+    depends = ('x','y','z','vx','vy','vz','ax','ay','az','theta')
+    adds = ('invdyn_Fx', 'invdyn_Fy', 'invdyn_Fz', 'invdyn_T_phi', 'invdyn_T_theta', 'invdyn_T_eta')
+
+    def process(self, df, dt, **state):
+        compute_inverse_dynamics_matlab(df, dt, window_size=25, full_model=True)
 
 ALL_FEATURES = [cls for cls in _all_subclasses(_Feature) if cls.name is not None]
 ALL_FEATURE_NAMES = [cls.name for cls in ALL_FEATURES]
