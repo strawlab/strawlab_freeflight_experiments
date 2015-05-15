@@ -280,6 +280,9 @@ class InverseDynamicsFeature(_Feature):
     depends = ('x','y','z','vx','vy','vz','ax','ay','az','theta')
     adds = ('invdyn_Fx', 'invdyn_Fy', 'invdyn_Fz', 'invdyn_T_phi', 'invdyn_T_theta', 'invdyn_T_eta')
 
+    def what(self):
+        return What(self.__class__.__name__,{'v':1})
+
     def process(self, df, dt, **state):
         compute_inverse_dynamics_matlab(df, dt, window_size=25, full_model=True)
 
