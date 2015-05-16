@@ -91,7 +91,7 @@ def plot_perturbation_signal(combine, args, perturbations, perturbation_objects)
         with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
             sfe_perturb.plot_perturbation_frequency_characteristics(fig, perturbation_obj)
 
-def plot_input_output_characteristics(combine, args, perturbations, perturbation_objects):
+def plot_input_output_characteristics(combine, args, perturbations, perturbation_objects, system_u_name, system_y_name):
 
     pid = args.only_perturb_start_id
 
@@ -101,7 +101,6 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
         cond_name = combine.get_condition_name(cond)
 
         plot_fn = aplt.get_safe_filename(cond_name)
-        system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         phs = perturbations[cond]
         if phs:
@@ -187,7 +186,14 @@ if __name__=='__main__':
         "--only-perturbations", type=str,
         default=','.join(sfe_sid.PERTURBERS_FOR_SID),
         help='only analyze perturbations of this type')
-
+    parser.add_argument(
+        "--system-input", type=str,
+        default='rotation_rate',
+        help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
 
     args = parser.parse_args()
 
@@ -205,6 +211,9 @@ if __name__=='__main__':
     except AttributeError:
         only_perturbations = None
 
+    system_u_name = args.system_input
+    system_y_name = args.system_output
+
     IODELAY = args.iod
     MODEL_SPECS_TO_TEST = args.models.split(',')
 
@@ -214,6 +223,8 @@ if __name__=='__main__':
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
 
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name=system_y_name)
+    combine.add_feature(column_name=system_u_name)
     combine.set_index(args.index)
     combine.add_from_args(args)
 
@@ -256,7 +267,6 @@ if __name__=='__main__':
             continue
 
         plot_fn = aplt.get_safe_filename(cond_name, **plot_fn_kwargs)
-        system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
         phs = perturbations[cond]

@@ -83,6 +83,15 @@ if __name__=='__main__':
         "--only-perturbations", type=str,
         default=','.join(sfe_sid.PERTURBERS_FOR_SID),
         help='only analyze perturbations of this type')
+    parser.add_argument(
+        "--system-input", type=str,
+        default='rotation_rate',
+        help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
+
 
     args = parser.parse_args()
 
@@ -97,12 +106,17 @@ if __name__=='__main__':
     except AttributeError:
         only_perturbations = None
 
+    system_u_name = args.system_input
+    system_y_name = args.system_output
+
     mlab = sfe_matlab.get_mlab_instance(args.show)
 
     #we use underscores etc in our matlab variable titles, etc, so turn them off
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
 
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name=system_y_name)
+    combine.add_feature(column_name=system_u_name)
     combine.set_index(args.index)
     combine.add_from_args(args)
 
@@ -147,7 +161,6 @@ if __name__=='__main__':
         alldata_models = {}
 
         plot_fn = aplt.get_safe_filename(cond_name, **plot_fn_kwargs)
-        system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
         phs = perturbations[cond]

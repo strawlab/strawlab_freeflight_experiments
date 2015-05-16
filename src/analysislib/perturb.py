@@ -228,20 +228,6 @@ def collect_perturbation_traces(combine,
     return perturbations, perturbation_objects
 
 
-def get_input_output_columns(step_obj):
-    # For SID. Shouldn't this be part of step_obj?
-    if step_obj.what == 'rotation_rate':
-        system_y = 'dtheta'
-        system_u = 'rotation_rate'
-    elif step_obj.what == 'z':
-        system_y = 'vz'
-        system_u = 'v_offset_rate'
-    else:
-        raise Exception("Not supported: %s" % step_obj.what)
-
-    return system_u, system_y
-
-
 def perturbations2df(perturbations, short_names=True, keep_df=True):
     """Returns a dataframe view of the perturbations list."""
     if perturbations is None or 0 == len(perturbations):
