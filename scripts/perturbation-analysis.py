@@ -200,12 +200,19 @@ if __name__=='__main__':
     parser.add_argument(
         "--only-conditions", type=str, metavar='CONDITION_NAME',
         help='only analyze perturbations in these conditions')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
+    system_y_name = args.system_output
+
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name=system_y_name)
     combine.add_from_args(args)
 
     fname = combine.fname
@@ -227,6 +234,8 @@ if __name__=='__main__':
                "velocity":{},
                "rotation_rate":{},
     }
+    if system_y_name not in TO_PLOT:
+        TO_PLOT[system_y_name] = {}
 
     plot_perturbation_traces(combine, args, TO_PLOT)
 
