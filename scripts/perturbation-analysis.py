@@ -235,7 +235,7 @@ if __name__=='__main__':
                "rotation_rate":{},
     }
     if system_y_name not in TO_PLOT:
-        TO_PLOT[system_y_name] = {}
+        TO_PLOT[system_y_name] = {"ylim":(-0.5e-10,0.5e-10)}
 
     plot_perturbation_traces(combine, args, TO_PLOT)
 
