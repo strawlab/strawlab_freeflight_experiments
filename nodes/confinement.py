@@ -54,7 +54,7 @@ XFORM = flyflypath.transform.SVGTransform()
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf"))
+                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf","x0","y0","z0"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
@@ -184,6 +184,9 @@ class Node(nodelib.node.Experiment):
                                        ('r=%s' % self.stopr) if self.stopr is not None else \
                                        ('%s +/- %s' % (svg_filename, stopbuf if stopbuf is not None else 0)))
 
+        self.log.x0 = self.x0
+        self.log.y0 = self.y0
+
         self.log.stimulus_filename = self.stimulus_filename
         self.log.svg_filename = svg_filename
         self.log.startr = self.startr
@@ -261,6 +264,8 @@ class Node(nodelib.node.Experiment):
                 self.z0 = (self.z0 + dz) % -WRAP_MODEL_H_Z
                 self.pub_model_pose.publish( self.get_model_pose_msg() )
 
+                self.log.z0 = self.z0
+
             #new combine needs data recorded at the framerate
             self.log.framenumber = framenumber
             self.log.update()
@@ -324,6 +329,8 @@ class Node(nodelib.node.Experiment):
             self.fly = obj.position
 
         self.z0 = 0.0
+        self.log.z0 = self.z0
+
         self.pub_model_pose.publish( self.get_model_pose_msg() )        
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
@@ -345,6 +352,7 @@ class Node(nodelib.node.Experiment):
             self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
 
         self.z0 = 0.0
+        self.log.z0 = self.z0
 
         self.pub_stimulus.publish( HOLD_COND )
         self.update()        
