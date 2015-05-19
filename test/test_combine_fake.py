@@ -256,13 +256,13 @@ class TestCombineFake(unittest.TestCase):
         self.assertEqual(framenumber0, 1)
 
     def test_get(self):
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1)
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1, condition='tex0/svg/1.0/1.0/adv/...')
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1, condition='tex0/svg/1.0/1.0/adv/...')
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1, framenumber0=1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1, framenumber0=1)
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
 
@@ -278,7 +278,7 @@ class TestCombineFake(unittest.TestCase):
 
         self.assertRaises(ValueError, self.combine.get_one_result, 0)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1)
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
         self.assertEqual(time0, self.combine._t0 + self.combine._dt)
@@ -411,7 +411,7 @@ class TestCombineFake2(unittest.TestCase):
         h5_fname, _ = self._create_h5(500,1,1)
         combine = analysislib.combine.CombineH5()
         combine.add_h5_file(h5_fname)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(1)
 
         self.assertEqual(len(df),500)
         self.assertEqual(obj_id,1)
@@ -429,7 +429,7 @@ class TestCombineFake2(unittest.TestCase):
             cn.set_index(index)
 
             cn.add_csv_and_h5_file(csv_fname, h5_fname, args)
-            dfn,dt,(x0,y0,obj_id,framenumber0,time0) = cn.get_one_result(1)
+            dfn,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = cn.get_one_result(1)
 
             self.assertEqual(obj_id,1)
 

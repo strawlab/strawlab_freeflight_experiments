@@ -46,7 +46,7 @@ class TestPlot(unittest.TestCase):
 
     def test_plot_heuristics(self):
         combine,args,tdir = self._get_fake_tmpdir_combine()
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(1)
         self.assertEqual(analysislib.plots._calculate_nloops(df), 6)
 
     def test_plots(self):

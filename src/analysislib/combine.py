@@ -550,14 +550,14 @@ class _Combine(object):
                 raise ValueError("obj_id %s exists in multiple conditions: %s" % (obj_id,','.join(self.get_condition_name(d[0]) for d in spanned[obj_id])))
 
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
-            for df,(x0,y0,_obj_id,_framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+            for df,(x0,y0,_obj_id,_framenumber0,time0),uuid in zip(r['df'], r['start_obj_ids'],r['uuids']):
                 if _obj_id == obj_id:
                     if (condition is None) and (framenumber0 is None):
-                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0)
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
                     elif (condition is not None) and (current_condition == condition):
-                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0)
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
                     elif (framenumber0 is not None) and (_framenumber0 == framenumber0):
-                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0)
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
 
         raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
@@ -924,9 +924,9 @@ class CombineCSV(_Combine):
 
     def _get_result(self, df):
         ser = df.irow(0)
-        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time']
+        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time'],'',''
 
-    def get_one_result(self, obj_id):
+    def get_one_result(self, obj_id, condition=None, framenumber0=None):
         df = self._df[self._df['lock_object'] == obj_id]
         if not len(df):
             raise ValueError("object %s not found" % obj_id)
@@ -988,7 +988,7 @@ class CombineH5(_Combine):
             assert dt == self._dt
             assert tzname == self._tzname
 
-    def get_one_result(self, obj_id):
+    def get_one_result(self, obj_id, condition=None, framenumber0=None):
         query = "obj_id == %d" % obj_id
 
         traj = self._trajectories.readWhere(query)
@@ -1005,7 +1005,7 @@ class CombineH5(_Combine):
         dt = self._dt
         self.features.process(df, dt)
 
-        return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
+        return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0,'','')
 
     def close(self):
         if self._h5 is not None:

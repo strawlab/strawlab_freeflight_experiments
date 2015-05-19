@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     for condition,longest in combine.get_obj_ids_sorted_by_length().iteritems():
         for n,(obj_id,l) in enumerate(longest):
-            df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+            df,dt,(x0,y0,obj_id,framenumber0,start,_condition,uuid) = combine.get_one_result(obj_id, condition)
 
             trajs[condition].extend( get_trajs(df) )
             

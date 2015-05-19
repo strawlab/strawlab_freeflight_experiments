@@ -46,7 +46,7 @@ if __name__=='__main__':
             os.makedirs(odir)
 
         for n,(obj_id,l) in enumerate(longest):
-            df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+            df,dt,(x0,y0,obj_id,framenumber0,start,_condition,uuid) = combine.get_one_result(obj_id, condition)
             dest = os.path.join(odir,'%d' % obj_id)
 
             if args.split_column and (args.split_where is not None):
