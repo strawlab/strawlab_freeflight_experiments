@@ -145,7 +145,8 @@ class TestFlyFlyPathModel(unittest.TestCase):
             ax.set_xlim(-1,1)
             ax.set_ylim(-1,1)
             ax.legend()
-        plt.show()
+
+        #plt.show()
 
     def test_hitmanager(self):
         #path crosses itself
