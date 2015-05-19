@@ -53,14 +53,13 @@ class TestScript(unittest.TestCase):
         proc = subprocess.Popen(
                 "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
                 "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 --arena flycave "\
-                "--outdir %s --save-data" % self._tdir,
+                "--outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir)
         stdout,stderr = proc.communicate()
         self.assertEqual(proc.returncode,0,stderr)
         #uuid_obj_id_fn0_condition
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_11902_checkerboard16pnginfinitysvg031000102.csv")))
         self.assertTrue(os.path.isfile(os.path.join(self._tdir,"9b97392ebb1611e2a7e46c626d3a008a_9_11902_checkerboard16pnginfinitysvg031000102.png")))
 
     def test_conflict_analysis(self):
