@@ -72,6 +72,7 @@ class Experiment(object):
                           state=state,
                           wait=not args.no_wait, use_tmpdir=args.tmpdir,
                           continue_existing=args.continue_existing)
+        self.log.condition = self.condition
 
         self.timer = rospy.Timer(rospy.Duration(args.switch_time),
                                   self._switch_conditions)
