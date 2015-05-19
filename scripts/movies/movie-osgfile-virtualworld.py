@@ -40,8 +40,6 @@ from strawlab_freeflight_experiments.topics import *
 roslib.load_manifest('flyvr')
 import flyvr.display_client
 
-VR_PANELS = ['virtual_world']
-
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
@@ -96,7 +94,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
-def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc):
+def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_mode):
     try:
         combine = analysislib.util.get_combiner_for_args(args)
         combine.add_from_args(args)
@@ -108,6 +106,9 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
 
     valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
     condition_obj = combine.get_condition_object(condition)
+
+    #just support one panel
+    VR_PANELS = vr_mode
 
     renderers = {}
     osgslaves = {}
@@ -224,6 +225,9 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
     else:
         target_out_w = TARGET_OUT_W
         target_out_h = TARGET_OUT_H
+
+#    if len(VR_PANELS) > 1:
+#        target_out_w = len(VR_PANELS) * float(target_out_w) / (float(target_out_w)/target_out_h)
 
     #define the size of the output
     device_y0 = MARGIN
@@ -390,6 +394,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '--framenumber0', type=int, default=None,
         help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
+    parser.add_argument('--vr-mode', type=str, default=['virtual_world'],
+        choices=('geometry', 'virtual_world'),
+        action='append',
+        help='the display server mode')
 
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
@@ -416,5 +424,6 @@ if __name__ == "__main__":
          '_sml',
          args.plot,
          args.osgdesc,
+         set(args.vr_mode),
     )
 
