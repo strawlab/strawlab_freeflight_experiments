@@ -74,7 +74,7 @@ class FlyCaveCylinder(ArenaBase):
         theta = np.linspace(0, 2*np.pi, 100)
         ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta),
                 *args, **kwargs)
-        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta),
+        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta)*self.height,
                 *args, **kwargs)
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax, zmin, zmax)'''
@@ -99,6 +99,15 @@ class FishBowl(ArenaBase):
         rad = self.radius
         theta = np.linspace(0, 2*np.pi, 100)
         return ax.plot( rad*np.cos(theta), rad*np.sin(theta), *args, **kwargs)
+
+    def plot_mpl_3d(self,ax,*args,**kwargs):
+        rad = self.radius
+        theta = np.linspace(0, 2*np.pi, 100)
+        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta),
+                *args, **kwargs)
+        ax.plot(0.05*rad*np.cos(theta), 0.05*rad*np.sin(theta), -self.height*np.ones_like(theta),
+                *args, **kwargs)
+
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
