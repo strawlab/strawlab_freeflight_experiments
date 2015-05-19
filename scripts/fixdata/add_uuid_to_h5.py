@@ -12,7 +12,7 @@ def read_uuid_from_h5(h5):
     uuids = []
     with h5py.File(h5,'r') as f:
         try:
-            uuids.extend( str(r[0]) for r in np.unique(f['experiment_info']) )
+            uuids.extend( str(r[0]) for r in f['experiment_info'] )
         except KeyError:
             #no such table
             pass
