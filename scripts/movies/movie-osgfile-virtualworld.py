@@ -301,6 +301,8 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
                 continue
 
         if ts > t0:
+            ok = True
+
             t0 = ts
 
             col,row = uv
@@ -350,6 +352,7 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
 
                 fn = os.path.basename(imgfname)
                 myfname = imgfname.replace(fn,name+fn)
+
                 renderers[name].render_frame(myfname, msg)
 
                 time.sleep(0.01) # disk i/o
@@ -358,9 +361,17 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
                 device_rect = (m["device_x0"], device_y0, m["dw"], m["dh"])
                 user_rect = (0,0,m["width"], m["height"])
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
-                    _canv.imshow( scipy.misc.imread(myfname), 0,0, filter='best' )
+                    a = scipy.misc.imread(myfname)
+                    if a.dtype == np.object:
+                        print "ERROR", myfname
+                        ok = False
+                        continue
+                    _canv.imshow( a, 0,0, filter='best' )
 
             canv.save()
+
+            if not ok:
+                os.unlink(imgfname)
 
     pbar.finish()
 
