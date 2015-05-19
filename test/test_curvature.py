@@ -25,8 +25,7 @@ class TestCurvature(unittest.TestCase):
 
         df = pd.DataFrame({"x":x,"y":y,"z":np.zeros_like(theta)})
         for meth in ("algebraic","leastsq"):
-            curve.calc_curvature(df, dt, NPTS=3, method=meth, clip=None, colname=meth)
-            v = df[meth].values
+            v = curve.calc_curvature(df, dt, npts=3, method=meth, clip=None)
             #no nans
             self.assertTrue( np.alltrue(~np.isnan(v)) )
             #estimate correct radius
@@ -43,8 +42,7 @@ class TestCurvature(unittest.TestCase):
 
         df = pd.DataFrame({"x":x2,"y":y2,"z":np.zeros_like(theta)})
         for meth in ("algebraic","leastsq"):
-            curve.calc_curvature(df, dt, NPTS=3, method=meth, clip=None, colname=meth)
-            v = df[meth].values
+            v = curve.calc_curvature(df, dt, npts=3, method=meth, clip=None)
             #no nans
             self.assertTrue( np.alltrue(~np.isnan(v)) )
 
