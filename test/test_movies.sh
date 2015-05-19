@@ -31,7 +31,7 @@ python scripts/movies/movie-1up.py \
     --uuid 1d06dfe0a2c711e2b7ca6c626d3a008a --idfilt 1278 \
     --outdir $TDIR
 
-roslaunch ./scripts/movies/launch/render_trajectory_displayservers.launch &
+roslaunch ./scripts/movies/launch/render_trajectory_displayservers_flycave.launch &
 jobpid=$!
 sleep 5
 

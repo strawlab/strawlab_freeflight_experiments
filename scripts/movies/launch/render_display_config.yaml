@@ -28,3 +28,5 @@ stimulus_plugins:
   name: StimulusCylinderAndModel
 - path: $(find strawlab_freeflight_experiments)/lib
   name: StimulusCylinder
+- path: $(find strawlab_freeflight_experiments)/lib
+  name: StimulusStarField
