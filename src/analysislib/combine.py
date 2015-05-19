@@ -1270,16 +1270,19 @@ class CombineH5WithCSV(_Combine):
                         self._debug("IO:     wrote %s" % fn)
                 except Exception, e:
                     self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
-            except:
+            except Exception, e:
+                self._debug("IO:     ERROR reading from database\n%s" % e)
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
                     self._metadata.append(yaml.safe_load(f))
-        except:
-            pass
+        except Exception, e:
+            self._debug("IO:     ERROR reading metadata\n%s" % e)
 
-        if this_exp_metadata is None: this_exp_metadata = {}
+        if this_exp_metadata is None:
+            this_exp_metadata = {}
         this_exp_metadata['csv_file'] = csv_fname
         this_exp_metadata['h5_file'] = h5_file
+
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
             self._debug("FIX:     fixing data %s" % fix)
