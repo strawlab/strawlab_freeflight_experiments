@@ -36,6 +36,8 @@ if __name__=='__main__':
     parser.add_argument(
         "--save-animation", action="store_true", help="save an mp4 of this trajectory")
     parser.add_argument(
+        "--save-plot", action="store_true", help="save this plot to the plot_dir")
+    parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)",
@@ -60,6 +62,9 @@ if __name__=='__main__':
     for p in plot_axes:
         combine.add_feature(column_name=p)
     combine.add_from_args(args)
+
+    if args.save_animation:
+        args.animate = True
 
     if args.outdir:
         basedir = args.outdir
@@ -96,7 +101,11 @@ if __name__=='__main__':
 
                 name = analysislib.combine.safe_condition_string(current_condition)
 
-                filename = "%s_%s_%s_%s" % (uuid, obj_id, framenumber0, name)
+                if args.save_plot:
+                    filename = combine.get_plot_filename("%s_%s_%s" % (obj_id, framenumber0, name))
+                else:
+                    filename = '/tmp/trajectory_viewer'
+
                 title = "%s: %s (fn0 %d)" % (obj_id, combine.get_condition_name(current_condition), framenumber0)
 
                 if args.animate:
