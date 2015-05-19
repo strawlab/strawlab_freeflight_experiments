@@ -1505,6 +1505,12 @@ class CombineH5WithCSV(_Combine):
             # get trajectory data from flydra
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
                     (oid, start_frame, trial_framenumbers[-1])
+
+            if fix.active and (fix.identifier == 'OLD_CONFINEMENT_CSVS_ARE_BROKEN'):
+                #sorry everyone
+                query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_frame)
+                self._warn_once("WARN: THIS DATA IS BROKEN IF OBJ_ID SPANS CONDITIONS")
+
             try:
                 valid = trajectories.readWhere(query)
             except:

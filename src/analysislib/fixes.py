@@ -35,10 +35,11 @@ class _Fixup(object):
     should_fix_dataframe = False
     should_fix_condition = False
 
-    def __init__(self, row_wrapper, dataframe_wrapper, desc='N/A'):
+    def __init__(self, row_wrapper, dataframe_wrapper, desc='N/A', identifier=None):
         self._rr = row_wrapper
         self._dr = dataframe_wrapper
         self._desc = desc
+        self._identifier = identifier
 
         self.should_fix_rows = self._rr.COLS if self._rr is not None else []
         self.should_fix_dataframe = self._dr is not None
@@ -55,6 +56,10 @@ class _Fixup(object):
                                                         'Y' if self._dr else 'N')
         else:
             return '<Fixup desc="%s">' % self._desc
+
+    @property
+    def identifier(self):
+        return self._identifier or ''
 
     def fix_row(self, row):
         if self._rr is None:
@@ -163,11 +168,12 @@ def load_csv_fixups(**kwargs):
                     return _Fixup(row_wrapper=_FixPerturbationConditionName,
                                   dataframe_wrapper=None,
                                   desc='fix perturb descriptors to say what was perturbed')
-            if csv_file and ('confinement' in csv_file):
+            if csv_file and (('confinement' in csv_file) or ('saver' in csv_file)):
                 if cdt and (cdt < datetime.datetime(year=2015,month=05,day=11)):
                     return _Fixup(row_wrapper=None,
                                   dataframe_wrapper=_fix_confinement_add_columns,
-                                  desc='add svg_filename, start/stop_{r,buf} columns')
+                                  desc='add svg_filename, start/stop_{r,buf} columns',
+                                  identifier='OLD_CONFINEMENT_CSVS_ARE_BROKEN')
 
 
     return _Fixup(None, None)
