@@ -25,6 +25,7 @@ import camera_model
 roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 import analysislib.args
+import analysislib.arenas
 import analysislib.movie
 import analysislib.combine
 import analysislib.util
@@ -45,13 +46,10 @@ TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
 class StimulusCylinderAndModel(flyvr.display_client.OSGFileStimulusSlave):
-    #the conflict format for this is
-    #justpost1.osg|-0.15|0.25|0.0
-    def __init__(self, dsc, osg_file_desc):
-        fname,x,y,z = osg_file_desc.split('|')
+    def __init__(self, dsc, fname, oxyz):
         flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
         self.set_model_filename(fname)
-        self.set_model_origin(map(float,(x,y,z)))
+        self.set_model_origin(oxyz)
 
         self.pub_rotation_velocity = rospy.Publisher(
             self.dsc.name+'/' + TOPIC_CYL_ROTATION_RATE,
@@ -63,14 +61,11 @@ class StimulusCylinderAndModel(flyvr.display_client.OSGFileStimulusSlave):
             self.pub_rotation_velocity.publish(rrate)
 
 class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
-    #the format string for this looks like
-    #L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
-    def __init__(self, dsc, osg_file_desc):
-        fname,oxyz,sxyz = osg_file_desc.split('/')
+    def __init__(self, dsc, fname, oxyz, sxyz):
         flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc)
         self.set_model_filename(fname)
-        self.set_model_origin(map(float,oxyz.split(',')))
-        self.set_model_scale(map(float,sxyz.split(',')))
+        self.set_model_origin(oxyz)
+        self.set_model_scale(sxyz)
 
     def set_state(self, row):
         pass
@@ -80,7 +75,28 @@ STIMULUS_CLASS_MAP = {
     "StimulusCylinderAndModel":StimulusCylinderAndModel
 }
 
-def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
+def get_stimulus_from_osgdesc(dsc, osgdesc):
+    #the format string for this looks like
+    #L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
+    fname,oxyz,sxyz = osgdesc.split('/')
+    return StimulusOSGFile(dsc,fname,map(float,oxyz.split(',')),map(float,sxyz.split(',')))
+
+def get_stimulus_from_condition(dsc, condition_obj):
+    if condition_obj.is_type('confine'):
+        fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
+        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
+        sxyz = (1.,1.,1.)
+        return StimulusOSGFile(dsc,fname,oxyz,sxyz)
+    elif condition_obj.is_type('conflict'):
+        #the conflict format for this is
+        #justpost1.osg|-0.15|0.25|0.0
+        model_descriptor = condition_obj['model_descriptor']
+        fname,x,y,z = model_descriptor.split('|')
+        return StimulusCylinderAndModel(dsc,fname,(float(x),float(y),float(z)))
+
+    raise ValueError('Unknown stimulus type for %r' % condition_obj)
+
+def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc):
     try:
         combine = analysislib.util.get_combiner_for_args(args)
         combine.add_from_args(args)
@@ -88,7 +104,10 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
         combine = analysislib.combine.CombineH5()
         combine.add_from_args(args)
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+    arena = analysislib.arenas.get_arena_from_args(args)
+
+    valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
+    condition_obj = combine.get_condition_object(condition)
 
     renderers = {}
     osgslaves = {}
@@ -96,11 +115,14 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
         node = "/ds_%s" % name
         dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
 
-        stimklass = STIMULUS_CLASS_MAP[stimname]
-        print "rendering vr",name,stimklass
+        if osgdesc:
+            stimobj = get_stimulus_from_osgdesc(dsc, osgdesc)
+        else:
+            stimobj = get_stimulus_from_condition(dsc, condition_obj)
+        print "rendering vr",name,stimobj
 
         renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
-        osgslaves[name] = stimklass(dsc, osg_file_desc)
+        osgslaves[name] = stimobj
 
     # setup camera position
     for name in VR_PANELS:
@@ -315,8 +337,7 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                     with _canv.get_figure(m["dw"], m["dh"]) as fig:
                         analysislib.movie.plot_xyz(fig, movie.frame_number,
                             xhist, yhist, zhist, x, y, z,
-                            draw_arena_callback=analysislib.movie.draw_flycave,
-                        )
+                            arena)
 
             #do the VR 
             for name in VR_PANELS:
@@ -363,15 +384,12 @@ if __name__ == "__main__":
     parser.add_argument(
         '--plot', action='store_true',
         help='plot x,y,z')
+    parser.add_argument('--osgdesc', type=str,
+        help='osg file descriptor string '\
+             '(if omitted it is determined automatically from the condition')
     parser.add_argument(
-        '--osgdesc', type=str, default='posts3.osg',
-        help='osg file descriptor string')
-    parser.add_argument(
-        '--stimulus', type=str, default='StimulusOSGFile',
-        help='flyvr stimulus name')
-    parser.add_argument(
-        '--condition', type=str,
-        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
+        '--framenumber0', type=int, default=None,
+        help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
 
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
@@ -392,12 +410,11 @@ if __name__ == "__main__":
 
     doit(args,
          args.movie_file,
-         obj_id, args.condition,
+         obj_id, args.framenumber0,
          args.tmpdir,
          outdir, args.calibration, args.framenumber,
          '_sml',
-         args.stimulus,
+         args.plot,
          args.osgdesc,
-         args.plot
     )
 
