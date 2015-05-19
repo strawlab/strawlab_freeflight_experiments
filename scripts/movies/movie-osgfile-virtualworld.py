@@ -68,10 +68,28 @@ class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
     def set_state(self, row):
         pass
 
-STIMULUS_CLASS_MAP = {
-    "StimulusOSGFile":StimulusOSGFile,
-    "StimulusCylinderAndModel":StimulusCylinderAndModel
-}
+class StimulusStarField(flyvr.display_client.OSGFileStimulusSlave):
+    def __init__(self, dsc, star_size):
+        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusStarField')
+        self.pub_velocity = rospy.Publisher(
+                                self.dsc.name+'/' + TOPIC_STAR_VELOCITY,
+                                geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
+        self.pub_size = rospy.Publisher(
+                                self.dsc.name+'/' + TOPIC_STAR_SIZE,
+                                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_velocity.publish(0,0,0)
+        self.pub_size.publish(star_size)
+
+    def set_state(self, row):
+        safe_row = row.dropna(how='any', subset=('stim_x','stim_y','stim_z'))
+        try:
+            sx = safe_row['stim_x']
+            sy = safe_row['stim_y']
+            sz = safe_row['stim_z']
+            self.pub_velocity.publish(sx,sy,sz)
+        except:
+            #no value for this row
+            pass
 
 def get_stimulus_from_osgdesc(dsc, osgdesc):
     #the format string for this looks like
@@ -91,6 +109,8 @@ def get_stimulus_from_condition(dsc, condition_obj):
         model_descriptor = condition_obj['model_descriptor']
         fname,x,y,z = model_descriptor.split('|')
         return StimulusCylinderAndModel(dsc,fname,(float(x),float(y),float(z)))
+    elif condition_obj.is_type('translation'):
+        return StimulusStarField(dsc, float(condition_obj['star_size']))
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
