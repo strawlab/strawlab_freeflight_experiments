@@ -54,7 +54,7 @@ XFORM = flyflypath.transform.SVGTransform()
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf","x0","y0","z0"))
+                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf","x0","y0","z0","sx","sy","sz"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
@@ -62,6 +62,7 @@ class Node(nodelib.node.Experiment):
         self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
         self.pub_lag = rospy.Publisher('extra_lag_msec', Float32, latch=True, tcp_nodelay=True)
         self.pub_model_pose = rospy.Publisher('model_pose', Pose, latch=True, tcp_nodelay=True)
+        self.pub_model_scale = rospy.Publisher('model_scale', Vector3, latch=True, tcp_nodelay=True)
 
         self.trigarea_pub = rospy.Publisher('trigger_area', Polygon, latch=True, tcp_nodelay=True)
 
@@ -87,6 +88,7 @@ class Node(nodelib.node.Experiment):
         self.src_pub = rospy.Publisher("source", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
+        self._z00 = 0.0
         self.switch_conditions()
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
@@ -117,7 +119,18 @@ class Node(nodelib.node.Experiment):
         self.stimulus_filename = str(self.condition['stimulus_filename'])
         self.x0                = float(self.condition['x0'])
         self.y0                = float(self.condition['y0'])
-        self.lag               = float(self.condition['lag'])
+        try:
+            self._z00          = float(self.condition['z0'])
+        except KeyError:
+            self._z00          = 0.0
+
+        self.lag               = float(self.condition.get('lag',0.0))
+
+        sx =                float(self.condition.get('sx',1.0))
+        sy =                float(self.condition.get('sy',1.0))
+        sz =                float(self.condition.get('sz',1.0))
+        self.pub_model_scale.publish(sx,sy,sz)
+
         try:
             self.startr        = float(self.condition['start_radius'])
         except KeyError:
@@ -328,7 +341,7 @@ class Node(nodelib.node.Experiment):
             self.last_check_flying_time = now
             self.fly = obj.position
 
-        self.z0 = 0.0
+        self.z0 = self._z00
         self.log.z0 = self.z0
 
         self.pub_model_pose.publish( self.get_model_pose_msg() )        
@@ -351,7 +364,7 @@ class Node(nodelib.node.Experiment):
         if (dt > 30) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
 
-        self.z0 = 0.0
+        self.z0 = self._z00
         self.log.z0 = self.z0
 
         self.pub_stimulus.publish( HOLD_COND )
