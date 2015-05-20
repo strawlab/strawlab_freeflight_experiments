@@ -114,6 +114,9 @@ class Experiment(object):
             if self._n_cool < self._max_cool:
                 if not note:
                     note = "Subject %d met cool condition"
+
+                note += "(condition: '%s')" % self.condition.name
+
                 self.pub_pushover.publish(note)
                 self.pub_save.publish(obj_id)
                 self._n_cool += 1
