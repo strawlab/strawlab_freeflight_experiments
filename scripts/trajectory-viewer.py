@@ -53,7 +53,10 @@ if __name__=='__main__':
 
     analysislib.args.check_args(parser, args, max_uuids=1)
 
-    uuid = args.uuid[0]
+    try:
+        uuid = args.uuid[0]
+    except TypeError:
+        uuid = '0'*32
     obj_ids = map(int,args.idfilt)
     plot_axes = args.plot_values.split(',')
 
