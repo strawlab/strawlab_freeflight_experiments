@@ -408,11 +408,14 @@ if __name__ == "__main__":
 
     parser = analysislib.args.get_parser(disable_filters=True)
     parser.add_argument(
-        '--movie-file', type=str, default='',
+        '--movie-file', type=str, nargs='+',
         help='path to movie file (fmf or mp4)')
     parser.add_argument(
         '--calibration', type=str, required=False,
         help='path to camera calibration file')
+    parser.add_argument(
+        '--camera', type=str, default="Basler_21266086",
+        help='camera uuid that recorded fmf file')
     parser.add_argument(
         '--tmpdir', type=str, default='/tmp/',
         help='path to temporary directory')
@@ -438,11 +441,6 @@ if __name__ == "__main__":
 
     analysislib.args.check_args(parser, args, max_uuids=1)
 
-    if len(args.idfilt) != 1:
-        parser.error("You must specify --idfilt with a single obj_id")
-
-    obj_id = args.idfilt[0]
-
     if args.uuid is not None:
         uuid = args.uuid[0]
     else:
@@ -450,14 +448,32 @@ if __name__ == "__main__":
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
-    doit(args,
-         args.movie_file,
-         obj_id, args.framenumber0,
-         args.tmpdir,
-         outdir, args.calibration, args.framenumber,
-         '_sml',
-         args.plot,
-         args.osgdesc,
-         set(args.vr_mode),
-    )
+    if args.movie_file:
+        obj_ids = [int(os.path.basename(fmf_file)[:-4]) for fmf_file in args.movie_file]
+        fmf_files = args.movie_file
+    else:
+        obj_ids = args.idfilt
+        fmf_files = [autodata.files.get_fmf_file(uuid,obj_id,args.camera,raise_exception=False) for obj_id in args.idfilt]
+        fmf_files = [f if os.path.exists(f) else None for f in fmf_files]
+
+    if not obj_ids:
+        parser.error("You must specify --idfilt or --movie-file")
+
+    for obj_id,fmf_fname in zip(obj_ids,fmf_files):
+        try:
+            doit(args,
+                 fmf_fname,
+                 obj_id, args.framenumber0,
+                 args.tmpdir,
+                 outdir, args.calibration, args.framenumber,
+                 '_sml',
+                 args.plot,
+                 args.osgdesc,
+                 set(args.vr_mode)
+            )
+        except IOError, e:
+            print "missing file", e
+        except ValueError, e:
+            print "missing data", e
+
 
