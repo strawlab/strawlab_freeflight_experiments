@@ -311,6 +311,9 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
 
         pbar.update(n)
 
+        if ('NOSETEST_FLAG' in os.environ) and (movie.frame_number > 100):
+            continue
+
         if fmf is None:
             ts = t
             img = None
