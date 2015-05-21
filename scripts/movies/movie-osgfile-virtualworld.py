@@ -406,7 +406,7 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
 if __name__ == "__main__":
     rospy.init_node('osgrender')
 
-    parser = analysislib.args.get_parser()
+    parser = analysislib.args.get_parser(disable_filters=True)
     parser.add_argument(
         '--movie-file', type=str, default='',
         help='path to movie file (fmf or mp4)')

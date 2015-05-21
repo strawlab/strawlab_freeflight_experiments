@@ -42,7 +42,6 @@ python scripts/movies/movie-osgfile-virtualworld.py \
     --uuid be130ece9db611e2b8fe6c626d3a008a \
     --movie-file /mnt/strawscience/movies/Flycave/be130ece9db611e2b8fe6c626d3a008a/Basler_21266086/1607.fmf \
     --idfilt 1607 \
-    --zfilt none --rfilt none \
     --outdir $TDIR
 
 ##gopro osg file and movie camera
@@ -52,7 +51,6 @@ python scripts/movies/movie-osgfile-virtualworld.py \
     --uuid 39665d18d81011e292be6c626d3a008a \
     --movie-file /mnt/strawscience/movies/Flycave/39665d18d81011e292be6c626d3a008a/Basler_21266086/16.fmf \
     --idfilt 16 \
-    --zfilt none --rfilt none \
     --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3 \
     --outdir $TDIR
 
@@ -63,7 +61,6 @@ python scripts/movies/movie-osgfile-virtualworld.py \
     --movie-file '/mnt/storage/GOPROVIDFRAMES/39665d18d81011e292be6c626d3a008a|60.0|1371559150.51' \
     --idfilt 16 \
     --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3 \
-    --zfilt none --rfilt none \
     --outdir $TDIR
 
 ##render conflict stimulus with post
