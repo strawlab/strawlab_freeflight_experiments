@@ -7,6 +7,7 @@ import sys
 import os.path
 import tempfile
 import time
+import re
 import collections
 
 import benu.utils
@@ -153,7 +154,8 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
         msg = flyvr.msg.TrackballManipulatorState()
         if name=='virtual_world':
             #used for the post movies
-            if 1:
+            if re.match(".*[Pp]ost.*\.osg.*",condition):
+                print "view for post movie"
                 msg.rotation.x = -0.0563853703639
                 msg.rotation.y = -0.249313040186
                 msg.rotation.z = -0.959619648636
@@ -164,6 +166,7 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
                 msg.distance = 1.26881285595
             #used for the colored l box, more looking down
             else:
+                print "view for box movie"
                 msg.rotation.x = -0.0530832760665
                 msg.rotation.y = -0.0785547480223
                 msg.rotation.z = -0.986425433667
@@ -174,7 +177,7 @@ def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, fra
                 msg.distance = 1.00728635582
 
         elif name=='geometry':
-            msg = flyvr.msg.TrackballManipulatorState()
+            print "view for geometry"
             msg.rotation.x = 0.122742295197
             msg.rotation.y = 0.198753058426
             msg.rotation.z = 0.873456803025
