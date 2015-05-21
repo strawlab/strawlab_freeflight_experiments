@@ -1294,6 +1294,12 @@ class CombineH5WithCSV(_Combine):
         dt = 1.0/trajectories.attrs['frames_per_second']
         tzname = h5.root.trajectory_start_times.attrs['timezone']
 
+        try:
+            pytz.timezone(tzname)
+        except UnicodeDecodeError:
+            self._warn("ERROR: PYTABLES UNICODE DECODE ERROR. UPGRADE PYTABLES")
+            tzname = 'CET'
+
         if self._dt is None:
             self._dt = dt
             self._lenfilt = args.lenfilt
