@@ -41,8 +41,7 @@ if __name__=='__main__':
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)", nargs='+',
-        default=("theta","dtheta","rotation_rate","velocity","ratio","radius"),
-        choices=analysislib.features.get_all_columns(True))
+        default=("theta","dtheta","rotation_rate","velocity","ratio","radius"))
     parser.add_argument(
         "--test-filter-args",
         help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
@@ -63,7 +62,11 @@ if __name__=='__main__':
     combine = autil.get_combiner_for_args(args)
     combine.set_index(args.index)
     for p in plot_axes:
-        combine.add_feature(column_name=p)
+        try:
+            combine.add_feature(column_name=p)
+        except ValueError, e:
+            print e.message + " ... assuming it is in the csv"
+
     combine.add_from_args(args)
 
     if args.save_animation:
