@@ -19,6 +19,8 @@ if __name__=='__main__':
 
     results,dt = combine.get_results()
 
+    #combine.get_split_reason_dataframe().to_html('test.html')
+
     name = combine.get_plot_filename("FILTER_ANALYSIS.md")
     with open(name, 'w') as f:
         l = "effect of filters on flight data"
