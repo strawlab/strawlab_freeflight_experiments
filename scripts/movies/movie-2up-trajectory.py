@@ -60,7 +60,7 @@ def draw_flycube2(ax):
              alpha=0.0001,
              markersize=0.0001 )
 
-def doit(combine, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
     h5_file = combine.h5_file
 
     arena = analysislib.arenas.get_arena_from_args(args)

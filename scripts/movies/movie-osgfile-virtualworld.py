@@ -115,13 +115,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
-def doit(args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_mode):
-    try:
-        combine = analysislib.util.get_combiner_for_args(args)
-        combine.add_from_args(args)
-    except autodata.files.NoFile:
-        combine = analysislib.combine.CombineH5()
-        combine.add_from_args(args)
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_mode):
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -462,9 +456,17 @@ if __name__ == "__main__":
     if not obj_ids:
         parser.error("You must specify --idfilt or --movie-file")
 
+    try:
+        combine = analysislib.util.get_combiner_for_args(args)
+        combine.add_from_args(args)
+    except autodata.files.NoFile:
+        combine = analysislib.combine.CombineH5()
+        combine.add_from_args(args)
+
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(args,
+            doit(combine,
+                 args,
                  fmf_fname,
                  obj_id, args.framenumber0,
                  args.tmpdir,
