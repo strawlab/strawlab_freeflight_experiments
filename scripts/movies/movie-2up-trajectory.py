@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(combine, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
+            doit(combine, args, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
         except ValueError, e:
