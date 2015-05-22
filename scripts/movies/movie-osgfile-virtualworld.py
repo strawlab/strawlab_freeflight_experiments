@@ -158,6 +158,16 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                 msg.center.y = -0.0655635818839
                 msg.center.z = 0.54163891077
                 msg.distance = 1.26881285595
+            elif re.match(".*kitchen_[ab].*\.osgt.*",condition):
+                print "view for kitchen"
+                msg.rotation.x = -0.561771881545
+                msg.rotation.y = -0.241962482875
+                msg.rotation.z = -0.297665916385
+                msg.rotation.w = -0.732981249561
+                msg.center.x = -0.108774609864
+                msg.center.y = -0.0496510416269
+                msg.center.z = 0.635622143745
+                msg.distance = 2.43433470856
             #used for the colored l box, more looking down
             else:
                 print "view for box movie"
