@@ -109,10 +109,7 @@ class RatioMeasurement(_Measurement):
 class RotationRateMeasurement(_Measurement):
     name = 'rotation_rate'
 
-class ReproErrorsFeature(_Feature):
-
-    name = 'reprojection_error'
-    adds = ('mean_reproj_error_px', 'visible_in_n_cams')
+class _ReproErrorsFeature(_Feature):
 
     def __init__(self, **kwargs):
         _Feature.__init__(self, **kwargs)
@@ -131,7 +128,7 @@ class ReproErrorsFeature(_Feature):
             if uuid not in self._stores:
                 fm = autodata.files.FileModel()
                 fm.select_uuid(uuid)
-                h5_file = fm.get_file_model("repro_errors.h5").fullpath
+                h5_file = fm.get_file_model(self._filename).fullpath
                 self._stores[uuid] = pd.HDFStore(h5_file, 'r')
 
         except (KeyError, autodata.files.NoFile):
@@ -148,8 +145,22 @@ class ReproErrorsFeature(_Feature):
             dists.append(__df['dist'].mean())
             ncams.append(len(__df['camn'].unique()))
 
-        df['mean_reproj_error_px'] = pd.Series(dists,index=fns)
-        df['visible_in_n_cams'] = pd.Series(ncams,index=fns)
+        df[self.adds[0]] = pd.Series(dists,index=fns)
+        df[self.adds[1]] = pd.Series(ncams,index=fns)
+
+class ReproErrorsSmoothedFeature(_ReproErrorsFeature):
+
+    name = 'reprojection_error_smoothed'
+    adds = ('mean_reproj_error_smoothed_px', 'visible_in_cams_smoothed_n')
+
+    _filename = "smoothed_repro_errors.h5"
+
+class ReproErrorsFeature(_ReproErrorsFeature):
+
+    name = 'reprojection_error'
+    adds = ('mean_reproj_error_mle_px', 'visible_in_cams_mle_n')
+
+    _filename = "repro_errors.h5"
 
 class ErrorPositionStddev(_Feature):
     name = 'err_pos_stddev_m'
