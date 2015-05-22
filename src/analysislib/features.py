@@ -309,6 +309,13 @@ def get_feature_class(name):
 def get_feature(name,**kwargs):
     return get_feature_class(name)(**kwargs)
 
+def get_all_columns(include_measurements):
+    a = []
+    a.extend(ALL_FEATURES)
+    if include_measurements:
+        a.extend(cls for cls in _all_subclasses(_Measurement) if cls.name is not None)
+    return tuple(itertools.chain.from_iterable(i.get_adds() for i in a))
+
 class MultiFeatureComputer(object):
 
     def __init__(self, *features):

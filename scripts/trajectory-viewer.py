@@ -17,10 +17,10 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.fixes
+import analysislib.features
 import analysislib.plots as aplt
 import analysislib.curvature as acurve
 import analysislib.util as autil
-
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser(disable_filters=True)
@@ -40,14 +40,14 @@ if __name__=='__main__':
     parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
-        "--plot-values", help="plot these fields too (comma separated list)",
-        default=",".join(["theta","dtheta","rotation_rate","velocity","ratio","radius"]))
+        "--plot-values", help="plot these fields too (comma separated list)", nargs='+',
+        default=("theta","dtheta","rotation_rate","velocity","ratio","radius"),
+        choices=analysislib.features.get_all_columns(True))
     parser.add_argument(
         "--test-filter-args",
         help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
     parser.add_argument(
         "--ylimits", help="y-axis limits name:min:max,[name2:min2:max2]")
-
     
     args = parser.parse_args()
 
@@ -58,7 +58,7 @@ if __name__=='__main__':
     except TypeError:
         uuid = '0'*32
     obj_ids = map(int,args.idfilt)
-    plot_axes = args.plot_values.split(',')
+    plot_axes = args.plot_values
 
     combine = autil.get_combiner_for_args(args)
     combine.set_index(args.index)
