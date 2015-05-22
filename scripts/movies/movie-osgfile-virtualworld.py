@@ -99,7 +99,7 @@ def get_stimulus_from_osgdesc(dsc, osgdesc):
     return StimulusOSGFile(dsc,fname,map(float,oxyz.split(',')),map(float,sxyz.split(',')))
 
 def get_stimulus_from_condition(dsc, condition_obj):
-    if condition_obj.is_type('confine'):
+    if condition_obj.is_type('confine','post','kitchen'):
         fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
         oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
         sxyz = (1.,1.,1.)
