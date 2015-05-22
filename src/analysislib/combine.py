@@ -1525,6 +1525,10 @@ class CombineH5WithCSV(_Combine):
             validframenumber = valid['framenumber']
 
             n_samples = len(validframenumber)
+
+            if ((trial_framenumbers[-1] - start_frame) > dur_samples) and (n_samples < dur_samples):
+                self._warn("WARN:   obj_id %d missing from h5 file\n        %s" % (oid, query))
+
             if n_samples < dur_samples:
                 self._debug('SKIP:   %d valid samples for obj_id %d' % (n_samples, oid))
                 self._skipped[cond] += 1
