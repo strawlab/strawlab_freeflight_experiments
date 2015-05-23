@@ -169,38 +169,16 @@ def get_stimulus_from_condition(dsc, condition_obj):
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
-def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_mode):
-
-    arena = analysislib.arenas.get_arena_from_args(args)
-
-    valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
-    condition_obj = combine.get_condition_object(condition)
-
-    #just support one panel
-    VR_PANELS = vr_mode
-
-    renderers = {}
-    osgslaves = {}
-    for name in VR_PANELS:
-        node = "/ds_%s" % name
-        dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
-
-        if osgdesc:
-            stimobj = get_stimulus_from_osgdesc(dsc, osgdesc)
-        else:
-            stimobj = get_stimulus_from_condition(dsc, condition_obj)
-        print "rendering vr",name,stimobj
-
-        renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
-        osgslaves[name] = stimobj
-
-    # setup camera position
-    for name in VR_PANELS:
-        print "HAVE YOU SET THE CORRECT VIEW????"
-        # easiest way to get these:
-        #   rosservice call /ds_geometry/get_trackball_manipulator_state
+def get_vr_view(arena, vr_mode, condition, condition_obj):
+    # easiest way to get these:
+    #   rosservice call /ds_geometry/get_trackball_manipulator_state
+    if arena.name == 'fishbowl':
+        return None
+    elif arena.name == 'flycube':
+        return None
+    elif arena.name == 'flycave':
         msg = flyvr.msg.TrackballManipulatorState()
-        if name=='virtual_world':
+        if vr_mode == 'virtual_world':
             #used for the post movies
             if re.match(".*[Pp]ost.*\.osg.*",condition):
                 print "view for post movie"
@@ -234,7 +212,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                 msg.center.z = 0.522875547409
                 msg.distance = 1.00728635582
 
-        elif name=='geometry':
+        elif vr_mode == 'geometry':
             print "view for geometry"
             msg.rotation.x = 0.122742295197
             msg.rotation.y = 0.198753058426
@@ -244,10 +222,38 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
             msg.center.y = -0.0946640968323
             msg.center.z = 0.282709181309
             msg.distance = 1.5655520953
-        else:
-            msg = None
+        
+        return msg
 
-        if msg is not None:
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_panels):
+    VR_PANELS = vr_panels
+
+    arena = analysislib.arenas.get_arena_from_args(args)
+
+    valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
+    condition_obj = combine.get_condition_object(condition)
+
+    renderers = {}
+    osgslaves = {}
+    for name in VR_PANELS:
+        node = "/ds_%s" % name
+        dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
+
+        if osgdesc:
+            stimobj = get_stimulus_from_osgdesc(dsc, osgdesc)
+        else:
+            stimobj = get_stimulus_from_condition(dsc, condition_obj)
+        print "rendering vr",name,stimobj
+
+        renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
+        osgslaves[name] = stimobj
+
+    # setup camera position
+    for name in VR_PANELS:
+        msg = get_vr_view(arena, name, condition, condition_obj)
+        if msg is None:
+            print "HAVE YOU SET THE CORRECT VIEW????"
+        else:
             renderers[name].set_view(msg)
 
     if calibration:
