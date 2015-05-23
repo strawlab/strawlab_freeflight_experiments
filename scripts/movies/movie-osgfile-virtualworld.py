@@ -498,9 +498,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--framenumber0', type=int, default=None,
         help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
-    parser.add_argument('--vr-mode', type=str, default=['virtual_world'],
+    parser.add_argument('--vr-mode', type=str, default='virtual_world',
         choices=('geometry', 'virtual_world'),
-        action='append',
         help='the display server mode')
 
     argv = rospy.myargv()
@@ -544,7 +543,7 @@ if __name__ == "__main__":
                  '_sml',
                  args.plot,
                  args.osgdesc,
-                 set(args.vr_mode)
+                 [args.vr_mode] #just support one panel
             )
         except IOError, e:
             print "missing file", e
