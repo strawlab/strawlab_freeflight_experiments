@@ -17,7 +17,15 @@ geom:
     <remap from="stimulus_filename" to="ds_virtual_world/stimulus_filename"/>
 
     <remap from="model_filename" to="ds_virtual_world/model_filename"/>
+
+    <remap from="cylinder_rotation" to="ds_virtual_world/cylinder_rotation"/>
     <remap from="cylinder_rotation_rate" to="ds_virtual_world/cylinder_rotation_rate"/>
+    <remap from="cylinder_v_offset_value" to="ds_virtual_world/cylinder_v_offset_value"/>
+    <remap from="cylinder_v_offset_rate" to="ds_virtual_world/cylinder_v_offset_rate"/>
+    <remap from="cylinder_image" to="ds_virtual_world/cylinder_image"/>
+    <remap from="cylinder_centre" to="ds_virtual_world/cylinder_centre"/>
+    <remap from="cylinder_radius" to="ds_virtual_world/cylinder_radius"/>
+    <remap from="cylinder_height" to="ds_virtual_world/cylinder_height"/>
 
     <remap from="star_velocity" to="ds_virtual_world/star_velocity"/>
     <remap from="star_size" to="ds_virtual_world/star_size"/>
@@ -42,7 +50,15 @@ geom:
     <remap from="stimulus_filename" to="ds_geometry/stimulus_filename"/>
 
     <remap from="model_filename" to="ds_geometry/model_filename"/>
+
+    <remap from="cylinder_rotation" to="ds_geometry/cylinder_rotation"/>
     <remap from="cylinder_rotation_rate" to="ds_geometry/cylinder_rotation_rate"/>
+    <remap from="cylinder_v_offset_value" to="ds_geometry/cylinder_v_offset_value"/>
+    <remap from="cylinder_v_offset_rate" to="ds_geometry/cylinder_v_offset_rate"/>
+    <remap from="cylinder_image" to="ds_geometry/cylinder_image"/>
+    <remap from="cylinder_centre" to="ds_geometry/cylinder_centre"/>
+    <remap from="cylinder_radius" to="ds_geometry/cylinder_radius"/>
+    <remap from="cylinder_height" to="ds_geometry/cylinder_height"/>
 
     <remap from="star_velocity" to="ds_geometry/star_velocity"/>
     <remap from="star_size" to="ds_geometry/star_size"/>

@@ -44,6 +44,56 @@ import flyvr.display_client
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
+class _SafePubMixin:
+
+    def pub_scalar(self, pub, val):
+        if not np.isnan(val):
+            pub.publish(val)
+
+    def pub_vector(self, pub, v1, v2, v3):
+        if (not np.isnan(v1)) and (not np.isnan(v2)) and (not np.isnan(v3)):
+            pub.publish(v1,v2,v3)
+
+
+class StimulusCylinder(flyvr.display_client.OSGFileStimulusSlave, _SafePubMixin):
+    def __init__(self, dsc, fname, radius):
+        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinder')
+
+        self.pub_rotation = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_rotation_velocity = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION_RATE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_value = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_V_OFFSET_VALUE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_rate = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_V_OFFSET_RATE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_image = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_IMAGE,
+                std_msgs.msg.String, latch=True, tcp_nodelay=True)
+        self.pub_cyl_centre = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_CENTRE,
+                geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
+        self.pub_cyl_radius = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_RADIUS,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_cyl_height = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_HEIGHT,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+
+        self._radius = radius
+
+        self.pub_image.publish(fname)
+        self.pub_cyl_radius.publish(radius)
+        self.pub_rotation.publish(0)
+        self.pub_v_offset_value.publish(0)
+
+    def set_state(self, row):
+        self.pub_scalar(self.pub_rotation_velocity, row['rotation_rate'])
+        self.pub_scalar(self.pub_v_offset_rate, row['v_offset_rate'])
+        self.pub_vector(self.pub_cyl_centre,row['cyl_x'],row['cyl_y'],0)
+        try:
+            cr = abs(row['cyl_r'])
+        except KeyError:
+            cr = self._radius
+        self.pub_scalar(self.pub_cyl_radius, cr)
+        self.pub_scalar(self.pub_cyl_height, 5.0*cr)
+
 class StimulusCylinderAndModel(flyvr.display_client.OSGFileStimulusSlave):
     def __init__(self, dsc, fname, oxyz):
         flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
@@ -112,6 +162,10 @@ def get_stimulus_from_condition(dsc, condition_obj):
         return StimulusCylinderAndModel(dsc,fname,(float(x),float(y),float(z)))
     elif condition_obj.is_type('translation'):
         return StimulusStarField(dsc, float(condition_obj['star_size']))
+    elif condition_obj.is_type('rotation'):
+        return StimulusCylinder(dsc,
+                                str(condition_obj['cylinder_image']),
+                                abs(float(condition_obj['radius_when_locked'])))
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
