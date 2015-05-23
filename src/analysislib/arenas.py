@@ -61,6 +61,7 @@ class ArenaBase(object):
         return valid, cond
 
 class FlyCaveCylinder(ArenaBase):
+    name = "flycave"
     def __init__(self,args,radius=0.5,height=1.0):
         self.radius = radius
         self.height = height
@@ -91,6 +92,7 @@ class FlyCaveCylinder(ArenaBase):
                 "trajectory_start_offset":0.0}
 
 class FishBowl(ArenaBase):
+    name = "fishbowl"
     def __init__(self,args,radius=0.175,height=0.08):
         self.radius = radius
         self.height = height
@@ -117,6 +119,7 @@ class FishBowl(ArenaBase):
                 "trajectory_start_offset":0.0}
 
 class FlyCube(ArenaBase):
+    name = "flycube"
     def __init__(self,args,xdim=0.63,ydim=0.35,zdim=0.4):
         self.xdim=xdim
         self.ydim=ydim
