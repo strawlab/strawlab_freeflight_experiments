@@ -64,9 +64,14 @@ class ConditionCompat(OrderedDict):
 
     #make sure any named groups are named identically to the expected
     #fields in the experiment condition yaml file
-    ROTATION_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}$")
+
+    #https://regex101.com/r/tN5mQ4/1
+    ROTATION_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?$")
+
     CONFLICT_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)(?:/[\d.+-]+){1,5}/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
+
     PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
+
     CONFINE_RE = re.compile("(?P<stimulus_filename>[\w.]+\.osg)/(?P<x0>[\d.+-]+)/(?P<y0>[\d.+-]+)/(?P<lag>[\d.+-]+)$")
 
     def __init__(self, slash_string):
