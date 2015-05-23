@@ -54,14 +54,14 @@ python scripts/movies/movie-osgfile-virtualworld.py \
     --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3 \
     --outdir $TDIR
 
-##gopro osg file and gopro camera
-python scripts/movies/movie-osgfile-virtualworld.py \
-    --arena flycave \
-    --uuid 39665d18d81011e292be6c626d3a008a \
-    --movie-file '/mnt/storage/GOPROVIDFRAMES/39665d18d81011e292be6c626d3a008a|60.0|1371559150.51' \
-    --idfilt 16 \
-    --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3 \
-    --outdir $TDIR
+###gopro osg file and gopro camera
+#python scripts/movies/movie-osgfile-virtualworld.py \
+#    --arena flycave \
+#    --uuid 39665d18d81011e292be6c626d3a008a \
+#    --movie-file '/mnt/storage/GOPROVIDFRAMES/39665d18d81011e292be6c626d3a008a|60.0|1371559150.51' \
+#    --idfilt 16 \
+#    --osgdesc L.osgt/0.0,0.0,0.29/0.1,0.1,0.3 \
+#    --outdir $TDIR
 
 ##render conflict stimulus with post
 python scripts/movies/movie-osgfile-virtualworld.py \
