@@ -107,7 +107,8 @@ if __name__=='__main__':
 
                 name = analysislib.combine.safe_condition_string(current_condition)
 
-                if args.save_plot:
+
+                if args.save_plot or args.save_animation:
                     filename = combine.get_plot_filename("%s_%s_%s" % (obj_id, framenumber0, name))
                 else:
                     filename = '/tmp/trajectory_viewer'
