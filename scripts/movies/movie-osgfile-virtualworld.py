@@ -346,7 +346,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
         pixel = np.ones((xyz.shape[0],2),dtype=xyz.dtype)
         pixel.fill(np.nan)
 
-    print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
+    print "trajectory ranges from %f to %f (framenumber: %d)" % (timestamps[0], timestamps[-1], framenumber0)
 
     if fmf is not None:
         fmftimestamps = fmf.get_all_timestamps()
@@ -512,6 +512,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
             canv.save()
 
             if not ok:
+                print "err", imgfname
                 os.unlink(imgfname)
 
     pbar.finish()
