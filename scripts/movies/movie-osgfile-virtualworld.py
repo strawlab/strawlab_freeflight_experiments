@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import tables
 import numpy as np
+import pandas as pd
 import scipy.misc
 import cv2
 import sys
@@ -47,17 +48,38 @@ MARGIN = 0
 class _SafePubMixin:
 
     def pub_scalar(self, pub, val):
-        if not np.isnan(val):
+        if not pd.isnull(val):
             pub.publish(val)
 
+    def pub_scalar_safe(self, pub, row, name):
+        try:
+            self.pub_scalar(pub, row[name])
+        except KeyError:
+            pass
+
     def pub_vector(self, pub, v1, v2, v3):
-        if (not np.isnan(v1)) and (not np.isnan(v2)) and (not np.isnan(v3)):
+        if (not pd.isnull(v1)) and (not pd.isnull(v2)) and (not pd.isnull(v3)):
             pub.publish(v1,v2,v3)
 
+    def pub_vector_safe(self, pub, row, n1, n2, n3):
+        try:
+            self.pub_vector(pub, row[n1], row[n2], row[n3])
+        except KeyError:
+            pass
 
-class StimulusCylinder(flyvr.display_client.OSGFileStimulusSlave, _SafePubMixin):
-    def __init__(self, dsc, fname, radius):
-        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinder')
+    def pub_pose(self, pub, x, y, z, w=1.0):
+        if any(pd.isnull(i) for i in (x,y,z,w)):
+            return
+        msg = geometry_msgs.msg.Pose()
+        msg.position.x = x
+        msg.position.y = y
+        msg.position.z = z
+        msg.orientation.w = w
+        pub.publish(msg)
+
+class StimulusCylinderAndModel(flyvr.display_client.StimulusSlave, _SafePubMixin):
+    def __init__(self, dsc, cyl_fname, radius, model_fname, model_oxyz):
+        flyvr.display_client.StimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
 
         self.pub_rotation = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION,
                 std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
@@ -76,16 +98,36 @@ class StimulusCylinder(flyvr.display_client.OSGFileStimulusSlave, _SafePubMixin)
         self.pub_cyl_height = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_HEIGHT,
                 std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
 
+        self.pub_model_filename = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_FILENAME,
+            std_msgs.msg.String, latch=True, tcp_nodelay=True)
+        self.pub_model_scale = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_SCALE,
+            geometry_msgs.msg.Vector3, latch=True)
+        self.pub_model_centre = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_POSITION,
+            geometry_msgs.msg.Pose, latch=True)
+
         self._radius = radius
 
-        self.pub_image.publish(fname)
+        if model_fname:
+            self.pub_model_filename.publish(model_fname)
+        else:
+            self.pub_model_filename.publish('/dev/null')
+        if model_oxyz:
+            x,y,z = model_oxyz
+            self.pub_pose(self.pub_model_centre,x,y,z)
+        else:
+            self.pub_pose(self.pub_model_centre,0.,0.,0.)
+
+        self.pub_image.publish(cyl_fname)
         self.pub_cyl_radius.publish(radius)
         self.pub_rotation.publish(0)
         self.pub_v_offset_value.publish(0)
 
     def set_state(self, row):
-        self.pub_scalar(self.pub_rotation_velocity, row['rotation_rate'])
-        self.pub_scalar(self.pub_v_offset_rate, row['v_offset_rate'])
+        self.pub_scalar_safe(self.pub_rotation_velocity, row, 'rotation_rate')
+        self.pub_scalar_safe(self.pub_v_offset_rate, row, 'v_offset_rate')
         self.pub_vector(self.pub_cyl_centre,row['cyl_x'],row['cyl_y'],0)
         try:
             cr = abs(row['cyl_r'])
@@ -94,20 +136,8 @@ class StimulusCylinder(flyvr.display_client.OSGFileStimulusSlave, _SafePubMixin)
         self.pub_scalar(self.pub_cyl_radius, cr)
         self.pub_scalar(self.pub_cyl_height, 5.0*cr)
 
-class StimulusCylinderAndModel(flyvr.display_client.OSGFileStimulusSlave):
-    def __init__(self, dsc, fname, oxyz):
-        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
-        self.set_model_filename(fname)
-        self.set_model_origin(oxyz)
+        self.pub_scalar_safe(self.pub_model_filename, row, 'model_filename')
 
-        self.pub_rotation_velocity = rospy.Publisher(
-            self.dsc.name+'/' + TOPIC_CYL_ROTATION_RATE,
-            std_msgs.msg.Float32, latch=False, tcp_nodelay=True)
-
-    def set_state(self, row):
-        rrate = row['rotation_rate']
-        if not np.isnan(rrate):
-            self.pub_rotation_velocity.publish(rrate)
 
 class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
     def __init__(self, dsc, fname, oxyz, sxyz):
