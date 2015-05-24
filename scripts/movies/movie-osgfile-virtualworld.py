@@ -179,35 +179,56 @@ def get_stimulus_from_osgdesc(dsc, osgdesc):
     return StimulusOSGFile(dsc,fname,map(float,oxyz.split(',')),map(float,sxyz.split(',')))
 
 def get_stimulus_from_condition(dsc, condition_obj):
-    if condition_obj.is_type('confine','post','kitchen'):
-        fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
-        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
-        sxyz = (1.,1.,1.)
-        return StimulusOSGFile(dsc,fname,oxyz,sxyz)
+    print "guessing best stimulus for", condition_obj
+
+    if condition_obj.is_type('rotation','conflict'):
+        return StimulusCylinderAndModel(dsc,
+                                str(condition_obj['cylinder_image']),
+                                abs(float(condition_obj['radius_when_locked'])),
+                                model_fname='',
+                                model_oxyz=None)
     elif condition_obj.is_type('conflict'):
         #the conflict format for this is
         #justpost1.osg|-0.15|0.25|0.0
         model_descriptor = condition_obj['model_descriptor']
-        fname,x,y,z = model_descriptor.split('|')
-        return StimulusCylinderAndModel(dsc,fname,(float(x),float(y),float(z)))
+        model_fname,x,y,z = model_descriptor.split('|')
+        model_oxyz = (float(x),float(y),float(z))
+        return StimulusCylinderAndModel(dsc,
+                                str(condition_obj['cylinder_image']),
+                                abs(float(condition_obj['radius_when_locked'])),
+                                model_fname,
+                                model_oxyz)
+    elif condition_obj.is_type('confine','post','kitchen'):
+        fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
+        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
+        sxyz = (1.,1.,1.)
+        return StimulusOSGFile(dsc,fname,oxyz,sxyz)
     elif condition_obj.is_type('translation'):
         return StimulusStarField(dsc, float(condition_obj['star_size']))
-    elif condition_obj.is_type('rotation'):
-        return StimulusCylinder(dsc,
-                                str(condition_obj['cylinder_image']),
-                                abs(float(condition_obj['radius_when_locked'])))
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
 def get_vr_view(arena, vr_mode, condition, condition_obj):
     # easiest way to get these:
     #   rosservice call /ds_geometry/get_trackball_manipulator_state
+    msg = flyvr.msg.TrackballManipulatorState()
+
     if arena.name == 'fishbowl':
         return None
     elif arena.name == 'flycube':
+        if vr_mode == 'geometry':
+            print "view for flycube2"
+            msg.rotation.x = 0.24170110684
+            msg.rotation.y = 0.114982953086
+            msg.rotation.z = 0.39462520478
+            msg.rotation.w = 0.878993994976
+            msg.center.x = 0.193173855543
+            msg.center.y = -0.120346151292
+            msg.center.z = 0.544801235199
+            msg.distance = 0.551671916976
+            return msg
         return None
     elif arena.name == 'flycave':
-        msg = flyvr.msg.TrackballManipulatorState()
         if vr_mode == 'virtual_world':
             #used for the post movies
             if re.match(".*[Pp]ost.*\.osg.*",condition):
