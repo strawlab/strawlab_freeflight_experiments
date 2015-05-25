@@ -22,9 +22,9 @@ def plot_xyz(fig, frame_number, xhist, yhist, zhist, x, y, z, arena=None):
     ax.plot( xhist, yhist, zhist, 'w-', lw=1.5, alpha=1.0, rasterized=False)
     ax.plot( [x], [y], [z], 'ro', rasterized=False )
 
-    ax.set_xlabel('')    
-    ax.set_ylabel('')    
-    ax.set_zlabel('')    
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_zlabel('')
 
     if arena is not None:
         arena.plot_mpl_3d(ax, 'r-', lw=2, alpha=0.5)
@@ -52,7 +52,7 @@ def plot_xyz(fig, frame_number, xhist, yhist, zhist, x, y, z, arena=None):
     #    a.pane.set_color((0.3, 0.3, 0.3, 1.0))
 
     fig.patch.set_facecolor('none')
-    #fig.tight_layout() 
+    #fig.tight_layout()
 
 
 class MovieMaker:
@@ -80,7 +80,7 @@ class MovieMaker:
         sh.mplayer("mf://%s/frame*.png" % self.tmpdir,
                    "-mf", "fps=%d" % self.fps,
                    "-vo", "yuv4mpeg:file=%s/movie.y4m" % self.tmpdir,
-                   "-ao", "null", 
+                   "-ao", "null",
                    "-nosound", "-noframedrop", "-benchmark", "-nolirc"
         )
 
