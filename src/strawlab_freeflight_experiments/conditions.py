@@ -68,7 +68,8 @@ class ConditionCompat(OrderedDict):
     #https://regex101.com/r/tN5mQ4/1
     ROTATION_RE = re.compile("^(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?$")
 
-    CONFLICT_RE = re.compile("^(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)(?:/[\d.+-]+){1,5}/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
+    #https://regex101.com/r/eZ7aE5/1
+    CONFLICT_RE = re.compile("^(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
 
     PERTURB_RE = re.compile("^\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
 
