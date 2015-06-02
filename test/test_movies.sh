@@ -3,6 +3,7 @@
 set -e
 
 TDIR=$(mktemp -d)
+export NOSETEST_FLAG=1
 
 python scripts/movies/movie-2up-trajectory.py \
     --calibration ~/ros-flycave.electric.boost1.46/flycave/calibration/flycube2/Basler_21017221.bag \
