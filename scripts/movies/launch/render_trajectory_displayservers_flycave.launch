@@ -1,0 +1,69 @@
+<launch>
+  <node name="ds_virtual_world" pkg="flyvr" type="display_server" args="--mode=virtual_world --observer_radius -0.015">
+
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
+    <rosparam>
+geom:
+  axis: {x: 0.0, y: 0.0, z: 1.0}
+  base: {x: 0.0, y: 0.0, z: 0.0}
+  model: cylinder
+  radius: 0.5
+    </rosparam>
+
+    <remap from="pose" to="ds_virtual_world/pose"/>
+
+    <remap from="model_scale" to="ds_virtual_world/model_scale"/>
+    <remap from="model_pose" to="ds_virtual_world/model_pose"/>
+    <remap from="stimulus_filename" to="ds_virtual_world/stimulus_filename"/>
+
+    <remap from="model_filename" to="ds_virtual_world/model_filename"/>
+
+    <remap from="cylinder_rotation" to="ds_virtual_world/cylinder_rotation"/>
+    <remap from="cylinder_rotation_rate" to="ds_virtual_world/cylinder_rotation_rate"/>
+    <remap from="cylinder_v_offset_value" to="ds_virtual_world/cylinder_v_offset_value"/>
+    <remap from="cylinder_v_offset_rate" to="ds_virtual_world/cylinder_v_offset_rate"/>
+    <remap from="cylinder_image" to="ds_virtual_world/cylinder_image"/>
+    <remap from="cylinder_centre" to="ds_virtual_world/cylinder_centre"/>
+    <remap from="cylinder_radius" to="ds_virtual_world/cylinder_radius"/>
+    <remap from="cylinder_height" to="ds_virtual_world/cylinder_height"/>
+
+    <remap from="star_velocity" to="ds_virtual_world/star_velocity"/>
+    <remap from="star_size" to="ds_virtual_world/star_size"/>
+
+  </node>
+
+  <node name="ds_geometry" pkg="flyvr" type="display_server" args="--mode=geometry --observer_radius -0.015">
+
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
+    <rosparam>
+geom:
+  axis: {x: 0.0, y: 0.0, z: 1.0}
+  base: {x: 0.0, y: 0.0, z: 0.0}
+  model: cylinder
+  radius: 0.5
+    </rosparam>
+
+    <remap from="pose" to="ds_geometry/pose"/>
+
+    <remap from="model_scale" to="ds_geometry/model_scale"/>
+    <remap from="model_pose" to="ds_geometry/model_pose"/>
+    <remap from="stimulus_filename" to="ds_geometry/stimulus_filename"/>
+
+    <remap from="model_filename" to="ds_geometry/model_filename"/>
+
+    <remap from="cylinder_rotation" to="ds_geometry/cylinder_rotation"/>
+    <remap from="cylinder_rotation_rate" to="ds_geometry/cylinder_rotation_rate"/>
+    <remap from="cylinder_v_offset_value" to="ds_geometry/cylinder_v_offset_value"/>
+    <remap from="cylinder_v_offset_rate" to="ds_geometry/cylinder_v_offset_rate"/>
+    <remap from="cylinder_image" to="ds_geometry/cylinder_image"/>
+    <remap from="cylinder_centre" to="ds_geometry/cylinder_centre"/>
+    <remap from="cylinder_radius" to="ds_geometry/cylinder_radius"/>
+    <remap from="cylinder_height" to="ds_geometry/cylinder_height"/>
+
+    <remap from="star_velocity" to="ds_geometry/star_velocity"/>
+    <remap from="star_size" to="ds_geometry/star_size"/>
+
+
+  </node>
+
+</launch>

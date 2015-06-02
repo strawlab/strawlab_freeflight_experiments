@@ -5,6 +5,7 @@ import numpy as np
 import threading
 import argparse
 import os.path
+import collections
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -19,11 +20,14 @@ from geometry_msgs.msg import Vector3, Pose, Polygon
 from ros_flydra.msg import flydra_mainbrain_super_packet
 
 import flyflypath.transform
+import flyflypath.model
 import nodelib.node
 import nodelib.visualization
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
+
+Pos = collections.namedtuple('Pos', ('x', 'y', 'z'))
 
 pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
@@ -41,6 +45,8 @@ START_Z         = 0.5
 Z_MINIMUM = 0.00
 Z_MAXIMUM = 0.95
 
+WRAP_MODEL_H_Z      = 5.0
+
 TIMEOUT             = 0.5
 
 XFORM = flyflypath.transform.SVGTransform()
@@ -48,7 +54,7 @@ XFORM = flyflypath.transform.SVGTransform()
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("stimulus_filename","startr"))
+                                   state=("stimulus_filename","svg_filename","startr","stopr","startbuf","stopbuf","x0","y0","z0","sx","sy","sz"))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusOSGFile')
@@ -56,6 +62,7 @@ class Node(nodelib.node.Experiment):
         self.pub_stimulus = rospy.Publisher('stimulus_filename', String, latch=True, tcp_nodelay=True)
         self.pub_lag = rospy.Publisher('extra_lag_msec', Float32, latch=True, tcp_nodelay=True)
         self.pub_model_pose = rospy.Publisher('model_pose', Pose, latch=True, tcp_nodelay=True)
+        self.pub_model_scale = rospy.Publisher('model_scale', Vector3, latch=True, tcp_nodelay=True)
 
         self.trigarea_pub = rospy.Publisher('trigger_area', Polygon, latch=True, tcp_nodelay=True)
 
@@ -81,6 +88,7 @@ class Node(nodelib.node.Experiment):
         self.src_pub = rospy.Publisher("source", Vector3)
         self.ack_pub = rospy.Publisher("active", Bool)
 
+        self._z00 = 0.0
         self.switch_conditions()
 
         rospy.Subscriber("flydra_mainbrain/super_packets",
@@ -91,9 +99,18 @@ class Node(nodelib.node.Experiment):
         msg = Pose()
         msg.position.x = self.x0
         msg.position.y = self.y0
-        msg.position.z = 0.0
+        msg.position.z = self.z0
         msg.orientation.w = 1
         return msg
+
+    def _get_trigger_area(self):
+        if self.hitm_start is not None:
+            x,y = self.hitm_start.points
+            return nodelib.visualization.get_trigger_volume_polygon(XFORM,zip(x,y))
+        else:
+            return nodelib.visualization.get_circle_trigger_volume_polygon(
+                                        XFORM,
+                                        self.startr,self.x0,self.y0)
 
     def switch_conditions(self):
 
@@ -102,23 +119,101 @@ class Node(nodelib.node.Experiment):
         self.stimulus_filename = str(self.condition['stimulus_filename'])
         self.x0                = float(self.condition['x0'])
         self.y0                = float(self.condition['y0'])
-        self.lag               = float(self.condition['lag'])
-        self.startr            = float(self.condition['start_radius'])
+        try:
+            self._z00          = float(self.condition['z0'])
+        except KeyError:
+            self._z00          = 0.0
 
+        self.lag               = float(self.condition.get('lag',0.0))
+
+        sx =                float(self.condition.get('sx',1.0))
+        sy =                float(self.condition.get('sy',1.0))
+        sz =                float(self.condition.get('sz',1.0))
+        self.pub_model_scale.publish(sx,sy,sz)
+
+        try:
+            self.startr        = float(self.condition['start_radius'])
+        except KeyError:
+            self.startr        = None
+        try:
+            self.stopr         = float(self.condition['stop_radius'])
+        except KeyError:
+            self.stopr         = None
+
+        try:
+            #we can optionally move the model down vertically
+            self.model_pose_voffset = float(self.condition['model_pose_voffset'])
+            if self.model_pose_voffset > 0:
+                raise Exception("NOT TESTED")
+        except:
+            self.model_pose_voffset = 0.0
+
+        #settings related to the svg path which defines the confinement or lock on/off region
+        try:
+            svg_filename       = str(self.condition['svg_filename'])
+            svg_path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
+        except KeyError:
+            #conditional and backwards compatible handling for specifying start and
+            #stop conditions relative to a buffer around the svg
+            svg_path = os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4])
+            if os.path.isfile(svg_path):
+                svg_filename = os.path.basename(svg_path)
+            else:
+                svg_filename = None
+
+        #settings related to a lock on region defined as a buffer around svg_filename
+        try:
+            startbuf            = float(self.condition['start_buffer'])
+            self.hitm_start     = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=startbuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError), e:
+            startbuf            = None
+            self.hitm_start     = None
+
+        #settings related to a lock off region defined as a buffer around svg_filename
+        try:
+            stopbuf             = float(self.condition['stop_buffer'])
+            self.hitm_stop      = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=stopbuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError):
+            stopbuf             = None
+            self.hitm_stop      = None
+
+        #settings related to a hiding the stimulus when the fly exceeds a
+        #region defined as a buffer around svg_filename
+        try:
+            hidebuf             = float(self.condition['hide_buffer'])
+            self.hitm_hide      = flyflypath.model.HitManager(
+                                        flyflypath.model.MovingPointSvgPath(svg_path),
+                                        transform_to_world=True, validate=True, scale=hidebuf)
+        except (KeyError,ValueError,flyflypath.model.SvgError):
+            hidebuf             = None
+            self.hitm_hide      = None
+
+        desc = "start: %s stop: %s" % (('r=%s' % self.startr) if self.startr is not None else \
+                                       ('%s +/- %s' % (svg_filename, startbuf if startbuf is not None else 0)),
+                                       ('r=%s' % self.stopr) if self.stopr is not None else \
+                                       ('%s +/- %s' % (svg_filename, stopbuf if stopbuf is not None else 0)))
+
+        self.log.x0 = self.x0
+        self.log.y0 = self.y0
 
         self.log.stimulus_filename = self.stimulus_filename
+        self.log.svg_filename = svg_filename
         self.log.startr = self.startr
+        self.log.stopr = self.stopr
+        self.log.startbuf = startbuf
+        self.log.stopbuf = stopbuf
 
         self.pub_lag.publish(self.lag)
         self.pub_model_pose.publish( self.get_model_pose_msg() )
-        self.svg_pub.publish(os.path.join(pkg_dir,"data","svgpaths",self.stimulus_filename[:-4]))
-        self.trigarea_pub.publish(
-                nodelib.visualization.get_circle_trigger_volume_polygon(
-                                        XFORM,
-                                        self.startr,self.x0,self.y0)
-        )
+        self.svg_pub.publish(svg_path)
 
-        rospy.loginfo('condition: %s (%f,%f)' % (self.condition.name,self.x0,self.y0))
+        self.trigarea_pub.publish( self._get_trigger_area() )
+
+        rospy.loginfo('condition: %s (%f,%f) %s' % (self.condition.name,self.x0,self.y0,desc))
 
 
     def run(self):
@@ -136,16 +231,20 @@ class Node(nodelib.node.Experiment):
             else:
                 now = rospy.get_time()
                 if now-self.last_seen_time > TIMEOUT:
-                    self.drop_lock_on()
+                    self.drop_lock_on('timeout')
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
                 if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
-                    self.drop_lock_on()
+                    self.drop_lock_on('z range')
                     continue
 
                 if np.isnan(fly_x):
                     #we have a race  - a fly to track with no pose yet
+                    continue
+
+                if self.has_left_stop_volume(Pos(fly_x,fly_y,fly_z)):
+                    self.drop_lock_on('left volume')
                     continue
 
                 active = True
@@ -162,17 +261,27 @@ class Node(nodelib.node.Experiment):
                     self.last_check_flying_time = now
                     self.fly_dist = 0
                     if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
-                        self.drop_lock_on()
-                        rospy.loginfo('SLOW: too slow (%.3f < %.3f m/s)' % (fly_dist/FLY_DIST_CHECK_TIME, FLY_DIST_MIN_DIST/FLY_DIST_CHECK_TIME))
+                        self.drop_lock_on('slow')
                         continue
 
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 self.src_pub.publish(px,py,fly_z)
 
-            #don't need to record anything at the control rate
-            #self.log.framenumber = framenumber
-            #self.log.update()
+            if active:
 
+                if self.hitm_hide is not None:
+                    if not self.hitm_hide.contains(fly_x, fly_y):
+                        self.pub_stimulus.publish( HOLD_COND )
+
+                dz = self.model_pose_voffset / CONTROL_RATE
+                self.z0 = (self.z0 + dz) % -WRAP_MODEL_H_Z
+                self.pub_model_pose.publish( self.get_model_pose_msg() )
+
+                self.log.z0 = self.z0
+
+            #new combine needs data recorded at the framerate
+            self.log.framenumber = framenumber
+            self.log.update()
 
             self.ack_pub.publish(active)
 
@@ -180,13 +289,28 @@ class Node(nodelib.node.Experiment):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def is_in_trigger_volume(self,pos):
+    def _is_in_circle_at_origin(self,pos,rad):
         c = np.array( (self.x0,self.y0) )
         p = np.array( (pos.x, pos.y) )
         dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < self.startr) and (abs(pos.z-START_Z) < START_ZDIST):
+        if (dist < rad) and (abs(pos.z-START_Z) < START_ZDIST):
             return True
         return False
+
+    def is_in_trigger_volume(self,pos):
+        if self.hitm_start is not None:
+            return self.hitm_start.contains(pos.x, pos.y)
+        else:
+            return self._is_in_circle_at_origin(pos,self.startr)
+
+    def has_left_stop_volume(self,pos):
+        if self.hitm_stop is not None:
+            return not self.hitm_stop.contains(pos.x, pos.y)
+        else:
+            if self.stopr is not None:
+                return not self._is_in_circle_at_origin(pos,self.stopr)
+            else:
+                return False
 
     def on_flydra_mainbrain_super_packets(self,data):
         now = rospy.get_time()
@@ -215,17 +339,22 @@ class Node(nodelib.node.Experiment):
             self.log.lock_object = obj.obj_id
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
+            self.fly = obj.position
 
+        self.z0 = self._z00
+        self.log.z0 = self.z0
+
+        self.pub_model_pose.publish( self.get_model_pose_msg() )        
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
 
-    def drop_lock_on(self):
+    def drop_lock_on(self, reason=''):
         with self.trackinglock:
             old_id = self.currently_locked_obj_id
             now = rospy.get_time()
             dt = now - self.first_seen_time
 
-            rospy.loginfo('dropping locked object %s (tracked for %.1f)' % (old_id, dt))
+            rospy.loginfo('dropping locked object %s %s (tracked for %.1f)' % (old_id,reason,dt))
 
             self.currently_locked_obj_id = None
 
@@ -234,6 +363,9 @@ class Node(nodelib.node.Experiment):
 
         if (dt > 30) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
+
+        self.z0 = self._z00
+        self.log.z0 = self.z0
 
         self.pub_stimulus.publish( HOLD_COND )
         self.update()        

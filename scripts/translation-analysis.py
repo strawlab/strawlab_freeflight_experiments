@@ -20,12 +20,16 @@ import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
+    parser.add_argument(
+        "--plot-rcurve-cont", action="store_true")
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+    if args.plot_rcurve_cont:
+        combine.add_feature(column_name='rcurve_cont')
     combine.add_from_args(args)
 
     fname = combine.fname

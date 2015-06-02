@@ -60,12 +60,12 @@ def draw_flycube2(ax):
              alpha=0.0001,
              markersize=0.0001 )
 
-def doit(combine, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
     h5_file = combine.h5_file
 
     arena = analysislib.arenas.get_arena_from_args(args)
 
-    df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+    df,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
 
     if show_values:
         valid = df.fillna(method='ffill')
@@ -211,13 +211,7 @@ def doit(combine, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, sho
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser(
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none',
-                    trajectory_start_offset=0.0)
+    parser = analysislib.args.get_parser(disable_filters=True)
 
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
@@ -241,8 +235,8 @@ if __name__ == "__main__":
         '--show-values', type=str, default='',
         help='comma separated list of extra colums to display')
     parser.add_argument(
-        '--condition', type=str,
-        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
+        '--framenumber0', type=int, default=None,
+        help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
 
     args = parser.parse_args()
     analysislib.args.check_args(parser, args, max_uuids=1)
@@ -277,7 +271,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(combine, fmf_fname, obj_id, args.condition, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
+            doit(combine, args, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
         except IOError, e:
             print "missing file", e
         except ValueError, e:

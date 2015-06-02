@@ -9,6 +9,9 @@ import cPickle as pickle
 import pandas
 import numpy as np
 import matplotlib.mlab
+import matplotlib.collections
+import matplotlib.patches
+import matplotlib.colorbar
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.colors as colors
@@ -37,6 +40,144 @@ LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 9
 
 OUTSIDE_LEGEND = True
+
+def colorline(ax,x,y,v,linewidth=1, colormap='jet', norm=None, zorder=1, alpha=1, linestyle='solid', cmap=None):
+    """
+    Plot a line in x and y with changing colors defined by v, and optionally changing linewidths defined by linewidth
+    """
+
+    if cmap is None:
+        cmap = plt.get_cmap(colormap)
+
+    if type(linewidth) is list or type(linewidth) is np.array or type(linewidth) is np.ndarray:
+        linewidths = linewidth
+    else:
+        linewidths = np.ones_like(v)*linewidth
+
+    if norm is None:
+        norm = plt.Normalize(np.min(v), np.max(v))
+    else:
+        norm = plt.Normalize(norm[0], norm[1])
+
+    # Create a set of line segments so that we can color them individually
+    # This creates the points as a N x 1 x 2 array so that we can stack points
+    # together easily to get the segments. The segments array for line collection
+    # needs to be numlines x points per line x 2 (x and y)
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    # Create the line collection object, setting the colormapping parameters.
+    # Have to set the actual values used for colormapping separately.
+    lc = matplotlib.collections.LineCollection(segments, linewidths=linewidths, cmap=cmap, norm=norm, zorder=zorder, alpha=alpha, linestyles=linestyle )
+    lc.set_array(v)
+    lc.set_linewidth(linewidth)
+
+    ax.add_collection(lc)
+
+    return lc
+
+def get_wedges_for_heading_plot(x, y, color, orientation, size_radius=0.1, size_angle=20, colormap='jet', colornorm=None, size_radius_range=(0.01,.1), size_radius_norm=None, edgecolor='none', alpha=1, flip=True, deg=True, nskip=0, center_offset_fraction=0.75):
+    '''
+    Returns a Patch Collection of Wedges, with arbitrary color and orientation
+
+    Outputs:
+    Patch Collection
+
+    Inputs:
+    x, y        - x and y positions (np.array or list, each of length N)
+    color       - values to color wedges by (np.array or list, length N), OR color string. 
+       colormap - specifies colormap to use (string, eg. 'jet')
+       norm     - specifies range you'd like to normalize to, 
+                  if none, scales to min/max of color array (2-tuple, eg. (0,1) )
+    orientation - angles are in degrees, use deg=False to convert radians to degrees
+    size_radius - radius of wedge, in same units as x, y. Can be list or np.array, length N, for changing sizes
+       size_radius_norm - specifies range you'd like to normalize size_radius to, if size_radius is a list/array
+                  should be tuple, eg. (0.01, .1)
+    size_angle  - angular extent of wedge, degrees. Can be list or np.array, length N, for changing sizes
+    edgecolor   - color for lineedges, string or np.array of length N
+    alpha       - transparency (single value, between 0 and 1)
+    flip        - flip orientations by 180 degrees, default = True
+    nskip       - allows you to skip between points to make the points clearer, nskip=1 skips every other point
+    center_offset_fraction  - (float in range (0,1) ) - 0 means (x,y) is at the tip, 1 means (x,y) is at the edge
+    '''
+    cmap = plt.get_cmap(colormap)
+
+    # norms
+    if colornorm is None and type(color) is not str:
+        colornorm = plt.Normalize(np.min(color), np.max(color))
+    elif type(color) is not str:
+        colornorm = plt.Normalize(colornorm[0], colornorm[1])
+    if size_radius_norm is None:
+        size_radius_norm = plt.Normalize(np.min(size_radius), np.max(size_radius), clip=True)
+    else:
+        size_radius_norm = plt.Normalize(size_radius_norm[0], size_radius_norm[1], clip=True)
+
+    indices_to_plot = np.arange(0, len(x), nskip+1)
+
+    # fix orientations
+    if type(orientation) is list:
+        orientation = np.array(orientation)
+    if deg is False:
+        orientation = orientation*180./np.pi
+    if flip:
+        orientation += 180
+
+    flycons = []
+    n = 0
+    for i in indices_to_plot:
+        # wedge parameters
+        if type(size_radius) is list or type(size_radius) is np.array or type(size_radius) is np.ndarray: 
+            r = size_radius_norm(size_radius[i])*(size_radius_range[1]-size_radius_range[0]) + size_radius_range[0] 
+        else: r = size_radius
+
+        if type(size_angle) is list or type(size_angle) is np.array or type(size_angle) is np.ndarray: 
+            angle_swept = size_radius[i]
+        else: angle_swept = size_radius
+        theta1 = orientation[i] - size_angle/2.
+        theta2 = orientation[i] + size_angle/2.
+
+        center = [x[i], y[i]]
+        center[0] -= np.cos(orientation[i]*np.pi/180.)*r*center_offset_fraction
+        center[1] -= np.sin(orientation[i]*np.pi/180.)*r*center_offset_fraction
+
+        wedge = matplotlib.patches.Wedge(center, r, theta1, theta2)
+        flycons.append(wedge)
+
+    # add collection and color it
+    pc = matplotlib.collections.PatchCollection(flycons, cmap=cmap, norm=colornorm)
+
+    # set properties for collection
+    pc.set_edgecolors(edgecolor)
+    if type(color) is list or type(color) is np.array or type(color) is np.ndarray:
+        if type(color) is list:
+            color = np.asarray(color)
+        pc.set_array(color[indices_to_plot])
+    else:
+        pc.set_facecolors(color)
+    pc.set_alpha(alpha)
+
+    return pc
+
+def colorline_with_heading(ax, x, y, color, orientation, size_radius=0.1, size_angle=20, colormap='jet', colornorm=None, size_radius_range=(0.01,.1), size_radius_norm=None, edgecolor='none', alpha=1, flip=True, deg=True, nskip=0, use_center='center', show_centers=True, center_offset_fraction=0.75, center_point_size=2):
+    '''
+    Plots a trajectory with colored wedge shapes to indicate orientation. 
+    See function get_wedges_for_heading_plot for details
+
+    Additional options:
+
+    show_centers      - (bool) - show a black dot where the actual point is - shows where the center of the wedge is 
+    center_point_size - markersize for center, if show_centers
+    '''
+
+    pc = get_wedges_for_heading_plot(x, y, color, orientation, size_radius=size_radius, size_angle=size_angle, colormap=colormap, colornorm=colornorm, size_radius_range=size_radius_range, size_radius_norm=size_radius_norm, edgecolor=edgecolor, alpha=alpha, flip=flip, deg=deg, nskip=nskip, center_offset_fraction=center_offset_fraction)
+
+    ax.add_collection(pc)
+
+    if show_centers:
+        indices_to_plot = np.arange(0, len(x), nskip+1)
+        ax.plot(x[indices_to_plot],y[indices_to_plot],'.', color='black', markersize=center_point_size)
+
+    return pc
 
 def _perm_check(args):
     if not strawlab.constants.set_permissions():
@@ -149,14 +290,15 @@ def plot_trial_times(combine, args, name=None):
             prop={'size':LEGEND_TEXT_BIG} if nconds <= 4 else {'size':LEGEND_TEXT_SML}
         )
 
-def make_note(ax, txt, color='k', fontsize=10):
+def make_note(ax, txt, color='k', fontsize=10,**kwargs):
     return ax.text(0.01, 0.99, #top left
                    txt,
                    fontsize=fontsize,
                    horizontalalignment='left',
                    verticalalignment='top',
                    transform=ax.transAxes,
-                   color=color)
+                   color=color,
+                   **kwargs)
 
 def layout_trajectory_plots(ax, arena, in3d):
     arena.plot_mpl_line_2d(ax, 'r-', lw=2, alpha=0.3, clip_on=False )
@@ -233,6 +375,46 @@ def plot_saccades(combine, args, figncols, name=None):
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
 
+def plot_trajectories(ax, r, dt, title, in3d, show_obj_ids, show_starts, show_ends, alpha):
+
+    dur = sum(len(df) for df in r['df'])*dt
+
+    if in3d:
+        for i,df in enumerate(r['df']):
+            xv = df['x'].values
+            yv = df['y'].values
+            zv = df['z'].values
+            ax.plot(xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE)
+            if show_starts:
+                ax.plot(xv[:2], yv[:2], zv[:2], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial start' if i == 0 else '__nolabel__')
+            if show_ends:
+                ax.plot(xv[-2:], yv[-2:], zv[-2:], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial end' if i == 0 else '__nolabel__')
+    else:
+        for i,df in enumerate(r['df']):
+            xv = df['x'].values
+            yv = df['y'].values
+            ax.plot(xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE)
+            if show_starts:
+                ax.plot(xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial start' if i == 0 else '__nolabel__')
+            if show_ends:
+                ax.plot(xv[-1], yv[-1], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE,
+                        label='trial end' if i == 0 else '__nolabel__')
+
+    if show_obj_ids:
+        if in3d:
+            #no 3d text supported
+            pass
+        else:
+            for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
+                ax.text( x0, y0, str(obj_id) )
+
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE)
+    if not in3d:
+        make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
 
 def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
     """
@@ -290,40 +472,52 @@ def plot_traces(combine, args, figncols, in3d, name=None, show_starts=False, sho
             axes.add( ax )
 
             if not r['count']:
-                print "WARNING: NO DATA TO PLOT"
                 continue
 
-            dur = sum(len(df) for df in r['df'])*dt
+            title = combine.get_condition_name(current_condition)
 
-            if in3d:
-                for df in r['df']:
-                    xv = df['x'].values
-                    yv = df['y'].values
-                    zv = df['z'].values
-                    ax.plot( xv, yv, zv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
-            else:
-                for df in r['df']:
-                    xv = df['x'].values
-                    yv = df['y'].values
-                    ax.plot( xv, yv, 'k-', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
-                    if show_starts:
-                        ax.plot( xv[0], yv[0], 'g^', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
-                    if show_ends:
-                        ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=alpha, rasterized=RASTERIZE )
-
-            if args.show_obj_ids:
-                if in3d:
-                    print 'no 3d text'
-                else:
-                    for (x0,y0,obj_id,framenumber0,time0) in r['start_obj_ids']:
-                        ax.text( x0, y0, str(obj_id) )
-
-            ax.set_title(combine.get_condition_name(current_condition), fontsize=TITLE_FONT_SIZE)
-            if not in3d:
-                make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+            plot_trajectories(ax, r, dt, title, in3d, args.show_obj_ids, show_starts, show_ends, alpha)
 
         for ax in axes:
             layout_trajectory_plots(ax, arena, in3d)
+
+        if WRAP_TEXT:
+            fig.canvas.mpl_connect('draw_event', autowrap_text)
+
+def plot_saccades(combine, args, figncols, name=None):
+    figsize = (5.0*figncols,5.0)
+    if name is None:
+        name = '%s_saccades' % combine.fname
+    arena = analysislib.arenas.get_arena_from_args(args)
+    results,dt = combine.get_results()
+    with mpl_fig(name,args,figsize=figsize) as fig:
+        ax = None
+        axes = set()
+        for i,(current_condition,r) in enumerate(results.iteritems()):
+            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
+            axes.add(ax)
+
+            if not r['count']:
+                continue
+
+            title = combine.get_condition_name(current_condition)
+
+            dur = sum(len(df) for df in r['df'])*dt
+
+            for df in r['df']:
+                xv = df['x'].values
+                yv = df['y'].values
+                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=RASTERIZE )
+
+                xs = df['x'].where(df['saccade'].values).dropna()
+                ys = df['y'].where(df['saccade'].values).dropna()
+                ax.plot(xs,ys,'r.')
+
+            ax.set_title(title, fontsize=TITLE_FONT_SIZE)
+            make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
+
+        for ax in axes:
+            layout_trajectory_plots(ax, arena, False)
 
         if WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', autowrap_text)
@@ -395,7 +589,7 @@ def plot_dist_from_origin(combine, args, figsize, name=None):
                 else:
                     spine.set_color('none') # don't draw spine
 
-def plot_histograms(combine, args, figncols, name=None, colorbar=False):
+def plot_histograms(combine, args, figncols, name=None, colorbar=False, nbins=20.0):
     figsize = (5.0*figncols,(2*5.0) + 2)     #2 rows
     if name is None:
         name = '%s.hist' % combine.fname
@@ -409,12 +603,12 @@ def plot_histograms(combine, args, figncols, name=None, colorbar=False):
         x_range = xmax-xmin
         y_range = ymax-ymin
         max_range = max(y_range,x_range)
-        binsize = max_range/20.0
+        binsize = max_range/float(nbins)
         eps = 1e-10
         xbins = np.arange(xmin,xmax+eps,binsize)
         ybins = np.arange(ymin,ymax+eps,binsize)
-        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/20.0)
-        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/20.0)
+        rbins = np.arange(0,max(xmax,ymax)+eps,max(xmax,ymax)/float(nbins))
+        zbins = np.arange(zmin,zmax+eps,(zmax-zmin)/float(nbins))
 
         cmap=plt.get_cmap('jet')
         valmax=0
@@ -704,40 +898,45 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
         if show_filter_args:
             filt_arena = analysislib.arenas.get_arena_from_args(show_filter_args)
-
             trans = mtransforms.blended_transform_factory(_axz.transData, _axz.transAxes)
 
-            filt_valid,filt_cond = filt_arena.apply_geometry_filter(show_filter_args, _df, dt)
+            filters = filt_arena.active_filters
 
-            filt2_valid,filt2_cond = filt_arena.apply_secondary_filter(show_filter_args, _df, dt)
+            filt_cmap = plt.get_cmap('brg')
+            colors = [filt_cmap(i) for i in np.linspace(0,1.0,len(filters))]
 
             lasts = []
-
             i = 0
-            for color,name,cond,valid in (('b','geometry',filt_cond,filt_valid),('g','secondary',filt2_cond,filt2_valid)):
+            di = 1.0/len(filters)
+
+            for filt,color in zip(filters,colors):
+                name = filt.name
+                cond, valid = filt.apply_to_df(_df, dt)
+
                 _axz.fill_between(cond.index.values,
-                                 i, i+0.5,
+                                 i, i+di,
                                  ~cond.values,
                                  edgecolor=color,
                                  facecolor=color,
                                  alpha=0.4, transform=trans)
-                i+=0.5
+
+                i+=di
 
                 #use _cond to draw because we want to plot where the condition is not true
                 _x = _df.loc[~cond,'x']
                 _y = _df.loc[~cond,'y']
-                _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='fail %s filter' % name)
+                _axxy.plot(_x, _y, color=color,marker='.',markeredgecolor='none', linestyle='none',markersize=6, label='FAIL %s' % filt.condition_desc)
 
                 if np.any(valid):
                     last_valid_frame = _df['framenumber'].values[valid][-1]
-                    _axz.axvline(last_valid_frame, color=color, lw=2, label='end of filtered %s' % name)
+                    _axz.axvline(last_valid_frame, color=color, lw=2, label='filter %s' % filt.filter_desc)
                     lasts.append(last_valid_frame)
                 else:
                     #no valid frames, draw line at start
-                    _axz.axvline(_ts[0], color=color, lw=2, label='end of filtered %s' % name)
+                    _axz.axvline(_ts[0], color=color, lw=2, label='no valid data for %s' % name)
 
             if lasts:
-                _axz.axvline(min(lasts), linestyle='--', color='red', lw=2, label='end of filtered trajectory')
+                _axz.axvline(min(lasts), linestyle='--', color='grey', lw=2, label='end of filtered trajectory')
 
             _axxy.set_xlim(1.1*xl0,1.1*xl1)
             _axxy.set_ylim(1.1*yl0,1.1*yl1)

@@ -4,8 +4,12 @@ import unittest
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+import analysislib.args
+import analysislib.arenas as aarenas
 import analysislib.util as autil
+import analysislib.filters as afilters
 from analysislib.combine import check_combine_health
+
 
 def _quiet(combine):
     combine.disable_debug()
@@ -49,7 +53,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 161)
 
@@ -64,7 +68,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 301)
 
@@ -81,7 +85,7 @@ class TestCombineData(unittest.TestCase):
 
         check_combine_health(combine, min_length_f=None)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 71)  # here it says 91
 
@@ -104,7 +108,7 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(self._uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result_proper_coords(self._id, self._framenumber0)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
 
         self.assertEqual(len(df), 57)
 
@@ -121,13 +125,84 @@ class TestCombineData(unittest.TestCase):
 
         combine.add_from_uuid(uuid, **kwargs)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(oid)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(oid)
 
         self.assertEqual(len(df), 881)
         self.assertEqual(df['framenumber'].max(), 801530)
         self.assertEqual(df['framenumber'].values[-1], 801530)
         self.assertEqual(df['framenumber'].min(), 800650)
         self.assertEqual(df['framenumber'].values[0], 800650)
+
+    def test_from_commandline_no_filt(self):
+
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs.update(self.filter_args())
+        parser = analysislib.args.get_parser(**kwargs)
+
+        args = parser.parse_args('')
+        combine = autil.get_combiner_for_args(args)
+        _quiet(combine)
+        combine.add_from_args(args)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self._id, framenumber0=self._framenumber0)
+
+        self.assertEqual(len(df), 301)
+
+    def test_arena_defaults(self):
+
+        fargs = self.filter_args()
+
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs.update(self.filter_args())
+        parser = analysislib.args.get_parser(**kwargs)
+        args = parser.parse_args('')
+        arena = aarenas.get_arena_from_args(args)
+
+        self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
+        self.assertEqual(len(arena.active_filters), 0)
+
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs.update(fargs)
+        kwargs['zfilt'] = 'trim'
+        kwargs['rfilt'] = 'trim'
+        parser = analysislib.args.get_parser(**kwargs)
+        args = parser.parse_args('')
+        arena = aarenas.get_arena_from_args(args)
+
+        self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
+        self.assertEqual(len(arena.active_filters), 2)
+
+        self.assertEqual(args.lenfilt, fargs['lenfilt'])
+        self.assertEqual(args.trajectory_start_offset, fargs['trajectory_start_offset'])
+
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs.update(fargs)
+        kwargs['zfilt'] = 'trim'
+        kwargs['rfilt'] = 'trim'
+        kwargs['trajectory_start_offset'] = 0.1
+        kwargs['disable_filters'] = True
+        parser = analysislib.args.get_parser(**kwargs)
+        args = parser.parse_args('')
+        arena = aarenas.get_arena_from_args(args)
+
+        self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
+        self.assertEqual(len(arena.active_filters), 0)
+
+        self.assertEqual(args.lenfilt, 0)
+        self.assertEqual(args.trajectory_start_offset, 0)
+
+        kwargs = {'arena':'flycube','idfilt':[self._id],'uuid':[self._uuid]}
+        kwargs['disable_filters'] = True
+
+        parser = analysislib.args.get_parser(**kwargs)
+        args = parser.parse_args('')
+        arena = aarenas.get_arena_from_args(args)
+
+        self.assertEqual(len(arena.filters), len(afilters.FILTER_TYPES))
+        self.assertEqual(len(arena.active_filters), 0)
+
+        self.assertEqual(args.lenfilt, 0)
+        self.assertEqual(args.trajectory_start_offset, 0)
 
 if __name__=='__main__':
     unittest.main()

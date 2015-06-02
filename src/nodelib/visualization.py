@@ -24,3 +24,8 @@ def get_circle_trigger_volume_polygon(xform, r, x0, y0):
     pxpy = _get_circle_trigger_volume(xform, r, x0, y0)
     points = [Point32(px,py,0) for px,py in pxpy]
     return Polygon(points=points)
+
+def get_trigger_volume_polygon(xform, xy_points):
+    pxpy = [xform.xy_to_pxpy(p[0],p[1]) for p in xy_points]
+    points = [Point32(px,py,0) for px,py in pxpy]
+    return Polygon(points=points)

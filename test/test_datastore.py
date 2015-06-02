@@ -35,7 +35,7 @@ class TestDataStore(unittest.TestCase):
     def testLoad(self):
         n = self.combine.get_total_trials()
         self.assertEqual(n, 5)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(5)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(5)
         self.assertEqual(len(df), 1908)
 
     def testSingleLoad(self):
@@ -58,7 +58,7 @@ class TestDataStore(unittest.TestCase):
         self.assertTrue(os.path.exists(combine._get_cache_name()))
         combine = autil.get_combiner_for_uuid(self.uuid)
         combine.add_from_uuid(self.uuid, cached=True, reindex=False)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(5)
         self.assertEqual(len(df), 1908)
 
     def testCache2(self):

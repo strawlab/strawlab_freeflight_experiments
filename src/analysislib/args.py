@@ -26,6 +26,7 @@ def _filter_types_args():
 REQUIRED_ARENA_DEFAULTS = ["trajectory_start_offset"]
 
 DATA_MODIFYING_ARGS = [
+    'idfilt',
     'uuid',
     'arena',
     'lenfilt',
@@ -41,6 +42,14 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
             arena = get_arena_from_args(args)
         except ValueError, e:
             self.error(e.message)
+
+        #disable-filters can override
+        if getattr(args,"disable_filters",False):
+            for f in arena.filters:
+                f.disable()
+
+            args.lenfilt = 0
+            args.trajectory_start_offset = 0.0
 
         #for forensics we store all configuration on the args object
         for f in arena.filters:
@@ -122,6 +131,12 @@ def get_parser(*only_these_options, **defaults):
             '--plot-tracking-stats', action='store_true',
             default=defaults.get('no_trackingstats', False),
             help='plot tracking length distribution for all flies in h5 file (takes some time)')
+
+    if not only_these_options or "disable-filters" in only_these_options:
+        parser.add_argument(
+            '--disable-filters', action='store_true',
+            default=defaults.get('disable_filters',False),
+            help='disables all filters (overrides other command line options)')
     for i,desc in FILTER_TYPES.iteritems():
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(
@@ -142,7 +157,7 @@ def get_parser(*only_these_options, **defaults):
             parser.add_argument(
                 '--%sfilt-interval' % i, type=float,
                 default=defaults.get('%sfilt_interval' % i, None),
-                help="when using 'triminterval' filter methods, the length over "\
+                help="when using 'triminterval' filter methods, the number of seconds over "\
                      "which the filter must match in order for data to be trimmed. ")
 
     if not only_these_options or "uuid" in only_these_options:

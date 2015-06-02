@@ -16,15 +16,8 @@ import analysislib.util as autil
 import analysislib.combine as acombine
 
 if __name__=='__main__':
-    parser = analysislib.args.get_parser(
-                    xfilt='none',
-                    yfilt='none',
-                    zfilt='none',
-                    vfilt='none',
-                    rfilt='none',
-                    lenfilt=0,
-                    trajectory_start_offset=0.0
-    )
+    parser = analysislib.args.get_parser(disable_filters=True)
+
     parser.add_argument(
         '--n-longest', type=int, default=100,
         help='save only the N longest trajectories')
@@ -53,7 +46,7 @@ if __name__=='__main__':
             os.makedirs(odir)
 
         for n,(obj_id,l) in enumerate(longest):
-            df,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+            df,dt,(x0,y0,obj_id,framenumber0,start,_condition,uuid) = combine.get_one_result(obj_id, condition)
             dest = os.path.join(odir,'%d' % obj_id)
 
             if args.split_column and (args.split_where is not None):
@@ -63,11 +56,14 @@ if __name__=='__main__':
                 if len(z[0]):
                     fidx = z[0][0]
                     bdf = df.iloc[:fidx]
-                    acombine.write_result_dataframe(dest+"_before", bdf, args.index)
+                    s = acombine.write_result_dataframe(dest+"_before", bdf, args.index)
+                    print "WROTE", s
                     adf = df.iloc[fidx:]
-                    acombine.write_result_dataframe(dest+"_after", adf, args.index)
+                    s = acombine.write_result_dataframe(dest+"_after", adf, args.index)
+                    print "WROTE", s
             else:
-                acombine.write_result_dataframe(dest, df, args.index)
+                s = acombine.write_result_dataframe(dest, df, args.index)
+                print "WROTE", s
 
             if n >= args.n_longest:
                 break

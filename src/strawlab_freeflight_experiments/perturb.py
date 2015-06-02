@@ -15,6 +15,9 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import strawlab_freeflight_experiments.frequency as sfe_frequency
 import analysislib.plots
 
+# see the end of the file for populating this
+PERTURBERS = []
+
 def get_ratio_ragefuncs(*chunks,**kwargs):
     if (len(chunks) < 1) or ((len(chunks) % 2) != 0):
         raise Exception("Chunks must be pairs of ratio ranges")
@@ -37,20 +40,9 @@ def get_perturb_class(perturb_descriptor, debug=False):
         name = perturb_descriptor.split('|')[0]
         name_parts = name.split('_')
         name = name_parts[0]
-        if name == 'step':
-            return PerturberStep
-        elif name == 'stepn':
-            return PerturberStepN
-        elif name == 'chirp':
-            return PerturberChirp
-        elif name == 'multitone':
-            return  PerturberMultiTone
-        elif name == 'tone':
-            return PerturberTone
-        elif name == 'rbs':
-            return PerturberRBS
-        elif name == 'idinput':
-            return PerturberIDINPUT
+        for p in PERTURBERS:
+            if name == p.NAME:
+                return p
     except Exception, e:
         import traceback
         err = '\n' + traceback.format_exc()
@@ -66,7 +58,11 @@ def is_perturb_condition_string(desc):
 def get_perturb_object(perturb_descriptor, debug=False):
     if not perturb_descriptor:
         return NoPerturb()
+
     cls = get_perturb_class(perturb_descriptor, debug=debug)
+    if cls is NoPerturb:
+        return cls
+
     desc,criteria = cls.split_perturb_descriptor(perturb_descriptor)
     return cls(desc,criteria)
 
@@ -79,7 +75,7 @@ def get_perturb_object_from_condition(cond_object):
     except KeyError:
         return get_perturb_object(cond_object.get('perturb_desc'))
 
-class Perturber:
+class Perturber(object):
 
     DEFAULT_CRITERIA = "0.4|0|1"
 
@@ -121,10 +117,14 @@ class Perturber:
         self.duration = float(duration)
         self.reset()
 
+        self.analysis_hints = {}
+
     def __hash__(self):
         return hash((self.descriptor,self.progress))
 
     def __eq__(self, o):
+        if not hasattr(o, 'progress') or not hasattr(o, 'descriptor'):
+            return False
         return (self.progress == o.progress) and (self.descriptor == o.descriptor)
 
     def _get_duration(self, thresh=0.98):
@@ -133,12 +133,28 @@ class Perturber:
     def _get_duration_discrete(self, Fs, thresh=0.98):
         return int(self._get_duration(thresh)*Fs)
 
+    @property
+    def name(self):
+        return self.NAME
+
     @classmethod
     def split_perturb_descriptor(cls, desc):
         bits = desc.split("|",cls.N_PARAMS)
         description = "|".join(bits[:cls.N_PARAMS])
         criteria = bits[cls.N_PARAMS]
         return description, criteria
+
+    @classmethod
+    def check_descriptor(cls, descriptor):
+        if not descriptor.startswith(cls.NAME):
+            raise Exception("Incorrect %s configuration: %s" % (cls, descriptor))
+
+    def get_analysis_hints(self, **defaults):
+        h = self.analysis_hints.copy()
+        for k,v in defaults.iteritems():
+            if v is not None:
+                h[k] = v
+        return h
 
     def get_time_limits(self):
         raise NotImplementedError
@@ -154,9 +170,10 @@ class Perturber:
             return np.nan,np.nan
 
     def get_perturb_range_identifier(self, v):
-        for i,f in enumerate(self.in_ratio_funcs):
-            if f(v):
-                return i
+        if self.criteria_type == self.CRITERIA_TYPE_RATIO:
+            for i,f in enumerate(self.in_ratio_funcs):
+                if f(v):
+                    return i
         return -1
 
     def completed_perturbation(self, t, thresh=0.98):
@@ -235,6 +252,7 @@ class Perturber:
 
 class NoPerturb(Perturber):
 
+    NAME = "noperturb"
     DEFAULT_DESC = "noperturb_WHAT"
     N_PARAMS = 1
 
@@ -260,6 +278,7 @@ class NoPerturb(Perturber):
 
 class PerturberStep(Perturber):
 
+    NAME = "step"
     DEFAULT_DESC = "step_WHAT|1.8|3"
     N_PARAMS = 3
 
@@ -324,6 +343,7 @@ class PerturberStep(Perturber):
 
 class PerturberStepN(Perturber):
 
+    NAME = "stepn"
     DEFAULT_DESC = "stepn_WHAT1_WHAT2|2|1.8|0.9|3"
 
     def __init__(self, descriptor, criteria):
@@ -336,8 +356,7 @@ class PerturberStepN(Perturber):
         value0, value1, ... are the magnitudes
         duration is the duration of the step.
         """
-        if not descriptor.startswith('stepn'):
-            raise Exception("Incorrect PerturberStepN configuration")
+        self.check_descriptor(descriptor)
 
         parts = descriptor.split('|')
         name,n_args=parts[:2]
@@ -476,6 +495,7 @@ class _PerturberInterpolation(Perturber):
 
 class PerturberChirp(_PerturberInterpolation):
 
+    NAME = "chirp"
     DEFAULT_DESC = "chirp_WHAT|linear|1.8|3|1.0|5.0"
     N_PARAMS = 6
 
@@ -489,8 +509,7 @@ class PerturberChirp(_PerturberInterpolation):
         duration is its duration
         f0 and f1 are the frequency limites the signal changes between
         """
-        if not descriptor.startswith('chirp'):
-            raise Exception("Incorrect PerturberChirp configuration %s" % descriptor)
+        self.check_descriptor(descriptor)
 
         name,method,value,t1,f0,f1 = descriptor.split('|')
         self.method = str(method)
@@ -515,6 +534,7 @@ class PerturberChirp(_PerturberInterpolation):
 
 class PerturberTone(_PerturberInterpolation):
 
+    NAME = "tone"
     DEFAULT_DESC = "tone_WHAT|1.8|3|0|3"
     N_PARAMS = 5
 
@@ -529,8 +549,7 @@ class PerturberTone(_PerturberInterpolation):
         freq is the tone frequency (hz)
 
         """
-        if not descriptor.startswith('tone'):
-            raise Exception("Incorrect PerturberTone configuration")
+        self.check_descriptor(descriptor)
 
         name,value,t1,po,f0 = descriptor.split('|')
         self.value = float(value)
@@ -548,6 +567,7 @@ class PerturberTone(_PerturberInterpolation):
 
 class PerturberMultiTone(_PerturberInterpolation):
 
+    NAME = "multitone"
     DEFAULT_DESC = "multitone_WHAT|rudinshapiro|1.8|3|1|5|"
     N_PARAMS = 7
 
@@ -558,8 +578,7 @@ class PerturberMultiTone(_PerturberInterpolation):
 
         seed is the random seen (can be omitted)
         """
-        if not descriptor.startswith('multitone'):
-            raise Exception("Incorrect PerturberMultiTone configuration")
+        self.check_descriptor(descriptor)
 
         name,method,value,t1,tone0,Ntones,seed = descriptor.split('|')
         self.method = str(method)
@@ -587,11 +606,14 @@ class PerturberMultiTone(_PerturberInterpolation):
 
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
+        self.analysis_hints["lookback"] = 4.0
+
     def __repr__(self):
         return "<PerturberMultiTone %s what=%s val=%.1f dur=%.1fs f=%.1f...%.1f>" % (self.method,self.what,self.value,self.duration,self.tone0,self.Ntones)
 
 class PerturberRBS(Perturber):
 
+    NAME = "rbs"
     DEFAULT_DESC = "rbs_WHAT|-0.4|0.4|0.03|3|"
     N_PARAMS = 6
 
@@ -604,8 +626,7 @@ class PerturberRBS(Perturber):
         value is the magnitude of the step
         duration is the duration of the step.
         """
-        if not descriptor.startswith('rbs'):
-            raise Exception("Incorrect PerturberRBS configuration")
+        self.check_descriptor(descriptor)
 
         name,value_min,value_max,bw,duration,seed = descriptor.split('|')
         self.seed = int(seed) if seed else None
@@ -614,6 +635,8 @@ class PerturberRBS(Perturber):
         self.bw = float(bw)
 
         Perturber.__init__(self, descriptor, criteria, duration)
+
+        self.analysis_hints["lookback"] = 0.0
 
         #build a dataframe that we can resample or index into while maintaining
         #the correct seed
@@ -682,8 +705,11 @@ class PerturberRBS(Perturber):
 
 class PerturberIDINPUT(_PerturberInterpolation):
 
+    NAME = "idinput"
     DEFAULT_DESC = "idinput_WHAT|sine|3|0|5|1.8||||1"
     N_PARAMS = 10
+
+    TYPES = ("sine","prbs")
 
     _mlab = None
 
@@ -694,8 +720,7 @@ class PerturberIDINPUT(_PerturberInterpolation):
 
         WHAT is a string specifying what is stepped (e.g. rotation rate, Z, etc.)
         """
-        if not descriptor.startswith('idinput'):
-            raise Exception("Incorrect PerturberIDINPUT configuration")
+        self.check_descriptor(descriptor)
 
         OS = 1.0    #over sample
         FS = 100.0
@@ -761,8 +786,17 @@ class PerturberIDINPUT(_PerturberInterpolation):
 
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
+        if self.type == 'prbs':
+            self.analysis_hints["lookback"] = 0.0
+        else:
+            self.analysis_hints["lookback"] = 4.0
+
     def __repr__(self):
-        return "<PerturberIDINPUT what=%s type=%s dur=%.1fs bw=%f...%f f=%.1f...%.1f>" % (self.what,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
+        return "<PerturberIDINPUT what=%s val=%.1f type=%s dur=%.1fs bw=%.2f...%.2f f=%.1f...%.1f>" % (self.what,self.value,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
+
+    @property
+    def name(self):
+        return self.NAME + self.type
 
 def plot_spectum(ax, obj, fs=100, maxfreq=12):
     if not obj.is_single_valued:
@@ -800,7 +834,8 @@ def plot_perturbation_frequency_characteristics(fig,obj,fs=100,maxfreq=12):
     ax = fig.add_subplot(gs[1,1])
     plot_amp_spectrum(ax, obj, fs, maxfreq)
 
-PERTURBERS = (PerturberStepN, PerturberStep, PerturberChirp, NoPerturb, PerturberTone, PerturberMultiTone, PerturberRBS, PerturberIDINPUT)
+
+PERTURBERS.extend( (PerturberStepN, PerturberStep, PerturberChirp, NoPerturb, PerturberTone, PerturberMultiTone, PerturberRBS, PerturberIDINPUT) )
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

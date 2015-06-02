@@ -44,7 +44,7 @@ class TestFixes(unittest.TestCase):
         self.assertTrue(FIXED_COND in conds)
         self.assertFalse(BROKEN_COND in conds)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(1444)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(1444)
         conds = df['condition'].unique()
 
         self.assertTrue(FIXED_COND in conds)

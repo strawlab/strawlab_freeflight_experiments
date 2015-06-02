@@ -255,6 +255,17 @@ class TestCombineFake(unittest.TestCase):
         self.assertEqual(obj_id, 1)
         self.assertEqual(framenumber0, 1)
 
+    def test_get(self):
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1)
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1, condition='tex0/svg/1.0/1.0/adv/...')
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1, framenumber0=1)
+        self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
+
+
     def test_load(self):
         #be default we have no filter, so we get 300 trials
         self.assertEqual(self.combine.min_num_frames, 0)
@@ -267,7 +278,7 @@ class TestCombineFake(unittest.TestCase):
 
         self.assertRaises(ValueError, self.combine.get_one_result, 0)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = self.combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = self.combine.get_one_result(1)
         self._check_oid1(df,dt,x0,y0,obj_id,framenumber0,time0)
 
         self.assertEqual(time0, self.combine._t0 + self.combine._dt)
@@ -315,7 +326,7 @@ class TestCombineFake2(unittest.TestCase):
                                     wait=False, debug=False, warn=False,
                                     state=log_state)
 
-        cond_obj = Condition(value=1)
+        cond_obj = Condition(value='foo',value2='bar')
         cond_obj.name = 'test'
 
         log.condition = cond_obj
@@ -400,7 +411,7 @@ class TestCombineFake2(unittest.TestCase):
         h5_fname, _ = self._create_h5(500,1,1)
         combine = analysislib.combine.CombineH5()
         combine.add_h5_file(h5_fname)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(1)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(1)
 
         self.assertEqual(len(df),500)
         self.assertEqual(obj_id,1)
@@ -410,22 +421,15 @@ class TestCombineFake2(unittest.TestCase):
 
         parser,args = analysislib.args.get_default_args(
                         outdir=self._tdir,
-                        xfilt='none',
-                        yfilt='none',
-                        zfilt='none',
-                        vfilt='none',
-                        rfilt='none')
+                        disable_filters=True)
 
         for index,csv_rate in itertools.product(('none','framenumber','time','time+1L'),(0.5,2.0)):
             h5_fname, csv_fname = self._create_h5(200,1,csv_rate=csv_rate,framenumber0=14)
             cn = analysislib.util.get_combiner_for_csv(csv_fname)
-            cn.calc_angular_stats = False
-            cn.calc_turn_stats = False
-            cn.calc_linear_stats = False
             cn.set_index(index)
 
             cn.add_csv_and_h5_file(csv_fname, h5_fname, args)
-            dfn,dt,(x0,y0,obj_id,framenumber0,time0) = cn.get_one_result(1)
+            dfn,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = cn.get_one_result(1)
 
             self.assertEqual(obj_id,1)
 
@@ -443,15 +447,7 @@ class TestCombineNonContiguous(unittest.TestCase):
     def _combine_from_csv_h5(self, csv, h5):
         # combine the test csv/h5
         combine = get_combiner_for_csv(csv)
-        combine.calc_turn_stats = False
-        combine.calc_linear_stats = False
-        combine.calc_angular_stats = False
-        _, args = analysislib.args.get_default_args(xfilt='none',
-                                                    yfilt='none',
-                                                    zfilt='none',
-                                                    vfilt='none',
-                                                    rfilt='none',
-                                                    lenfilt=0)
+        _, args = analysislib.args.get_default_args(disable_filters=True)
 
         combine.add_csv_and_h5_file(csv_fname=csv,
                                     h5_file=h5,
@@ -473,15 +469,8 @@ class TestCombineNonContiguous(unittest.TestCase):
         if not op.isfile(csv) or not op.isfile(h5):
             # generate smaller test files we can fit in our repo
             combine = get_combiner_for_uuid(MAX_TEST_UUID)
-            combine.calc_turn_stats = False
-            combine.calc_linear_stats = False
-            combine.calc_angular_stats = False
             combine.add_from_uuid(MAX_TEST_UUID,
-                                  xfilt='none',
-                                  yfilt='none',
-                                  zfilt='none',
-                                  vfilt='none',
-                                  rfilt='none')
+                                  disable_filters=True)
             combine2h5csv(combine,
                           tempdir=DATA_ROOT,
                           columns_for_csv=('stim_x',))

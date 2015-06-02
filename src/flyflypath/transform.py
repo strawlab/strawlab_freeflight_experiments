@@ -35,18 +35,5 @@ class SVGTransform:
         x,y = self.pxpy_to_xy(px,py)
         return x,y,pz
 
-if __name__ == "__main__":
-    XFORM = SVGTransform()
 
-    xy = [(0,0),(0.2,0.4),(-0.3,-0.1)]
-    for x,y in xy:
-        px,py = XFORM.xy_to_pxpy(x,y)
-        _x,_y = XFORM.pxpy_to_xy(px,py)
-        assert x == _x
-        assert y == _y
-
-    m = XFORM.pixel_to_m(20)
-    p = XFORM.m_to_pixel(m)
-
-    assert p == 20
 

@@ -1,5 +1,7 @@
 import numpy as np
 
+from .compute import find_intervals
+
 FILTER_REMOVE = "remove"
 FILTER_TRIM   = "trim"
 FILTER_NOOP   = "none"
@@ -33,7 +35,22 @@ class Filter:
         self.filter_interval = filter_interval
 
     def __repr__(self):
-        return "<Filter %s=%s condition=%s < %s < %s interval=%s >" % (self.name,self.trimspec,self.vmin,self.colname,self.vmax,self.filter_interval)
+        return "<Filter %s condition='%s'>" % (self.filter_desc,self.condition_desc)
+
+    @property
+    def condition_desc(self):
+        return "%s < %s < %s" % (self.vmin,self.colname,self.vmax)
+
+    @property
+    def filter_desc(self):
+        s = "%s=%s" % (self.name, self.trimspec)
+        if self.trimspec == FILTER_TRIM_INTERVAL:
+            s += " (%.1fs)" % self.filter_interval
+        return s
+
+    @property
+    def active(self):
+        return self.trimspec != FILTER_NOOP
 
     @staticmethod
     def from_args_and_defaults(name, args, **defaults):
@@ -49,9 +66,8 @@ class Filter:
                       vmax=_get_val('%s_max' % name,+np.inf),
                       filter_interval=_get_val('%s_interval' % name,0.0))
 
-    @property
-    def active(self):
-        return self.trimspec != 'none'
+    def disable(self):
+        self.trimspec = FILTER_NOOP
 
     def apply_to_df(self, df, dt, source_column=None,dest_column=None):
         colname = source_column if source_column is not None else self.colname
@@ -66,105 +82,6 @@ class Filter:
         setattr(args,self.name+'_min',self.vmin)
         setattr(args,self.name+'_max',self.vmax)
         setattr(args,self.name+'_interval',self.filter_interval)
-
-def crossings(x, threshold=0, after=False):
-    """Returns the indices of the elements before or after crossing a threshold.
-
-    N.B. touching the threshold itself is considered a cross.
-
-    Parameters
-    ----------
-    x: array
-    The data
-
-    threshold: float, default 0
-    Where crossing happens.
-
-    after: bool, default False
-    If True, the indices represent the elements after the cross, if False the elements before the cross.
-
-    Returns
-    -------
-    The indices where crosses happen.
-
-    Examples
-    --------
-
-    >>> print crossings(np.array([0, 1, -1, -1, 1, -1]))
-    [0 1 3 4]
-    >>> print crossings(np.array([0, 1, -1, -1, 1, -1]), after=True)
-    [1 2 4 5]
-    >>> print crossings(np.array([0, 0, 0]))
-    []
-    >>> print crossings(np.array([0, 3, -3, -3, 1]), threshold=1)
-    [0 1 3]
-    >>> print crossings(np.array([0, 3, -3, -3]), threshold=-2.5)
-    [1]
-    """
-    if len(x.shape) > 1:
-        raise Exception('Only 1D arrays, please (you gave me %d dimensions)' % len(x.shape))
-    where_crosses = np.where(np.diff(np.sign(x - threshold)))[0]
-    if after:
-        return where_crosses + 1
-    return where_crosses
-
-def find_intervals(x):
-    """
-    Finds the intervals in which x is True or non-zero.
-
-
-    Returns
-    -------
-    Pairs of indices representing the intervals in which x is True or nonzero.
-    The pairs represent valid python intervals, lower point included, upper point excluded.
-
-
-    Examples
-    --------
-    >>> find_intervals([])
-    []
-    >>> find_intervals([1])
-    [(0, 1)]
-    >>> find_intervals([0, 1])
-    [(1, 2)]
-    >>> find_intervals([0, 0, 1, 1, 0, 0, 1, 1, 0])
-    [(2, 4), (6, 8)]
-    >>> find_intervals([0, 0, 0])
-    []
-    >>> find_intervals([1, 1, 1])
-    [(0, 3)]
-    >>> find_intervals([True, True, True])
-    [(0, 3)]
-    >>> find_intervals([1, 1, 1, 0])
-    [(0, 3)]
-    """
-    # This ugly 6 lines are here because:
-    #   - we allow to pass lists but we need numpy arrays
-    #   - we want to allow both boolean (True, False) arrays and numeric arrays
-    #   - we want to use the crossings function which only accepts numeric arrays
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    if not x.dtype == np.bool:
-        x = x != 0
-    zeros_ones = np.zeros_like(x, dtype=np.int)
-    zeros_ones[x] = 1
-
-    # Find where we change from being in an interval to not being in an interval
-    starts_ends = list(crossings(zeros_ones, after=True))
-
-    # Do we start already in an interval?
-    if len(zeros_ones) > 0 and 1 == zeros_ones[0]:
-        starts_ends = [0] + starts_ends
-
-    # Do we end in an interval?
-    if len(zeros_ones) > 0 and 1 == zeros_ones[-1]:
-        starts_ends = starts_ends + [len(x)]
-
-    assert len(starts_ends) % 2 == 0
-
-    starts = starts_ends[0::2]
-    ends = starts_ends[1::2]
-    return zip(starts, ends)
 
 def filter_cond(method, cond, alldata, filter_interval_frames):
     """

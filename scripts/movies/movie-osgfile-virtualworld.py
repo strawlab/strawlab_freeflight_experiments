@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import tables
 import numpy as np
+import pandas as pd
 import scipy.misc
 import cv2
 import sys
 import os.path
 import tempfile
 import time
+import re
 import collections
 
 import benu.utils
@@ -25,6 +27,7 @@ import camera_model
 roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
 import analysislib.args
+import analysislib.arenas
 import analysislib.movie
 import analysislib.combine
 import analysislib.util
@@ -39,78 +42,197 @@ from strawlab_freeflight_experiments.topics import *
 roslib.load_manifest('flyvr')
 import flyvr.display_client
 
-VR_PANELS = ['virtual_world']
-
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
-class StimulusCylinderAndModel(flyvr.display_client.OSGFileStimulusSlave):
-    #the conflict format for this is
-    #justpost1.osg|-0.15|0.25|0.0
-    def __init__(self, dsc, osg_file_desc):
-        fname,x,y,z = osg_file_desc.split('|')
-        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
-        self.set_model_filename(fname)
-        self.set_model_origin(map(float,(x,y,z)))
+class _SafePubMixin:
 
-        self.pub_rotation_velocity = rospy.Publisher(
-            self.dsc.name+'/' + TOPIC_CYL_ROTATION_RATE,
-            std_msgs.msg.Float32, latch=False, tcp_nodelay=True)
+    def pub_scalar(self, pub, val):
+        if not pd.isnull(val):
+            pub.publish(val)
+
+    def pub_scalar_safe(self, pub, row, name):
+        try:
+            self.pub_scalar(pub, row[name])
+        except KeyError:
+            pass
+
+    def pub_vector(self, pub, v1, v2, v3):
+        if (not pd.isnull(v1)) and (not pd.isnull(v2)) and (not pd.isnull(v3)):
+            pub.publish(v1,v2,v3)
+
+    def pub_vector_safe(self, pub, row, n1, n2, n3):
+        try:
+            self.pub_vector(pub, row[n1], row[n2], row[n3])
+        except KeyError:
+            pass
+
+    def pub_pose(self, pub, x, y, z, w=1.0):
+        if any(pd.isnull(i) for i in (x,y,z,w)):
+            return
+        msg = geometry_msgs.msg.Pose()
+        msg.position.x = x
+        msg.position.y = y
+        msg.position.z = z
+        msg.orientation.w = w
+        pub.publish(msg)
+
+class StimulusCylinderAndModel(flyvr.display_client.StimulusSlave, _SafePubMixin):
+    def __init__(self, dsc, cyl_fname, radius, model_fname, model_oxyz):
+        flyvr.display_client.StimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
+
+        self.pub_rotation = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_rotation_velocity = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION_RATE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_value = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_V_OFFSET_VALUE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_v_offset_rate = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_V_OFFSET_RATE,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_image = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_IMAGE,
+                std_msgs.msg.String, latch=True, tcp_nodelay=True)
+        self.pub_cyl_centre = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_CENTRE,
+                geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
+        self.pub_cyl_radius = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_RADIUS,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_cyl_height = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_HEIGHT,
+                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+
+        self.pub_model_filename = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_FILENAME,
+            std_msgs.msg.String, latch=True, tcp_nodelay=True)
+        self.pub_model_scale = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_SCALE,
+            geometry_msgs.msg.Vector3, latch=True)
+        self.pub_model_centre = rospy.Publisher(
+            self.dsc.name+'/' + TOPIC_MODEL_POSITION,
+            geometry_msgs.msg.Pose, latch=True)
+
+        self._radius = radius
+
+        if model_fname:
+            self.pub_model_filename.publish(model_fname)
+        else:
+            self.pub_model_filename.publish('/dev/null')
+        if model_oxyz:
+            x,y,z = model_oxyz
+            self.pub_pose(self.pub_model_centre,x,y,z)
+        else:
+            self.pub_pose(self.pub_model_centre,0.,0.,0.)
+
+        self.pub_image.publish(cyl_fname)
+        self.pub_cyl_radius.publish(radius)
+        self.pub_rotation.publish(0)
+        self.pub_v_offset_value.publish(0)
 
     def set_state(self, row):
-        rrate = row['rotation_rate']
-        if not np.isnan(rrate):
-            self.pub_rotation_velocity.publish(rrate)
+        self.pub_scalar_safe(self.pub_rotation_velocity, row, 'rotation_rate')
+        self.pub_scalar_safe(self.pub_v_offset_rate, row, 'v_offset_rate')
+        self.pub_vector(self.pub_cyl_centre,row['cyl_x'],row['cyl_y'],0)
+        try:
+            cr = abs(row['cyl_r'])
+        except KeyError:
+            cr = self._radius
+        self.pub_scalar(self.pub_cyl_radius, cr)
+        self.pub_scalar(self.pub_cyl_height, 5.0*cr)
+
+        self.pub_scalar_safe(self.pub_model_filename, row, 'model_filename')
+
 
 class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
-    #the format string for this looks like
-    #L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
-    def __init__(self, dsc, osg_file_desc):
-        fname,oxyz,sxyz = osg_file_desc.split('/')
+    def __init__(self, dsc, fname, oxyz, sxyz):
         flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc)
         self.set_model_filename(fname)
-        self.set_model_origin(map(float,oxyz.split(',')))
-        self.set_model_scale(map(float,sxyz.split(',')))
+        self.set_model_origin(oxyz)
+        self.set_model_scale(sxyz)
 
     def set_state(self, row):
         pass
 
-STIMULUS_CLASS_MAP = {
-    "StimulusOSGFile":StimulusOSGFile,
-    "StimulusCylinderAndModel":StimulusCylinderAndModel
-}
+class StimulusStarField(flyvr.display_client.OSGFileStimulusSlave):
+    def __init__(self, dsc, star_size):
+        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusStarField')
+        self.pub_velocity = rospy.Publisher(
+                                self.dsc.name+'/' + TOPIC_STAR_VELOCITY,
+                                geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
+        self.pub_size = rospy.Publisher(
+                                self.dsc.name+'/' + TOPIC_STAR_SIZE,
+                                std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
+        self.pub_velocity.publish(0,0,0)
+        self.pub_size.publish(star_size)
 
-def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framenumber, sml, stimname, osg_file_desc, plot):
-    try:
-        combine = analysislib.util.get_combiner_for_args(args)
-        combine.add_from_args(args)
-    except autodata.files.NoFile:
-        combine = analysislib.combine.CombineH5()
-        combine.add_from_args(args)
+    def set_state(self, row):
+        safe_row = row.dropna(how='any', subset=('stim_x','stim_y','stim_z'))
+        try:
+            sx = safe_row['stim_x']
+            sy = safe_row['stim_y']
+            sz = safe_row['stim_z']
+            self.pub_velocity.publish(sx,sy,sz)
+        except:
+            #no value for this row
+            pass
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+def get_stimulus_from_osgdesc(dsc, osgdesc):
+    #the format string for this looks like
+    #L.osgt/0.0,0.0,0.29/0.1,0.1,0.3
+    fname,oxyz,sxyz = osgdesc.split('/')
+    return StimulusOSGFile(dsc,fname,map(float,oxyz.split(',')),map(float,sxyz.split(',')))
 
-    renderers = {}
-    osgslaves = {}
-    for name in VR_PANELS:
-        node = "/ds_%s" % name
-        dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
+def get_stimulus_from_condition(dsc, condition_obj):
+    print "guessing best stimulus for", condition_obj
 
-        stimklass = STIMULUS_CLASS_MAP[stimname]
-        print "rendering vr",name,stimklass
+    if condition_obj.is_type('rotation','conflict'):
+        return StimulusCylinderAndModel(dsc,
+                                str(condition_obj['cylinder_image']),
+                                abs(float(condition_obj['radius_when_locked'])),
+                                model_fname='',
+                                model_oxyz=None)
+    elif condition_obj.is_type('conflict'):
+        #the conflict format for this is
+        #justpost1.osg|-0.15|0.25|0.0
+        model_descriptor = condition_obj['model_descriptor']
+        model_fname,x,y,z = model_descriptor.split('|')
+        model_oxyz = (float(x),float(y),float(z))
+        return StimulusCylinderAndModel(dsc,
+                                str(condition_obj['cylinder_image']),
+                                abs(float(condition_obj['radius_when_locked'])),
+                                model_fname,
+                                model_oxyz)
+    elif condition_obj.is_type('confine','post','kitchen'):
+        fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
+        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
+        sxyz = (1.,1.,1.)
+        return StimulusOSGFile(dsc,fname,oxyz,sxyz)
+    elif condition_obj.is_type('translation'):
+        return StimulusStarField(dsc, float(condition_obj['star_size']))
 
-        renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
-        osgslaves[name] = stimklass(dsc, osg_file_desc)
+    raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
-    # setup camera position
-    for name in VR_PANELS:
-        print "HAVE YOU SET THE CORRECT VIEW????"
-        # easiest way to get these:
-        #   rosservice call /ds_geometry/get_trackball_manipulator_state
-        msg = flyvr.msg.TrackballManipulatorState()
-        if name=='virtual_world':
+def get_vr_view(arena, vr_mode, condition, condition_obj):
+    # easiest way to get these:
+    #   rosservice call /ds_geometry/get_trackball_manipulator_state
+    msg = flyvr.msg.TrackballManipulatorState()
+
+    if arena.name == 'fishbowl':
+        return None
+    elif arena.name == 'flycube':
+        if vr_mode == 'geometry':
+            print "view for flycube2"
+            msg.rotation.x = 0.24170110684
+            msg.rotation.y = 0.114982953086
+            msg.rotation.z = 0.39462520478
+            msg.rotation.w = 0.878993994976
+            msg.center.x = 0.193173855543
+            msg.center.y = -0.120346151292
+            msg.center.z = 0.544801235199
+            msg.distance = 0.551671916976
+            return msg
+        return None
+    elif arena.name == 'flycave':
+        if vr_mode == 'virtual_world':
             #used for the post movies
-            if 1:
+            if re.match(".*[Pp]ost.*\.osg.*",condition):
+                print "view for post movie"
                 msg.rotation.x = -0.0563853703639
                 msg.rotation.y = -0.249313040186
                 msg.rotation.z = -0.959619648636
@@ -119,8 +241,19 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                 msg.center.y = -0.0655635818839
                 msg.center.z = 0.54163891077
                 msg.distance = 1.26881285595
+            elif re.match(".*kitchen_[ab].*\.osgt.*",condition):
+                print "view for kitchen"
+                msg.rotation.x = -0.561771881545
+                msg.rotation.y = -0.241962482875
+                msg.rotation.z = -0.297665916385
+                msg.rotation.w = -0.732981249561
+                msg.center.x = -0.108774609864
+                msg.center.y = -0.0496510416269
+                msg.center.z = 0.635622143745
+                msg.distance = 2.43433470856
             #used for the colored l box, more looking down
             else:
+                print "view for box movie"
                 msg.rotation.x = -0.0530832760665
                 msg.rotation.y = -0.0785547480223
                 msg.rotation.z = -0.986425433667
@@ -130,8 +263,8 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                 msg.center.z = 0.522875547409
                 msg.distance = 1.00728635582
 
-        elif name=='geometry':
-            msg = flyvr.msg.TrackballManipulatorState()
+        elif vr_mode == 'geometry':
+            print "view for geometry"
             msg.rotation.x = 0.122742295197
             msg.rotation.y = 0.198753058426
             msg.rotation.z = 0.873456803025
@@ -140,10 +273,38 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
             msg.center.y = -0.0946640968323
             msg.center.z = 0.282709181309
             msg.distance = 1.5655520953
-        else:
-            msg = None
+        
+        return msg
 
-        if msg is not None:
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_panels):
+    VR_PANELS = vr_panels
+
+    arena = analysislib.arenas.get_arena_from_args(args)
+
+    valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
+    condition_obj = combine.get_condition_object(condition)
+
+    renderers = {}
+    osgslaves = {}
+    for name in VR_PANELS:
+        node = "/ds_%s" % name
+        dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
+
+        if osgdesc:
+            stimobj = get_stimulus_from_osgdesc(dsc, osgdesc)
+        else:
+            stimobj = get_stimulus_from_condition(dsc, condition_obj)
+        print "rendering vr",name,stimobj
+
+        renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
+        osgslaves[name] = stimobj
+
+    # setup camera position
+    for name in VR_PANELS:
+        msg = get_vr_view(arena, name, condition, condition_obj)
+        if msg is None:
+            print "HAVE YOU SET THE CORRECT VIEW????"
+        else:
             renderers[name].set_view(msg)
 
     if calibration:
@@ -185,7 +346,7 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
         pixel = np.ones((xyz.shape[0],2),dtype=xyz.dtype)
         pixel.fill(np.nan)
 
-    print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
+    print "trajectory ranges from %f to %f (framenumber: %d)" % (timestamps[0], timestamps[-1], framenumber0)
 
     if fmf is not None:
         fmftimestamps = fmf.get_all_timestamps()
@@ -202,6 +363,9 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
     else:
         target_out_w = TARGET_OUT_W
         target_out_h = TARGET_OUT_H
+
+#    if len(VR_PANELS) > 1:
+#        target_out_w = len(VR_PANELS) * float(target_out_w) / (float(target_out_w)/target_out_h)
 
     #define the size of the output
     device_y0 = MARGIN
@@ -265,6 +429,9 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
 
         pbar.update(n)
 
+        if ('NOSETEST_FLAG' in os.environ) and (movie.frame_number > 100):
+            continue
+
         if fmf is None:
             ts = t
             img = None
@@ -275,6 +442,8 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                 continue
 
         if ts > t0:
+            ok = True
+
             t0 = ts
 
             col,row = uv
@@ -315,8 +484,7 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                     with _canv.get_figure(m["dw"], m["dh"]) as fig:
                         analysislib.movie.plot_xyz(fig, movie.frame_number,
                             xhist, yhist, zhist, x, y, z,
-                            draw_arena_callback=analysislib.movie.draw_flycave,
-                        )
+                            arena)
 
             #do the VR 
             for name in VR_PANELS:
@@ -325,6 +493,7 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
 
                 fn = os.path.basename(imgfname)
                 myfname = imgfname.replace(fn,name+fn)
+
                 renderers[name].render_frame(myfname, msg)
 
                 time.sleep(0.01) # disk i/o
@@ -333,9 +502,18 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
                 device_rect = (m["device_x0"], device_y0, m["dw"], m["dh"])
                 user_rect = (0,0,m["width"], m["height"])
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
-                    _canv.imshow( scipy.misc.imread(myfname), 0,0, filter='best' )
+                    a = scipy.misc.imread(myfname)
+                    if a.dtype == np.object:
+                        print "ERROR", myfname
+                        ok = False
+                        continue
+                    _canv.imshow( a, 0,0, filter='best' )
 
             canv.save()
+
+            if not ok:
+                print "err", imgfname
+                os.unlink(imgfname)
 
     pbar.finish()
 
@@ -347,13 +525,16 @@ def doit(args, fmf_fname, obj_id, condition, tmpdir, outdir, calibration, framen
 if __name__ == "__main__":
     rospy.init_node('osgrender')
 
-    parser = analysislib.args.get_parser()
+    parser = analysislib.args.get_parser(disable_filters=True)
     parser.add_argument(
-        '--movie-file', type=str, default='',
+        '--movie-file', type=str, nargs='+',
         help='path to movie file (fmf or mp4)')
     parser.add_argument(
         '--calibration', type=str, required=False,
         help='path to camera calibration file')
+    parser.add_argument(
+        '--camera', type=str, default="Basler_21266086",
+        help='camera uuid that recorded fmf file')
     parser.add_argument(
         '--tmpdir', type=str, default='/tmp/',
         help='path to temporary directory')
@@ -363,25 +544,20 @@ if __name__ == "__main__":
     parser.add_argument(
         '--plot', action='store_true',
         help='plot x,y,z')
+    parser.add_argument('--osgdesc', type=str,
+        help='osg file descriptor string '\
+             '(if omitted it is determined automatically from the condition')
     parser.add_argument(
-        '--osgdesc', type=str, default='posts3.osg',
-        help='osg file descriptor string')
-    parser.add_argument(
-        '--stimulus', type=str, default='StimulusOSGFile',
-        help='flyvr stimulus name')
-    parser.add_argument(
-        '--condition', type=str,
-        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
+        '--framenumber0', type=int, default=None,
+        help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
+    parser.add_argument('--vr-mode', type=str, default='virtual_world',
+        choices=('geometry', 'virtual_world'),
+        help='the display server mode')
 
     argv = rospy.myargv()
     args = parser.parse_args(argv[1:])
 
     analysislib.args.check_args(parser, args, max_uuids=1)
-
-    if len(args.idfilt) != 1:
-        parser.error("You must specify --idfilt with a single obj_id")
-
-    obj_id = args.idfilt[0]
 
     if args.uuid is not None:
         uuid = args.uuid[0]
@@ -390,14 +566,40 @@ if __name__ == "__main__":
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
-    doit(args,
-         args.movie_file,
-         obj_id, args.condition,
-         args.tmpdir,
-         outdir, args.calibration, args.framenumber,
-         '_sml',
-         args.stimulus,
-         args.osgdesc,
-         args.plot
-    )
+    if args.movie_file:
+        obj_ids = [int(os.path.basename(fmf_file)[:-4]) for fmf_file in args.movie_file]
+        fmf_files = args.movie_file
+    else:
+        obj_ids = args.idfilt
+        fmf_files = [autodata.files.get_fmf_file(uuid,obj_id,args.camera,raise_exception=False) for obj_id in args.idfilt]
+        fmf_files = [f if os.path.exists(f) else None for f in fmf_files]
+
+    if not obj_ids:
+        parser.error("You must specify --idfilt or --movie-file")
+
+    try:
+        combine = analysislib.util.get_combiner_for_args(args)
+        combine.add_from_args(args)
+    except autodata.files.NoFile:
+        combine = analysislib.combine.CombineH5()
+        combine.add_from_args(args)
+
+    for obj_id,fmf_fname in zip(obj_ids,fmf_files):
+        try:
+            doit(combine,
+                 args,
+                 fmf_fname,
+                 obj_id, args.framenumber0,
+                 args.tmpdir,
+                 outdir, args.calibration, args.framenumber,
+                 '_sml',
+                 args.plot,
+                 args.osgdesc,
+                 [args.vr_mode] #just support one panel
+            )
+        except IOError, e:
+            print "missing file", e
+        except ValueError, e:
+            print "missing data", e
+
 

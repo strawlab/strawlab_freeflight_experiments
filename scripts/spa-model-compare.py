@@ -5,13 +5,15 @@ import numpy as np
 import argparse
 import re
 
-import pymatbridge
-
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
 import strawlab_freeflight_experiments.sid as sfe_sid
+import strawlab_freeflight_experiments.matlab as sfe_matlab
+
 import strawlab.constants
+
+from strawlab_freeflight_experiments.sid import VERSION
 
 def get_genotype(path):
     try:
@@ -46,11 +48,10 @@ if __name__=='__main__':
     parser.add_argument('--save', help='save figure', default='/tmp/spa_model_compare')
     parser.add_argument('--labels', nargs='+', metavar='L')
     parser.add_argument('--show', action='store_true')
-    parser.add_argument('--title',type=str)
+    parser.add_argument('--title',type=str,default='')
     args = parser.parse_args()
 
-    mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
-    mlab.start()
+    mlab = sfe_matlab.get_mlab_instance(args.show)
 
     #we use underscores etc in our matlab variable titles, etc, so turn them off
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
@@ -74,6 +75,8 @@ if __name__=='__main__':
     title = "Bode (using SPA on all data)"
     if args.title:
         title += ('\n' + args.title)
+    title += (" v%s" % VERSION)
+
     with mlab.fig(args.save+'.png') as f:
         sfe_sid.bode_models(mlab,title,True,'SouthWest',False,models,w)
 

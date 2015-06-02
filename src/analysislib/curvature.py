@@ -2,6 +2,7 @@ import os.path
 import sys
 import pickle
 import collections
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -10,80 +11,19 @@ import scipy.optimize
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from matplotlib import gridspec
+from matplotlib.colors import LogNorm
 
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
+
 import analysislib.plots as aplt
-from analysislib.plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
+
+from .plots import LEGEND_TEXT_BIG, LEGEND_TEXT_SML, OUTSIDE_LEGEND
 
 DEBUG = False
 
 class NotEnoughDataError(Exception):
     pass
-
-def calc_saccades(df, dt, min_dtheta=10, min_consecutive_dtheta=7):
-
-    a = pd.rolling_apply(df['dtheta'],min_consecutive_dtheta,lambda v: np.abs(v).mean() > min_dtheta,center=True)
-    a.fillna(0,inplace=True)
-
-    H = False
-    idxs = []
-    i0 = None
-
-    for idx,r in a.iteritems():
-        if not H and r == 1:
-            i0 = idx
-            H = True
-        elif H and r == 0:
-            H = False
-            if (idx - i0) > min_consecutive_dtheta:
-                idxs.append( (i0,idx) )
-
-    df['saccade'] = False
-
-    for i0,i1 in idxs:
-        i = ((i1-i0) // 2) + i0
-        try:
-            df['saccade'][i] = True
-        except KeyError:
-            df['saccade'][i0] = True
-
-    return ['saccade']
-
-def calc_velocities(df, dt):
-    vx = np.gradient(df['x'].values) / dt
-    vy = np.gradient(df['y'].values) / dt
-    vz = np.gradient(df['z'].values) / dt
-    velocity = np.sqrt( (vx**2) + (vy**2) )
-
-    df['vx'] = vx
-    df['vy'] = vy
-    df['vz'] = vz
-    df['velocity'] = velocity
-
-    return ['vx','vy','vz', 'velocity']
-
-def calc_accelerations(df, dt):
-    df['ax'] = np.gradient(df['vx'].values) / dt
-    df['ay'] = np.gradient(df['vy'].values) / dt
-    df['az'] = np.gradient(df['vz'].values) / dt
-
-    return ['ax','ay','az']
-
-def calc_angular_velocities(df, dt):
-    velocity = df['velocity'].values
-
-    theta       = np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
-    dtheta      = np.gradient(theta) / dt
-    radius      = np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
-
-    df['theta']     = theta
-    df['dtheta']    = dtheta
-    df['radius']    = radius
-    df['omega']     = (velocity*np.cos(theta))/radius
-
-    return ['theta','dtheta','radius','omega']
-
 
 def calc_circle_algebraic(x,y):
     # derivation
@@ -148,7 +88,18 @@ def calc_circle_leastsq(x,y):
 
     return R_2
 
-def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurve'):
+def window(seq, n=2):
+    "Returns a sliding window (of width n) over data from the iterable"
+    "   s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...                   "
+    it = iter(seq)
+    result = tuple(itertools.islice(it, n))
+    if len(result) == n:
+        yield result
+    for elem in it:
+        result = result[1:] + (elem,)
+        yield result
+
+def calc_curvature(df, dt, npts=3, method="leastsq", clip=None, sliding_window=False):
     method = {"leastsq":calc_circle_leastsq,
               "algebraic":calc_circle_algebraic}[method]
 
@@ -156,24 +107,30 @@ def calc_curvature(df, data, NPTS=3, method="leastsq", clip=None, colname='rcurv
     d.fill(np.nan)
     c = np.nan
 
-    for i in range(0,len(df)+1,NPTS):
-        x = df['x'][i:i+NPTS].values
-        y = df['y'][i:i+NPTS].values
-        if len(x) == NPTS:
+    if sliding_window:
+        for idxs in window(range(len(df)),npts):
+            s = slice(idxs[0],idxs[-1])
+            x = df['x'][s].values
+            y = df['y'][s].values
             c = method(x,y)
-            d[i:i+NPTS] = c
+            d[s] = c
+    else:
+        for i in range(0,len(df)+1,npts):
+            x = df['x'][i:i+npts].values
+            y = df['y'][i:i+npts].values
+            if len(x) == npts:
+                c = method(x,y)
+                d[i:i+npts] = c
 
-    #handle the last value for curves not divisible by NPTS
-    if i < len(d):
-        #equiv to -(len(d)-i)
-        d[i-len(d):] = c
+        #handle the last value for curves not divisible by NPTS
+        if i < len(d):
+            #equiv to -(len(d)-i)
+            d[i-len(d):] = c
 
     if clip is not None:
         d = np.clip(d,*clip)
 
-    df[colname] = d
-
-    return [colname]
+    return d
 
 def remove_pre_infinity(df):
     if 'ratio' not in df.columns:
@@ -186,58 +143,6 @@ def remove_pre_infinity(df):
             if (r > last) and first is None:
                 return df[i:]
             last = r
-
-def calc_unwrapped_ratio(df, data):
-    if 'ratio' in df.columns:
-        #unwrap the ratio
-        wrap = 0.0
-        last = df['ratio'][df.index[0]]
-        ratiouw = []
-        for i,r in enumerate(df['ratio']):
-            if not np.isnan(r):
-                if (r - last) < 0:
-                    wrap += 1
-                last = r
-            ratiouw.append(r+wrap)
-        df['ratiouw'] = ratiouw
-
-        return ['ratiouw']
-
-    return []
-
-def _strictly_increasing(L):
-    return all(x<y for x, y in zip(L, L[1:]))
-
-def calc_interpolate_dataframe(df,dt,columns):
-    #where data is measured at a lower rate, such as from the csv file,
-    #it should be interpolated or filled as appropriate as later analysis may
-    #not handle NaNs correctly.
-    #
-    #after filling, we should only have nans at the start. for performance (and
-    #animated plotting reasons) I scrub these only when needed, like to calculate
-    #correlations, but enable DEBUG to test that here.
-    for c in columns:
-        try:
-            if DEBUG:
-                bf = np.sum(np.isnan(df[c].values))
-
-            vals = df[c].interpolate().values
-            df[c] = vals
-
-            if DEBUG:
-                ldf = len(df)
-                print "INTERPOLATED %.1f%% of %d %s values" % (
-                            (bf/float(ldf)) * 100, ldf, c)
-
-                idx, = np.where(np.isnan(vals))
-                if len(idx):
-                    assert _strictly_increasing(idx)
-        except ValueError:
-            #not enough/any points to interpolate
-            pass
-        except KeyError:
-            #no such column
-            pass
 
 def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,title='',note='',limits=None):
     if title:
@@ -254,7 +159,7 @@ def plot_scatter_corra_vs_corrb_pooled(corra,corrb,corra_name,corrb_name,ax,titl
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,limits=None):
+def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',note='',nbins=100,limits=None,**hkwargs):
     def hist2d(x, y, bins = 10, range=None, weights=None, cmin=None, cmax=None, **kwargs):
         # xrange becomes range after 2to3
         bin_range = range
@@ -275,12 +180,11 @@ def plot_hist_corra_vs_corrb_pooled(rr,dtheta,corra_name,corrb_name,ax,title='',
     if title:
         ax.set_title(title)
     if note:
-        aplt.make_note(ax,note,color='white')
+        aplt.make_note(ax,note,color='white',backgroundcolor="#5f5f5f")
 
     ax.set_xlabel(corra_name)
     ax.set_ylabel(corrb_name)
 
-    hkwargs = {}
     if limits is not None and all(limits):
         hkwargs["range"] = limits
 
@@ -415,6 +319,12 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
 
         #plot the maximally correlated latency
         for _current_condition,(shift,ccef) in max_latencies_shift.iteritems():
+
+            #can override with command line options
+            if getattr(args,'force_max_latency',None) is not None:
+                shift = args.force_max_latency
+                ccef = ccef_m.loc[shift]
+
             all_corra, all_corrb, nens = _shift_pool_and_flatten_correlation_data(
                                                 results,
                                                 _current_condition,
@@ -437,13 +347,16 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                 except TypeError:
                     pass
 
-                plot_hist_corra_vs_corrb_pooled(
+                ax = fig.add_subplot(1,1,1)
+                H, xedges, yedges, img = plot_hist_corra_vs_corrb_pooled(
                         all_corra,all_corrb,corra,corrb,
-                        fig.gca(),
+                        ax,
                         title=combine.get_condition_name(_current_condition),
                         note="max corr @%.2fs = %.3f (n=%d)" % (dt*shift,ccef,nens),
-                        limits=(xlimit,ylimit)
+                        limits=(xlimit,ylimit),
+                        norm=LogNorm(),
                 )
+                fig.colorbar(img)
 
             corr_latencies[_current_condition]["%s:%s" % (corra,corrb)] = ccef
 
@@ -480,8 +393,9 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
                         pass
 
                     if hist2d:
-                        plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
+                        H, xedges, yedges, img = plot_hist_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
                     else:
+                        img = None
                         plot_scatter_corra_vs_corrb_pooled(all_corra,all_corrb,corra,corrb,ax,limits=(xlimit,ylimit))
 
                     i += 1
@@ -495,6 +409,9 @@ def plot_correlation_analysis(args, combine, correlations, correlation_options, 
 
                 NAMES = {"dtheta":r'turn rate ($\mathrm{d}\theta / dt$)',
                          "rotation_rate":r'rotation rate ($\mathrm{rad} s^{-1}$)'}
+
+                #if img:
+                #    fig.colorbar(img)
 
                 fig.subplots_adjust(wspace=0.1,hspace=0.1,top=0.92)
                 fig.suptitle('Correlation between %s and %s per latency correction \n%s' % (

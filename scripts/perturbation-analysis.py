@@ -26,7 +26,12 @@ import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False):
+def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False, max_plot=np.inf):
+
+    try:
+        only_conditions = args.only_conditions.split(',')
+    except AttributeError:
+        only_conditions = None
 
     pid = args.only_perturb_start_id
 
@@ -40,6 +45,11 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         step_obj = perturbation_objects[cond]
         phs = perturbations[cond]
 
+        cond_name = combine.get_condition_name(cond)
+
+        if only_conditions and (cond_name not in only_conditions):
+            continue
+
         condn = aplt.get_safe_filename(cond,allowed_spaces=False)
         if pid is not None:
             condn = 'p%d_%s' % (pid,condn)
@@ -48,17 +58,13 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
             n_completed = 0
 
             to_pool = []
-            for ph in phs.itervalues():
-                if pid is None or (ph.df['ratio_range_start_id'].values[0] == pid):
+            for ph in phs:
+                if (pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid):
                     to_pool.append(ph.df)
                     if ph.completed:
                         n_completed += 1
 
             pool = pd.concat(to_pool,join="outer",axis=0)
-            pool.to_pickle(
-                    combine.get_plot_filename("pool_%s" % condn) + '.df')
-
-            grouped_oid = pool.groupby('obj_id')
 
             #plot x-y trajectories while under perturbation
             name = combine.get_plot_filename('xy_%s' % condn)
@@ -66,10 +72,18 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                 ax = fig.add_subplot(1,1,1)
                 ax.set_title("%s" % combine.get_condition_name(cond), fontsize=12)
 
-                for oid,_df in grouped_oid:
+                for n,ph in enumerate(phs):
 
-                    ph = phs[oid]
-                    pdf = _df.iloc[ph.start_idx:ph.end_idx]
+                    if n > max_plot:
+                        continue
+
+                    if pid is not None:
+                        if ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO:
+                            if ph.start_id != pid:
+                                continue
+
+                    #ph = phs[oid]
+                    pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
 
                     xv = pdf['x'].values
                     yv = pdf['y'].values
@@ -80,7 +94,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                         ax.plot( xv[-1], yv[-1], 'bv', lw=1.0, alpha=0.5, rasterized=aplt.RASTERIZE )
 
                     if plot_pre_perturbation:
-                        pdf = _df.iloc[:ph.start_idx]
+                        pdf = ph.df.iloc[:ph.start_idx]
                         xv = pdf['x'].values
                         yv = pdf['y'].values
                         if len(xv):
@@ -109,10 +123,18 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                             transform=ax.transAxes,
                             color='k')
 
-                    for oid,_df in grouped_oid:
+                    for n,ph in enumerate(phs):
 
-                        t = _df['talign'].values
-                        v = _df[to_plot].values
+                        if n > max_plot:
+                            continue
+
+                        if pid is not None:
+                            if ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO:
+                                if ph.start_id != pid:
+                                    continue
+
+                        t = ph.df['talign'].values
+                        v = ph.df[to_plot].values
 
                         ax.plot(t, v, 'k-', alpha=0.1)
                         ax.plot(t[-1], v[-1], 'ko', alpha=0.4, markersize=2)
@@ -124,10 +146,18 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                     ax.set_ylabel(to_plot)
                     ax.set_xlabel('t (s)')
 
-                    #plot from one second before to one second after
+                    #plot from one second before to one second after if the perturbation
                     step_obj.plot(ax2, t_extra=1, ylabel=str(step_obj), linestyle='-')
                     t0,t1 = step_obj.get_time_limits()
-                    t0 -= 1; t1 += 1
+
+                    #if the perturbation is more than 3x longer than the longest trial
+                    #then don't adjust axis limits
+                    if t1 > (5*np.nanmax(m['talign'].values)):
+                        t1 = np.nanmax(m['talign'].values) + 1
+                        t0 = np.nanmin(m['talign'].values) - 1
+                    else:
+                        #otherwise plot the whole perturbation
+                        t0 -= 1; t1 += 1
                     ax.set_xlim(t0,t1)
 
                     if "ylim" in perturbation_options[to_plot]:
@@ -148,7 +178,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
         for cond in perturbations:
             perturb_obj = perturbation_objects[cond]
             scond = combine.get_condition_name(cond)
-            for response_obj in perturbations[cond].itervalues():
+            for response_obj in perturbations[cond]:
                 if response_obj.completed:
                     f.write("| %s | %s | %.1f | %.1f |\n" % (scond, response_obj.obj_id, response_obj.perturbation_length, response_obj.trajectory_length))
                     i += 1
@@ -167,12 +197,22 @@ if __name__=='__main__':
     parser.add_argument(
         "--perturb-completion-threshold", type=float, default=0.98,
         help='perturbations must be this complete to be counted')
+    parser.add_argument(
+        "--only-conditions", type=str, metavar='CONDITION_NAME',
+        help='only analyze perturbations in these conditions')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
+    system_y_name = args.system_output
+
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name=system_y_name)
     combine.add_from_args(args)
 
     fname = combine.fname
@@ -194,6 +234,8 @@ if __name__=='__main__':
                "velocity":{},
                "rotation_rate":{},
     }
+    if system_y_name not in TO_PLOT:
+        TO_PLOT[system_y_name] = {"ylim":(-0.5e-10,0.5e-10)}
 
     plot_perturbation_traces(combine, args, TO_PLOT)
 

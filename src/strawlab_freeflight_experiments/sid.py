@@ -18,6 +18,7 @@ import control.ctrlutil
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
+import strawlab_freeflight_experiments
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
 import analysislib.util as autil
@@ -26,6 +27,13 @@ import analysislib.args as aargs
 import analysislib.plots as aplt
 
 import matplotlib.pyplot as plt
+
+# show the version of analysis in all plots for easier updating documents
+VERSION = 1
+
+# these perturb classes are spectrally interesting enough for system identification
+PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME]
+PERTURBERS_FOR_SID.extend(sfe_perturb.PerturberIDINPUT.NAME + t for t in sfe_perturb.PerturberIDINPUT.TYPES)
 
 def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
@@ -232,14 +240,32 @@ def run_model_from_specifier(mlab, iddata, spec, iod):
     else:
         raise ValueError("Unknown model specifier")
 
-def upload_data(mlab, y, u, Ts, detrend, name):
+def upload_data(mlab, y, u, Ts, detrend, name, y_col_name='', u_col_name=''):
+    ihname,ihunit = strawlab_freeflight_experiments.get_human_names(u_col_name)
+    ohname,ohunit = strawlab_freeflight_experiments.get_human_names(y_col_name)
+
     iddata = mlab.run_code("""
-function trial_data = make_iddata(y,u,Ts,detrend_first,name)
+function trial_data = make_iddata(y,u,Ts,detrend_first,name,ihname,ihunit,ohname,ohunit)
     trial_data = iddata(y(:),u(:),Ts,'ExperimentName',name);
     if detrend_first
         trial_data = detrend(trial_data);
     end
-end""",y,u,Ts,bool(detrend),name,nout=1,saveout=(mlab.varname('iddata'),))
+    if ihname
+        trial_data.InputName = ihname;
+    end
+    if ohname
+        trial_data.OutputName = ohname;
+    end
+    trial_data.TimeUnit = 'seconds';
+    if ihunit
+        trial_data.InputUnit = ihunit;
+    end
+    if ohunit
+        trial_data.OutputUnit = ohunit;
+    end
+end""", y,u,Ts,bool(detrend),name,ihname,ihunit,ohname,ohunit,
+        nout=1,saveout=(mlab.varname('iddata'),))
+
     return iddata
 
 def run_spa(mlab, iddata, name, w=None):

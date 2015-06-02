@@ -13,9 +13,6 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
-import pymatbridge
-import control.pzmap
-
 import matplotlib.pyplot as plt
 
 import roslib
@@ -33,12 +30,16 @@ import analysislib.combine as acombine
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 import strawlab_freeflight_experiments.frequency as sfe_frequency
 import strawlab_freeflight_experiments.sid as sfe_sid
+import strawlab_freeflight_experiments.matlab as sfe_matlab
+
+from strawlab_freeflight_experiments.sid import VERSION
 
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, basefn):
-    h1,h2,h3 = mlab.run_func(os.path.join(pkg_dir,'src','matlab','sid_spectrum_plots.m'),
-                        iddata,f0,f1,FS,title,system_u_name,system_y_name,nout=3)
+    h1,h2,h3,idata,odata = mlab.run_func(os.path.join(pkg_dir,'data','matlab','sid_spectrum_plots.m'),
+                           iddata,f0,f1,FS,title,system_u_name,system_y_name,
+                           nout=5,saveout=('h1','h2','h3',mlab.varname('idata'),mlab.varname('odata')))
 
     fn = basefn % "cohere"
     mlab.saveas(h1,fn,'png')
@@ -52,6 +53,8 @@ def plot_spectrum(mlab, iddata, f0, f1, FS, title, system_u_name,system_y_name, 
     mlab.saveas(h3,fn,'png')
     print "WROTE", fn
 
+    return idata,odata
+
 if __name__=='__main__':
 
     EPS = False
@@ -64,7 +67,7 @@ if __name__=='__main__':
         "--perturb-completion-threshold", type=float, default=0.98,
         help='perturbations must be this complete to be counted')
     parser.add_argument(
-        "--lookback", type=float, default=4.0,
+        "--lookback", type=float, default=None,
         help="number of seconds of data before perturbation to include "\
              "in analysis")
     parser.add_argument(
@@ -73,18 +76,47 @@ if __name__=='__main__':
     parser.add_argument(
         "--detrend", type=int, default=1, choices=(1,0),
         help='detrend data')
+    parser.add_argument(
+        "--only-conditions", type=str, metavar='CONDITION_NAME',
+        help='only analyze perturbations in these conditions')
+    parser.add_argument(
+        "--only-perturbations", type=str,
+        default=','.join(sfe_sid.PERTURBERS_FOR_SID),
+        help='only analyze perturbations of this type')
+    parser.add_argument(
+        "--system-input", type=str,
+        default='rotation_rate',
+        help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
+
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
-    mlab = pymatbridge.Matlab(matlab='/opt/matlab/R2013a/bin/matlab', capture_stdout=False, log=False)
-    mlab.start()
+    try:
+        only_conditions = args.only_conditions.split(',')
+    except AttributeError:
+        only_conditions = None
+    try:
+        only_perturbations = args.only_perturbations.split(',')
+    except AttributeError:
+        only_perturbations = None
+
+    system_u_name = args.system_input
+    system_y_name = args.system_output
+
+    mlab = sfe_matlab.get_mlab_instance(args.show)
 
     #we use underscores etc in our matlab variable titles, etc, so turn them off
     mlab.set(0,'DefaultTextInterpreter','none',nout=0)
 
     combine = autil.get_combiner_for_args(args)
+    combine.add_feature(column_name=system_y_name)
+    combine.add_feature(column_name=system_u_name)
     combine.set_index(args.index)
     combine.add_from_args(args)
 
@@ -92,25 +124,30 @@ if __name__=='__main__':
     FS = 1/TS
     print "DATA FS=%sHz (TS=%fs)" % (FS,TS)
 
-    lookback_frames = int(args.lookback / combine.dt)
-
     aplt.save_args(combine, args)
 
     perturbations, perturbation_objects = aperturb.collect_perturbation_traces(combine,
-                                                    completion_threshold=args.perturb_completion_threshold)
+                                                    completion_threshold=args.perturb_completion_threshold,
+                                                    allowed_perturbation_types=only_perturbations)
 
-    #perturbations {cond: {obj_id:PerturbationHolder,...}}
+    #perturbations {cond: [PerturbationHolder,...]}
     #perturbation_objects {cond: perturb_obj}
-
-    pid = args.only_perturb_start_id
-
-    plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS), 'dt':args.detrend}
 
     #loop per condition
     for cond in perturbations:
-
         perturbation_obj = perturbation_objects[cond]
+
+        hints = perturbation_obj.get_analysis_hints(lookback=args.lookback)
+
+        pid = args.only_perturb_start_id
+        lookback = hints['lookback']
+        lookback_frames = int(lookback / combine.dt)
+        plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'fs':int(FS), 'dt':args.detrend}
+
         cond_name = combine.get_condition_name(cond)
+
+        if only_conditions and (cond_name not in only_conditions):
+            continue
 
         f0,f1 = perturbation_obj.get_frequency_limits()
         if np.isnan(f1):
@@ -124,7 +161,6 @@ if __name__=='__main__':
         alldata_models = {}
 
         plot_fn = aplt.get_safe_filename(cond_name, **plot_fn_kwargs)
-        system_u_name, system_y_name = aperturb.get_input_output_columns(perturbation_obj)
 
         #any perturbations started
         phs = perturbations[cond]
@@ -133,9 +169,9 @@ if __name__=='__main__':
             individual_iddata = []          #[(iddata_object,perturbation_holder,len_data),...]
             individual_iddata_mean = None
 
-            for ph in phs.itervalues():
+            for ph in phs:
                 #any perturbations completed
-                if ph.completed and ((pid is None) or (ph.df['ratio_range_start_id'].values[0] == pid)):
+                if ph.completed and ((pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid)):
                     any_completed_perturbations = True
 
                     #upload to matlab the data for this perturbation and also including
@@ -155,6 +191,8 @@ if __name__=='__main__':
             print "%s: NO COMPLETED PERTURBATIONS" % combine.get_condition_name(cond)
 
         if any_completed_perturbations:
+            print "%s: %d completed perturbations" % (cond_name, len(individual_iddata))
+
             #create a iddata object that contains all complete perturbations
             pooled_id_varname = mlab.varname('iddata')
             mlab.run_code("%s = merge(%s);" % (
@@ -165,14 +203,19 @@ if __name__=='__main__':
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
 
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Bode (from all data): %s->%s\n%s' % (system_u_name,system_y_name, perturbation_obj)
+            title = 'Bode (from all data): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title, -1)
 
-            title = '%s' % perturbation_obj
+            title = '%s v%d' % (perturbation_obj,VERSION)
             name = combine.get_plot_filename('%%s_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
 
-            plot_spectrum(mlab,pooled_id, f0, f1, FS, title, system_u_name, system_y_name, name)
+            indata,outdata = plot_spectrum(mlab,pooled_id, f0, f1, FS, title, system_u_name, system_y_name, name)
+
+            name = combine.get_plot_filename('input_data_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
+            mlab.run_code("save('%s','%s');" % (name,indata))
+            name = combine.get_plot_filename('output_data_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
+            mlab.run_code("save('%s','%s');" % (name,outdata))
 
 
     if args.show:

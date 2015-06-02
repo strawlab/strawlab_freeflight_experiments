@@ -62,39 +62,61 @@ def get_default_condition_filename(argv):
 
 class ConditionCompat(OrderedDict):
 
-    ROTATION_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}$")
-    CONFLICT_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){1,5}\/\w+\.osg(?:\|[\d.+-]+)+$")
+    #make sure any named groups are named identically to the expected
+    #fields in the experiment condition yaml file
+
+    #https://regex101.com/r/tN5mQ4/1
+    ROTATION_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?$")
+
+    CONFLICT_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)(?:/[\d.+-]+){1,5}/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
+
     PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
+
+    CONFINE_RE = re.compile("(?P<stimulus_filename>[\w.]+\.osg)/(?P<x0>[\d.+-]+)/(?P<y0>[\d.+-]+)/(?P<lag>[\d.+-]+)$")
 
     def __init__(self, slash_string):
         OrderedDict.__init__(self)
         self._s = slash_string
+        self._fake_names = []
 
-    def is_type(self, *names):
-        fake_names = []
         #rotation experiments look like this
         # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2
         # gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
         # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2
-        if ConditionCompat.ROTATION_RE.match(self._s):
-            fake_names.append('rotation')
+        match = ConditionCompat.ROTATION_RE.match(self._s)
+        if match:
+            self._fake_names.append('rotation')
+            self.update(match.groupdict())
 
         #conflict experiments look like this
         # checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0
-        if ConditionCompat.CONFLICT_RE.match(self._s):
-            fake_names.append('conflict')
+        match = ConditionCompat.CONFLICT_RE.match(self._s)
+        if match:
+            self._fake_names.append('conflict')
+            self.update(match.groupdict())
 
         #perturb experiments look like this
         # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06
         # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06
-        if ConditionCompat.PERTURB_RE.match(self._s):
+        match = ConditionCompat.PERTURB_RE.match(self._s)
+        if match:
             #let the validation logic in sfe.perturb do the heavy work here.
             #lazy import for Santi
             from .perturb import is_perturb_condition_string
             if is_perturb_condition_string(self._s):
-                fake_names.append('perturbation')
+                self._fake_names.append('perturbation')
+                self.update(match.groupdict())
 
-        return any(name in fake_names for name in names)
+        match = ConditionCompat.CONFINE_RE.match(self._s)
+        if match:
+            self._fake_names.append('confine')
+            self.update(match.groupdict())
+
+    def __repr__(self):
+        return "<ConditionCompat '%s' (is %s)>" % (self._s, ','.join(self._fake_names))
+
+    def is_type(self, *names):
+        return any(name in self._fake_names for name in names)
 
     def to_slash_separated(self):
         return self._s
@@ -104,6 +126,9 @@ class Condition(OrderedDict, _YamlMixin):
     def __init__(self, *args, **kwargs):
         OrderedDict.__init__(self, *args, **kwargs)
         self.name = ''
+
+    def __repr__(self):
+        return "<Condition %s (%s)>" % (self.name, ','.join(self.keys()))
 
     @staticmethod
     def from_base64(txt,name=''):

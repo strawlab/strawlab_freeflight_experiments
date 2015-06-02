@@ -21,44 +21,6 @@ import analysislib.plots as aplt
 import analysislib.curvature as curve
 import analysislib.util as autil
 
-def plot_saccades(combine, args, figncols, name=None):
-    figsize = (5.0*figncols,5.0)
-    if name is None:
-        name = '%s_saccades' % combine.fname
-    arena = analysislib.arenas.get_arena_from_args(args)
-    results,dt = combine.get_results()
-    with aplt.mpl_fig(name,args,figsize=figsize) as fig:
-        ax = None
-        axes = set()
-        for i,(current_condition,r) in enumerate(results.iteritems()):
-            ax = fig.add_subplot(1,figncols,1+i,sharex=ax,sharey=ax)
-            axes.add(ax)
-
-            if not r['count']:
-                continue
-
-            dur = sum(len(df) for df in r['df'])*dt
-
-            for df in r['df']:
-                xv = df['x'].values
-                yv = df['y'].values
-                ax.plot( xv, yv, 'k-', lw=1.0, alpha=0.1, rasterized=aplt.RASTERIZE )
-
-                curve.calc_saccades(df, None)
-
-                xs = df['x'].where(df['saccade'].values).dropna()
-                ys = df['y'].where(df['saccade'].values).dropna()
-                ax.plot(xs,ys,'r.')
-
-            ax.set_title(current_condition, fontsize=aplt.TITLE_FONT_SIZE)
-            aplt.make_note(ax, 't=%.1fs n=%d' % (dur,r['count']))
-
-        for ax in axes:
-            aplt.layout_trajectory_plots(ax, arena, False)
-
-        if aplt.WRAP_TEXT:
-            fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
-
 def plot_distance_from_path(combine, args, name=None):
     if name is None:
         name = '%s_distfrmpath' % combine.fname
@@ -83,7 +45,7 @@ def plot_distance_from_path(combine, args, name=None):
     with aplt.mpl_fig(name,args) as fig:
         ax = fig.add_subplot(1,1,1)
         for c in all_dists:
-            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=c,range=(0.1,0.2))
+            ax.hist(all_dists[c],bins=50,normed=True,histtype='step',label=combine.get_condition_name(c),range=(0.1,0.2))
         ax.legend(numpoints=1,
                   prop={'size':aplt.LEGEND_TEXT_SML})
         ax.set_title('distance from path')
@@ -93,12 +55,19 @@ def plot_distance_from_path(combine, args, name=None):
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
+    parser.add_argument(
+        "--force-max-latency", type=int, default=None,
+        help='plot latency at this many frames (rather than plotting the max)')
+    parser.add_argument(
+        "--plot-saccades", action="store_true")
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+    if args.plot_saccades:
+        combine.add_feature(column_name='saccade')
     combine.add_from_args(args)
 
     fname = combine.fname
@@ -146,9 +115,13 @@ if __name__=='__main__':
     
     rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
 
+    fml = args.force_max_latency
+
     correlations = (('rotation_rate','dtheta'),)
     correlation_options = {"rotation_rate:dtheta":{"range":[_get_rrate_lim,[-10,10]]},
-                           "latencies":set(range(0,40,2) + [40,80]),
+                           "latencies":set(range(0,40,2) +\
+                                           [40,80] +\
+                                           [fml if fml is not None else 0]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
         
     }
@@ -174,7 +147,8 @@ if __name__=='__main__':
 
     plot_distance_from_path(combine, args)
 
-    #plot_saccades(combine, args, ncond)
+    if args.plot_saccades:
+        aplt.plot_saccades(combine, args, ncond)
 
     if args.show:
         aplt.show_plots()

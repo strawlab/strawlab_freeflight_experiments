@@ -14,7 +14,9 @@ TOPIC_NUM_PARTICLES     = "num_particles"
 TOPIC_BB_SIZE           = "bb_size"
 TOPIC_PARTICLES_ANGULAR_SIZE_FIXED = "particles_angular_size_fixed"
 
+TOPIC_MODEL_SCALE       = "model_scale"
 TOPIC_MODEL_POSITION    = "model_pose"
+TOPIC_MODEL_FILENAME    = "model_filename"
 
 TOPIC_CYL_GRATING_INFO  = "grating_info"
 

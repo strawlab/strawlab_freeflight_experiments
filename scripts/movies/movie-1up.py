@@ -29,11 +29,11 @@ import analysislib.args
 import analysislib.movie
 import analysislib.combine
 
-def doit(h5_file, fmf_fname, obj_id, condition, tmpdir, outdir, calibration):
+def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
     combine = analysislib.combine.CombineH5()
     combine.add_h5_file(h5_file)
 
-    valid,dt,(x0,y0,obj_id,framenumber0,start) = combine.get_one_result(obj_id, condition)
+    valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
 
     camera = camera_model.load_camera_from_bagfile( open(calibration) )
 
@@ -101,7 +101,7 @@ def doit(h5_file, fmf_fname, obj_id, condition, tmpdir, outdir, calibration):
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir")
+    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir", "arena")
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
         help='path to fmf file (if not using --uuid)')
@@ -115,8 +115,8 @@ if __name__ == "__main__":
         '--tmpdir', type=str, default='/tmp/',
         help='path to temporary directory')
     parser.add_argument(
-        '--condition', type=str,
-        help='if the obj_id exists in multiple conditions, use only trajectories from this one')
+        '--framenumber0', type=int, default=None,
+        help='if the obj_id exists in multiple conditions, use trajectory with this framenumber0')
 
     args = parser.parse_args()
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.condition, args.tmpdir, outdir, args.calibration)
+            doit(h5_file, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration)
         except IOError, e:
             print "missing file", e
 

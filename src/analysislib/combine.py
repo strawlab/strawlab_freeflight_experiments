@@ -31,7 +31,7 @@ import autodata.files
 
 import analysislib.fixes
 import analysislib.args
-import analysislib.curvature as acurve
+import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
@@ -124,12 +124,12 @@ def check_combine_health(combine, min_length_f=100):
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
                         with_missing[['uuid', 'oid', 'frame0']].to_string())
 
+class CacheError(Exception):
+    pass
 
 class _Combine(object):
 
-    calc_linear_stats = True
-    calc_angular_stats = True
-    calc_turn_stats = False
+    DEFAULT_FEATURES = ('vx','vy','vz','ax','ay','az','velocity','dtheta','radius','err_pos_stddev_m')
 
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)
@@ -155,6 +155,24 @@ class _Combine(object):
         self._configdict = {'v': 16,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
+
+        self.features = afeat.MultiFeatureComputer(*kwargs.get("features",self.DEFAULT_FEATURES))
+        self._configdict['features'] = self.features    #is whatable
+
+    def add_feature(self, feature_name=None, column_name=None):
+        if feature_name and column_name:
+            raise ValueError('Only one of feature_name and column_name may be provided')
+        elif feature_name:
+            self.features.add_feature(feature_name)
+        elif column_name:
+            self.features.add_feature_by_column_added(column_name)
+        else:
+            raise ValueError('feature_name or column_name are required')
+        self._configdict['features'] = self.features
+
+    def set_features(self, *features):
+        self.features.set_features(*features)
+        self._configdict['features'] = self.features
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
@@ -218,6 +236,7 @@ class _Combine(object):
                     except Exception, e:
                         self._warn('Could not unpickle %s, recombining and recaching' % pkl)
                         self._warn('The error was %s' % str(e))
+                        raise CacheError(pkl)
         return None
 
     def get_data_dictionary(self):
@@ -315,15 +334,25 @@ class _Combine(object):
             self._warn_cache[m] = 0
         self._warn_cache[m] += 1
 
-    def _get_df_sample_interval(self):
-        for cond,r in self._results.iteritems():
-            for _df in r['df']:
-                try:
-                    return _df.index.freq.nanos / 1e9
-                except AttributeError:
-                    #not datetime index
-                    return None
+    def _get_df_sample_interval(self, df=None):
+        try:
+            if df is not None:
+                return df.index.freq.nanos / 1e9
+            else:
+                #take the first dataframe as all must have the same index
+                for cond,r in self._results.iteritems():
+                    for df in r['df']:
+                        return df.index.freq.nanos / 1e9
+        except AttributeError:
+            #not datetime index
+            pass
         return None
+
+    def __repr__(self):
+        if not self._results:
+            return "<Combine NO_DATA>"
+        else:
+           return "<Combine %s idx=%s dt=%s>" % (os.path.basename(self.csv_file),self._index,self.dt)
 
     @property
     def dt(self):
@@ -509,36 +538,28 @@ class _Combine(object):
             r[c] = self._results[c]
         return r, self.dt
 
-    def get_one_result(self, obj_id, condition=None):
+    def get_one_result(self, obj_id, condition=None, framenumber0=None):
         """
         Get the data associated with a single object_id
 
         returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
         """
-        if (not condition) and (obj_id in self.get_spanned_results()):
-            raise ValueError("obj_id: %s exists in multiple conditions - please specify which one" % obj_id)
+        spanned = self.get_spanned_results()
+        if obj_id in spanned:
+            if (condition is None) and (framenumber0 is None):
+                raise ValueError("obj_id %s exists in multiple conditions: %s" % (obj_id,','.join(self.get_condition_name(d[0]) for d in spanned[obj_id])))
 
         for i,(current_condition,r) in enumerate(self._results.iteritems()):
-            for df,(x0,y0,_obj_id,framenumber0,time0) in zip(r['df'], r['start_obj_ids']):
+            for df,(x0,y0,_obj_id,_framenumber0,time0),uuid in zip(r['df'], r['start_obj_ids'],r['uuids']):
                 if _obj_id == obj_id:
-                    if (not condition) or (current_condition == condition):
-                        return df,self._dt,(x0,y0,obj_id,framenumber0,time0)
+                    if (condition is None) and (framenumber0 is None):
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
+                    elif (condition is not None) and (current_condition == condition):
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
+                    elif (framenumber0 is not None) and (_framenumber0 == framenumber0):
+                        return df,self._dt,(x0,y0,_obj_id,_framenumber0,time0,current_condition,uuid)
 
-        raise ValueError("No such obj_id: %s (in condition: %s)" % (obj_id, condition))
-
-    def get_one_result_proper_coords(self, obj_id, framenumber0):
-        """
-        Get the data associated with a single object_id
-
-        returns: (dataframe, dt, (x0,y0,obj_id,framenumber0,time0))
-        """
-        # TODO: we should also pass uuid in here or make each combine object hold one experiment
-        for current_condition, r in self._results.iteritems():
-            for df, (x0, y0, _obj_id, _framenumber0, time0) in zip(r['df'], r['start_obj_ids']):
-                if _obj_id == obj_id and _framenumber0 == framenumber0:
-                    return df, self._dt, (x0, y0, obj_id, framenumber0, time0)
-
-        raise ValueError("No such obj_id=%d startf=%d)" % (obj_id, framenumber0))
+        raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
     def get_obj_ids_sorted_by_length(self):
         """
@@ -608,33 +629,10 @@ class _Combine(object):
     def close(self):
         pass
 
-    def _calc_other_series(self, df, dt):
-        """Computes other time series for the trial.
-        In particular:
-          - velocities and accelerations
-          - angular velocities
-          - turn stats (careful, time consuming!)
-        """
-        if self.calc_linear_stats:
-            acurve.calc_velocities(df, dt)
-            acurve.calc_accelerations(df, dt)
-
-            try:
-                #compute a position error estimate from the observed covariances
-                #covariance is m**2, hence 2 sqrt
-                df['err_pos_stddev_m'] = np.sqrt( np.sqrt( df['covariance_x']**2 + df['covariance_y']**2 + df['covariance_z']**2 ) )
-            except KeyError:
-                #if not set, range type filters compare against +/- np.inf, so set the error
-                #to a real number (comparisons with nan are false) 
-                df['err_pos_stddev_m'] = 0
-
-        if self.calc_angular_stats:
-            acurve.calc_angular_velocities(df, dt)
-        if self.calc_turn_stats:
-            acurve.calc_curvature(df, dt, 10, 'leastsq', clip=(0, 1))
-
-
 class _CombineFakeInfinity(_Combine):
+
+    CONDITION_FMT_STRING = "tex%d/svg/1.0/1.0/adv/..."
+
     def __init__(self, **kwargs):
         _Combine.__init__(self, **kwargs)
         self._nconditions = kwargs.get('nconditions',1)
@@ -651,7 +649,7 @@ class _CombineFakeInfinity(_Combine):
         framenumber = 1
 
         for c in range(self._nconditions):
-            cond = "tex%d/svg/1.0/1.0/adv/..." % c
+            cond = self.CONDITION_FMT_STRING % c
 
             try:
                 self._results[cond]
@@ -683,7 +681,7 @@ class _CombineFakeInfinity(_Combine):
                     continue
 
                 dt = self._dt
-                self._calc_other_series(df, dt)
+                self.features.process(df, dt)
 
                 first = df.irow(0)
                 last = df.irow(-1)
@@ -756,9 +754,8 @@ class _CombineFakeInfinity(_Combine):
 
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
-        cols = []
-        cols.extend( acurve.calc_velocities(df, dt) )
-        cols.extend( acurve.calc_angular_velocities(df, dt) )
+        m = afeat.MultiFeatureComputer('dtheta')
+        m.process(df, dt)
 
         #add some uncorrelated noise to rrate
         rrate = (df['dtheta'].values * 10.0) + (0.0 * (np.random.random(len(df)) - 0.5))
@@ -774,7 +771,8 @@ class _CombineFakeInfinity(_Combine):
         df['rotation_rate'] = rrate
         df['v_offset_rate'] = np.zeros_like(rrate)
 
-        for c in cols:
+        #remove the added colums
+        for c in m.get_columns_added():
             del df[c]
 
         return df
@@ -890,7 +888,7 @@ class CombineCSV(_Combine):
                         pass
 
                 dt = self._dt
-                self._calc_other_series(df, dt)
+                self.features.process(df, dt)
 
                 self._results[cond]['df'].append(odf)
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
@@ -926,9 +924,9 @@ class CombineCSV(_Combine):
 
     def _get_result(self, df):
         ser = df.irow(0)
-        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time']
+        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time'],'',''
 
-    def get_one_result(self, obj_id):
+    def get_one_result(self, obj_id, condition=None, framenumber0=None):
         df = self._df[self._df['lock_object'] == obj_id]
         if not len(df):
             raise ValueError("object %s not found" % obj_id)
@@ -990,7 +988,7 @@ class CombineH5(_Combine):
             assert dt == self._dt
             assert tzname == self._tzname
 
-    def get_one_result(self, obj_id):
+    def get_one_result(self, obj_id, condition=None, framenumber0=None):
         query = "obj_id == %d" % obj_id
 
         traj = self._trajectories.readWhere(query)
@@ -1005,9 +1003,9 @@ class CombineH5(_Combine):
         )
 
         dt = self._dt
-        self._calc_other_series(df, dt)
+        self.features.process(df, dt)
 
-        return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0)
+        return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0,'','')
 
     def close(self):
         if self._h5 is not None:
@@ -1057,6 +1055,16 @@ class CombineH5WithCSV(_Combine):
         except KeyError:
             raise Exception('The trial (%s, %d, %d) is not in the books' % (uuid, oid, startf))
 
+    def get_split_reason_dataframe(self):
+        d = {k:[] for k in ('uuid', 'oid', 'startf', 'split_num', 'reason_for_split')}
+        for (uuid, oid, startf), (split_num, reason_for_split) in self._split_bookeeping.iteritems():
+            d['uuid'].append(uuid)
+            d['oid'].append(oid)
+            d['startf'].append(startf)
+            d['split_num'].append(split_num)
+            d['reason_for_split'].append(reason_for_split)
+        return pd.DataFrame(d)
+
     def add_from_uuid(self, uuid, csv_suffix=None, **kwargs):
         """Add a csv and h5 file collected from the experiment with the
         given uuid.
@@ -1079,8 +1087,16 @@ class CombineH5WithCSV(_Combine):
         arguments given
         """
         self._args_to_configuration(args)
+
+        cache_error = False
         if args.cached:
-            d = self._get_cache_file()
+
+            try:
+                d = self._get_cache_file()
+            except CacheError:
+                d = None
+                cache_error = True
+                
             if d is not None:
                 self._results = d['results']
                 self._dt = d['dt']
@@ -1136,7 +1152,7 @@ class CombineH5WithCSV(_Combine):
 
             self.add_csv_and_h5_file(csv_file, h5_file, args)
 
-        if not os.path.isfile(self._get_cache_name()):
+        if cache_error or (not os.path.isfile(self._get_cache_name())):
             if args.cached:
                 self._save_cache_file()
         elif args.recache:
@@ -1245,21 +1261,28 @@ class CombineH5WithCSV(_Combine):
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:
+                    try:
+                        os.unlink(fn)
+                    except:
+                        pass
                     with open(fn, 'w') as f:
                         yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
-                except:
-                    pass
-            except:
+                except Exception, e:
+                    self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
+            except Exception, e:
+                self._debug("IO:     ERROR reading from database\n%s" % e)
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
                     self._metadata.append(yaml.safe_load(f))
-        except:
-            pass
+        except Exception, e:
+            self._debug("IO:     ERROR reading metadata\n%s" % e)
 
-        if this_exp_metadata is None: this_exp_metadata = {}
+        if this_exp_metadata is None:
+            this_exp_metadata = {}
         this_exp_metadata['csv_file'] = csv_fname
         this_exp_metadata['h5_file'] = h5_file
+
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
             self._debug("FIX:     fixing data %s" % fix)
@@ -1270,6 +1293,12 @@ class CombineH5WithCSV(_Combine):
         trajectories = self._get_trajectories(h5)
         dt = 1.0/trajectories.attrs['frames_per_second']
         tzname = h5.root.trajectory_start_times.attrs['timezone']
+
+        try:
+            pytz.timezone(tzname)
+        except UnicodeDecodeError:
+            self._warn("ERROR: PYTABLES UNICODE DECODE ERROR. UPGRADE PYTABLES")
+            tzname = 'CET'
 
         if self._dt is None:
             self._dt = dt
@@ -1482,6 +1511,12 @@ class CombineH5WithCSV(_Combine):
             # get trajectory data from flydra
             query = "(obj_id == %d) & (framenumber >= %d) & (framenumber <= %d)" % \
                     (oid, start_frame, trial_framenumbers[-1])
+
+            if fix.active and (fix.identifier == 'OLD_CONFINEMENT_CSVS_ARE_BROKEN'):
+                #sorry everyone
+                query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_frame)
+                self._warn_once("WARN: THIS DATA IS BROKEN IF OBJ_ID SPANS CONDITIONS")
+
             try:
                 valid = trajectories.readWhere(query)
             except:
@@ -1490,6 +1525,10 @@ class CombineH5WithCSV(_Combine):
             validframenumber = valid['framenumber']
 
             n_samples = len(validframenumber)
+
+            if ((trial_framenumbers[-1] - start_frame) > dur_samples) and (n_samples < dur_samples):
+                self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" % (oid, trial_framenumbers[-1]-start_frame, query))
+
             if n_samples < dur_samples:
                 self._debug('SKIP:   %d valid samples for obj_id %d' % (n_samples, oid))
                 self._skipped[cond] += 1
@@ -1511,12 +1550,12 @@ class CombineH5WithCSV(_Combine):
             h5_df = pd.concat(flydra_series, axis=1)
             n_samples_before = len(h5_df)
 
+            #compute those features we can (such as those that only need x,y,z)
             try:
-                dt = self._dt
-                self._calc_other_series(h5_df, dt)
+                computed,not_computed,missing = self.features.process(h5_df, self._dt)
             except Exception, e:
                 self._skipped[cond] += 1
-                self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
 
             # apply filters
@@ -1660,6 +1699,10 @@ class CombineH5WithCSV(_Combine):
                             except IndexError, e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
+                if fix.should_fix_dataframe:
+                    fix.fix_dataframe(df)
+
+                stop_framenumber = df['framenumber'].dropna().values[-1]
 
                 # the start time and the start framenumber are defined by the experiment,
                 # so they come from the csv
@@ -1678,6 +1721,26 @@ class CombineH5WithCSV(_Combine):
                 valid = trajectories.readWhere(query)
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
+
+                #compute the remaining features (which might have come from the CSV)
+                try:
+                    dt = self._get_df_sample_interval(df) or self._dt
+
+                    opts = {'uuid':uuid,
+                            'obj_id':oid,
+                            'start_framenumber':start_framenumber,
+                            'stop_framenumber':stop_framenumber,
+                            'start_time':start_time,
+                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt)}
+
+                    computed,not_computed,missing = self.features.process(df, dt, **opts)
+                    if missing:
+                        for m in missing:
+                            self._warn_once("ERROR: column/feature '%s' not computed" % m)
+                except Exception, e:
+                    self._skipped[cond] += 1
+                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                    continue
 
                 # provide a nanoseconds after the epoc column (use at your own risk(TM))
                 if 'tns' not in df.columns:
@@ -1826,7 +1889,7 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
     if to_mat:
         dict_df = df.to_dict('list')
         dict_df['index'] = df.index.values
-        scipy.io.savemat(dest+'.mat', dict_df)
+        scipy.io.savemat(dest+'.mat', dict_df, oned_as='column')
 
     formats = ('csv' if to_csv else '',
                'df' if to_df else '',

@@ -43,7 +43,7 @@ class TestCombineData(unittest.TestCase):
         cols = set(combine.get_result_columns())
 
         required = ['cyl_r', 'cyl_x', 'cyl_y', 'ratio', 'rotation_rate', 'trg_x', 'trg_y', 'trg_z',
-                    'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'ax', 'ay', 'az', 'theta',
+                    'v_offset_rate', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'velocity', 'theta',
                     'dtheta', 'radius', 't_nsec', 'framenumber', 'tns', 't_sec', 'exp_uuid',
                     'flydra_data_file', 'lock_object', 'condition']
         for r in required:
@@ -67,12 +67,12 @@ class TestCombineData(unittest.TestCase):
 
     def test_date(self):
         combine = self._get_comb()
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(5)
         self.assertAlmostEqual(time0, 1380896219.427156, 3)
 
     def test_range(self):
         combine = self._get_comb()
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(5)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,condition,uuid) = combine.get_one_result(5)
 
         fn = self._get_fn(df)
 
@@ -80,6 +80,8 @@ class TestCombineData(unittest.TestCase):
         self.assertEqual(framenumber0, 3843)
         self.assertEqual(fn[-1], 5750)
 
+        self.assertEqual(condition,'checkerboard16.png/infinity06.svg/0.2/-10.0/0.1/0.3/0.184')
+        self.assertEqual(uuid, '00000000000000000000000000000000')
 
 class TestCombine(unittest.TestCase):
 
@@ -87,8 +89,8 @@ class TestCombine(unittest.TestCase):
     RT_CSV_OBJ_ID = 1374168638
 
     def _assert_two_equal(self, a, b):
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = a
-        df_2,dt_2,(x0_2,y0_2,obj_id_2,framenumber0_2,time0_2) = b
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = a
+        df_2,dt_2,(x0_2,y0_2,obj_id_2,framenumber0_2,time0_2,_,_) = b
 
         self.assertEqual(dt,dt_2)
         self.assertEqual(obj_id,obj_id_2)
@@ -152,7 +154,7 @@ class TestCombine(unittest.TestCase):
 
         combine.add_csv_file(self.RT_CSV)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)
 
     def test_csv_args(self):
@@ -166,7 +168,7 @@ class TestCombine(unittest.TestCase):
         )
         combine.add_from_args(args, "rotation_tethered.csv")
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = combine.get_one_result(self.RT_CSV_OBJ_ID)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(self.RT_CSV_OBJ_ID)
         self._check_rotation_tethered(df,dt,x0,y0,obj_id,framenumber0,time0)
 
     def test_multi(self):
@@ -198,7 +200,7 @@ class TestCombine(unittest.TestCase):
 
         nc1 = c1.get_total_trials()
         self.assertEqual(nc1, 16)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c1.get_one_result(1375713692)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = c1.get_one_result(1375713692)
         self.assertEqual(len(df), 19945)
 
         del c1
@@ -215,7 +217,7 @@ class TestCombine(unittest.TestCase):
 
         nc2 = c2.get_total_trials()
         self.assertEqual(nc2, 32)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = c2.get_one_result(1375445854)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = c2.get_one_result(1375445854)
         self.assertEqual(len(df), 17472)
 
         del c2
@@ -233,9 +235,9 @@ class TestCombine(unittest.TestCase):
         ncc = cc.get_total_trials()
         self.assertEqual(ncc, nc1 + nc2)
 
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = cc.get_one_result(1375713692)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = cc.get_one_result(1375713692)
         self.assertEqual(len(df), 19945)
-        df,dt,(x0,y0,obj_id,framenumber0,time0) = cc.get_one_result(1375445854)
+        df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = cc.get_one_result(1375445854)
         self.assertEqual(len(df), 17472)
 
 if __name__=='__main__':

@@ -28,6 +28,10 @@ class ArenaBase(object):
             f = Filter.from_args_and_defaults('%sfilt' % i, self._args, **self.get_filter_defaults())
             self.filters.append(f)
 
+    @property
+    def active_filters(self):
+        return [f for f in self.filters if f.active]
+
     def get_xtick_locations(self):
         # override to specify tick locations, otherwise, auto-determined
         return None
@@ -45,8 +49,8 @@ class ArenaBase(object):
         return {}
 
     def apply_filters(self, args, df, dt):
-        cond = np.ones_like(df['framenumber'], dtype=bool)
-        valid = np.ones_like(df['framenumber'], dtype=bool)
+        cond = np.ones(len(df), dtype=bool)
+        valid = np.ones_like(cond, dtype=bool)
 
         for f in self.filters:
             if f.active:
@@ -57,6 +61,7 @@ class ArenaBase(object):
         return valid, cond
 
 class FlyCaveCylinder(ArenaBase):
+    name = "flycave"
     def __init__(self,args,radius=0.5,height=1.0):
         self.radius = radius
         self.height = height
@@ -70,7 +75,7 @@ class FlyCaveCylinder(ArenaBase):
         theta = np.linspace(0, 2*np.pi, 100)
         ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta),
                 *args, **kwargs)
-        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta),
+        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.ones_like(theta)*self.height,
                 *args, **kwargs)
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax, zmin, zmax)'''
@@ -87,6 +92,7 @@ class FlyCaveCylinder(ArenaBase):
                 "trajectory_start_offset":0.0}
 
 class FishBowl(ArenaBase):
+    name = "fishbowl"
     def __init__(self,args,radius=0.175,height=0.08):
         self.radius = radius
         self.height = height
@@ -95,6 +101,15 @@ class FishBowl(ArenaBase):
         rad = self.radius
         theta = np.linspace(0, 2*np.pi, 100)
         return ax.plot( rad*np.cos(theta), rad*np.sin(theta), *args, **kwargs)
+
+    def plot_mpl_3d(self,ax,*args,**kwargs):
+        rad = self.radius
+        theta = np.linspace(0, 2*np.pi, 100)
+        ax.plot(rad*np.cos(theta), rad*np.sin(theta), np.zeros_like(theta),
+                *args, **kwargs)
+        ax.plot(0.05*rad*np.cos(theta), 0.05*rad*np.sin(theta), -self.height*np.ones_like(theta),
+                *args, **kwargs)
+
     def get_bounds(self):
         ''' returns (xmin, xmax, ymin, ymax)'''
         return (-self.radius, self.radius, -self.radius, self.radius, -self.height, 0)
@@ -104,6 +119,7 @@ class FishBowl(ArenaBase):
                 "trajectory_start_offset":0.0}
 
 class FlyCube(ArenaBase):
+    name = "flycube"
     def __init__(self,args,xdim=0.63,ydim=0.35,zdim=0.4):
         self.xdim=xdim
         self.ydim=ydim
