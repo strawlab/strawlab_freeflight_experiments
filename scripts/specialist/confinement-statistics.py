@@ -96,7 +96,7 @@ def plot_confine_traces(combine, args, sorted_conditions):
         if aplt.WRAP_TEXT:
             fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
-def plot_confine_times(combine, args, sorted_conditions, skip_high=0):
+def plot_confine_times(combine, args, sorted_conditions, skip_high=0, plot_filtered_trajectories=False):
     results,dt = combine.get_results()
     arena = analysislib.arenas.get_arena_from_args(args)
 
@@ -136,12 +136,13 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=0):
             data['time_in_area'].append(in_area_time)
             data['percent_in_area'].append(in_area_pct)
 
-        f = plt.figure()
-        ax = f.add_subplot(1,1,1)
-        for df in dfs:
-            ax.plot(df['x'].values, df['y'].values, 'k-', lw=1.0, alpha=0.8)
-        ax.set_title(condn)
-        aplt.layout_trajectory_plots(ax, arena, False)
+        if plot_filtered_trajectories:
+            f = plt.figure()
+            ax = f.add_subplot(1,1,1)
+            for df in dfs:
+                ax.plot(df['x'].values, df['y'].values, 'k-', lw=1.0, alpha=0.8)
+            ax.set_title(condn)
+            aplt.layout_trajectory_plots(ax, arena, False)
 
     try:
         import seaborn as sns
@@ -151,7 +152,6 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=0):
         return
 
     df = pd.DataFrame(data)
-    print df.head(10)
 
     for y,label in (('time_in_area','time in area (s)'), ('percent_in_area','time in area (pct)')):
         name = '%s_%s' % (combine.fname,y)
@@ -162,11 +162,27 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=0):
                 sns.boxplot(x='condition',y=y,data=df, ax=ax)
                 sns.stripplot(x='condition',y=y,data=df, size=3, jitter=True, color="white", edgecolor="gray", ax=ax)
             else:
-                sns.boxplot(df, ax=ax)
+                raise Exception("Not Supported")
 
             for label in ax.get_xticklabels():
                 label.set_ha('right')
                 label.set_rotation(30)
+
+        name = '%s_%shist' % (combine.fname,y)
+        with aplt.mpl_fig(name,args) as fig:
+            ax = fig.add_subplot(1,1,1)
+
+            for cond in sorted_conditions:
+                condn = combine.get_condition_name(cond)
+
+                s = df[df['condition'] == condn][y]
+                sns.kdeplot(s, label=condn, ax=ax)
+
+            ax.legend()
+
+            if y == 'percent_in_area':
+                ax.set_xlim(0,1.0)
+
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
