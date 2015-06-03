@@ -187,8 +187,8 @@ class TestSomeFeatures(unittest.TestCase):
 
     def test_all_features_and_deps(self):
         for name in afeat.ALL_FEATURE_NAMES:
-            if name in ('reprojection_error','inverse_dynamics'):
-                #needs to load extra h5 data
+            if name in ('reprojection_error_smoothed', 'reprojection_error','inverse_dynamics'):
+                #needs to load extra h5 data and uuid not known
                 continue
 
             m = afeat.MultiFeatureComputer(name)

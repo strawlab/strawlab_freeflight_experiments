@@ -131,8 +131,10 @@ class _ReproErrorsFeature(_Feature):
                 h5_file = fm.get_file_model(self._filename).fullpath
                 self._stores[uuid] = pd.HDFStore(h5_file, 'r')
 
-        except (KeyError, autodata.files.NoFile):
-            raise FeatureError('Missing options')
+        except KeyError as ke:
+            raise FeatureError('Missing option %s' % ke)
+        except autodata.files.NoFile as fe:
+            raise FeatureError('Missing file %s' % fe)
 
         clause = 'obj_id = %d & frame >= %d & frame <= %d' % (int(oid), int(start_fn), int(stop_fn))
         _df = self._stores[uuid].select('/reprojection', where=clause)
@@ -389,7 +391,7 @@ class MultiFeatureComputer(object):
                     try:
                         f.process(df,dt,**state)
                         computed.append(f.name)
-                    except FeatureError:
+                    except FeatureError as fe:
                         pass
         not_computed = set(f.name for f in self._get_features()) - set(computed)
         missing = set(itertools.chain(self.get_columns_added(),self.get_measurements_required())) - set(df.columns.tolist())
