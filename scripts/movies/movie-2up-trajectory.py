@@ -138,6 +138,9 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
 
         pbar.update(n)
 
+        if ('NOSETEST_FLAG' in os.environ) and (movie.frame_number > 100):
+            continue
+
         try:
             img,ts = fmf.get_frame_at_or_before_timestamp(t)
         except ValueError:

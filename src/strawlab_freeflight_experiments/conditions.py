@@ -66,18 +66,29 @@ class ConditionCompat(OrderedDict):
     #fields in the experiment condition yaml file
 
     #https://regex101.com/r/tN5mQ4/1
-    ROTATION_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?$")
+    ROTATION_RE = re.compile("^(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?$")
 
-    CONFLICT_RE = re.compile("(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)(?:/[\d.+-]+){1,5}/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
+    #https://regex101.com/r/eZ7aE5/1
+    CONFLICT_RE = re.compile("^(?P<cylinder_image>\w+\.png)/(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<radius_when_locked>[\d.+-]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/?(?P<z_target>[\d.+-]+)?/(?P<model_descriptor>\w+\.osg(?:\|[\d.+-]+)+)$")
 
-    PERTURB_RE = re.compile("\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
+    PERTURB_RE = re.compile("^\w+\.png\/\w+\.svg(?:\/[\d.+-]+){3,5}\/\w+\|.*$")
 
-    CONFINE_RE = re.compile("(?P<stimulus_filename>[\w.]+\.osg)/(?P<x0>[\d.+-]+)/(?P<y0>[\d.+-]+)/(?P<lag>[\d.+-]+)$")
+    CONFINE_RE = re.compile("^(?P<stimulus_filename>[\w.]+\.osg)/(?P<x0>[\d.+-]+)/(?P<y0>[\d.+-]+)/(?P<lag>[\d.+-]+)$")
+
+    #https://regex101.com/r/yW6lG5/1
+    TRANSLATION_RE = re.compile("^(?P<svg_path>\w+\.svg)/(?P<gain>[\d.+]+)/(?P<advance_threshold>[\d.+-]+)/(?P<z_gain>[\d.+]+)/(?P<star_size>[\d.+]+)/(?P<z_target>[\d.+-]+)$")
 
     def __init__(self, slash_string):
         OrderedDict.__init__(self)
         self._s = slash_string
         self._fake_names = []
+
+        #translation experiments look like this
+        # infinity07.svg/5.0/0.1/5.0/20.0/0.12
+        match = ConditionCompat.TRANSLATION_RE.match(self._s)
+        if match:
+            self._fake_names.append('translation')
+            self.update(match.groupdict())
 
         #rotation experiments look like this
         # checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2

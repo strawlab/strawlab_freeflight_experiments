@@ -1490,7 +1490,7 @@ class CombineH5WithCSV(_Combine):
                 continue
 
             if original_condition != fixed_condition:
-                self._debug_once("FIX:    condition string %s -> %s" % (original_condition, fixed_condition))
+                self._debug_once("FIX:    #%5d: condition string %s -> %s" % (oid, original_condition, fixed_condition))
                 csv_df = csv_df.copy()  # use copy and not view
                 csv_df['condition'].replace(original_condition, fixed_condition, inplace=True)
 
@@ -1505,7 +1505,7 @@ class CombineH5WithCSV(_Combine):
             # is already past the end frame (due to the frames_start_offset)
             # then the trajectory is too short
             if start_frame > trial_framenumbers[-1]:
-                self._debug('SKIP:   0 valid samples for obj_id %d' % oid)
+                self._debug('SKIP:   #%5d: 0 valid samples' % oid)
                 continue
 
             # get trajectory data from flydra
@@ -1530,7 +1530,7 @@ class CombineH5WithCSV(_Combine):
                 self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" % (oid, trial_framenumbers[-1]-start_frame, query))
 
             if n_samples < dur_samples:
-                self._debug('SKIP:   %d valid samples for obj_id %d' % (n_samples, oid))
+                self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples))
                 self._skipped[cond] += 1
                 continue
 
@@ -1564,11 +1564,11 @@ class CombineH5WithCSV(_Combine):
 
             n_samples = len(h5_df)
             if n_samples < dur_samples:
-                self._debug('FILT:   %d/%d valid samples for obj_id %d' % (n_samples, len(valid), oid))
+                self._debug('FILT:   #%5d: %d/%d valid samples' % (oid, n_samples, len(valid)))
                 self._skipped[cond] += 1
                 continue
             if n_samples != n_samples_before:
-                self._debug('TRIM:   removed %d frames' % (n_samples_before - n_samples))
+                self._debug('TRIM:   #%5d: removed %d frames' % (oid, n_samples_before - n_samples))
 
             traj_start_frame = h5_df['framenumber'].values[0]
             traj_stop_frame = h5_df['framenumber'].values[-1]
@@ -1584,10 +1584,11 @@ class CombineH5WithCSV(_Combine):
                 span_details = (cond, n_samples)
                 self._results_by_condition.setdefault(oid, []).append(span_details)
 
-                self._debug('SAVE:   %d samples (%d -> %d) for obj_id %d (%s)' %
-                            (n_samples,
+                self._debug('SAVE:   #%5d: %d samples (%d -> %d) (%s)' %
+                            (oid,
+                             n_samples,
                              traj_start_frame, traj_stop_frame,
-                             oid, self.get_condition_name(cond)))
+                             self.get_condition_name(cond)))
 
                 if self._index == 'framenumber':
                     # if the csv has been written at a faster rate than the

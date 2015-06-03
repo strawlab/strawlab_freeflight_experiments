@@ -122,10 +122,12 @@ cond3:
         TO_TEST = {'rotation':['checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2',
                                'gray.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2',
                                'checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2'],
-                   'conflict':['checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0'],
+                   'conflict':['checkerboard16.png/infinity07.svg/0.3/-5.0/0.1/0.18/0.2/justpost1.osg|-0.1|-0.1|0.0',
+                               'checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/justpost1.osg|-0.15|0.25|0.0'],
                    'perturbation':['checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/multitone_rotation_rate|rudinshapiro2|1.8|3|1|5||0.4|0.46|0.56|0.96|1.0|0.0|0.06',
                                    'checkerboard16.png/infinity.svg/0.3/-10.0/0.1/0.2/step_rotation_rate|1.8|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06'],
                    'confine':['lboxmed.svg.osg/+0.0/+0.0/125','lboxmed.svg.osg/+0.0/+0.0/0'],
+                   'translation':['infinity07.svg/5.0/0.1/5.0/20.0/0.12'],
         }
 
         for t,conds in TO_TEST.iteritems():
