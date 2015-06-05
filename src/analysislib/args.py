@@ -230,8 +230,6 @@ def check_args(parser, args, max_uuids=1000, defaults_from_arena=True):
             parser.error("if uuid is given, --csv-file and --h5-file are not required")
         if len(args.uuid) > max_uuids:
             parser.error("only %d uuids supported" % max_uuids)
-        if len(args.uuid) > 1 and args.outdir is None:
-            parser.error("if multiple uuids are given, --outdir is required")
     else:
         if None in (args.csv_file, args.h5_file):
             parser.error("either --uuid or both --csv-file and --h5-file are required")

@@ -1,7 +1,6 @@
 from functools import partial
 from itertools import izip
 import os.path
-import os.path
 import sys
 import random
 import time
@@ -14,6 +13,7 @@ import datetime
 import calendar
 import collections
 import copy
+import itertools
 from pandas.tseries.index import DatetimeIndex
 
 import tables
@@ -144,6 +144,7 @@ class _Combine(object):
         self._tfilt_after = None
         self._tfilt = None
         self._plotdir = None
+        self._plotdir_uuids = []
         self._analysistype = None
         self._index = 'framenumber'
         self._warn_cache = {}
@@ -238,6 +239,31 @@ class _Combine(object):
                         self._warn('The error was %s' % str(e))
                         raise CacheError(pkl)
         return None
+
+    def _update_plot_dir(self, args, uuid, uuids=None):
+        def add_uuid(_uuid):
+            if _uuid and (_uuid not in self._plotdir_uuids):
+                self._plotdir_uuids.append(_uuid)
+
+        add_uuid(uuid)
+        if uuids is not None:
+            for uuid in uuids:
+                add_uuid(uuid)
+
+        uuids = self._plotdir_uuids
+
+        if args.outdir:
+            self.plotdir = args.outdir
+            return
+
+        if not uuids:
+            self.plotdir = os.getcwd()
+        elif len(uuids) > 1:
+            self.plotdir = autodata.files.get_multi_plot_path(*uuids)
+        else:
+            fm = autodata.files.FileModel(basedir=args.basedir)
+            fm.select_uuid(uuids[0])
+            self.plotdir = fm.get_plot_dir()
 
     def get_data_dictionary(self):
         """Returns a dictionary with the data that is worth to save from this combine object.
@@ -390,6 +416,11 @@ class _Combine(object):
  
         if not os.path.isdir(pd):
             os.makedirs(pd)
+
+        if len(self._plotdir_uuids) > 1:
+            with open(os.path.join(self._plotdir,'UUIDS'),'w') as f:
+                f.write('\n'.join(self._plotdir_uuids))
+                f.write('\n')
 
         return pd
 
@@ -817,22 +848,21 @@ class CombineCSV(_Combine):
         self._maybe_add_tfilt(args)
 
         if args.uuid:
-            if len(args.uuid) > 1:
-                self.plotdir = args.outdir
-
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
                 fm.select_uuid(uuid)
-                csv_file = fm.get_file_model(csv_suffix).fullpath
-
-                #this handles the single uuid case
-                if self.plotdir is None:
-                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
-
+                try:
+                    csv_file = fm.get_file_model(csv_suffix).fullpath
+                except autodata.files.NoFile:
+                    if len(args.uuid) == 1:
+                        raise
+                    else:
+                        continue
                 self.add_csv_file(csv_file, args.lenfilt)
+                self._update_plot_dir(args,uuid)
         else:
-            self.add_csv_file(args.csv_file, args.lenfilt)
-            self.plotdir = args.outdir if args.outdir else os.getcwd()
+            uuid = self.add_csv_file(args.csv_file, args.lenfilt)
+            self._update_plot_dir(args,uuid)
 
     def add_csv_file(self, csv_file, lenfilt=None):
         self._debug("IO:     reading %s" % csv_file)
@@ -842,8 +872,17 @@ class CombineCSV(_Combine):
         assert 'lock_object' in df.columns
 
         # uuids from CSV
-        if 'exp_uuid' not in df.columns:
-            self._warn('exp_uuid not in %s, cannot infer the UUID' % self.csv_file)
+        uuid = None
+        if 'exp_uuid' in df:
+            if df['exp_uuid'].nunique() == 1:
+                uuid = df['exp_uuid'].dropna().unique()[0]
+        if uuid is None:
+            # FIXME: some csvs lack the exp_uuid for some initial observations:
+            #        e.g. cdb7a1ac94f711e4bb6cbcee7bdac270
+            #        diagnose why (race condition?) and write defensive uuid readers...
+            self._warn('cannot infer a unique UUID for %s' % self.csv_file)
+
+        self._debug("IO:     csv uuid %s" % uuid)
 
         df = df.fillna(method="pad")
         df['time'] = df['t_sec'] + (df['t_nsec'] * 1e-9)
@@ -894,16 +933,6 @@ class CombineCSV(_Combine):
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
                 self._results[cond]['count'] += 1
 
-                # save uuid
-                uuid = None
-                if 'exp_uuid' in odf:
-                    if odf['exp_uuid'].nunique() != 1:
-                        self._warn('cannot infer a unique uuid for cond=%s oid=%s' % (cond, obj_id))
-                    else:
-                        uuid = odf['exp_uuid'].dropna().unique()[0]
-                # FIXME: some csvs lack the exp_uuid for some initial observations:
-                #        e.g. cdb7a1ac94f711e4bb6cbcee7bdac270
-                #        diagnose why (race condition?) and write defensive uuid readers...
                 self._results[cond]['uuids'].append(uuid)
 
         if self._df is None:
@@ -1106,14 +1135,8 @@ class CombineH5WithCSV(_Combine):
                 self._condition_names = d['condition_names']
                 self._metadata = d['metadata']
 
-                if args.uuid is None:
-                    self.plotdir = args.outdir if args.outdir else os.getcwd()
-                elif len(args.uuid) > 1:
-                    self.plotdir = args.outdir
-                else:
-                    fm = autodata.files.FileModel(basedir=args.basedir)
-                    fm.select_uuid(args.uuid[0])
-                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
+                uuids = set(itertools.chain.from_iterable(self._results[cond]['uuids'] for cond in self._results))
+                self._update_plot_dir(args,None,uuids)
 
                 return
 
@@ -1123,9 +1146,6 @@ class CombineH5WithCSV(_Combine):
         self._maybe_add_tfilt(args)
 
         if args.uuid:
-            if len(args.uuid) > 1:
-                self.plotdir = args.outdir
-
             for uuid in args.uuid:
                 fm = autodata.files.FileModel(basedir=args.basedir)
                 fm.select_uuid(uuid)
@@ -1137,20 +1157,13 @@ class CombineH5WithCSV(_Combine):
                         raise
                     else:
                         continue
-
-                #this handles the single uuid case
-                if self.plotdir is None:
-                    self.plotdir = args.outdir if args.outdir else fm.get_plot_dir()
-
                 self.add_csv_and_h5_file(csv_file, h5_file, args)
-
+                self._update_plot_dir(args,uuid)
         else:
             csv_file = args.csv_file
             h5_file = args.h5_file
-
-            self.plotdir = args.outdir if args.outdir else os.getcwd()
-
-            self.add_csv_and_h5_file(csv_file, h5_file, args)
+            uuid = self.add_csv_and_h5_file(csv_file, h5_file, args)
+            self._update_plot_dir(args,uuid)
 
         if cache_error or (not os.path.isfile(self._get_cache_name())):
             if args.cached:
@@ -1165,21 +1178,25 @@ class CombineH5WithCSV(_Combine):
                 spanned[oid] = details
         return spanned
 
-    def infer_uuid(self, args, csv_df):
+    def infer_uuid(self, args_uuids, csv_df, csv_fname, h5_fname=None):
         """Given args and the csv_df, try to infer a unique UUID."""
         uuid = None
-        uuids_from_flydra = uuids_from_flydra_h5(self.h5_file, logger=self._warn)  # can be more than one
         uuids_from_csv = uuids_from_experiment_csv(csv_df)  # can be more than one
-        uuid_candidates_from_files = set(uuids_from_flydra) & set(uuids_from_csv)  # can be more than one
-        uuids_from_args = args.uuid if args.uuid is not None else []  # can be more than one
-
-        self._debug("IO:     h5 uuid(s) %s" % ','.join(uuids_from_flydra))
         self._debug("IO:     csv uuid(s) %s" % ','.join(uuids_from_csv))
+
+        if h5_fname is not None:
+            uuids_from_flydra = uuids_from_flydra_h5(h5_fname, logger=self._warn)  # can be more than one
+            self._debug("IO:     h5 uuid(s) %s" % ','.join(uuids_from_flydra))
+            uuid_candidates_from_files = set(uuids_from_flydra) & set(uuids_from_csv)  # can be more than one
+        else:
+            uuid_candidates = set(uuids_from_csv)
+
+        uuids_from_args = args_uuids if args_uuids is not None else []  # can be more than one
 
         if len(uuids_from_args) == 1:
             uuid_candidate = uuids_from_args[0]
             if uuid_candidate not in uuid_candidates_from_files:  # we do not want to recover from this
-                raise Exception('uuid %s not present in the csv %s' % (uuid_candidate, self.csv_file))
+                raise Exception('uuid %s not present in the csv %s' % (uuid_candidate, csv_fname))
             uuid = uuid_candidate
         elif len(uuids_from_args) > 1:
             uuid_candidates = uuid_candidates_from_files & set(uuids_from_args)
@@ -1230,7 +1247,7 @@ class CombineH5WithCSV(_Combine):
             csv['framenumber'] = csv['framenumber'].astype(int)
 
         # infer uuid
-        uuid = self.infer_uuid(args, csv)
+        uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
         # try and open the experiment and condition metadata files
         path, fname = os.path.split(csv_fname)
@@ -1756,6 +1773,8 @@ class CombineH5WithCSV(_Combine):
                 self._results[cond]['uuids'].append(uuid)
 
         h5.close()  # maybe this should go in a finally?
+
+        return uuid
 
 
 FORMAT_DOCS = """
