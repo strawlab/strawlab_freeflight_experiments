@@ -20,6 +20,7 @@ import analysislib.args
 import analysislib.util
 import nodelib.log
 
+import flydra.version
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID
 from flydra.analysis.save_as_flydra_hdf5 import save_as_flydra_hdf5
 from strawlab_freeflight_experiments.conditions import Condition
@@ -402,7 +403,14 @@ class TestCombineFake2(unittest.TestCase):
         data = {"trajectories":traj_arr,
                 "trajectory_start_times":traj_start_arr}
 
-        save_as_flydra_hdf5(h5_fname, data, "US/Pacific", FPS)
+        save_as_flydra_hdf5(h5_fname, data, "US/Pacific", FPS,
+                            smoothed_source='FAKE',
+                            smoothed_data_filename='fake.h5',
+                            raw_data_filename='fake.h5',
+                            dynamic_model_name='FAKE',
+                            recording_flydra_version=flydra.version.__version__,
+                            smoothing_flydra_version=flydra.version.__version__)
+
         log.close()
 
         return h5_fname, csv_fname
