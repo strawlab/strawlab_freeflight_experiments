@@ -135,11 +135,14 @@ class _FixPerturbationConditionName(_DictOrAttr):
         return c
 
 def _fix_confinement_add_columns(df):
-    stim_filename = df['stimulus_filename'].dropna().unique()[0]
-    if '.svg' in stim_filename:
-        svg_filename = stim_filename.replace('.osg','')
-    else:
-        svg_filename = ''
+    svg_filename = ''
+
+    try:
+        stim_filename = df['stimulus_filename'].dropna().unique()[0]
+        if '.svg' in stim_filename:
+            svg_filename = stim_filename.replace('.osg','')
+    except IndexError:
+        pass
 
     df['svg_filename'] = svg_filename
     df['stopr'] = np.nan
