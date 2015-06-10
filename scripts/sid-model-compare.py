@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+import os
 import pickle
 import argparse
-import itertools
 
-import control
+if not os.environ.get('DISPLAY'):
+    print "DISPLAY NOT SET: USING AGG BACKEND"
+    import matplotlib
+    matplotlib.use('agg')
+
 import numpy as np
 import matplotlib.pyplot as plt
 

@@ -79,6 +79,7 @@ if __name__=='__main__':
 
     with mlab.fig(args.save+'.png') as f:
         sfe_sid.bode_models(mlab,title,True,'SouthWest',False,models,w)
+        print "WROTE", args.save+'.png'
 
     if args.show:
         sfe_sid.show_mlab_figures(mlab)

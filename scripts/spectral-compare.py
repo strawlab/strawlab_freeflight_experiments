@@ -71,6 +71,7 @@ if __name__=='__main__':
                        nout=1)
 
     mlab.saveas(h,args.save+'.png','png')
+    print "WROTE", args.save+'.png'
 
     if args.show:
         sfe_sid.show_mlab_figures(mlab)
