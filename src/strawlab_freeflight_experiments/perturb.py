@@ -169,6 +169,9 @@ class Perturber(object):
             #not present in subclasses
             return np.nan,np.nan
 
+    def get_crest_factor(self):
+        return np.nan
+
     def get_perturb_range_identifier(self, v):
         if self.criteria_type == self.CRITERIA_TYPE_RATIO:
             for i,f in enumerate(self.in_ratio_funcs):
@@ -492,6 +495,9 @@ class _PerturberInterpolation(Perturber):
 
     def get_value_limits(self):
         return -self.value,self.value
+
+    def get_crest_factor(self):
+        return sfe_frequency.get_crest_factor_db(self._w)
 
 class PerturberChirp(_PerturberInterpolation):
 
