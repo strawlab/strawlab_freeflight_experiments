@@ -15,6 +15,12 @@ if not os.environ.get('DISPLAY'):
 
 import matplotlib.pyplot as plt
 
+try:
+    import seaborn as sns
+    new_seaborn = int(sns.__version__.split('.')[1]) > 5
+except ImportError:
+    sns = None
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 
@@ -48,12 +54,6 @@ def plot_model_fits(all_models, ax):
     df = pd.DataFrame(all_models)
     df.drop('obj_id',axis=1,inplace=True)
     df[df < 0] = 0.0
-
-    try:
-        import seaborn as sns
-        new_seaborn = int(sns.__version__.split('.')[1]) > 5
-    except ImportError:
-        sns = None
 
     if sns is not None:
         if new_seaborn:
