@@ -751,13 +751,16 @@ class PerturberIDINPUT(_PerturberInterpolation):
 
         #look for the cached data object
         fn = '_'.join([str(i) for i in ('idinput',self.type,dur,b0,b1,value,s0,s1,s2,seed)])
-        fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn + '.npy')
+        fn = os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),'data','idinput',fn)
 
-        fn_exists = os.path.isfile(fn)
-
+        fn_exists = os.path.isfile(fn+'.npy')
         if fn_exists:
-            w = np.load(fn)
+            w = np.load(fn+'.npy')
             t = np.linspace(0, self.t1, len(w))
+            try:
+                freqs = np.load(fn+'.freqs.npy')
+            except IOError:
+                freqs = []
         else:
             if PerturberIDINPUT._mlab == None:
                 try:
@@ -774,15 +777,16 @@ class PerturberIDINPUT(_PerturberInterpolation):
             else:
                 sindata = [10,10,1]
 
-            N = self.t1*100*OS
+            N = self.t1*FS*OS
 
             _mlab.rng(int(seed))
-            u = _mlab.idinput(int(N),self.type,self.band,lvls,sindata,nout=1)
+            u,freqs = _mlab.idinput(int(N),self.type,self.band,lvls,sindata,nout=2)
             w = np.squeeze(u.T)
 
             t = np.linspace(0, self.t1, len(w))
 
-            np.save(fn,w)
+            np.save(fn+'.npy',w)
+            np.save(fn+'.freqs.npy',freqs)
 
         _PerturberInterpolation.__init__(self, descriptor, criteria, self.t1, t, w)
 
@@ -790,6 +794,9 @@ class PerturberIDINPUT(_PerturberInterpolation):
             self.analysis_hints["lookback"] = 0.0
         else:
             self.analysis_hints["lookback"] = 4.0
+
+        if len(freqs):
+            self.analysis_hints["frequencies_hz"] = (FS*freqs) / (2*np.pi)
 
     def __repr__(self):
         return "<PerturberIDINPUT what=%s val=%.1f type=%s dur=%.1fs bw=%.2f...%.2f f=%.1f...%.1f>" % (self.what,self.value,self.type,self.duration,self.band[0],self.band[1],self.f0,self.f1)
