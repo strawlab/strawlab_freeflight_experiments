@@ -880,6 +880,9 @@ if __name__ == "__main__":
         obj = get_perturb_object(condition)
         f = plt.figure(repr(obj), figsize=(8,8))
         _plot(f,obj)
+        print obj
+        print "crest factor:",obj.get_crest_factor(), "dB"
+        print "hints:\n",obj.analysis_hints
     else:
         for p in PERTURBERS:
             condition = p.DEFAULT_DESC + "|" + p.DEFAULT_CRITERIA
