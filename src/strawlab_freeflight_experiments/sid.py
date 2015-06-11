@@ -295,13 +295,12 @@ function g = do_spa(trial_data,title,f1)
         line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
     end
 
-end""",iddata,title.replace('_',''),f1,
+end""",iddata,title.replace('_',r'\_'),f1,
        nout=1,saveout=(mlab.varname('idfrd'),))
     return idfrd_model
 
 def compare_models(mlab,title,iddata,result_objs):
-    #remove _ because it seems impossible to disable the tex interpreter
-    mlab.set_variable('figtitle',title.replace('_',''))
+    mlab.set_variable('figtitle',title)
 
     model_varnames = map(str,[iddata] + [r.sid_model for r in result_objs if not r.failed])
     model_names = ["'validation data'"] + ["'%s'" % r for r in result_objs]
@@ -317,7 +316,7 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
         w = np.logspace(-2,2,100)
 
     #remove _ because it seems impossible to disable the tex interpreter
-    mlab.set_variable('figtitle',title.replace('_',''))
+    mlab.set_variable('figtitle',title.replace('_',r'\_'))
     mlab.set_variable('w',w)
 
     if use_model_colors:
@@ -349,8 +348,11 @@ setoptions(h,'YLimMode','manual','YLim',ylims);
          'showConfidence(h,1);' if show_confidence else ''))
 
 def pzmap_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs):
-    #remove _ because it seems impossible to disable the tex interpreter
-    mlab.set_variable('figtitle',title.replace('_',''))
+    if show_confidence:
+        #no idea... stpuid matlab
+        title = title.replace('_',r'\_')
+
+    mlab.set_variable('figtitle',title)
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
@@ -381,7 +383,7 @@ ylim([-1.5 1.5]);
 
 def step_response_models(mlab,title,show_confidence,show_legend,use_model_colors,amplitude,tfinal,result_objs):
     #remove _ because it seems impossible to disable the tex interpreter
-    mlab.set_variable('figtitle',title.replace('_',''))
+    mlab.set_variable('figtitle',title.replace('_',r'\_'))
 
     if use_model_colors:
         plot_args = ','.join(itertools.chain(*[(str(r.sid_model),"'%s'" % r.matlab_color) for r in result_objs if not r.failed]))
