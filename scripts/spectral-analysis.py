@@ -203,11 +203,11 @@ if __name__=='__main__':
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
 
             name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Bode (from all data): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
+            title = 'Bode (from all data): %s->%s v%d\n%s\n%s' % (system_u_name,system_y_name,VERSION,cond_name,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title, -1)
 
-            title = '%s v%d' % (perturbation_obj,VERSION)
+            title = '%s\n%s v%d' % (cond_name,perturbation_obj,VERSION)
             name = combine.get_plot_filename('%%s_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
 
             indata,outdata = plot_spectrum(mlab,pooled_id, f0, f1, FS, title, system_u_name, system_y_name, name)
