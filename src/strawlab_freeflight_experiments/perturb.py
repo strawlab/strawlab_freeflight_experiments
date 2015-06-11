@@ -839,7 +839,7 @@ def plot_perturbation_frequency_characteristics(fig,obj,fs=100,maxfreq=12):
     gs = matplotlib.gridspec.GridSpec(2,2)
     ax = fig.add_subplot(gs[0,:])
     obj.plot(ax, t_extra=0.5)
-    ax.set_title(str(obj))
+    ax.set_title(str(obj),size=10)
     ax.set_xlabel('t (s)')
     ax.set_ylabel(str(obj.what))
     ax = fig.add_subplot(gs[1,0])
