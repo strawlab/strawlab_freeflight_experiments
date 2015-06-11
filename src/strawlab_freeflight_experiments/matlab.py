@@ -57,6 +57,12 @@ def _kill_mlab():
     except Exception, e:
         print "Error killing MATLAB: %s" % e
 
+def escape_matlab(s):
+    _chars = {
+        '_':  r'\_',
+    }
+    return ''.join(_chars.get(c, c) for c in s)
+
 def get_mlab_instance(visible):
     global mlab
     mlab_opts = dict(matlab='/opt/matlab/R2013a/bin/matlab',

@@ -146,7 +146,7 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
                                     system_u_name, system_y_name,
                                     fs=100, max_freq=12, NFFT=None, amp_spectrum=False, nfft_sweep=False)
 
-                    fig.suptitle('%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (perturbation_obj,100,nfft_desc))
+                    fig.suptitle('%s\n%s\nPSD and Coherence (Fs=%d, NFFT=%s)' % (cond_name,perturbation_obj,100,nfft_desc))
 
 if __name__=='__main__':
 
@@ -356,7 +356,7 @@ if __name__=='__main__':
 
             #plot the mean timeseries and any model fits using matplotlib
             name = combine.get_plot_filename('ts_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Model Comparison (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
+            title = 'Model Comparison (mean response): %s->%s v%d\n%s\n%s' % (system_u_name,system_y_name,VERSION,cond_name,perturbation_obj)
             with aplt.mpl_fig(name,args,figsize=(8,4)) as fig:
 
                 ax = fig.add_subplot(1,1,1)
@@ -410,7 +410,7 @@ if __name__=='__main__':
                 continue
 
             name = combine.get_plot_filename('validation_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Model Comparison (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
+            title = 'Model Comparison (mean response): %s v%d\n%s' % (cond_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
             if EPS:
@@ -418,7 +418,7 @@ if __name__=='__main__':
                     sfe_sid.compare_models(mlab,title,individual_iddata_mean,possible_models)
 
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Bode (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
+            title = 'Bode (mean response): %s v%d\n%s' % (cond_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
             if EPS:
@@ -426,7 +426,7 @@ if __name__=='__main__':
                     sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            title = 'Pole Zero Plot (mean response): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
+            title = 'Pole Zero Plot (mean response): %s v%d\n%s' % (cond_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
                 sfe_sid.pzmap_models(mlab,title,True,True,False,possible_models)
             if EPS:
@@ -531,7 +531,7 @@ if __name__=='__main__':
                     extra_desc = 'r=model(mean perturb),b=merge(%d good ind. models),g=model(%d all ind. data),m=model(%d good ind. data) ' % (len(individual_models[pm]),len(individual_iddata), len(individual_models[pm]))
 
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Bode %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
+                    title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
                     if EPS:
@@ -539,7 +539,7 @@ if __name__=='__main__':
                             sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
 
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Pole Zero Plot %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
+                    title = 'Pole Zero Plot %s (int>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
                     if EPS:
@@ -547,7 +547,7 @@ if __name__=='__main__':
                             sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
 
                     name = combine.get_plot_filename('pz_merge_and_means_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Pole Zero Plot %s (merge>%.1f%%/means): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
+                    title = 'Pole Zero Plot %s (merge>%.1f%%/means): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
                     if EPS:
@@ -555,14 +555,14 @@ if __name__=='__main__':
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
                     name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Bode %s (individual>%.1f%%): %s->%s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,perturbation_obj,extra_desc)
+                    title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
                     if EPS:
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
 
-            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond, **plot_fn_kwargs))
+            name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond_name, **plot_fn_kwargs))
             title = 'Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond))
             with aplt.mpl_fig(name,args,figsize=(8,8)) as fig:
                 ax = fig.add_subplot(1,1,1)
