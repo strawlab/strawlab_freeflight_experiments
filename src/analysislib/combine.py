@@ -175,6 +175,9 @@ class _Combine(object):
         self.features.set_features(*features)
         self._configdict['features'] = self.features
 
+    def get_features(self):
+        return self.features.get_columns_added()
+
     def set_index(self, index):
         VALID_INDEXES = ('framenumber','none')
         if (index not in VALID_INDEXES) and (not index.startswith('time')):
