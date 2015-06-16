@@ -542,7 +542,7 @@ if __name__=='__main__':
                             sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
 
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Pole Zero Plot %s (int>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
+                    title = 'Pole Zero Plot %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
                         sfe_sid.pzmap_models(mlab,title,False,False,True,indmdls+extra_models)
                     if EPS:
