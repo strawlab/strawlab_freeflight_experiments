@@ -1,0 +1,15 @@
+<launch>
+
+  <node name="display_server_demo" pkg="flyvr" type="display_server" args="--mode overview">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+    <param name="p2g" type="str" value="$(find flyvr)/config/p2g.exr" />
+  </node>
+
+  <node name="stimulus_latch" pkg="rostopic" type="rostopic" args="pub --once /stimulus_mode std_msgs/String StimulusCylinderGrating">
+  </node>
+
+
+  <node name="stimulus_geom" pkg="rostopic" type="rostopic" args="pub --once /geometry_type std_msgs/Int32 1">
+  </node>
+
+</launch>

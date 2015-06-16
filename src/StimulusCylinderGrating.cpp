@@ -95,6 +95,21 @@ typedef struct
     GratingType gratings[NUM_GRATINGS];
 } CylInfo;
 
+typedef struct
+{
+    osg::ref_ptr<osg::Box>              box;
+    osg::ref_ptr<osg::ShapeDrawable>    shape;
+    osg::ref_ptr<osg::Geode>            geode;
+
+    osg::ref_ptr<osg::StateSet>         state_set;
+
+    osg::ref_ptr<osg::Program>          program;
+    osg::ref_ptr<osg::Shader>           vertex_shader;
+    osg::ref_ptr<osg::Shader>           fragment_shader;
+
+    GratingType gratings[NUM_GRATINGS];
+} SquareInfo;
+
 class StimulusCylinderGrating: public StimulusInterface
 {
 public:
@@ -112,11 +127,17 @@ private:
     osg::ref_ptr<osg::Group>            _virtual_world;
     double                              _t0;
     CylInfo _cyl;
+    SquareInfo _square;
+    int _geometry_type;
+    osg::Geode*                         _current_world;
+
 
     osg::ref_ptr<osg::Group> create_virtual_world();
     void post_init(bool);
     void init_cyl(CylInfo&);
+    void init_square(SquareInfo&);
     void set_grating_info( int i, GratingParams& new_values);
+    void set_geometry_type( int value );
 };
 
 StimulusCylinderGrating::StimulusCylinderGrating() :
@@ -129,7 +150,42 @@ std::vector<std::string> StimulusCylinderGrating::get_topic_names() const
 {
     std::vector<std::string> result;
 	result.push_back("grating_info");
+	result.push_back("geometry_type");
     return result;
+}
+
+void StimulusCylinderGrating::set_geometry_type( int value ) {
+
+    GratingParams orig_params = (_geometry_type == 0) ? _cyl.gratings[0].params : _square.gratings[0].params;
+
+    _geometry_type = value;
+    if (_geometry_type == 0) {
+        std::cout << "using cylinder " << std::endl;
+
+        _cyl.gratings[0].params = orig_params; // carry over old parameters
+
+        // Cylinder
+        _virtual_world->removeChild( _current_world );
+
+        _current_world = _cyl.geode.get();
+        _virtual_world->addChild( _current_world );
+    } else if (_geometry_type == 1) {
+
+        std::cout << "using square" << std::endl;
+
+        _square.gratings[0].params = orig_params; // carry over old parameters
+
+        // Square
+        _virtual_world->removeChild( _current_world );
+
+        _current_world = _square.geode.get();
+        _virtual_world->addChild( _current_world );
+    } else {
+        throw std::runtime_error("unknown geometry type");
+    }
+
+    set_grating_info(0, orig_params); // set the dirty flag, if nothing else...
+
 }
 
 void StimulusCylinderGrating::receive_json_message(const std::string& topic_name, const std::string& json_message)
@@ -146,6 +202,11 @@ void StimulusCylinderGrating::receive_json_message(const std::string& topic_name
         new_values = parse_grating_info(root);
         set_grating_info(0,new_values);
 
+    } else if (topic_name=="geometry_type") {
+
+        int geometry_type = parse_int(root);
+        set_geometry_type( geometry_type );
+
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -158,6 +219,8 @@ std::string StimulusCylinderGrating::get_message_type(const std::string& topic_n
     std::string result;
     if (topic_name=="grating_info") {
         result = "strawlab_freeflight_experiments/CylinderGratingInfo";
+    } else if (topic_name=="geometry_type") {
+        result = "std_msgs/Int32";
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -177,7 +240,8 @@ void StimulusCylinderGrating::update( const double& time, const osg::Vec3& obser
     }
 
     for (int i=0; i<NUM_GRATINGS; i++) {
-        GratingType &grating = _cyl.gratings[i];
+        GratingType &grating = (_geometry_type == 0) ? _cyl.gratings[i] : _square.gratings[i];
+
         {
             OpenThreads::ScopedLock<OpenThreads::Mutex> lock(grating.mutex);
 
@@ -274,10 +338,79 @@ void StimulusCylinderGrating::init_cyl(CylInfo& cyl) {
 
 }
 
+void StimulusCylinderGrating::init_square(SquareInfo& square) {
+
+    osg::Vec3 center = osg::Vec3(0.0f, 0.0f, -0.016f);
+    float lengthX = 10.0f;
+    float lengthY = lengthX;
+    float lengthZ = 1e-6;
+
+    square.box = new osg::Box(center,lengthX,lengthY,lengthZ);
+    square.shape = new osg::ShapeDrawable(square.box); //, hints.get());
+
+    const char* phase_position_name;
+    const char* wavelength_name;
+    const char* contrast_name;
+    const char* orientation_name;
+
+    for (int i=0; i<NUM_GRATINGS; i++) {
+        GratingParams new_values;
+        new_values.phase_position = 0.0;
+        new_values.phase_velocity = 2.0*M_PI;
+        new_values.wavelength = 0.038;
+        new_values.contrast = 10000.0;
+        new_values.orientation = 0;
+
+        if (i==0) {
+            phase_position_name="phase_position0";
+            wavelength_name="wavelength0";
+            contrast_name="contrast0";
+            orientation_name="orientation0";
+        } else {
+            flyvr_assert(false);
+        }
+
+        square.gratings[i].u_phase_position = new osg::Uniform( osg::Uniform::FLOAT, phase_position_name );
+        square.gratings[i].u_wavelength = new osg::Uniform( osg::Uniform::FLOAT, wavelength_name );
+        square.gratings[i].u_contrast = new osg::Uniform( osg::Uniform::FLOAT, contrast_name );
+        square.gratings[i].u_orientation = new osg::Uniform( osg::Uniform::FLOAT, orientation_name );
+
+        set_grating_info( i, new_values);
+    }
+
+    square.geode = new osg::Geode;
+    square.geode->addDrawable(square.shape.get());
+
+    square.program = new osg::Program;
+    square.program->setName( "box_shader" );
+
+    square.vertex_shader = new osg::Shader( osg::Shader::VERTEX );
+    square.fragment_shader = new osg::Shader( osg::Shader::FRAGMENT );
+
+    square.program->addShader(square.vertex_shader);
+    square.program->addShader(square.fragment_shader);
+
+    load_shader_source( square.vertex_shader, "box_grating_blended.vert" );
+    load_shader_source( square.fragment_shader, "box_grating_blended.frag" );
+
+    square.state_set = square.shape->getOrCreateStateSet();
+
+    square.state_set->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    square.state_set->setMode(GL_BLEND, osg::StateAttribute::ON);
+
+    square.state_set->setAttributeAndModes( square.program, osg::StateAttribute::ON);
+
+    for (int i=0;i<NUM_GRATINGS;i++) {
+        square.state_set->addUniform( square.gratings[i].u_phase_position );
+        square.state_set->addUniform( square.gratings[i].u_wavelength );
+        square.state_set->addUniform( square.gratings[i].u_contrast );
+        square.state_set->addUniform( square.gratings[i].u_orientation );
+    }
+
+}
+
 osg::ref_ptr<osg::Group> StimulusCylinderGrating::create_virtual_world() {
     osg::ref_ptr<osg::MatrixTransform> myroot = new osg::MatrixTransform; myroot->addDescription("virtual world root node");
-
-
     return myroot;
 }
 
@@ -285,12 +418,15 @@ void StimulusCylinderGrating::post_init(bool slave)
 {
 
     init_cyl(_cyl);
+    init_square(_square);
 
-    _virtual_world->addChild( _cyl.geode.get() );
+    _geometry_type = 0;
+    _current_world = _cyl.geode.get();
+    _virtual_world->addChild( _current_world );
 }
 
 void StimulusCylinderGrating::set_grating_info(int i, GratingParams &new_values) {
-    GratingType &grating = _cyl.gratings[i];
+    GratingType &grating = (_geometry_type == 0) ? _cyl.gratings[0] : _square.gratings[0];
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(grating.mutex);
 
