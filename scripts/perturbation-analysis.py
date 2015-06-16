@@ -133,11 +133,21 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                                 if ph.start_id != pid:
                                     continue
 
-                        t = ph.df['talign'].values
-                        v = ph.df[to_plot].values
+                        #plot the whole perturbation but clip the axis limits
+                        pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
+
+                        t = pdf['talign'].values
+                        v = pdf[to_plot].values
 
                         ax.plot(t, v, 'k-', alpha=0.1)
                         ax.plot(t[-1], v[-1], 'ko', alpha=0.4, markersize=2)
+
+                        if plot_pre_perturbation:
+                            pdf = ph.df.iloc[:ph.start_idx]
+                            t = pdf['talign'].values
+                            v = pdf[to_plot].values
+                            ax.plot(t, v, 'k-', alpha=0.1)
+
 
                     grouped = pool.groupby('align')
                     m = grouped.mean()
