@@ -55,7 +55,7 @@ Hpsdi=psd(Hs,i,'Fs',fs,'NFFT',nfft);
 
 plot(Hpsdi)
 xlim([0 fs/4]);
-ylim([-50 25])
+ylim([-40 10])
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
 title({'Power Spectral Density Estimate',subtitle},'interpreter', 'none');
 
@@ -70,7 +70,7 @@ Hpsdo=psd(Hs,o,'Fs',fs,'NFFT',nfft);
 
 plot(Hpsdo);
 xlim([0 fs/4]);
-ylim([-50 25])
+ylim([-20 20])
 line([f1 f1],get(gca,'YLim'),'Color',[1 0 0]);
 title('');
 legend(y_name)

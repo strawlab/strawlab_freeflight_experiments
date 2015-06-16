@@ -29,7 +29,7 @@ import analysislib.plots as aplt
 import matplotlib.pyplot as plt
 
 # show the version of analysis in all plots for easier updating documents
-VERSION = 1
+VERSION = 2
 
 # these perturb classes are spectrally interesting enough for system identification
 PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME]
