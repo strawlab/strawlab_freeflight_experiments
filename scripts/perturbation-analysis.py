@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+import re
 import os.path
 import sys
 import operator
@@ -248,16 +249,23 @@ if __name__=='__main__':
     arena = aarenas.get_arena_from_args(args)
     (xmin,xmax, ymin,ymax, zmin,zmax) = arena.get_bounds()
 
-    TO_PLOT = {"dtheta":{"ylim":(-10,10)},
+    PLOT_DEFAULTS = {
+               "dtheta":{"ylim":(-10,10)},
                "z":{"ylim":(zmin,zmax)},
                "vz":{"ylim":(-0.5,+0.5)},
                "velocity":{},
                "rotation_rate":{},
     }
-    if system_y_name not in TO_PLOT:
-        TO_PLOT[system_y_name] = {"ylim":(-0.5e-10,0.5e-10)}
+    #https://regex101.com/r/iB0mZ6/1
+    F_RE = re.compile(r"^(?:FAKE(?:[_a-zA-Z]*))_(?P<real_col>[a-z]+)$")
+    for t in to_plot:
+        if F_RE.match(t):
+            g = F_RE.match(t).groupdict()
+            real_col, = F_RE.match(t).groups()
+            if real_col in PLOT_DEFAULTS:
+                PLOT_DEFAULTS[t] = PLOT_DEFAULTS[real_col]
 
-    plot_perturbation_traces(combine, args, TO_PLOT)
+    plot_perturbation_traces(combine, args, to_plot, PLOT_DEFAULTS, plot_pre_perturbation=True)
 
     if args.show:
         aplt.show_plots()
