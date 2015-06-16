@@ -55,17 +55,16 @@ def extract_perturbation_interval(df, step_obj, dt, completion_threshold=0.98):
     # recall that pandas fillna is really slow
     perturb_progress = df['perturb_progress'].fillna(method='ffill').fillna(method='bfill')
     # find the start of the perturbation (where perturb_progress == 0)
-    # is 0 guaranteed bo be there whenever there is perturbation data?
-    # is_perturbed = df['perturb_progress'] >= 0
+    # 0 is guaranteed to be there whenever there is perturbation data
     perturb_start = np.where(perturb_progress.values == 0)[0]
     if 0 == len(perturb_start):
         return (None,) * 6
     first_idx = perturb_start[0]
+
     # find the end of the perturbation (where perturb_progress is max)
-    # this is what it was before:
-    #   last_idx = df['perturb_progress'].argmax()
-    # is this what we want in case perturb_progress max happens more than once? or should we get the last occurrence?
-    last_idx = np.where(perturb_progress == perturb_progress.max())[0][-1] + 1  # +1 => python interval
+    # after the perturbation has started (there can be races at the start)
+    perturb_progress_started = perturb_progress[first_idx:]
+    last_idx = np.where(perturb_progress_started == perturb_progress_started.max())[0][-1] + first_idx + 1  # +1 => python interval
 
     # Perturbation length and completion
     traj_length = (len(df) - 1) * dt
