@@ -12,4 +12,7 @@
   <node name="stimulus_geom" pkg="rostopic" type="rostopic" args="pub --once /geometry_type std_msgs/Int32 1">
   </node>
 
+  <node name="lock_z" pkg="rostopic" type="rostopic" args="pub --once /lock_z std_msgs/Bool 1">
+  </node>
+
 </launch>

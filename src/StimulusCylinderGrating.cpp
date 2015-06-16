@@ -124,15 +124,16 @@ public:
     osg::ref_ptr<osg::Group> get_3d_world() {return _virtual_world; }
 
 private:
-    osg::ref_ptr<osg::Group>            _virtual_world;
+    osg::ref_ptr<osg::PositionAttitudeTransform>            _virtual_world;
     double                              _t0;
     CylInfo _cyl;
     SquareInfo _square;
     int _geometry_type;
     osg::Geode*                         _current_world;
+    bool _lock_z;
 
 
-    osg::ref_ptr<osg::Group> create_virtual_world();
+    osg::ref_ptr<osg::PositionAttitudeTransform> create_virtual_world();
     void post_init(bool);
     void init_cyl(CylInfo&);
     void init_square(SquareInfo&);
@@ -151,6 +152,8 @@ std::vector<std::string> StimulusCylinderGrating::get_topic_names() const
     std::vector<std::string> result;
 	result.push_back("grating_info");
 	result.push_back("geometry_type");
+    result.push_back("lock_z");
+
     return result;
 }
 
@@ -206,7 +209,11 @@ void StimulusCylinderGrating::receive_json_message(const std::string& topic_name
 
         int geometry_type = parse_int(root);
         set_geometry_type( geometry_type );
-
+    } else if (topic_name=="lock_z") {
+        _lock_z = (bool)parse_bool(root);
+        if (!_lock_z) {
+            _virtual_world->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ));
+        }
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -221,6 +228,8 @@ std::string StimulusCylinderGrating::get_message_type(const std::string& topic_n
         result = "strawlab_freeflight_experiments/CylinderGratingInfo";
     } else if (topic_name=="geometry_type") {
         result = "std_msgs/Int32";
+    } else if (topic_name=="lock_z") {
+        result = "std_msgs/Bool";
     } else {
         throw std::runtime_error("unknown topic name");
     }
@@ -260,6 +269,10 @@ void StimulusCylinderGrating::update( const double& time, const osg::Vec3& obser
             }
         }
 
+    }
+
+    if (_lock_z) {
+        _virtual_world->setPosition( osg::Vec3(0.0, 0.0, observer_position[2]) );
     }
 }
 
@@ -409,14 +422,14 @@ void StimulusCylinderGrating::init_square(SquareInfo& square) {
 
 }
 
-osg::ref_ptr<osg::Group> StimulusCylinderGrating::create_virtual_world() {
-    osg::ref_ptr<osg::MatrixTransform> myroot = new osg::MatrixTransform; myroot->addDescription("virtual world root node");
+osg::ref_ptr<osg::PositionAttitudeTransform> StimulusCylinderGrating::create_virtual_world() {
+    osg::ref_ptr<osg::PositionAttitudeTransform> myroot = new osg::PositionAttitudeTransform;
+    myroot->addDescription("virtual world root node");
     return myroot;
 }
 
 void StimulusCylinderGrating::post_init(bool slave)
 {
-
     init_cyl(_cyl);
     init_square(_square);
 
