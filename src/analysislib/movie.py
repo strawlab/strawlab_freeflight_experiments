@@ -76,8 +76,8 @@ class MovieMaker:
         self.num = num
         return os.path.join(self.tmpdir,"frame{:0>6d}.png".format(num))
 
-    def render(self, moviedir):
-        sh.mplayer("mf://%s/frame*.png" % self.tmpdir,
+    def render(self, moviedir, frame_format_str='frame*.png'):
+        sh.mplayer("mf://%s/%s" % (self.tmpdir, frame_format_str),
                    "-mf", "fps=%d" % self.fps,
                    "-vo", "yuv4mpeg:file=%s/movie.y4m" % self.tmpdir,
                    "-ao", "null",
