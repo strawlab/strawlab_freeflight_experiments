@@ -115,6 +115,11 @@ class HitManager:
         from shapely.geometry.polygon import LinearRing, LineString
         from shapely.validation import explain_validity
 
+        self._model = model
+
+        self._t = transform.SVGTransform()
+        self._tfunc_to_model = self._t.xy_to_pxpy if transform_to_world else (lambda px,py: (px,py))
+
         coords = model.get_points(transform_to_world)
 
         if validate:
@@ -157,5 +162,13 @@ class HitManager:
     def contains(self, x, y):
         return self._poly.contains(self._pt(x,y))
 
+    def distance_to_closest_point(self, x, y):
+        try:
+            _x,_y = self._tfunc_to_model(x,y)
+            seg,ratio = self._model.connect_closest(None,px=float(_x),py=float(_y))
+            return seg.length
+        except Exception as e:
+            print e,_x,_y
+            return np.nan
     
 
