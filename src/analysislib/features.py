@@ -299,6 +299,37 @@ class InverseDynamicsFeature(_Feature):
     def process(self, df, dt, **state):
         compute_inverse_dynamics_matlab(df, dt, window_size=25, full_model=True)
 
+class _FakeGaussianFeature(_Feature):
+
+    @staticmethod
+    def compute_from_df(df,dt,loc,scale):
+        return np.random.normal(loc=loc,scale=scale,size=len(df))
+
+class FakeGaussianDthetaFeature(_FakeGaussianFeature):
+
+    name = 'FAKE_gaussian_dtheta'
+    depends = 'dtheta',
+    DEFAULT_OPTS = {'loc':0.0,'scale':5.0}
+
+class FakeScaledDthetaFeature(_FakeGaussianFeature):
+
+    name = 'FAKE_scaled_dtheta'
+    depends = 'rotation_rate',
+    DEFAULT_OPTS = {'shift_t':0.09, 'scale':3.0, 'noise':0.8}
+
+    @staticmethod
+    def compute_from_df(df,dt,shift_t,scale,noise):
+        rr = df['rotation_rate']
+        shift_n = int(shift_t/dt)
+
+        dtheta = np.zeros_like(rr)
+        dtheta.fill(np.nan)
+        dtheta[shift_n:] = rr[:-shift_n]
+        dtheta *= scale
+        dtheta += np.random.normal(loc=0.0,scale=noise,size=len(dtheta))
+        return dtheta
+        
+
 ALL_FEATURES = [cls for cls in _all_subclasses(_Feature) if cls.name is not None]
 ALL_FEATURE_NAMES = [cls.name for cls in ALL_FEATURES]
 
