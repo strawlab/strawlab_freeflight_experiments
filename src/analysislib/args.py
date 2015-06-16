@@ -234,6 +234,11 @@ def check_args(parser, args, max_uuids=1000, defaults_from_arena=True):
         if None in (args.csv_file, args.h5_file):
             parser.error("either --uuid or both --csv-file and --h5-file are required")
 
+    od = getattr(args,'outdir',None)
+    if od is not None:
+        if not os.path.isdir(od):
+            os.makedirs(od)
+
     for f in ("tfilt_before", "tfilt_after"):
         v = getattr(args, f, None)
         if v is not None:
