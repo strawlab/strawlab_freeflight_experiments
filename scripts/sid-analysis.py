@@ -194,6 +194,14 @@ if __name__=='__main__':
         "--system-output", type=str,
         default='dtheta',
         help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--plot-bode-alldata", type=int, choices=[0,1],
+        default=0,
+        help='draw bodeplot of model created from all data')
+    parser.add_argument(
+        "--plot-bode-gooddata", type=int, choices=[0,1],
+        default=0,
+        help='draw bodeplot of model created from good data (individual model fit > thresh)')
 
     args = parser.parse_args()
 
@@ -340,11 +348,6 @@ if __name__=='__main__':
             dest = combine.get_plot_filename("iddata_merged_%s_%s_%s.mat" % (system_u_name,system_y_name,plot_fn))
             mlab.run_code("save('%s','%s');" % (dest,pooled_id))
             _load_matlab_variable_as_same_name(mfile,dest,'iddata_all_%s' % cond_name)
-
-            #name = combine.get_plot_filename('idfrd_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
-            #title = 'Bode (from all data): %s->%s v%d\n%s' % (system_u_name,system_y_name,VERSION,perturbation_obj)
-            #with mlab.fig(name+'.png') as f:
-            #    idfrd_model = sfe_sid.iddata_spa(mlab, pooled_id, title)
 
             #do initial model order selection based on the mean of the trajectories
             #over the perturbation period (as that data is less noisy)
@@ -554,13 +557,24 @@ if __name__=='__main__':
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
                             sfe_sid.pzmap_models(mlab,title,False,False,True,extra_models)
 
-                    name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
-                    title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
-                    with mlab.fig(name+'.png') as f:
-                        sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
-                    if EPS:
-                        with mlab.fig(name+'.eps',driver='epsc2') as f:
+                    if args.plot_bode_gooddata:
+                        name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
+                        title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
+                        with mlab.fig(name+'.png') as f:
                             sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
+                        if EPS:
+                            with mlab.fig(name+'.eps',driver='epsc2') as f:
+                                sfe_sid.bode_models(mlab,title,True,True,True,[alldata_good_mdl])
+
+                    if args.plot_bode_alldata:
+                        name = combine.get_plot_filename('bode_alldata_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
+                        title = 'Bode %s (all data): %s v%d\n%s\n%s' % (pm.spec,cond_name,VERSION,perturbation_obj,extra_desc)
+                        with mlab.fig(name+'.png') as f:
+                            sfe_sid.bode_models(mlab,title,True,True,True,[alldata_model])
+                        if EPS:
+                            with mlab.fig(name+'.eps',driver='epsc2') as f:
+                                sfe_sid.bode_models(mlab,title,True,False,True,[alldata_mdl])
+
 
             name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond_name, **plot_fn_kwargs))
             title = 'Individual model fits (ind. model fit > %.1f%%): %s->%s v%d\n%s' % (args.min_fit_pct_individual,system_u_name,system_y_name,VERSION,combine.get_condition_name(cond))
