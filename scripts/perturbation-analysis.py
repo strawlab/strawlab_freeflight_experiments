@@ -26,7 +26,7 @@ import analysislib.perturb as aperturb
 
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 
-def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_perturbation=False, max_plot=np.inf):
+def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, plot_pre_perturbation=False, max_plot=np.inf):
 
     try:
         only_conditions = args.only_conditions.split(',')
@@ -105,7 +105,7 @@ def plot_perturbation_traces(combine, args, perturbation_options, plot_pre_pertu
                 fig.canvas.mpl_connect('draw_event', aplt.autowrap_text)
 
             #plot timeseries for each requested
-            for to_plot in perturbation_options:
+            for to_plot in to_plot_cols:
 
                 name = combine.get_plot_filename('ts_%s_%s' % (to_plot,condn))
                 with aplt.mpl_fig(name,args,figsize=(8,6)) as fig:
@@ -214,6 +214,10 @@ if __name__=='__main__':
         "--system-output", type=str,
         default='dtheta',
         help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--also-plot", type=str, metavar="COL_NAME",
+        default="z,vz,velocity,rotation_rate",
+        help="also plot these during the perturbation period")
 
     args = parser.parse_args()
 
@@ -224,6 +228,12 @@ if __name__=='__main__':
     combine = autil.get_combiner_for_args(args)
     combine.add_feature(column_name=system_y_name)
     combine.add_from_args(args)
+
+    try:
+        to_plot = args.also_plot.split(',') if args.also_plot else []
+    except:
+        to_plot = []
+    to_plot.append(system_y_name)
 
     fname = combine.fname
     results,dt = combine.get_results()
