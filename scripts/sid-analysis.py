@@ -151,7 +151,6 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
 if __name__=='__main__':
 
     EPS = False
-    DETREND = True
 
     parser = analysislib.args.get_parser()
     parser.add_argument(
@@ -202,6 +201,10 @@ if __name__=='__main__':
         "--plot-bode-gooddata", type=int, choices=[0,1],
         default=0,
         help='draw bodeplot of model created from good data (individual model fit > thresh)')
+    parser.add_argument(
+        "--detrend", type=int, choices=[0,1],
+        default=1,
+        help='detrend data before SID')
 
     args = parser.parse_args()
 
@@ -222,6 +225,7 @@ if __name__=='__main__':
     system_u_name = args.system_input
     system_y_name = args.system_output
 
+    DETREND = args.detrend == 1
     IODELAY = args.iod
     MODEL_SPECS_TO_TEST = args.models.split(',')
 
