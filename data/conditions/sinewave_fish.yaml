@@ -1,0 +1,20 @@
+optomotor_translation_positive_2pi:
+    phase_position: 0.0
+    phase_velocity: 6.283
+    wavelength: 0.038
+    contrast: 10000.0
+    orientation: 0.0
+    geom_type: 1
+    trigger_radius_start: 0.05
+    trigger_radius_stop: 0.08
+    lock_z: true
+optomotor_translation_negative_2pi:
+    phase_position: 0.0
+    phase_velocity: -6.283
+    wavelength: 0.038
+    contrast: 10000.0
+    orientation: 0.0
+    geom_type: 1
+    trigger_radius_start: 0.05
+    trigger_radius_stop: 0.08
+    lock_z: true
