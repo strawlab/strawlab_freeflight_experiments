@@ -102,9 +102,9 @@ class Node(nodelib.node.Experiment):
                     self.drop_lock_on('timeout')
                     continue
 
-#                if self.not_in_trigger_volume(...)
-#                    self.drop_lock_on()
-#                    continue
+                if self.is_close_to_wall(fly_x,fly_y,fly_z):
+                    self.drop_lock_on('close to wall')
+                    continue
 
                 if np.isnan(fly_x):
                     #we have a race  - a fly to track with no pose yet
@@ -135,24 +135,19 @@ class Node(nodelib.node.Experiment):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
+    def _is_in_sphere(self, pt3d, sphere, r):
+        x,y,z = map(float,pt3d)
+        cx,cy,cz = sphere
+        return (x-cx)**2 + (y-cy)**2 + (z-cz)**2 < r**2
+
+    def is_close_to_wall(self,px,py,pz):
+        in_sphere = self._is_in_sphere((px,py,pz),(0,0,self.trigger_radius_stop/2.0), self.trigger_radius_stop)
+        return (not in_sphere) and (pz < 0)
+
     def is_in_trigger_volume(self,pos):
-        c = np.array( (0.0,0.0) )
-        p = np.array( (pos.x, pos.y) )
-        dist = np.sqrt(np.sum((c-p)**2))
-        if (dist < self.trigger_radius_start) and (pos.z < 0):
-            return True
-        return False
-
-    def is_out_trigger_volume(self,pos):
-        return False
-#        #actually the volumes are different. fix name later
-#        c = np.array( (0.0,0.0,0.125) )
-#        p = np.array( (pos.x, pos.y, pos.z) )
-#        dist = np.sqrt(np.sum((c-p)**2))
-#        if (dist < self.startr) and (abs(pos.z-START_Z) < START_ZDIST):
-#            return True
-#        return False
-
+        #trigger in a cylindrical column extending down to the wall
+        in_cylinder = self._is_in_sphere((pos.x,pos.y,0),(0,0,0), self.trigger_radius_start)
+        return in_cylinder and (pos.z < 0) and (not self.is_close_to_wall(pos.x,pos.y,pos.z))
 
     def on_flydra_mainbrain_super_packets(self,data):
         now = rospy.get_time()
@@ -190,7 +185,6 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
             self.fly = obj.position
-
         
         phase_velocity, msg = self._get_grating_msg( random.choice((-1.0,1.0)) )
         self.pub_grating_info.publish(msg)

@@ -29,3 +29,5 @@ def get_trigger_volume_polygon(xform, xy_points):
     pxpy = [xform.xy_to_pxpy(p[0],p[1]) for p in xy_points]
     points = [Point32(px,py,0) for px,py in pxpy]
     return Polygon(points=points)
+
+

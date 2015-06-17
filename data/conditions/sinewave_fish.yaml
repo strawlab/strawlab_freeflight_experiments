@@ -6,6 +6,6 @@ optomotor_translation_2pi:
     orientation: 0.0
     geom_type: 1
     trigger_radius_start: 0.05
-    trigger_radius_stop: 0.08
+    trigger_radius_stop: 0.125
     lock_z: true
 
