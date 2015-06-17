@@ -151,8 +151,8 @@ std::vector<std::string> StimulusCylinderGrating::get_topic_names() const
 {
     std::vector<std::string> result;
 	result.push_back("grating_info");
-	result.push_back("geometry_type");
-    result.push_back("lock_z");
+	result.push_back("grating_geometry_type");
+    result.push_back("grating_lock_z");
 
     return result;
 }
@@ -205,11 +205,11 @@ void StimulusCylinderGrating::receive_json_message(const std::string& topic_name
         new_values = parse_grating_info(root);
         set_grating_info(0,new_values);
 
-    } else if (topic_name=="geometry_type") {
+    } else if (topic_name=="grating_geometry_type") {
 
         int geometry_type = parse_int(root);
         set_geometry_type( geometry_type );
-    } else if (topic_name=="lock_z") {
+    } else if (topic_name=="grating_lock_z") {
         _lock_z = (bool)parse_bool(root);
         if (!_lock_z) {
             _virtual_world->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ));
@@ -226,9 +226,9 @@ std::string StimulusCylinderGrating::get_message_type(const std::string& topic_n
     std::string result;
     if (topic_name=="grating_info") {
         result = "strawlab_freeflight_experiments/CylinderGratingInfo";
-    } else if (topic_name=="geometry_type") {
+    } else if (topic_name=="grating_geometry_type") {
         result = "std_msgs/Int32";
-    } else if (topic_name=="lock_z") {
+    } else if (topic_name=="grating_lock_z") {
         result = "std_msgs/Bool";
     } else {
         throw std::runtime_error("unknown topic name");
