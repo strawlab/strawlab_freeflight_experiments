@@ -3,6 +3,7 @@
 import math
 import numpy as np
 import threading
+import random
 
 PACKAGE='strawlab_freeflight_experiments'
 
@@ -33,7 +34,7 @@ TIMEOUT             = 0.5
 class Node(nodelib.node.Experiment):
     def __init__(self, args):
         super(Node, self).__init__(args=args,
-                                   state=("stimulus_filename","startr"))
+                                   state=("phase_velocity",))
 
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinderGrating')
@@ -67,6 +68,10 @@ class Node(nodelib.node.Experiment):
 
     def switch_conditions(self):
 
+        #extract all the cyl grating params
+        KEYS = ('phase_position', 'phase_velocity', 'wavelength', 'contrast', 'orientation')
+        self.grating_conf = {k:float(self.condition[k]) for k in KEYS}
+
         self.drop_lock_on('switch conditions')
 
         self.pub_geom_type.publish(int(self.condition['geom_type']))
@@ -74,12 +79,6 @@ class Node(nodelib.node.Experiment):
 
         self.trigger_radius_start = float(self.condition['trigger_radius_start'])
         self.trigger_radius_stop = float(self.condition['trigger_radius_stop'])
-
-        #extract all the cyl grating params
-        KEYS = ('phase_position', 'phase_velocity', 'wavelength', 'contrast', 'orientation')
-        kwargs = {k:float(self.condition[k]) for k in KEYS}
-        msg = CylinderGratingInfo(**kwargs)
-        self.pub_grating_info.publish(msg)
 
         self.trigger_radius_stop = float(self.condition['trigger_radius_stop'])
 
@@ -113,20 +112,20 @@ class Node(nodelib.node.Experiment):
 
                 active = True
 
-                #distance accounting, give up on fly if it is not moving
-                self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
-                                           (fly_y-self.last_fly_y)**2 +
-                                           (fly_z-self.last_fly_z)**2)
-                self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
+#                #distance accounting, give up on fly if it is not moving
+#                self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
+#                                           (fly_y-self.last_fly_y)**2 +
+#                                           (fly_z-self.last_fly_z)**2)
+#                self.last_fly_x = fly_x; self.last_fly_y = fly_y; self.last_fly_z = fly_z;
 
-                # drop slow moving flies
-                if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
-                    fly_dist = self.fly_dist
-                    self.last_check_flying_time = now
-                    self.fly_dist = 0
-                    if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
-                        self.drop_lock_on('slow')
-                        continue
+#                # drop slow moving flies
+#                if now-self.last_check_flying_time > FLY_DIST_CHECK_TIME:
+#                    fly_dist = self.fly_dist
+#                    self.last_check_flying_time = now
+#                    self.fly_dist = 0
+#                    if fly_dist < FLY_DIST_MIN_DIST: # drop fly if it does not move enough
+#                        self.drop_lock_on('slow')
+#                        continue
 
             #new combine needs data recorded at the framerate
             self.log.framenumber = framenumber
@@ -172,6 +171,14 @@ class Node(nodelib.node.Experiment):
         self.log.update()
         self.pub_lock_object.publish( self.log.lock_object )
 
+    def _get_grating_msg(self, phase_multiplier):
+        grating_conf = self.grating_conf.copy()
+        phase_velocity = grating_conf['phase_velocity'] * phase_multiplier
+        grating_conf['phase_velocity'] = phase_velocity
+        msg = CylinderGratingInfo(**grating_conf)
+        return phase_velocity, msg
+
+
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
             rospy.loginfo('locked object %d at frame %d' % (obj.obj_id,framenumber))
@@ -183,6 +190,11 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
             self.fly = obj.position
+
+        
+        phase_velocity, msg = self._get_grating_msg( random.choice((-1.0,1.0)) )
+        self.pub_grating_info.publish(msg)
+        self.log.phase_velocity = phase_velocity
 
         self.update()
 
@@ -198,6 +210,10 @@ class Node(nodelib.node.Experiment):
 
             self.log.lock_object = IMPOSSIBLE_OBJ_ID
             self.log.framenumber = 0
+
+        phase_velocity, msg = self._get_grating_msg(0.0)
+        self.pub_grating_info.publish(msg)
+        self.log.phase_velocity = phase_velocity
 
         self.update()        
 
