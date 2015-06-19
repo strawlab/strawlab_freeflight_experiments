@@ -9,12 +9,16 @@ import analysislib.util as autil
 
 if __name__=='__main__':
     parser = analysislib.args.get_parser()
+    parser.add_argument(
+        '--index', default='framenumber',
+        help='the index of the returned dataframe (framenumber, none, time+NN)')
 
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+    combine.set_index(args.index)
     combine.add_from_args(args)
 
     results,dt = combine.get_results()
