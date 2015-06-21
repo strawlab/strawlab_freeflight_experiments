@@ -141,7 +141,7 @@ class Node(nodelib.node.Experiment):
         return (x-cx)**2 + (y-cy)**2 + (z-cz)**2 < r**2
 
     def is_close_to_wall(self,px,py,pz):
-        in_sphere = self._is_in_sphere((px,py,pz),(0,0,self.trigger_radius_stop/2.0), self.trigger_radius_stop)
+        in_sphere = self._is_in_sphere((px,py,pz), (0,0,0.110), self.trigger_radius_stop)
         return (not in_sphere) and (pz < 0)
 
     def is_in_trigger_volume(self,pos):
