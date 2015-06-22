@@ -51,7 +51,7 @@ def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, 
         if only_conditions and (cond_name not in only_conditions):
             continue
 
-        condn = aplt.get_safe_filename(cond,allowed_spaces=False)
+        condn = aplt.get_safe_filename(cond_name,allowed_spaces=False)
         if pid is not None:
             condn = 'p%d_%s' % (pid,condn)
 
