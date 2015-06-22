@@ -44,7 +44,7 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
             self.error(e.message)
 
         #disable-filters can override
-        if getattr(args,"disable_filters",False):
+        if (not getattr(args,"no_disable_filters",False)) and getattr(args,"disable_filters",False):
             for f in arena.filters:
                 f.disable()
 

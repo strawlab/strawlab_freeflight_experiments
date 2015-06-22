@@ -49,6 +49,9 @@ if __name__=='__main__':
         help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
     parser.add_argument(
         "--ylimits", help="y-axis limits name:min:max,[name2:min2:max2]")
+    parser.add_argument(
+        "--no-disable-filters", action='store_true',
+        help='do not disable the normal arena based filters')
     
     args = parser.parse_args()
 
