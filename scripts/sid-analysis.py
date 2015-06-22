@@ -116,8 +116,8 @@ def plot_input_output_characteristics(combine, args, perturbations, perturbation
 
                     #take out the perturbation period only
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
-                    system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
-                    system_ys.append( pd.Series(pdf[system_y_name].values, name=str(ph.obj_id)) )
+                    system_us.append( pd.Series(pdf[system_u_name].values, name=ph.identifier) )
+                    system_ys.append( pd.Series(pdf[system_y_name].values, name=ph.identifier) )
 
             if any_completed_perturbations:
                 system_u_df = pd.concat(system_us,axis=1)
@@ -297,8 +297,8 @@ if __name__=='__main__':
 
                     #take out the perturbation period only (for the mean response)
                     pdf = ph.df.iloc[ph.start_idx:ph.end_idx]
-                    system_us.append( pd.Series(pdf[system_u_name].values, name=str(ph.obj_id)) )
-                    system_ys.append( pd.Series(pdf[system_y_name].values, name=str(ph.obj_id)) )
+                    system_us.append( pd.Series(pdf[system_u_name].values, name=ph.identifier) )
+                    system_ys.append( pd.Series(pdf[system_y_name].values, name=ph.identifier) )
 
                     #upload to matlab the data for this perturbation and also including
                     #some data before the perturbation
@@ -306,14 +306,14 @@ if __name__=='__main__':
                     try:
                         iddata = sfe_sid.upload_data(mlab,
                                     y=pdf_extra[system_y_name].values, u=pdf_extra[system_u_name].values,
-                                    Ts=TS, detrend=DETREND, name='OID_%d' % ph.obj_id,
+                                    Ts=TS, detrend=DETREND, name='OID_%s' % ph.identifier,
                                     y_col_name=system_y_name, u_col_name=system_u_name)
                         individual_iddata.append((iddata,ph,len(pdf_extra)))
                     except RuntimeError, e:
-                        print "ERROR UPLOADING DATA obj_id: %s: %s" % (ph.obj_id,e)
+                        print "ERROR UPLOADING DATA obj_id: %s: %s" % (ph.identifier,e)
                         continue
 
-                    dest = combine.get_plot_filename('%s.mat' % ph.obj_id,subdir='all_iddata_%s' % plot_fn)
+                    dest = combine.get_plot_filename('%s.mat' % ph.identifier,subdir='all_iddata_%s' % plot_fn)
                     mlab.run_code("save('%s','%s');" % (dest,iddata))
 
         if not any_completed_perturbations:
@@ -442,7 +442,7 @@ if __name__=='__main__':
 
             #save all model fits and object ids for cluster analysis
             all_models[cond_name] = {_m.spec:[] for _m in possible_models}
-            all_models[cond_name]['obj_id'] = [_ph.obj_id for _i,_ph,_idlen in individual_iddata]
+            all_models[cond_name]['obj_id'] = [_ph.identifier for _i,_ph,_idlen in individual_iddata]
 
             #now re-identify the models for each individual trajectory
             possible_models.sort() #sort by fit pct
@@ -456,17 +456,17 @@ if __name__=='__main__':
 
                     #accept a lower fit due to noise on the individual trajectories
                     if not mdl.failed and fitpct > (args.min_fit_pct_individual):
-                        mdl.name = '%s_%d' % (pm.spec,ph.obj_id)
+                        mdl.name = '%s_%s' % (pm.spec,ph.identifier)
                         mdl.matlab_color = 'k'
                         mdl.perturb_holder = ph
 
                         individual_models[pm].append(mdl)
 
-                        print "\tindividual model oid %d %.0f%% complete: %s (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, mdl, mdl.fitpct, idlen)
+                        print "\tindividual model oid %s %.0f%% complete: %s (%.1f%% fit, %s frames)" % (ph.identifier, ph.completed_pct, mdl, mdl.fitpct, idlen)
                     else:
                         if mdl.failed:
                             fitpct = np.nan
-                        print "\tindividual model oid %d %.0f%% complete: %s FAIL (%.1f%% fit, %s frames)" % (ph.obj_id, ph.completed_pct, pm.spec, mdl.fitpct, idlen)
+                        print "\tindividual model oid %s %.0f%% complete: %s FAIL (%.1f%% fit, %s frames)" % (ph.identifier, ph.completed_pct, pm.spec, mdl.fitpct, idlen)
 
                     all_models[cond_name][pm.spec].append(fitpct)
 

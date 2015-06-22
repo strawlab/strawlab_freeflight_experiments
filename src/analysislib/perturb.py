@@ -19,6 +19,7 @@ import strawlab_freeflight_experiments.perturb as sfe_perturb
 # df: the series dataframe, may or may not contain alignment columns
 PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'uuid, obj_id, start_frame, '
+                                            'identifier, '
                                             'perturb_id, '
                                             'condition, '
                                             'start_criteria, start_reason, start_id, '
@@ -27,6 +28,8 @@ PerturbationHolder = collections.namedtuple('PerturbationHolder',
                                             'perturbation_length, trajectory_length, '
                                             'df')
 
+def get_identifier(uuid,obj_id,start_frame):
+    return "%d_%d" % (obj_id,start_frame)
 
 def find_step_obj(cond, condition_conf=None):
     """Returns the perturber used during the condition or None if cond it is not a perturbed condition."""
@@ -144,6 +147,7 @@ def extract_perturbations(df, uuid, obj_id, framenumber0, cond, time0, dt,
         # Copying the dataframe is very costly; we might want to just return a dataframe with these alignment columns...
 
     return [PerturbationHolder(uuid=uuid, obj_id=obj_id, start_frame=framenumber0,
+                               identifier=get_identifier(uuid,obj_id,framenumber0),
                                perturb_id=0,
                                condition=cond,
                                start_criteria=step_obj.criteria_type, start_reason=start_ratio, start_id=start_id,

@@ -178,7 +178,7 @@ if __name__=='__main__':
                     #some data before the perturbation
                     pdf_extra = ph.df.iloc[max(0,ph.start_idx-lookback_frames):ph.end_idx]
                     try:
-                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, args.detrend, 'OID_%d' % ph.obj_id)
+                        iddata = sfe_sid.upload_data(mlab, pdf_extra[system_y_name].values, pdf_extra[system_u_name].values, TS, args.detrend, 'OID_%s' % ph.identifier)
                         individual_iddata.append((iddata,ph,len(pdf_extra)))
                     except RuntimeError, e:
                         print "ERROR UPLOADING DATA obj_id: %s: %s" % (ph.obj_id,e)
