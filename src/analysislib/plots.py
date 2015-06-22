@@ -863,7 +863,7 @@ def plot_timeseries(ax, df, colname, *plot_args, **plot_kwargs):
 
     return x
 
-def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None, show_filter_args=None):
+def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, figsize=(16,8), title=None, show_filter_args=None, show_starts_ends=False):
     if name is None:
         name = '%s_infinity' % combine.fname
 
@@ -884,7 +884,17 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
         _axxy = plt.subplot2grid((n_plot_axes,2), (0,0), rowspan=n_plot_axes-1)
         _axxy.set_xlim(xl0,xl1)
         _axxy.set_ylim(yl0,yl1)
-        _axxy.plot(_df['x'], _df['y'], 'k-', label='__nolabel__')
+
+        _x,_y = _df['x'].values, _df['y'].values
+        _axxy.plot(_x, _y, 'k-', label='__nolabel__')
+        if show_starts_ends:
+            _axxy.plot(_x[0], _y[0], 'g^', lw=1.0, alpha=0.8,
+                    label='trial start')
+            _axxy.plot(_x[-1], _y[-1], 'bv', lw=1.0, alpha=0.8,
+                    label='trial end')
+
+
+
         _axxy.set_aspect('equal')
         arena.plot_mpl_line_2d(_axxy, 'r-', lw=2, alpha=0.3, clip_on=False )
 
@@ -945,6 +955,9 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
 
             _axxy.legend(frameon=False,numpoints=1,prop={'size':8})
             _axz.legend(frameon=False,numpoints=1,prop={'size':8})
+
+        if show_starts_ends:
+            _axxy.legend(frameon=False,numpoints=1,prop={'size':8})
 
         for i,p in enumerate(_plot_axes):
             _ax = plt.subplot2grid((n_plot_axes,2), (i,1))

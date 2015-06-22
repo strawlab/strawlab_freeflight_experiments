@@ -40,6 +40,8 @@ if __name__=='__main__':
     parser.add_argument(
         "--show-target", action="store_true", help="show target on path (useful with --animate)")
     parser.add_argument(
+        "--show-starts", action="store_true")
+    parser.add_argument(
         "--plot-values", help="plot these fields too (comma separated list)", nargs='+',
         default=("theta","dtheta","rotation_rate","velocity","ratio","radius"))
     parser.add_argument(
@@ -135,7 +137,8 @@ if __name__=='__main__':
                             name=filename,
                             plot_axes=plot_axes,
                             title=title,
-                            show_filter_args=filt_args
+                            show_filter_args=filt_args,
+                            show_starts_ends=args.show_starts
                     )
 
     if args.save_animation:
