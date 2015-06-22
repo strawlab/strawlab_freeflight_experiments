@@ -449,7 +449,7 @@ def plot_histograms(args, combine, flat_data, nens, histograms, histogram_option
                                       normed=histogram_options['normed'].get(h,True),
                                       range=histogram_options['range'].get(h),
                                       log=histogram_options.get('ylogscale',{h:False}).get(h,False),
-                                      histtype='step', alpha=0.75, label=combine.get_condition_name(current_condition),
+                                      histtype='step', alpha=1, lw=1, label=combine.get_condition_name(current_condition),
                 )
             ax.legend(
                 loc='upper center' if OUTSIDE_LEGEND else 'upper right',
