@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('models', metavar='M', nargs='+',
                    help='a model pkl file')
     parser.add_argument('--save', help='save figure')
+    parser.add_argument('--show', action='store_true')
     parser.add_argument('--labels', nargs='+', metavar='L')
     args = parser.parse_args()
 
@@ -52,9 +53,12 @@ if __name__ == "__main__":
 
     mdls = [p['model'] for p in pkls]
     if args.labels:
-        lbls = args.labels
-        if len(lbls) != len(mdls):
+        _lbls = args.labels
+        if len(_lbls) != len(mdls):
             parser.error("you must specify the same number of labels as models")
+        lbls = []
+        for lbl,p in zip(_lbls,pkls):
+            lbls.append("%s\n%s (n=%d)" % (lbl,p['model_spec'],p['n']))
     else:
         lbls = ["%s (%s, n=%d)\n%s\n%s" % (get_genotype(p), p['model_spec'], p['n'], p['condition_name'],','.join([md.get('uuid','???') for md in p.get('metadata',[])])) for p in pkls]
 
@@ -86,6 +90,7 @@ if __name__ == "__main__":
     if args.save:
         aplt.save_fig(fig,args.save)
 
-    plt.show()
+    if args.show:
+        plt.show()
 
 
