@@ -595,6 +595,68 @@ class _Combine(object):
 
         raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
+    def get_results_dataframe(self, cols, fill=True, extra_col_cb=None):
+        """
+        Return a single dataframe containing the supplied columns from 
+        all trials.
+
+        This is a long-form dataframe with the additional colums
+            ['condition','condition_name','obj_id','uuid','framenumber0']
+
+        To extract trials one can do something like
+            df.groupby(['condition','uuid','obj_id','framenumber0'])
+
+        For aggregate meansures of those trials one can do
+            df = df.groupby(['condition','uuid','obj_id','framenumber0'])['velocity'].mean().reset_index()
+            sns.boxplot(x="condition",y="velocity",data=df)
+
+        Parameters
+        ----------
+        cols: list of columns from the individual dataframes
+        to put in the merged dataframe
+
+        fill: forward and backward fill individual dataframes
+
+        extra_col_cb: a function to call each dataframe that may add
+        extra columns. signature is
+
+            def add_ts_things(combine, data, uuid, current_condition, oid, start_framenumber, df)
+
+        """
+
+        DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0']
+        all_cols = set(itertools.chain.from_iterable((DEFAULT,cols)))
+
+        data = {k:[] for k in all_cols}
+
+        for current_condition,r in self._results.iteritems():
+            cond_name = self.get_condition_name(current_condition)
+
+            if not r['count']:
+                continue
+
+            for df,uuid,(start_x, start_y, oid, start_framenumber, start_time) in zip(r['df'], r['uuids'],r['start_obj_ids']):
+
+                if fill:
+                    _df = df.ffill().bfill()
+                else:
+                    _df = df
+
+                for col in cols:
+                    data[col].extend(_df[col].values)
+
+                n = len(_df)
+                data['condition'].extend(itertools.repeat(current_condition, n))
+                data['condition_name'].extend(itertools.repeat(cond_name, n))
+                data['obj_id'].extend(itertools.repeat(oid, n))
+                data['uuid'].extend(itertools.repeat(uuid, n))
+                data['framenumber0'].extend(itertools.repeat(start_framenumber, n))
+
+                if extra_col_cb is not None:
+                    extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
+
+        return pd.DataFrame(data)
+
     def get_obj_ids_sorted_by_length(self):
         """
         Get a sorted list of the longest trajectories
