@@ -267,7 +267,10 @@ if __name__=='__main__':
         pid = args.only_perturb_start_id
         lookback = hints['lookback']
         lookback_frames = int(lookback / combine.dt)
+
         plot_fn_kwargs = {'lb':lookback_frames, 'pid':pid, 'mf':args.min_fit_pct, 'mfi':args.min_fit_pct_individual, 'iod':args.iod, 'fs':int(FS)}
+        if not DETREND:
+            plot_fn_kwargs['dt'] = 0
 
         cond_name = combine.get_condition_name(cond)
 
