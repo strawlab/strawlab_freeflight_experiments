@@ -500,9 +500,9 @@ class _Combine(object):
         """return a printable human readable condition name"""
         return self._condition_names.get(cond,cond)
 
-    def get_condition_configuration(self, cond):
+    def get_condition_configuration(self, cond_or_cond_name):
         """returns the full dictionary that defines the experimental condition"""
-        return self._conditions.get(cond,{})
+        return self._conditions.get(self.get_condition_name(cond_or_cond_name),{})
 
     def get_condition_object(self, cond):
         name = self.get_condition_name(cond)
@@ -522,10 +522,6 @@ class _Combine(object):
     def get_experiment_metadata(self):
         """a list of dictionaries, each dict containing the metadata for the experiment"""
         return self._metadata
-
-    def get_experiment_conditions(self):
-        """a list of dictionaries, each dict containing the metadata for the experiment"""
-        return self._conditions
 
     def get_spanned_results(self):
         """

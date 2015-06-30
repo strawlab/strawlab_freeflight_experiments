@@ -510,7 +510,7 @@ if __name__=='__main__':
                             pickle.dump({"n":len(individual_models[pm]),
                                          "model":py_mdl,
                                          "metadata":combine.get_experiment_metadata(),
-                                         "conditions":combine.get_experiment_conditions(),
+                                         "condition_conf":combine.get_condition_configuration(cond),
                                          "condition_name":combine.get_condition_name(cond),
                                          "model_spec":pm.spec},
                                         f)
@@ -532,7 +532,7 @@ if __name__=='__main__':
                             pickle.dump({"n":len(individual_iddata),
                                          "model":py_mdl,
                                          "metadata":combine.get_experiment_metadata(),
-                                         "conditions":combine.get_experiment_conditions(),
+                                         "condition_conf":combine.get_condition_configuration(cond),
                                          "condition_name":combine.get_condition_name(cond),
                                          "model_spec":pm.spec},
                                         f)
@@ -593,8 +593,7 @@ if __name__=='__main__':
     name = combine.get_plot_filename(aplt.get_safe_filename('all_mdlfits', **plot_fn_kwargs))
     with open(name+'.pkl', 'wb') as f:
         pickle.dump({"data":all_models,
-                     "metadata":combine.get_experiment_metadata(),
-                     "conditions":combine.get_experiment_conditions()},
+                     "metadata":combine.get_experiment_metadata()},
                     f)
 
     if args.show:
