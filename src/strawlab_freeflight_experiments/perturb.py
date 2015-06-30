@@ -234,11 +234,16 @@ class Perturber(object):
                 tl.set_color(color)
 
 
-    def plot(self, ax, t_extra=1, ylabel=None, plot_xaxis=True, **plot_kwargs):
+    def plot(self, ax, t_extra=1, ylabel=None, plot_xaxis=True, fs=100, **plot_kwargs):
         t0,t1 = self.get_time_limits()
         t0 -= t_extra; t1 += t_extra
 
-        t,v = self.get_perturb_vs_time(t0,t1)
+        t,v = self.get_perturb_vs_time(t0,t1, fs=fs)
+
+        try:
+            color = plot_kwargs['color']
+        except KeyError:
+            plot_kwargs['color'] = 'b'
 
         if 'label' not in plot_kwargs:
             plot_kwargs['label'] = self.what
@@ -250,7 +255,6 @@ class Perturber(object):
         v0,v1 = self.get_value_limits()
         ax.set_ylim(min(-0.1,1.2*v0),max(1.2*v1,0.1))
 
-        plot_kwargs['color'] = 'b'
         self._plot_ylabel(ax, ylabel, **plot_kwargs)
 
 class NoPerturb(Perturber):
