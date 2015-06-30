@@ -69,10 +69,9 @@ def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, 
                 if (pid is None) or (ph.start_criteria == sfe_perturb.Perturber.CRITERIA_TYPE_RATIO and ph.start_id == pid):
                     df = ph.df[all_dfs_cols].ffill().bfill()
                     n = len(df)
-
                     df['trial'] = "%s_%s_%s" % (ph.uuid,ph.obj_id,ph.start_frame)
                     df['condition'] = cond
-                    df['genotype'] = genotypes_per_uuid[ph.uuid]
+                    df['genotype'] = genotypes_per_uuid[ph.uuid].strip()
                     df['completed'] = ph.completed
 
                     all_dfs.append(df)
@@ -85,7 +84,11 @@ def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, 
 
             cond_name = combine.get_condition_name(cond)
 
-            name = combine.get_plot_filename('ts_compare_%s_%s' % (to_plot,cond_name))
+            condn = aplt.get_safe_filename(cond_name,allowed_spaces=False)
+            if pid is not None:
+                condn = 'p%d_%s' % (pid,condn)
+
+            name = combine.get_plot_filename('ts_compare_%s_%s' % (to_plot,condn))
             with aplt.mpl_fig(name,args) as fig:
 
                 ax = fig.add_subplot(1,1,1)
