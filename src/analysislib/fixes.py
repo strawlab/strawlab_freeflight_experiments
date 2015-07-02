@@ -145,6 +145,16 @@ class _FixPerturbationCondition(_DictOrAttr):
                 return c.replace('step|','step_rotation_rate|')
         return c
 
+class _FixPerturbationToneConditionName(_DictOrAttr):
+
+    COLS = ('condition_name',)
+
+    def _fix(self, n):
+        condn = self._r['condition_name']
+        if condn == "perturbation_tone_18_3s_2hz":
+            return "perturbation_tone_18_3s_3hz"
+        return condn
+
 def _fix_confinement_add_columns(df):
     svg_filename = ''
 
@@ -163,6 +173,15 @@ def _fix_confinement_add_columns(df):
 def load_csv_fixups(**kwargs):
     csv_file = kwargs.get('csv_file')
     h5_file = kwargs.get('h5_file')
+
+    try:
+        perturb_desc = kwargs['conditions']['perturbation_tone_18_3s_2hz']['perturb_desc']
+        if perturb_desc == 'tone_rotation_rate|1.8|3|0|3|0.4|0.46|0.56|0.96|1.0|0.0|0.06':
+            return _Fixup(row_wrapper=_FixPerturbationToneConditionName,
+                          dataframe_wrapper=None,
+                          desc='fix condition name for tone stimulus')
+    except KeyError:
+        pass
 
     if csv_file or h5_file:
 
