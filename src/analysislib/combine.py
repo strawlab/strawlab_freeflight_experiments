@@ -1363,7 +1363,7 @@ class CombineH5WithCSV(_Combine):
 
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
-            self._debug("FIX:     fixing data %s" % fix)
+            self._debug("FIX:    fixing data %s" % fix)
 
         # open h5 file (TODO: in a with statement, indent all under this)
         self._debug("IO:     reading %s" % h5_file)
