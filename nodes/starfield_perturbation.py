@@ -295,7 +295,7 @@ class Node(nodelib.node.Experiment):
                                              now, now - self.first_seen_time,
                                              framenumber, currently_locked_obj_id)
                 
-                rate_x=0
+                rate_x=rate
                 rate_y=-rate
                 # From a given value of rate, rate_x and rate_y can direct the translation.
                 # E.g.: if rate_x = rate_y = rate then: flow in +x, +y with a value of 'rate'.
