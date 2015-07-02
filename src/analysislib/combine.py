@@ -1311,17 +1311,18 @@ class CombineH5WithCSV(_Combine):
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
         # try and open the experiment and condition metadata files
+        this_exp_conditions = {}
         path, fname = os.path.split(csv_fname)
         try:
             fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
             with open(fn) as f:
                 self._debug("IO:     reading %s" % fn)
-                c = yaml.safe_load(f)
+                this_exp_conditions = yaml.safe_load(f)
                 try:
-                    del c['uuid']
+                    del this_exp_conditions['uuid']
                 except KeyError:
                     pass
-                self._conditions.update(c)
+                self._conditions.update(this_exp_conditions)
         except:
             self._conditions = {}
 
@@ -1360,6 +1361,7 @@ class CombineH5WithCSV(_Combine):
             this_exp_metadata = {}
         this_exp_metadata['csv_file'] = csv_fname
         this_exp_metadata['h5_file'] = h5_file
+        this_exp_metadata['conditions'] = this_exp_conditions
 
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
