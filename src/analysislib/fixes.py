@@ -34,6 +34,7 @@ class _Fixup(object):
     should_fix_rows = False
     should_fix_dataframe = False
     should_fix_condition = False
+    should_fix_condition_name = False
 
     def __init__(self, row_wrapper, dataframe_wrapper, desc='N/A', identifier=None):
         self._rr = row_wrapper
@@ -47,7 +48,11 @@ class _Fixup(object):
         if self._rr and "condition" in self._rr.COLS:
             self.should_fix_condition = True
 
-        self.active = any((self.should_fix_rows,self.should_fix_dataframe,self.should_fix_condition))
+        if self._rr and "condition_name" in self._rr.COLS:
+            self.should_fix_condition_name = True
+
+
+        self.active = any((self.should_fix_rows,self.should_fix_dataframe,self.should_fix_condition,self.should_fix_condition_name))
 
     def __repr__(self):
         if self.active:
@@ -77,6 +82,12 @@ class _Fixup(object):
             return cond
         else:
             return self._rr({"condition":cond})["condition"]
+
+    def fix_condition_name(self, condn):
+        if self._rr is None:
+            return condn
+        else:
+            return self._rr({"condition_name":condn})["condition_name"]
 
 def _get_cond(r):
     #support old combine where row was a namedtuple and not an

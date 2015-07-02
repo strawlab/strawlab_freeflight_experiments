@@ -1542,6 +1542,7 @@ class CombineH5WithCSV(_Combine):
             cond = analysislib.fixes.normalize_condition_string(cond)
             fixed_condition = cond
 
+            condition_name = None
             if cond not in results:
                 results[cond] = dict(count=0,
                                      start_obj_ids=[],
@@ -1549,9 +1550,23 @@ class CombineH5WithCSV(_Combine):
                                      uuids=[])
                 skipped[cond] = 0
                 try:
-                    self._condition_names[cond] = csv_df['condition_name'].iloc[0]
+                    condition_name = csv_df['condition_name'].iloc[0]
                 except:
+                    #old data with no condition name
                     pass
+
+            original_condition_name = condition_name
+            if condition_name:
+                if fix.active:
+                    condition_name = fix.fix_condition_name(condition_name)
+
+            if (condition_name is not None) and (cond not in self._condition_names):
+                self._condition_names[cond] = condition_name
+
+            if (condition_name is not None) and (original_condition_name != condition_name):
+                self._debug_once("FIX:    #%5d: condition name %s -> %s" % (oid, original_condition_name, condition_name))
+                csv_df = csv_df.copy()  # use copy and not view
+                csv_df['condition_name'].replace(original_condition_name, condition_name, inplace=True)
 
             r = results[cond]
 
