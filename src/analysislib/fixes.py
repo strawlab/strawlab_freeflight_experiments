@@ -121,7 +121,7 @@ class _FixConflictCsvRowModelPosition(_DictOrAttr):
         except ValueError:
             return np.nan
 
-class _FixPerturbationConditionName(_DictOrAttr):
+class _FixPerturbationCondition(_DictOrAttr):
 
     COLS = ('condition',)
 
@@ -168,7 +168,7 @@ def load_csv_fixups(**kwargs):
                                   desc='fix model_[y,z] in csv')
             if csv_file and ('perturbation' in csv_file):
                 if cdt and (cdt < datetime.datetime(year=2014,month=06,day=16)):
-                    return _Fixup(row_wrapper=_FixPerturbationConditionName,
+                    return _Fixup(row_wrapper=_FixPerturbationCondition,
                                   dataframe_wrapper=None,
                                   desc='fix perturb descriptors to say what was perturbed')
             if csv_file and (('confinement' in csv_file) or ('saver' in csv_file)):
