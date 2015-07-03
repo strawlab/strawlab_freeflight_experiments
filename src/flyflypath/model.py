@@ -36,7 +36,8 @@ def represent_svg_path_as_polyline(pathdata, points_per_bezier):
 class SvgError(Exception):
     pass
 
-class MovingPointSvgPath:
+class SvgPath(object):
+
     def __init__(self, path, polyline=None):
         if not os.path.exists(path):
             raise SvgError("File Missing: %s" % path)
@@ -51,9 +52,6 @@ class MovingPointSvgPath:
             polyline = represent_svg_path_as_polyline(self._svg_path_data, APPROX_BEZIER_WITH_N_SEGMENTS)
         self._polyline = polyline
 
-        self._moving_pt = None
-        self._ratio = 0.0
-
     @property
     def polyline(self):
         return self._polyline
@@ -61,14 +59,6 @@ class MovingPointSvgPath:
     @property
     def svg_path_data(self):
         return self._svg_path_data
-
-    @property
-    def moving_pt(self):
-        return self._moving_pt
-
-    @property
-    def ratio(self):
-        return self._ratio
 
     def point(self, pos, transform=None):
         pt = self._polyline.along(pos)
@@ -85,24 +75,6 @@ class MovingPointSvgPath:
         else:
             tfunc = lambda px,py: (px,py)
         return [tfunc(pt.x, pt.y) for pt in self._polyline.points]
-
-    def start_move_from_ratio(self, ratio):
-        """ set the ratio and point to this """
-        self._ratio = ratio
-        self._moving_pt = self._polyline.along(self._ratio)
-        return self._ratio, self._moving_pt
-
-    def advance_point(self, delta, wrap=False):
-        return self.move_point(self._ratio + delta, wrap)
-
-    def move_point(self, ratio, wrap=False):
-        """ the amount along the path [0..1], 0=start, 1=end """
-        ratio = min(1.0,max(0.0,ratio))
-        if wrap and (ratio == 1.0):
-            ratio = 0.0
-        self._ratio = ratio
-        self._moving_pt = self._polyline.along(self._ratio)
-        return self._ratio, self._moving_pt
 
     def connect_closest(self, p, px=None, py=None):
         """
@@ -122,6 +94,39 @@ class MovingPointSvgPath:
             seg = polyline.ZeroLineSegment2(closest)
         return seg,ratio
 
+class MovingPointSvgPath(SvgPath):
+
+    def __init__(self, path, polyline=None):
+        SvgPath.__init__(self,path,polyline)
+        self._moving_pt = None
+        self._ratio = 0.0
+
+    @property
+    def moving_pt(self):
+        return self._moving_pt
+
+    @property
+    def ratio(self):
+        return self._ratio
+
+    def start_move_from_ratio(self, ratio):
+        """ set the ratio and point to this """
+        self._ratio = ratio
+        self._moving_pt = self._polyline.along(self._ratio)
+        return self._ratio, self._moving_pt
+
+    def advance_point(self, delta, wrap=False):
+        return self.move_point(self._ratio + delta, wrap)
+
+    def move_point(self, ratio, wrap=False):
+        """ the amount along the path [0..1], 0=start, 1=end """
+        ratio = min(1.0,max(0.0,ratio))
+        if wrap and (ratio == 1.0):
+            ratio = 0.0
+        self._ratio = ratio
+        self._moving_pt = self._polyline.along(self._ratio)
+        return self._ratio, self._moving_pt
+
     def connect_to_moving_point(self, p, px=None, py=None):
         """
         finds the vector connecting p to the moving point
@@ -136,7 +141,7 @@ class MovingPointSvgPath:
             seg = polyline.ZeroLineSegment2(p)
         return seg
 
-class HitManager:
+class HitManager(object):
     def __init__(self, model, transform_to_world, validate=True, scale=None):
 
         import shapely.geometry as sg
