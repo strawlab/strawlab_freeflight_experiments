@@ -1,6 +1,8 @@
 from functools import partial
 from itertools import izip
 import os.path
+import shutil
+import socket
 import sys
 import random
 import time
@@ -34,7 +36,8 @@ import analysislib.args
 import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv, \
+    ensure_dir
 
 from strawlab_freeflight_experiments.conditions import Condition, ConditionCompat
 
@@ -1277,6 +1280,21 @@ class CombineH5WithCSV(_Combine):
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
+        # - DELETEME: quick workaround to keep going after strawscience is gone crazy
+        host = socket.gethostname()
+        NASTY_WORKAROUND_DIR = '/extra2/strawlab/rnai/temp' if host == 'strz' else None
+        nasty_dest_csv = None
+        nasty_dest_h5 = None
+        if NASTY_WORKAROUND_DIR is not None:
+            ensure_dir(NASTY_WORKAROUND_DIR)
+            nasty_dest_csv = os.path.join(NASTY_WORKAROUND_DIR, os.path.basename(csv_fname))
+            nasty_dest_h5 = os.path.join(NASTY_WORKAROUND_DIR, os.path.basename(h5_file))
+            shutil.copy(csv_fname, nasty_dest_csv)
+            shutil.copy(h5_file, nasty_dest_h5)
+            csv_fname = nasty_dest_csv
+            h5_file = nasty_dest_h5
+        # - /DELETEME
+
         # Update self.csv_file for every csv file, even if we contain
         # data from many. This for historical reasons as the csv file is used
         # as the basename for generated plots, so saving a few test
@@ -1858,6 +1876,13 @@ class CombineH5WithCSV(_Combine):
                 self._results[cond]['uuids'].append(uuid)
 
         h5.close()  # maybe this should go in a finally?
+
+        # - DELETEME: quick workaround to keep going after strawscience is gone crazy
+        if nasty_dest_csv:
+            os.remove(nasty_dest_csv)
+        if nasty_dest_h5:
+            os.remove(nasty_dest_h5)
+        # - /DELETEME
 
         return uuid
 
