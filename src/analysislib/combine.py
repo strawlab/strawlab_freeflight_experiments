@@ -198,7 +198,7 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
-        s = self.what().as_string()
+        s = self.what().id()
         if len(s) > (MAX_EXT4_FN_LENGTH - 4): #4=.pkl
             fn = hashlib.sha224(s).hexdigest() + '.pkl'
         else:
