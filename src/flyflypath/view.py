@@ -1,11 +1,37 @@
-
-import svg
 import math
 
 import cairo
+import numpy as np
 from gi.repository import Gtk, Gdk
 
 import euclid
+
+import svgpath
+
+def draw_on_context(cr, pathdata):
+    for path in svgpath.parse_path(pathdata):
+        cr.move_to(path.start.real,path.start.imag)
+        if isinstance(path, svgpath.Line):
+            cr.line_to(path.end.real,path.end.imag)
+        elif isinstance(path, svgpath.CubicBezier):
+            cr.curve_to(path.control1.real,path.control1.imag,
+                        path.control2.real,path.control2.imag,
+                        path.end.real,path.end.imag)
+        elif isinstance(path, svgpath.Arc):
+            #the cairo api for arcs is mental
+            #elliptical arcs can be approximated as beziers
+            #http://www.spaceroots.org/documents/ellipse/elliptical-arc.pdf
+            #http://pomax.github.io/bezierinfo/#circles_cubic
+            #
+            #circles can be approximated as 4 beziers according to
+            #http://spencermortensen.com/articles/bezier-circle/
+            #
+            #do none of these things and just approximate the arc with points
+            for i in np.linspace(0,1.0,50):
+                pt = path.point(i)
+                cr.line_to(pt.real,pt.imag)
+        else:
+            raise Exception("Not Supported")
 
 class SvgPathWidget(Gtk.DrawingArea):
     def __init__(self, model):
@@ -40,19 +66,16 @@ class SvgPathWidget(Gtk.DrawingArea):
         if not self._model:
             return
 
-        polyline = self._model.polyline
-        svgiter = self._model.svgiter
-
-        #draw the true svg in black
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (1)
-        for path_element in svgiter:
-            svg.draw_on_context(cr, path_element)
+        draw_on_context(cr, self._model.svg_path_data)
         cr.stroke()
-        
+
         #draw the approximation
+        polyline = self._model.polyline
         cr.set_source_rgb (0, 0, 1)
-        cr.set_line_width (0.3)
+        cr.set_line_width (1)
+        cr.set_dash([1.0])
         cr.move_to(polyline.points[0].x,polyline.points[0].y)
         for i in range(1,len(polyline.points)):
             cr.line_to(polyline.points[i].x,polyline.points[i].y)
