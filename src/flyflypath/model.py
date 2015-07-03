@@ -3,44 +3,64 @@ import xml.dom.minidom
 
 import numpy as np
 
-import svg
 import polyline
 import euclid
 import transform
 
+import svgpath
+
+from polyline import PolyLine2, BezierSegment2
+from euclid import Point2
+
 APPROX_BEZIER_WITH_N_SEGMENTS = 5
+
+def represent_svg_path_as_polyline(pathdata, points_per_bezier):
+    paths = svgpath.parse_path(pathdata)
+
+    pts = []
+    for path in paths:
+        if isinstance(path, svgpath.Line):
+            for pt in (path.start, path.end):
+                pts.append(Point2(float(pt.real),float(pt.imag)))
+        elif isinstance(path, (svgpath.CubicBezier, svgpath.QuadraticBezier)):
+            for i in np.linspace(0,1.0,points_per_bezier):
+                pt = path.point(i)
+                pts.append(Point2(float(pt.real),float(pt.imag)))
+        elif isinstance(path, svgpath.Arc):
+            for i in np.linspace(0,1.0,20):
+                pt = path.point(i)
+                pts.append(Point2(float(pt.real),float(pt.imag)))
+
+    return PolyLine2(*pts)
 
 class SvgError(Exception):
     pass
 
 class MovingPointSvgPath:
-    def __init__(self, path):
+    def __init__(self, path, polyline=None):
         if not os.path.exists(path):
             raise SvgError("File Missing: %s" % path)
-        self._svgpath = path
         #parse the SVG
         d = xml.dom.minidom.parse(open(path,'r'))
         paths = d.getElementsByTagName('path')
         if len(paths) != 1:
             raise SvgError("Only 1 path supported")
-        pathdata = str(paths[0].getAttribute('d'))
+        self._svg_path_data = str(paths[0].getAttribute('d'))
 
-        self._svgiter = svg.PathIterator(pathdata)
-        self._model = polyline.polyline_from_svg_path(self._svgiter, APPROX_BEZIER_WITH_N_SEGMENTS)
+        if polyline is None:
+            polyline = represent_svg_path_as_polyline(self._svg_path_data, APPROX_BEZIER_WITH_N_SEGMENTS)
+        self._polyline = polyline
+
         self._moving_pt = None
         self._ratio = 0.0
 
     @property
     def polyline(self):
-        return self._model
+        return self._polyline
 
     @property
-    def svgiter(self):
-        return self._svgiter
-
-    @property
-    def svgpath(self):
-        return self._svgpath
+    def svg_path_data(self):
+        return self._svg_path_data
 
     @property
     def moving_pt(self):
@@ -50,18 +70,26 @@ class MovingPointSvgPath:
     def ratio(self):
         return self._ratio
 
+    def point(self, pos, transform=None):
+        pt = self._polyline.along(pos)
+        if transform is not None:
+            return transform.pxpy_to_xy(pt.x,pt.y)
+        else:
+            return pt.x,py.y
+
     def get_points(self, transform_to_world):
+        #FIXME: make api as in def(point) (pass in transform)
         if transform_to_world:
             t = transform.SVGTransform()
             tfunc = t.pxpy_to_xy
         else:
             tfunc = lambda px,py: (px,py)
-        return [tfunc(pt.x, pt.y) for pt in self._model.points]
+        return [tfunc(pt.x, pt.y) for pt in self._polyline.points]
 
     def start_move_from_ratio(self, ratio):
         """ set the ratio and point to this """
         self._ratio = ratio
-        self._moving_pt = self._model.along(self._ratio)
+        self._moving_pt = self._polyline.along(self._ratio)
         return self._ratio, self._moving_pt
 
     def advance_point(self, delta, wrap=False):
@@ -73,7 +101,7 @@ class MovingPointSvgPath:
         if wrap and (ratio == 1.0):
             ratio = 0.0
         self._ratio = ratio
-        self._moving_pt = self._model.along(self._ratio)
+        self._moving_pt = self._polyline.along(self._ratio)
         return self._ratio, self._moving_pt
 
     def connect_closest(self, p, px=None, py=None):
@@ -87,7 +115,7 @@ class MovingPointSvgPath:
         """
         if px is not None and py is not None:
             p = euclid.Point2(px,py)
-        closest,ratio = self._model.connect(p)
+        closest,ratio = self._polyline.connect(p)
         try:
             seg = euclid.LineSegment2(p,closest)
         except AttributeError:
@@ -115,7 +143,7 @@ class HitManager:
         from shapely.geometry.polygon import LinearRing, LineString
         from shapely.validation import explain_validity
 
-        self._model = model
+        self._polyline = model
 
         self._t = transform.SVGTransform()
         self._tfunc_to_model = self._t.xy_to_pxpy if transform_to_world else (lambda px,py: (px,py))
@@ -165,7 +193,7 @@ class HitManager:
     def distance_to_closest_point(self, x, y):
         try:
             _x,_y = self._tfunc_to_model(x,y)
-            seg,ratio = self._model.connect_closest(None,px=float(_x),py=float(_y))
+            seg,ratio = self._polyline.connect_closest(None,px=float(_x),py=float(_y))
             return seg.length
         except Exception as e:
             print e,_x,_y
