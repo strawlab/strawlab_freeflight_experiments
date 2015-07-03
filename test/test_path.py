@@ -13,7 +13,7 @@ import shapely.geometry as sg
 from shapely.geometry.polygon import LinearRing, LineString
 
 from flyflypath.euclid import Point2, LineSegment2, Vector2
-from flyflypath.polyline import PolyBezier2, BezierSegment2, PolyLine2, ZeroLineSegment2
+from flyflypath.polyline import PolyLine2, ZeroLineSegment2
 from flyflypath.transform import SVGTransform
 from flyflypath.model import MovingPointSvgPath, HitManager, SvgError
 
@@ -123,7 +123,7 @@ class TestFlyFlyPathModel(unittest.TestCase):
         s = os.path.join(self._sdir,'lboxmed.svg')
         m = MovingPointSvgPath(s)
         m.start_move_from_ratio(0)
-        for prop in ('polyline','svgiter','svgpath','moving_pt','ratio'):
+        for prop in ('polyline','svg_path_data','moving_pt','ratio'):
             o = getattr(m,prop)
             self.assertIsNotNone(o)
 

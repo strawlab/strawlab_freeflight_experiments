@@ -179,9 +179,6 @@ class BezierSegment2:
             
         return [self.evaluate(float(mu)) for mu in murange]
         
-    def to_polyline(self, num_steps=None):
-        return PolyLine2( *self.to_points(num_steps) )
-
     @property
     def length(self):
         #see jsBezier for recursive approx, or just sum the length of the polyline2
@@ -190,56 +187,4 @@ class BezierSegment2:
     def __repr__(self):
         return 'BezierSegment2(%r -> %r (ctrl1:%r, ctrl2:%r))' % (self.p1,self.p4,self.p2,self.p3)
 
-class PolyBezier2:
-    def __init__(self, *points):
-        self._lines = [ BezierSegment2(points[i+0], points[i+1], points[i+2], points[i+3]) \
-                        for i in range(0,len(points)-3,4)]
-
-    def __repr__(self):
-        return 'PolyBezier2(%s)' % ', '.join( repr(l) for l in self._lines )
-
-def polyline_from_svg_path(path_iterator, points_per_bezier=10):
-    pts = []
-    last = Point2(0,0)
-    for path_element in path_iterator:
-        command, c = path_element
-        if command == "M" or command == "L":
-            for i in range(0,len(c)-1,2):
-                pts.append( Point2(c[i+0],c[i+1]) )
-                last = pts[-1]
-        elif command == "m" or command == "l":
-            for i in range(0,len(c)-1,2):
-                #now we are relative movement wrt last point
-                lastx = last.x
-                lasty = last.y
-                pts.append( Point2(c[i+0]+lastx,c[i+1]+lasty) )
-                last = pts[-1]
-        elif command == "C":
-            for i in range(0,len(c)-5,6):
-                b = BezierSegment2(
-                        last.copy(),
-                        Point2(c[i+0],c[i+1]),
-                        Point2(c[i+2],c[i+3]),
-                        Point2(c[i+4],c[i+5]))
-                last = b.p4
-                pts.extend( b.to_points(points_per_bezier) )
-        elif command == "c":
-            for i in range(0,len(c)-5,6):
-                lastx = last.x
-                lasty = last.y
-                b = BezierSegment2(
-                        last.copy(),
-                        Point2(c[i+0]+lastx,c[i+1]+lasty),
-                        Point2(c[i+2]+lastx,c[i+3]+lasty),
-                        Point2(c[i+4]+lastx,c[i+5]+lasty))
-                last = b.p4
-                pts.extend( b.to_points(points_per_bezier) )
-        elif command in ("z","Z"):
-            #FIXME: The spec says join to the start of the last open path, I think we
-            #only support 1 path, so this is the first point, not last.
-            pts.append( pts[0] )
-        else:
-            raise Exception("Command %s not supported" % command)
-
-    return PolyLine2(*pts)
 
