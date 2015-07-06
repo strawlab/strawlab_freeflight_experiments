@@ -177,6 +177,13 @@ class HitManager(object):
             #"A LinearRing may not cross itself, and may not touch itself at a single point"
             #so infinity paths could be incorrect
             lr = LinearRing(coords)
+
+            if not lr.is_valid:
+                #there are some numerical issues with how inkscape draws
+                #circles/ellipses as 2 or 4 beziers. Round those errors away... hopefully
+                coords = [(round(c[0],5),round(c[1],5)) for c in coords]
+                lr = LinearRing(coords)
+
             if not lr.is_valid:
                 raise InvalidPathError('Invalid model: %s' % explain_validity(lr))
 
