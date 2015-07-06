@@ -27,7 +27,7 @@ def make_wall(svg_fname, image_fname,height, odir, npts=500):
 
     svg_fname = os.path.abspath(svg_fname)
 
-    model = flyflypath.model.MovingPointSvgPath(svg_fname)
+    model = flyflypath.model.SvgPath(svg_fname)
 
     #so, ideally the move_point should be a little smarter about decomposing
     #the polyline into component peices (i.e. ensure you hit all corners),

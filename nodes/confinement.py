@@ -165,8 +165,8 @@ class Node(nodelib.node.Experiment):
         try:
             startbuf            = float(self.condition['start_buffer'])
             self.hitm_start     = flyflypath.model.HitManager(
-                                        flyflypath.model.MovingPointSvgPath(svg_path),
-                                        transform_to_world=True, validate=True, scale=startbuf)
+                                        flyflypath.model.SvgPath(svg_path),
+                                        transform_to_world=XFORM, validate=True, scale=startbuf)
         except (KeyError,ValueError,flyflypath.model.SvgError), e:
             startbuf            = None
             self.hitm_start     = None
@@ -175,8 +175,8 @@ class Node(nodelib.node.Experiment):
         try:
             stopbuf             = float(self.condition['stop_buffer'])
             self.hitm_stop      = flyflypath.model.HitManager(
-                                        flyflypath.model.MovingPointSvgPath(svg_path),
-                                        transform_to_world=True, validate=True, scale=stopbuf)
+                                        flyflypath.model.SvgPath(svg_path),
+                                        transform_to_world=XFORM, validate=True, scale=stopbuf)
         except (KeyError,ValueError,flyflypath.model.SvgError):
             stopbuf             = None
             self.hitm_stop      = None
@@ -186,8 +186,8 @@ class Node(nodelib.node.Experiment):
         try:
             hidebuf             = float(self.condition['hide_buffer'])
             self.hitm_hide      = flyflypath.model.HitManager(
-                                        flyflypath.model.MovingPointSvgPath(svg_path),
-                                        transform_to_world=True, validate=True, scale=hidebuf)
+                                        flyflypath.model.SvgPath(svg_path),
+                                        transform_to_world=XFORM, validate=True, scale=hidebuf)
         except (KeyError,ValueError,flyflypath.model.SvgError):
             hidebuf             = None
             self.hitm_hide      = None

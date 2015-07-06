@@ -34,6 +34,7 @@ import analysislib.util as autil
 
 import flyflypath.model
 import flyflypath.mplview
+import flyflypath.transform
 
 def _unique_or_none(df,col):
     s = df[col].dropna().unique()
@@ -44,7 +45,7 @@ def _unique_or_none(df,col):
 def _svg_model(svg_filename):
     pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
     path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
-    return flyflypath.model.MovingPointSvgPath(path)
+    return flyflypath.model.SvgPath(path)
 
 def draw_confinement_area(ax, df, **kwargs):
     svg_filename = _unique_or_none(df, 'svg_filename')
@@ -111,6 +112,8 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
 
     data = {'condition':[],'time_in_area':[], 'percent_in_area':[], 'dist_to_wall':[], 'radius':[], 'len':[]}
 
+    t = flyflypath.transform.SVGTransform()
+
     for cond in sorted_conditions:
         r = results[cond]
 
@@ -123,19 +126,19 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
             continue
 
         m = _svg_model(svg_filename)
-        hm = flyflypath.model.HitManager(m, transform_to_world=True)
+        hm = flyflypath.model.HitManager(m, flyflypath.transform.SVGTransform())
 
         condn = combine.get_condition_name(cond)
         dfs = []
 
         for df in r['df']:
 
-            in_area = [hm.contains(x,y) for x,y in zip(df['x'],df['y'])]
+            in_area = [hm.contains_m(x,y) for x,y in zip(df['x'],df['y'])]
             in_area_len = np.sum(in_area).astype(float)
             in_area_time = in_area_len*dt
             in_area_pct = in_area_len / len(df)
 
-            dist_to_wall = [hm.distance_to_closest_point(x,y) if hm.contains(x,y) else 0 for x,y in zip(df['x'],df['y'])]
+            dist_to_wall = [hm.distance_to_closest_point_m(x,y) if hm.contains_m(x,y) else 0 for x,y in zip(df['x'],df['y'])]
 
             if df['z'].head(10).mean() > skip_high:
                 print "SKIP (too high)"
