@@ -10,7 +10,8 @@ import sh
 import time
 import shutil
 import collections
-import pymvg
+
+import pymvg.camera_model
 
 import benu.benu
 import benu.utils
@@ -72,7 +73,8 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
     else:
         valid = df
 
-    camera = pymvg.CameraModel.load_camera_from_bagfile( open(calibration) )
+    with open(calibration) as bag:
+        camera = pymvg.camera_model.CameraModel.load_camera_from_opened_bagfile(bag)
 
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
