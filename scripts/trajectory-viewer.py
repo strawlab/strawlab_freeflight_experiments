@@ -42,7 +42,7 @@ if __name__=='__main__':
     parser.add_argument(
         "--show-starts", action="store_true")
     parser.add_argument(
-        "--plot-values", help="plot these fields too (comma separated list)", nargs='+',
+        "--plot-values", help="plot these features too", nargs='+',
         default=("theta","dtheta","rotation_rate","velocity","ratio","radius"))
     parser.add_argument(
         "--test-filter-args",
@@ -52,8 +52,18 @@ if __name__=='__main__':
     parser.add_argument(
         "--no-disable-filters", action='store_true',
         help='do not disable the normal arena based filters')
+    parser.add_argument(
+        "--help-features", action='store_true',
+        help="list all the features that can be plotted")
+
+    print analysislib.features.get_all_columns(True)
     
     args = parser.parse_args()
+    if args.help_fields:
+        print "Available features (may not include some already in the csv)"
+        for c in analysislib.features.get_all_columns(True):
+            print "  * %s" % c
+        parser.exit(0)
 
     analysislib.args.check_args(parser, args, max_uuids=1)
 
