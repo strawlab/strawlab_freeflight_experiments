@@ -12,8 +12,6 @@ import svgpath
 from polyline import PolyLine2, BezierSegment2
 from euclid import Point2
 
-APPROX_BEZIER_WITH_N_SEGMENTS = 5
-
 def represent_svg_path_as_polyline(pathdata, points_per_bezier):
     paths = svgpath.parse_path(pathdata)
 
@@ -38,18 +36,20 @@ class SvgError(Exception):
 
 class SvgPath(object):
 
-    def __init__(self, path, polyline=None):
-        if not os.path.exists(path):
-            raise SvgError("File Missing: %s" % path)
-        #parse the SVG
-        d = xml.dom.minidom.parse(open(path,'r'))
-        paths = d.getElementsByTagName('path')
-        if len(paths) != 1:
-            raise SvgError("Only 1 path supported")
-        self._svg_path_data = str(paths[0].getAttribute('d'))
+    def __init__(self, path, polyline=None, svg_path_data=None, npts=5):
+        if svg_path_data is None:
+            if not os.path.exists(path):
+                raise SvgError("File Missing: %s" % path)
+            #parse the SVG
+            d = xml.dom.minidom.parse(open(path,'r'))
+            paths = d.getElementsByTagName('path')
+            if len(paths) != 1:
+                raise SvgError("Only 1 path supported")
+            svg_path_data = str(paths[0].getAttribute('d'))
+        self._svg_path_data = svg_path_data
 
         if polyline is None:
-            polyline = represent_svg_path_as_polyline(self._svg_path_data, APPROX_BEZIER_WITH_N_SEGMENTS)
+            polyline = represent_svg_path_as_polyline(self._svg_path_data, npts)
         self._polyline = polyline
 
     @property
@@ -59,6 +59,12 @@ class SvgPath(object):
     @property
     def svg_path_data(self):
         return self._svg_path_data
+
+    def get_approximation(self, npts):
+        return SvgPath(path=None,
+                       polyline=None,
+                       svg_path_data=self._svg_path_data,
+                       npts=npts)
 
     def point(self, pos, transform=None):
         pt = self._polyline.along(pos)

@@ -5,6 +5,8 @@ import matplotlib.collections
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 
+NPTS = 300
+
 def _PolygonPath(polygon):
     """
     Constructs a compound matplotlib path from a Shapely polygon
@@ -30,15 +32,15 @@ def _PolygonPath(polygon):
     return Path(vertices, codes)
 
 
-def plot_xy(model,ax,**kwargs):
-    pts = model.get_points(transform_to_world=True)
+def plot_xy(model,t,ax,**kwargs):
+    pts = model.get_approximation(NPTS).get_points(transform=t)
     x,y = np.array(pts).T
     ax.plot(x, y, solid_capstyle='round', **kwargs)
 
-def plot_polygon(model,ax,**kwargs):
+def plot_polygon(model,t,ax,**kwargs):
     import shapely.geometry
 
-    pts = model.get_points(transform_to_world=True)
+    pts = model.get_approximation(NPTS).get_points(transform=t)
     poly = shapely.geometry.Polygon(pts)
 
     try:
