@@ -67,11 +67,9 @@ class SvgPath(object):
         else:
             return pt.x,py.y
 
-    def get_points(self, transform_to_world):
-        #FIXME: make api as in def(point) (pass in transform)
-        if transform_to_world:
-            t = transform.SVGTransform()
-            tfunc = t.pxpy_to_xy
+    def get_points(self, npts=None, transform=None):
+        if transform is not None:
+            tfunc = transform.pxpy_to_xy
         else:
             tfunc = lambda px,py: (px,py)
         return [tfunc(pt.x, pt.y) for pt in self._polyline.points]
@@ -141,19 +139,27 @@ class MovingPointSvgPath(SvgPath):
             seg = polyline.ZeroLineSegment2(p)
         return seg
 
+class PathError(Exception):
+    pass
+
+class OpenPathError(PathError):
+    pass
+
+class InvalidPathError(PathError):
+    pass
+
 class HitManager(object):
-    def __init__(self, model, transform_to_world, validate=True, scale=None):
+    def __init__(self, model, transform, validate=True, scale=None):
 
         import shapely.geometry as sg
         from shapely.geometry.polygon import LinearRing, LineString
         from shapely.validation import explain_validity
 
         self._polyline = model
+        self._t = transform
 
-        self._t = transform.SVGTransform()
-        self._tfunc_to_model = self._t.xy_to_pxpy if transform_to_world else (lambda px,py: (px,py))
-
-        coords = model.get_points(transform_to_world)
+        #keep the model points in pixels
+        coords = model.get_points(transform=None)
 
         if validate:
             #sg.LinearRing and sg.Polygon are automatically closed, so
@@ -161,7 +167,7 @@ class HitManager(object):
 
             p0,pn = coords[0], coords[-1]
             if not np.allclose(p0,pn):
-                raise ValueError('Invalid model: path is not closed')
+                raise OpenPathError('Invalid model: path is not closed')
 
             #also, AFAICT overlapping paths can be problematic for testing if
             #a polygon contains a point - although the shapely docs are not clear
@@ -172,7 +178,7 @@ class HitManager(object):
             #so infinity paths could be incorrect
             lr = LinearRing(coords)
             if not lr.is_valid:
-                raise ValueError('Invalid model: %s' % explain_validity(lr))
+                raise InvalidPathError('Invalid model: %s' % explain_validity(lr))
 
             self._poly = sg.Polygon(lr)
         else:
@@ -192,16 +198,24 @@ class HitManager(object):
     def points(self):
         return self._poly.exterior.xy
 
-    def contains(self, x, y):
-        return self._poly.contains(self._pt(x,y))
+    def contains_px(self, px, py):
+        return self._poly.contains(self._pt(px,py))
 
-    def distance_to_closest_point(self, x, y):
+    def contains_m(self, x, y):
+        px,py = self._t.xy_to_pxpy(x,y)
+        return self.contains_px(px,py)
+
+    def distance_to_closest_point_px(self, px, py):
         try:
-            _x,_y = self._tfunc_to_model(x,y)
-            seg,ratio = self._polyline.connect_closest(None,px=float(_x),py=float(_y))
+            seg,ratio = self._polyline.connect_closest(None,px=float(px),py=float(py))
             return seg.length
         except Exception as e:
-            print e,_x,_y
+            print e
             return np.nan
+
+    def distance_to_closest_point_m(self, x, y):
+        px,py = self._t.xy_to_pxpy(x,y)
+        return self.distance_to_closest_point_px(px,py)
+
     
 

@@ -93,11 +93,11 @@ class Tester:
         GLib.timeout_add(200, self._move_along)
 
         try:
-            self._hit = model.HitManager(self._model, transform_to_world=False, validate=True)
+            self._hit = model.HitManager(self._model, XFORM, validate=True)
             self._view.connect('motion-notify-event', self._on_motion_notify_event)
         except ImportError:
             pass
-        except ValueError, e:
+        except model.PathError as e:
             print "Could not initialize hit tester: %s" % e.message
 
     def _move_along(self):
@@ -106,7 +106,7 @@ class Tester:
         return True
 
     def _on_motion_notify_event(self, v, event):
-        if (self._hit is not None) and self._hit.contains(event.x, event.y):
+        if (self._hit is not None) and self._hit.contains_px(event.x, event.y):
             print "IN"
         else:
             print "OUT"
