@@ -33,24 +33,20 @@ def draw_on_context(cr, pathdata):
         else:
             raise Exception("Not Supported")
 
-class SvgPathWidget(Gtk.DrawingArea):
-    def __init__(self, model):
-        Gtk.DrawingArea.__init__(self)
-        self.set_size_request(500,500)
+
+class ViewWidget(Gtk.DrawingArea):
+    def __init__(self):
+        super(ViewWidget, self).__init__()
         self.connect('draw', self._on_draw_event)
         self.connect('configure-event', self._on_configure_event)
-
-        self._model = model
         self._surface = None
         self._need_bg_redraw = False
 
-    @property
-    def model(self):
-        return self._model
-
     def redraw(self):
         if self._need_bg_redraw:
-            self._draw_background()
+            cr = cairo.Context(self._surface)
+            self.redraw_background(cr)
+            self.add_to_background(cr)
             self._need_bg_redraw = False
         self.queue_draw()
         return True
@@ -58,30 +54,9 @@ class SvgPathWidget(Gtk.DrawingArea):
     def draw_background(self):
         self._need_bg_redraw = True
        
-    def _draw_background(self):
-        cr = cairo.Context(self._surface)
+    def redraw_background(self, cr):
         cr.set_source_rgb(1, 1, 1)
         cr.paint()
-
-        if not self._model:
-            return
-
-        cr.set_source_rgb (0, 0, 0)
-        cr.set_line_width (1)
-        draw_on_context(cr, self._model.svg_path_data)
-        cr.stroke()
-
-        #draw the approximation
-        polyline = self._model.polyline
-        cr.set_source_rgb (0, 0, 1)
-        cr.set_line_width (1)
-        cr.set_dash([1.0])
-        cr.move_to(polyline.points[0].x,polyline.points[0].y)
-        for i in range(1,len(polyline.points)):
-            cr.line_to(polyline.points[i].x,polyline.points[i].y)
-        cr.stroke()
-
-        self.add_to_background(cr)
 
     def add_to_background(self, cr):
         """ override this for a chance to draw additonal stuff on the background """
@@ -146,8 +121,8 @@ class SvgPathWidget(Gtk.DrawingArea):
                                             cairo.CONTENT_COLOR,
                                             allocation.width,
                                             allocation.height)
-
-        self._draw_background()
+        self.draw_background()
+        self.redraw()
 
     def get_vec_and_points(self):
         """
@@ -164,5 +139,38 @@ class SvgPathWidget(Gtk.DrawingArea):
             [(euclid.Point2,(r,g,b),"txt"),...]
         """
         return []
+
+class SvgPathWidget(ViewWidget):
+
+    def __init__(self, model, transform):
+        super(SvgPathWidget, self).__init__()
+        self.set_size_request(*transform.size_px)
+        self._model = model
+
+    @property
+    def model(self):
+        return self._model
+
+    def redraw_background(self, cr):
+        ViewWidget.redraw_background(self,cr)
+
+        if not self._model:
+            return
+
+        cr.set_source_rgb (0, 0, 0)
+        cr.set_line_width (1)
+
+        draw_on_context(cr, self._model.svg_path_data)
+        cr.stroke()
+
+        #draw the approximation
+        polyline = self._model.polyline
+        cr.set_source_rgb (0, 0, 1)
+        cr.set_line_width (1)
+        cr.set_dash([1.0])
+        cr.move_to(polyline.points[0].x,polyline.points[0].y)
+        for i in range(1,len(polyline.points)):
+            cr.line_to(polyline.points[i].x,polyline.points[i].y)
+        cr.stroke()
 
 
