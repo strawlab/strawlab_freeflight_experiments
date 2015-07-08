@@ -45,7 +45,11 @@ def _unique_or_none(df,col):
 def _svg_model(svg_filename):
     pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
     path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
-    return flyflypath.model.SvgPath(path)
+    try:
+        mod = flyflypath.model.SvgPath(path)
+    except flyflypath.model.MultiplePathSvgError:
+        mod = flyflypath.model.MultipleSvgPath(path)
+    return mod
 
 def draw_confinement_area(ax, df, **kwargs):
     svg_filename = _unique_or_none(df, 'svg_filename')
@@ -126,7 +130,7 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
             continue
 
         m = _svg_model(svg_filename)
-        hm = flyflypath.model.HitManager(m, flyflypath.transform.SVGTransform())
+        hm = m.get_hitmanager(flyflypath.transform.SVGTransform())
 
         condn = combine.get_condition_name(cond)
         dfs = []

@@ -33,26 +33,28 @@ def _PolygonPath(polygon):
 
 
 def plot_xy(model,t,ax,**kwargs):
-    pts = model.get_approximation(NPTS).get_points(transform=t)
-    x,y = np.array(pts).T
-    ax.plot(x, y, solid_capstyle='round', **kwargs)
+    for path in model.paths:
+        pts = path.get_approximation(NPTS).get_points(transform=t)
+        x,y = np.array(pts).T
+        ax.plot(x, y, solid_capstyle='round', **kwargs)
 
 def plot_polygon(model,t,ax,**kwargs):
     import shapely.geometry
 
-    pts = model.get_approximation(NPTS).get_points(transform=t)
-    poly = shapely.geometry.Polygon(pts)
+    for path in model.paths:
+        pts = path.get_approximation(NPTS).get_points(transform=t)
+        poly = shapely.geometry.Polygon(pts)
 
-    try:
-        scale = kwargs.pop('scale')
-        if not poly.is_valid:
-            raise ValueError('Could not scale invalid polygon')
-        poly = poly.buffer(scale)
-        if hasattr(poly,'geoms'):
-            raise ValueError('Sclaing split polygon into multiple polygons')
-    except KeyError:
-        pass
+        try:
+            scale = kwargs.pop('scale')
+            if not poly.is_valid:
+                raise ValueError('Could not scale invalid polygon')
+            poly = poly.buffer(scale)
+            if hasattr(poly,'geoms'):
+                raise ValueError('Sclaing split polygon into multiple polygons')
+        except KeyError:
+            pass
 
-    pat = PathPatch(_PolygonPath(poly), **kwargs)
-    ax.add_patch(pat)
+        pat = PathPatch(_PolygonPath(poly), **kwargs)
+        ax.add_patch(pat)
 

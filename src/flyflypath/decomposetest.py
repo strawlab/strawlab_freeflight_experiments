@@ -20,7 +20,7 @@ def load_svg_path(path):
     d = xml.dom.minidom.parse(open(path,'r'))
     paths = d.getElementsByTagName('path')
     if len(paths) != 1:
-        raise SvgError("Only 1 path supported")
+        raise model.SvgError("Only 1 path supported")
     return str(paths[0].getAttribute('d'))
 
 class PathIterator(object):
@@ -157,16 +157,19 @@ if __name__ == "__main__":
         print e
 
     #new parsing code
-    mod2 = model.SvgPath(sys.argv[1])
-    pts2 = mod2.get_points(transform=t)
-    x2,y2 = np.array(pts2).T
+    try:
+        mod2 = model.SvgPath(sys.argv[1])
+        pts2 = mod2.get_points(transform=t)
+        x2,y2 = np.array(pts2).T
 
-    ax.plot(x2, y2, 'r-', lw=0.2, label='new parsing code')
+        ax.plot(x2, y2, 'r-', lw=0.2, label='new parsing code')
 
-    for p in np.linspace(0,1.0,20):
-        ptx,pty = mod2.point(p, t)
-        ax.plot(ptx, pty, 'r>')
-    ax.legend()
+        for p in np.linspace(0,1.0,20):
+            ptx,pty = mod2.point(p, t)
+            ax.plot(ptx, pty, 'r>')
+        ax.legend()
+    except model.MultiplePathSvgError:
+        mod2 = model.MultipleSvgPath(sys.argv[1])
 
     #mpl helpers
     f = plt.figure("mpl view helper",figsize=(17,6))

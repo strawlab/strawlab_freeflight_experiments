@@ -160,17 +160,19 @@ class SvgPathWidget(ViewWidget):
         cr.set_source_rgb (0, 0, 0)
         cr.set_line_width (1)
 
-        draw_on_context(cr, self._model.svg_path_data)
-        cr.stroke()
+        for path in self._model.paths:
+            draw_on_context(cr, path.svg_path_data)
+            cr.stroke()
 
-        #draw the approximation
-        polyline = self._model.polyline
-        cr.set_source_rgb (0, 0, 1)
-        cr.set_line_width (1)
-        cr.set_dash([1.0])
-        cr.move_to(polyline.points[0].x,polyline.points[0].y)
-        for i in range(1,len(polyline.points)):
-            cr.line_to(polyline.points[i].x,polyline.points[i].y)
-        cr.stroke()
+        for path in self._model.paths:
+            #draw the approximation
+            polyline = path.polyline
+            cr.set_source_rgb (0, 0, 1)
+            cr.set_line_width (1)
+            cr.set_dash([1.0])
+            cr.move_to(polyline.points[0].x,polyline.points[0].y)
+            for i in range(1,len(polyline.points)):
+                cr.line_to(polyline.points[i].x,polyline.points[i].y)
+            cr.stroke()
 
 

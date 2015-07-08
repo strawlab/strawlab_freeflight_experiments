@@ -10,8 +10,8 @@ XFORM = transform.SVGTransform()
 from gi.repository import Gtk, GLib, Gdk
 
 class TestView(view.SvgPathWidget):
-    def __init__(self, model):
-        view.SvgPathWidget.__init__(self, model)
+    def __init__(self, model, transform):
+        super(TestView,self).__init__(model, transform)
         self.add_events(
                 Gdk.EventMask.POINTER_MOTION_HINT_MASK | \
                 Gdk.EventMask.POINTER_MOTION_MASK | \
@@ -27,12 +27,18 @@ class TestView(view.SvgPathWidget):
         self.queue_draw()
 
     def _on_button_press_event(self, da, event):
+        if self._model.num_paths > 1:
+            return False
+
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 1:
             seg, ratio = self._model.connect_closest(p=None,px=event.x,py=event.y)
             self._model.start_move_from_ratio(ratio)
             return True
 
     def get_vec_and_points(self):
+        if self._model.num_paths > 1:
+            return [],[],[]
+
         vecs = []
         src_pt = None
         trg_pt = self._model.moving_pt if self._model else None
@@ -50,6 +56,9 @@ class TestView(view.SvgPathWidget):
         return vecs,[(src_pt,(1,0,0)),(trg_pt,(0,1,0))],[]
 
     def get_annotations(self):
+        if self._model.num_paths > 1:
+            return []
+
         return [(euclid.Point2(20,20),(0,1,0),"ratio: %.2f" % self.model.ratio)]
 
     def add_to_background(self, cr):
@@ -81,10 +90,12 @@ class Tester:
         self._w = Gtk.Window()
         self._w.connect("delete-event", Gtk.main_quit)
 
-        self._model = model.MovingPointSvgPath(path)
-        self._view = TestView(self._model)
+        try:
+            self._model = model.MovingPointSvgPath(path)
+        except model.MultiplePathSvgError:
+            self._model = model.MultipleSvgPath(path)
 
-        self._model.start_move_from_ratio(0.3)
+        self._view = TestView(self._model, XFORM)
 
         self._w.add(self._view)
         self._w.show_all()
@@ -93,7 +104,7 @@ class Tester:
         GLib.timeout_add(200, self._move_along)
 
         try:
-            self._hit = model.HitManager(self._model, XFORM, validate=True)
+            self._hit = self._model.get_hitmanager(XFORM, validate=True)
             self._view.connect('motion-notify-event', self._on_motion_notify_event)
         except ImportError:
             pass
@@ -101,7 +112,8 @@ class Tester:
             print "Could not initialize hit tester: %s" % e.message
 
     def _move_along(self):
-        self._model.advance_point(self._step, wrap=True)
+        if self._model.num_paths == 1:
+            self._model.advance_point(self._step, wrap=True)
         self._view.queue_draw()
         return True
 

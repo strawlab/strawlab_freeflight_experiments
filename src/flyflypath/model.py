@@ -34,7 +34,12 @@ def represent_svg_path_as_polyline(pathdata, points_per_bezier):
 class SvgError(Exception):
     pass
 
+class MultiplePathSvgError(SvgError):
+    pass
+
 class SvgPath(object):
+
+    num_paths = 1
 
     def __init__(self, path, polyline=None, svg_path_data=None, npts=5):
         if svg_path_data is None:
@@ -44,13 +49,17 @@ class SvgPath(object):
             d = xml.dom.minidom.parse(open(path,'r'))
             paths = d.getElementsByTagName('path')
             if len(paths) != 1:
-                raise SvgError("Only 1 path supported")
+                raise MultiplePathSvgError("Only 1 path supported")
             svg_path_data = str(paths[0].getAttribute('d'))
         self._svg_path_data = svg_path_data
 
         if polyline is None:
             polyline = represent_svg_path_as_polyline(self._svg_path_data, npts)
         self._polyline = polyline
+
+    @property
+    def paths(self):
+        return (self,)
 
     @property
     def polyline(self):
@@ -66,14 +75,17 @@ class SvgPath(object):
                        svg_path_data=self._svg_path_data,
                        npts=npts)
 
+    def get_hitmanager(self, xform, validate=True, scale=None):
+        return SvgPathHitManager(self, xform, validate=validate, scale=scale)
+
     def point(self, pos, transform=None):
         pt = self._polyline.along(pos)
         if transform is not None:
             return transform.pxpy_to_xy(pt.x,pt.y)
         else:
-            return pt.x,py.y
+            return pt.x,pt.y
 
-    def get_points(self, npts=None, transform=None):
+    def get_points(self, transform=None):
         if transform is not None:
             tfunc = transform.pxpy_to_xy
         else:
@@ -97,6 +109,29 @@ class SvgPath(object):
         except AttributeError:
             seg = polyline.ZeroLineSegment2(closest)
         return seg,ratio
+
+class MultipleSvgPath(object):
+
+    def __init__(self, path, polyline=None, svg_path_data=None, npts=5):
+        if not os.path.exists(path):
+            raise SvgError("File Missing: %s" % path)
+        #parse the SVG
+        d = xml.dom.minidom.parse(open(path,'r'))
+        paths = d.getElementsByTagName('path')
+
+        self._paths = tuple(SvgPath(path=None,polyline=None,svg_path_data=p.getAttribute('d'), npts=npts) for p in paths)
+
+    @property
+    def num_paths(self):
+        return len(self._paths)
+
+    @property
+    def paths(self):
+        return self._paths
+
+    def get_hitmanager(self, xform, validate=True, scale=None):
+        return MultipleSvgPathHitManager(self, xform, validate=validate, scale=scale)
+
 
 class MovingPointSvgPath(SvgPath):
 
@@ -154,8 +189,11 @@ class OpenPathError(PathError):
 class InvalidPathError(PathError):
     pass
 
-class HitManager(object):
+class SvgPathHitManager(object):
     def __init__(self, model, transform, validate=True, scale=None):
+
+        if model.num_paths > 1:
+            raise PathError("HitManager only supports single paths")
 
         import shapely.geometry as sg
         from shapely.geometry.polygon import LinearRing, LineString
@@ -230,5 +268,24 @@ class HitManager(object):
         px,py = self._t.xy_to_pxpy(x,y)
         return self.distance_to_closest_point_px(px,py)
 
-    
+class MultipleSvgPathHitManager(object):
+
+    def __init__(self, model, transform, validate=True, scale=None):
+        self._hm = tuple(SvgPathHitManager(p,transform,validate=validate,scale=scale) for p in model.paths)
+
+    @property
+    def points(self):
+        return [hm.points for hm in self._hm]
+
+    def contains_px(self, px, py):
+        return any(hm.contains_px(px,py) for hm in self._hm)
+
+    def contains_m(self, x, y):
+        return any(hm.contains_m(x,y) for hm in self._hm)
+
+    def distance_to_closest_point_px(self, px, py):
+        return [hm.disance_to_closest_point_px(px,py) for hm in self._hm]
+
+    def distance_to_closest_point_m(self, x, y):
+        return [hm.disance_to_closest_point_m(x,y) for hm in self._hm]
 

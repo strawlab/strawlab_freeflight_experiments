@@ -112,6 +112,14 @@ class Node(nodelib.node.Experiment):
                                         XFORM,
                                         self.startr,self.x0,self.y0)
 
+    def _get_hitmanager(self, path, scale):
+        #try the faster single path case first
+        try:
+            mod = flyflypath.model.SvgPath(path)
+        except flyflypath.model.MultiplePathSvgError:
+            mod = flyflypath.model.MultipleSvgPath(path)
+        return mod.get_hitmanager(XFORM, validate=True, scale=scale)
+
     def switch_conditions(self):
 
         self.drop_lock_on()
@@ -164,9 +172,7 @@ class Node(nodelib.node.Experiment):
         #settings related to a lock on region defined as a buffer around svg_filename
         try:
             startbuf            = float(self.condition['start_buffer'])
-            self.hitm_start     = flyflypath.model.HitManager(
-                                        flyflypath.model.SvgPath(svg_path),
-                                        transform_to_world=XFORM, validate=True, scale=startbuf)
+            self.hitm_start     = self._get_hitmanager(svg_path, startbuf)
         except (KeyError,ValueError,flyflypath.model.SvgError), e:
             startbuf            = None
             self.hitm_start     = None
@@ -174,9 +180,7 @@ class Node(nodelib.node.Experiment):
         #settings related to a lock off region defined as a buffer around svg_filename
         try:
             stopbuf             = float(self.condition['stop_buffer'])
-            self.hitm_stop      = flyflypath.model.HitManager(
-                                        flyflypath.model.SvgPath(svg_path),
-                                        transform_to_world=XFORM, validate=True, scale=stopbuf)
+            self.hitm_stop      = self._get_hitmanager(svg_path, stopbuf)
         except (KeyError,ValueError,flyflypath.model.SvgError):
             stopbuf             = None
             self.hitm_stop      = None
@@ -185,9 +189,7 @@ class Node(nodelib.node.Experiment):
         #region defined as a buffer around svg_filename
         try:
             hidebuf             = float(self.condition['hide_buffer'])
-            self.hitm_hide      = flyflypath.model.HitManager(
-                                        flyflypath.model.SvgPath(svg_path),
-                                        transform_to_world=XFORM, validate=True, scale=hidebuf)
+            self.hitm_hide      = self._get_hitmanager(svg_path, hidebuf)
         except (KeyError,ValueError,flyflypath.model.SvgError):
             hidebuf             = None
             self.hitm_hide      = None
