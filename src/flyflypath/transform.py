@@ -6,6 +6,10 @@ class SVGTransform:
         if self._shrink != 1.0:
             print "****WARN: shrinking sphere****"
 
+    @property
+    def size_px(self):
+        return (self._w,self._w)
+
     def xy_to_pxpy(self, x,y):
         w = self._w
         c = self._w / 2
