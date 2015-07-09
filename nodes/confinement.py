@@ -105,8 +105,12 @@ class Node(nodelib.node.Experiment):
 
     def _get_trigger_area(self):
         if self.hitm_start is not None:
-            x,y = self.hitm_start.points
-            return nodelib.visualization.get_trigger_volume_polygon(XFORM,zip(x,y))
+            if self.hitm_start.num_paths == 1:
+                x,y = self.hitm_start.points
+                return nodelib.visualization.get_trigger_volume_polygon(XFORM,zip(x,y))
+            else:
+                #not supported
+                return None
         else:
             return nodelib.visualization.get_circle_trigger_volume_polygon(
                                         XFORM,
@@ -213,7 +217,9 @@ class Node(nodelib.node.Experiment):
         self.pub_model_pose.publish( self.get_model_pose_msg() )
         self.svg_pub.publish(svg_path)
 
-        self.trigarea_pub.publish( self._get_trigger_area() )
+        area = self._get_trigger_area()
+        if area is not None:
+            self.trigarea_pub.publish( area )
 
         rospy.loginfo('condition: %s (%f,%f) %s' % (self.condition.name,self.x0,self.y0,desc))
 
@@ -272,7 +278,7 @@ class Node(nodelib.node.Experiment):
             if active:
 
                 if self.hitm_hide is not None:
-                    if not self.hitm_hide.contains(fly_x, fly_y):
+                    if not self.hitm_hide.contains_m(fly_x, fly_y):
                         self.pub_stimulus.publish( HOLD_COND )
 
                 dz = self.model_pose_voffset / CONTROL_RATE
@@ -301,13 +307,13 @@ class Node(nodelib.node.Experiment):
 
     def is_in_trigger_volume(self,pos):
         if self.hitm_start is not None:
-            return self.hitm_start.contains(pos.x, pos.y)
+            return self.hitm_start.contains_m(pos.x, pos.y)
         else:
             return self._is_in_circle_at_origin(pos,self.startr)
 
     def has_left_stop_volume(self,pos):
         if self.hitm_stop is not None:
-            return not self.hitm_stop.contains(pos.x, pos.y)
+            return not self.hitm_stop.contains_m(pos.x, pos.y)
         else:
             if self.stopr is not None:
                 return not self._is_in_circle_at_origin(pos,self.stopr)
