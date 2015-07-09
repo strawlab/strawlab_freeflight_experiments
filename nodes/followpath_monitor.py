@@ -22,7 +22,7 @@ XFORM = flyflypath.transform.SVGTransform()
 
 class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
     def __init__(self):
-        flyflypath.view.SvgPathWidget.__init__(self, None)
+        flyflypath.view.SvgPathWidget.__init__(self, None, XFORM)
 
         self._src = None
         self._trg = None
@@ -96,9 +96,9 @@ class RemoveSvgWidget(flyflypath.view.SvgPathWidget):
     def _on_svg_filename(self, msg):
         with self._lock:
             try:
-                self._model = flyflypath.model.MovingPointSvgPath(msg.data)
-            except flyflypath.model.SvgError, e:
-                self._model = None
+                self._model = flyflypath.model.SvgPath(msg.data)
+            except flyflypath.model.MultiplePathSvgError:
+                self._model = flyflypath.model.MultipleSvgPath(msg.data)
             self.draw_background()
 
     def _on_source_move(self, msg):
