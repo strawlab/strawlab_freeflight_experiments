@@ -190,6 +190,9 @@ class InvalidPathError(PathError):
     pass
 
 class SvgPathHitManager(object):
+
+    num_paths = 1
+
     def __init__(self, model, transform, validate=True, scale=None):
 
         if model.num_paths > 1:
@@ -272,6 +275,10 @@ class MultipleSvgPathHitManager(object):
 
     def __init__(self, model, transform, validate=True, scale=None):
         self._hm = tuple(SvgPathHitManager(p,transform,validate=validate,scale=scale) for p in model.paths)
+
+    @property
+    def num_paths(self):
+        return len(self._hm)
 
     @property
     def points(self):
