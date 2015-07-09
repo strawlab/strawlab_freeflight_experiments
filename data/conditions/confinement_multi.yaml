@@ -1,0 +1,33 @@
+confine_5circles:
+    hide_buffer: 0.0
+    start_buffer: -0.05
+    stimulus_filename: 5circles_v1.svg.osg
+    svg_filename: 5circles_v1.svg
+    lag: 0.0
+    x0: 0.0
+    y0: 0.0
+confine_5circles_20ms_lag:
+    hide_buffer: 0.0
+    start_buffer: -0.05
+    stimulus_filename: 5circles_v1.svg.osg
+    svg_filename: 5circles_v1.svg
+    lag: 20.0
+    x0: 0.0
+    y0: 0.0
+confine_5circles_200ms_lag:
+    hide_buffer: 0.0
+    start_buffer: -0.05
+    stimulus_filename: 5circles_v1.svg.osg
+    svg_filename: 5circles_v1.svg
+    lag: 200.0
+    x0: 0.0
+    y0: 0.0
+confine_5circles_zero_texture_control:
+    hide_buffer: 0.0
+    start_buffer: -0.05
+    stimulus_filename: midgray.osg
+    svg_filename: 5circles_v1.svg
+    lag: 0.0
+    x0: 0.0
+    y0: 0.0
+
