@@ -138,38 +138,47 @@ def represent_svg_path_as_polyline(pathdata, points_per_bezier):
 if __name__ == "__main__":
 
     f = plt.figure("compare key points",figsize=(8,6))
+
     ax = f.add_subplot(1,1,1)
+    ax.set_color_cycle(['k', 'r', 'g', 'b', 'm', 'y'])
 
     t = transform.SVGTransform()
 
     #old parsing code
     try:
-        mod = model.SvgPath(sys.argv[1],
-                        polyline=represent_svg_path_as_polyline(load_svg_path(sys.argv[1]),APPROX_BEZIER_WITH_N_SEGMENTS))
+        path_data = load_svg_path(sys.argv[1])
+        mod = model.SvgPath(
+                        None,
+                        polyline=represent_svg_path_as_polyline(path_data,APPROX_BEZIER_WITH_N_SEGMENTS),
+                        svg_path_data=path_data)
         pts = mod.get_points(transform=t)
         x,y = np.array(pts).T
-        ax.plot(x, y, 'k-', lw=0.2, label='old parsing code')
+        q, = ax.plot(x, y, label='old parsing code')
 
         for p in np.linspace(0,1.0,20):
             ptx,pty = mod.point(p, t)
-            ax.plot(ptx, pty, 'k<')
+            ax.plot(ptx, pty, '%s<' % q.get_color())
     except Exception as e:
         print e
 
     #new parsing code
     try:
         mod2 = model.SvgPath(sys.argv[1])
-        pts2 = mod2.get_points(transform=t)
-        x2,y2 = np.array(pts2).T
-
-        ax.plot(x2, y2, 'r-', lw=0.2, label='new parsing code')
-
-        for p in np.linspace(0,1.0,20):
-            ptx,pty = mod2.point(p, t)
-            ax.plot(ptx, pty, 'r>')
-        ax.legend()
     except model.MultiplePathSvgError:
         mod2 = model.MultipleSvgPath(sys.argv[1])
+
+    for i,path in enumerate(mod2.paths):
+        pts2 = path.get_points(transform=t)
+        x2,y2 = np.array(pts2).T
+
+        q, = ax.plot(x2, y2, label='new parsing code')
+
+        for p in np.linspace(0,1.0,20):
+            ptx,pty = path.point(p, t)
+            ax.plot(ptx, pty, '%s>' % q.get_color())
+
+    ax.legend()
+
 
     #mpl helpers
     f = plt.figure("mpl view helper",figsize=(17,6))
