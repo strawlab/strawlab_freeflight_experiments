@@ -119,7 +119,8 @@ class MultipleSvgPath(object):
         d = xml.dom.minidom.parse(open(path,'r'))
         paths = d.getElementsByTagName('path')
 
-        self._paths = tuple(SvgPath(path=None,polyline=None,svg_path_data=p.getAttribute('d'), npts=npts) for p in paths)
+        self._filepath = path
+        self._paths = tuple(SvgPath(path=None,polyline=None,svg_path_data=p.getAttribute('d'), transform=p.getAttribute('transform'), npts=npts) for p in paths)
 
     @property
     def num_paths(self):
@@ -128,6 +129,12 @@ class MultipleSvgPath(object):
     @property
     def paths(self):
         return self._paths
+
+    def get_approximation(self, npts):
+        return MultipleSvgPath(path=self._filepath,
+                       polyline=None,
+                       svg_path_data=None,
+                       npts=npts)
 
     def get_hitmanager(self, xform, validate=True, scale=None):
         return MultipleSvgPathHitManager(self, xform, validate=validate, scale=scale)
