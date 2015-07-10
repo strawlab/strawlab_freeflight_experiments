@@ -12,8 +12,8 @@ import svgpath
 from polyline import PolyLine2, BezierSegment2
 from euclid import Point2
 
-def represent_svg_path_as_polyline(pathdata, points_per_bezier):
-    paths = svgpath.parse_path(pathdata)
+def parse_path_to_polyline(pathdata, transform, points_per_bezier):
+    paths = svgpath.parse_path(pathdata, transform)
 
     pts = []
     for path in paths:
@@ -29,7 +29,7 @@ def represent_svg_path_as_polyline(pathdata, points_per_bezier):
                 pt = path.point(i)
                 pts.append(Point2(float(pt.real),float(pt.imag)))
 
-    return PolyLine2(*pts)
+    return PolyLine2(*pts), paths.d()
 
 class SvgError(Exception):
     pass
@@ -41,7 +41,7 @@ class SvgPath(object):
 
     num_paths = 1
 
-    def __init__(self, path, polyline=None, svg_path_data=None, npts=5):
+    def __init__(self, path, polyline=None, svg_path_data=None, transform=None, npts=5):
         if svg_path_data is None:
             if not os.path.exists(path):
                 raise SvgError("File Missing: %s" % path)
@@ -50,11 +50,14 @@ class SvgPath(object):
             paths = d.getElementsByTagName('path')
             if len(paths) != 1:
                 raise MultiplePathSvgError("Only 1 path supported")
+
             svg_path_data = str(paths[0].getAttribute('d'))
-        self._svg_path_data = svg_path_data
+            transform = paths[0].getAttribute('transform')
 
         if polyline is None:
-            polyline = represent_svg_path_as_polyline(self._svg_path_data, npts)
+            polyline,svg_path_data = parse_path_to_polyline(svg_path_data, transform, npts)
+
+        self._svg_path_data = svg_path_data
         self._polyline = polyline
 
     @property

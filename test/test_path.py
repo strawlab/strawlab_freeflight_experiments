@@ -200,6 +200,15 @@ class TestFlyFlyPathModel(unittest.TestCase):
         self.assertEqual(hm.distance_to_closest_point_m(0.0,0.0), 0.032596266707763916)
         self.assertEqual(hm.distance_to_closest_point_px(0.0,0.0), 204.75459496191291)
 
+    def test_check_path_parse_bezier(self):
+        m = MovingPointSvgPath(os.path.join(self._tdir,'bezier.svg'))
+
+        ratio,p = m.move_point(1.0,wrap=False)
+        self.assertEqual(ratio,1.0)
+
+        self.assertEqual(p.x,297.66949)
+        self.assertEqual(p.y,257.41525)
+
     def test_simple_path(self):
         def _check_start_path(_x,_y):
             #from svg path data, first M command (start of path)
@@ -265,6 +274,29 @@ class TestFlyFlyPathModel(unittest.TestCase):
         m2 = m.get_approximation(400)
         self.assertTrue(isinstance(m2,MultipleSvgPath))
 
+    def test_circle_and_translate(self):
+        m = MovingPointSvgPath(os.path.join(self._tdir,'circle.svg'))
+        self.assertEqual(len(m.get_points()),41)
+
+        XR0 = 340.81948
+        YR0 = 250.56508
+
+        r,p = m.start_move_from_ratio(0)
+        self.assertAlmostEqual(p.x,XR0)
+        self.assertAlmostEqual(p.y,YR0)
+
+        #now open a svg with a translated circle with known translation
+        tx,ty = -150,-130
+
+        m = MovingPointSvgPath(os.path.join(self._tdir,'circle_translate.svg'))
+        self.assertEqual(len(m.get_points()),41)
+
+        r,p = m.start_move_from_ratio(0)
+        self.assertNotAlmostEqual(p.x,XR0)
+        self.assertNotAlmostEqual(p.y,YR0)
+
+        self.assertAlmostEqual(p.x,XR0+tx)
+        self.assertAlmostEqual(p.y,YR0+ty)
 
 if __name__ == '__main__':
     unittest.main()
