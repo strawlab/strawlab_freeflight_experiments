@@ -79,6 +79,12 @@ class SvgPath(object):
         return SvgPathHitManager(self, xform, validate=validate, scale=scale)
 
     def point(self, pos, transform=None):
+        """
+        returns a point along the path
+        (0.0=start, 1.0=end)
+
+        returns in pixel coordinates unless transform is supplied
+        """
         pt = self._polyline.along(pos)
         if transform is not None:
             return transform.pxpy_to_xy(pt.x,pt.y)
@@ -86,6 +92,11 @@ class SvgPath(object):
             return pt.x,pt.y
 
     def get_points(self, transform=None):
+        """
+        gets the current representation of the path
+        (where beziers have been decomposed into
+        npts as per constructor)
+        """
         if transform is not None:
             tfunc = transform.pxpy_to_xy
         else:
@@ -276,7 +287,7 @@ class SvgPathHitManager(object):
 
     def distance_to_closest_point_m(self, x, y):
         px,py = self._t.xy_to_pxpy(x,y)
-        return self.distance_to_closest_point_px(px,py)
+        return self._t.pixel_to_m(self.distance_to_closest_point_px(px,py))
 
 class MultipleSvgPathHitManager(object):
 

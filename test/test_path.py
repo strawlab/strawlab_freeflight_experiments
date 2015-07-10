@@ -189,6 +189,69 @@ class TestFlyFlyPathModel(unittest.TestCase):
         m2 = m.get_approximation(400)
         self.assertTrue(isinstance(m2,SvgPath))
 
+    def test_bezier(self):
+        m = SvgPath(os.path.join(self._tdir,'bezier.svg'))
+        self.assertEqual(len(m.get_points()),57)
+
+        ###test hitmanager
+        transform = SVGTransform()
+        hm = m.get_hitmanager(transform)
+
+        self.assertEqual(hm.distance_to_closest_point_m(0.0,0.0), 0.032596266707763916)
+        self.assertEqual(hm.distance_to_closest_point_px(0.0,0.0), 204.75459496191291)
+
+    def test_simple_path(self):
+        def _check_start_path(_x,_y):
+            #from svg path data, first M command (start of path)
+            self.assertEqual(_x,95.878886)
+            self.assertEqual(_y,173.41255)
+
+        def _check_ls_to_start_of_path(_ls):
+            self.assertEqual(_ls.p1.x, 0.0)
+            self.assertEqual(_ls.p1.y, 0.0)
+
+            x,y = _ls.p2.x, _ls.p2.y
+            _check_start_path(x,y)
+
+        for npts in (5,10,19):
+            m = SvgPath(os.path.join(self._tdir,'bezier_simple.svg'), npts=npts)
+            self.assertEqual(len(m.get_points()), npts)
+
+        self.assertEqual(len(m.get_approximation(100).get_points()),100)
+
+        m = SvgPath(os.path.join(self._tdir,'bezier_simple.svg'), npts=5)
+        self.assertEqual(m.point(0.5), (213.1052380714953, 237.21054620573256))
+
+        ls,ratio = m.connect_closest(None,px=0,py=0)
+        self.assertEqual(ratio,0.0)
+        _check_ls_to_start_of_path(ls)
+
+        ###test moving point path
+        m2 = MovingPointSvgPath(os.path.join(self._tdir,'bezier_simple.svg'))
+        ratio,p = m2.start_move_from_ratio(0)
+        self.assertEqual(ratio,0.0)
+
+        ls = m2.connect_to_moving_point(None, px=0, py=0)
+        _check_ls_to_start_of_path(ls)
+
+        ratio,p = m2.advance_point(0.0)
+        self.assertEqual(ratio,0.0)
+        _check_start_path(p.x,p.y)
+        ls = m2.connect_to_moving_point(None, px=0, py=0)
+        _check_ls_to_start_of_path(ls)
+
+        ratio,p = m2.move_point(0)
+        self.assertEqual(ratio,0.0)
+        _check_start_path(p.x,p.y)
+        ls = m2.connect_to_moving_point(None, px=0, py=0)
+        _check_ls_to_start_of_path(ls)
+
+        ratio,p = m2.move_point(1.0,wrap=True)
+        self.assertEqual(ratio,0.0)
+        _check_start_path(p.x,p.y)
+        ls = m2.connect_to_moving_point(None, px=0, py=0)
+        _check_ls_to_start_of_path(ls)
+
     def test_multipath(self):
         self.assertRaises(MultiplePathSvgError,SvgPath,os.path.join(self._tdir,'multiple.svg'))
 
