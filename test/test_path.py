@@ -15,7 +15,7 @@ from shapely.geometry.polygon import LinearRing, LineString
 from flyflypath.euclid import Point2, LineSegment2, Vector2
 from flyflypath.polyline import PolyLine2, ZeroLineSegment2
 from flyflypath.transform import SVGTransform
-from flyflypath.model import MovingPointSvgPath, HitManager, SvgError
+from flyflypath.model import MovingPointSvgPath, SvgPath, SvgPathHitManager, SvgError, InvalidPathError, OpenPathError, MultipleSvgPath, MultiplePathSvgError, MultipleSvgPathHitManager
 
 import matplotlib.pyplot as plt
 import flyflypath.mplview as pltpath
@@ -118,6 +118,10 @@ class TestFlyFlyPathModel(unittest.TestCase):
                     roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                    'data','svgpaths'
         )
+        self._tdir = os.path.join(
+                    roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
+                   'test','data'
+        )
 
     def test_model_api(self):
         s = os.path.join(self._sdir,'lboxmed.svg')
@@ -128,18 +132,20 @@ class TestFlyFlyPathModel(unittest.TestCase):
             self.assertIsNotNone(o)
 
     def test_plot_helpers(self):
+        transform = SVGTransform()
+
         for svg in ('infinity.svg', 'lboxmed.svg', 'plain.svg'):
             m = MovingPointSvgPath(os.path.join(self._sdir,svg))
             f = plt.figure()
             ax = f.add_subplot(1,2,1)
             ax.set_xlim(-1,1)
             ax.set_ylim(-1,1)
-            pltpath.plot_xy(m,ax)
+            pltpath.plot_xy(m,transform,ax)
             ax = f.add_subplot(1,2,2)
-            pltpath.plot_polygon(m,ax,fc='red',ec='black',alpha=0.7,label='original')
+            pltpath.plot_polygon(m,transform,ax,fc='red',ec='black',alpha=0.7,label='original')
             try:
-                pltpath.plot_polygon(m,ax,fc='none',ec='blue',scale=0.05,label='grow')
-                pltpath.plot_polygon(m,ax,fc='none',ec='green',scale=-0.05,label='shrink')
+                pltpath.plot_polygon(m,transform,ax,fc='none',ec='blue',scale=0.05,label='grow')
+                pltpath.plot_polygon(m,transform,ax,fc='none',ec='green',scale=-0.05,label='shrink')
             except ValueError:
                 pass
             ax.set_xlim(-1,1)
@@ -148,19 +154,22 @@ class TestFlyFlyPathModel(unittest.TestCase):
 
         #plt.show()
 
-    def test_hitmanager(self):
+    def test_svgpathhitmanager(self):
+        transform = SVGTransform()
+
         #path crosses itself
-        m = MovingPointSvgPath(os.path.join(self._sdir,'infinity.svg'))
-        self.assertRaises(ValueError,HitManager,m,transform_to_world=True,validate=True)
+        m = SvgPath(os.path.join(self._sdir,'infinity.svg'))
+        self.assertRaises(InvalidPathError,SvgPathHitManager,m,transform,validate=True)
 
         #path does not connect with itself
-        m = MovingPointSvgPath(os.path.join(self._sdir,'plain.svg'))
-        self.assertRaises(ValueError,HitManager,m,transform_to_world=True,validate=True)
+        m = SvgPath(os.path.join(self._sdir,'plain.svg'))
+        self.assertRaises(OpenPathError,SvgPathHitManager,m,transform,validate=True)
 
-        m = MovingPointSvgPath(os.path.join(self._sdir,'lboxmed.svg'))
-        h = HitManager(m,transform_to_world=True,validate=True)
-        self.assertTrue(h.contains(0.1,0.0))
-        self.assertFalse(h.contains(100,0.0))
+        m = SvgPath(os.path.join(self._sdir,'lboxmed.svg'))
+        h = SvgPathHitManager(m,transform,validate=True)
+        self.assertTrue(h.contains_m(0.1,0.0))
+        self.assertTrue(h.contains_px(250,250))
+        self.assertFalse(h.contains_m(100,0.0))
 
         x,y = h.points
         self.assertTrue(len(x) > 0)
@@ -168,6 +177,30 @@ class TestFlyFlyPathModel(unittest.TestCase):
 
         #missing file
         self.assertRaises(SvgError,MovingPointSvgPath,os.path.join(self._sdir,'MISSING.svg'))
+
+    def test_path(self):
+        m = SvgPath(os.path.join(self._tdir,'bezier.svg'))
+        self.assertEqual(m.num_paths, 1)
+
+        transform = SVGTransform()
+        hm = m.get_hitmanager(transform)
+        self.assertTrue(isinstance(hm,SvgPathHitManager))
+
+        m2 = m.get_approximation(400)
+        self.assertTrue(isinstance(m2,SvgPath))
+
+    def test_multipath(self):
+        self.assertRaises(MultiplePathSvgError,SvgPath,os.path.join(self._tdir,'multiple.svg'))
+
+        m = MultipleSvgPath(os.path.join(self._tdir,'multiple.svg'))
+        self.assertEqual(m.num_paths, 4)
+
+        transform = SVGTransform()
+        hm = m.get_hitmanager(transform)
+        self.assertTrue(isinstance(hm,MultipleSvgPathHitManager))
+
+        m2 = m.get_approximation(400)
+        self.assertTrue(isinstance(m2,MultipleSvgPath))
 
 
 if __name__ == '__main__':
