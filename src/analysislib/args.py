@@ -216,6 +216,12 @@ def get_parser(*only_these_options, **defaults):
             help='keep only trajectories after this time (%s). '\
                  'note: in local time (i.e. the times in the start_time plot)'\
                  % DATE_FMT.replace("%","%%"))
+    if not only_these_options or "check" in only_these_options:
+        parser.add_argument(
+            '--check', action='store_true',
+            default=defaults.get('check', False),
+            required=False,
+            help='enable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
 
     return parser
 
