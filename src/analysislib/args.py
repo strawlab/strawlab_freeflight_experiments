@@ -219,7 +219,7 @@ def get_parser(*only_these_options, **defaults):
     if not only_these_options or "check" in only_these_options:
         parser.add_argument(
             '--check', action='store_true',
-            default=defaults.get('check', False),
+            default=defaults.get('check', False),  # if defaults is True, then action='store_true' flips? (see other flags)
             required=False,
             help='enable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
 
