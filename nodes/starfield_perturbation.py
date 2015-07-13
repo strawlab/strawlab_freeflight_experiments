@@ -170,6 +170,9 @@ class Node(nodelib.node.Experiment):
             perturb_desc = str(self.condition['perturb_desc'])
             self.perturber = sfe_perturb.get_perturb_object(perturb_desc)
             self.perturber_additive = self.condition.get('perturb_additive',False)
+            if self.condition.is_type('translation'):
+                self.x_perturb_vector = float(self.condition['x_perturb_vector'])
+                self.y_perturb_vector = float(self.condition['y_perturb_vector'])
 
         if ssvg:
             self.svg_fn = os.path.join(pkg_dir,'data','svgpaths', ssvg)
@@ -230,7 +233,7 @@ class Node(nodelib.node.Experiment):
                     self.drop_lock_on(blacklist=True)
                     self.save_cool_condition(currently_locked_obj_id, note="Fly %s completed perturbation" % currently_locked_obj_id)
                     rospy.loginfo('perturbation finished')
-                # FIXME: set the rotation_rate to zero at the end of the perturbation,
+                # FIXME: set the rotation_rate at zero at the end of the perturbation,
                 # or simply (?) don't lock on the fly anymore!
 
                 return rate, self.trg_x,self.trg_y
@@ -295,12 +298,14 @@ class Node(nodelib.node.Experiment):
                                              now, now - self.first_seen_time,
                                              framenumber, currently_locked_obj_id)
                 
-                rate_x=rate
-                rate_y=-rate
-                # From a given value of rate, rate_x and rate_y can direct the translation.
+                rate_x = self.x_perturb_vector * rate
+                rate_y = self.y_perturb_vector * rate
+                # From a given value of rate, rate_x and rate_y direct the translation
+                # thanks to x_perturb_vector and y_perturb_vector.
                 # E.g.: if rate_x = rate_y = rate then: flow in +x, +y with a value of 'rate'.
                 #       if rate_x = rate and rate_y = 0 then: flow in +x...
-                #       if rate_x = 0 and rate_y = -rate then: flow in -y...
+                #       if rate_x = 0 and rate_y = -3 * rate then: flow in -y, with a magnitude
+                #          3 times higher than the value of rate...
 
                 print 'perturbation progress: %s' % self.perturber.progress
  
@@ -308,7 +313,7 @@ class Node(nodelib.node.Experiment):
                     self.drop_lock_on(blacklist=True)
                     self.save_cool_condition(currently_locked_obj_id, note="Fly %s completed perturbation" % currently_locked_obj_id)
                     rospy.loginfo('perturbation finished')
-                # FIXME: set the rotation_rate to zero at the end of the perturbation,
+                # FIXME: set the rate at zero at the end of the perturbation,
                 # or simply (?) don't lock on the fly anymore!
 
                 return rate_x,rate_y,self.trg_x,self.trg_y
