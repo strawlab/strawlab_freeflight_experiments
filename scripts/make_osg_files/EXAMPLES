@@ -7,5 +7,6 @@ Make a vertical world that is tall
 
 $ python make_osg_corridor.py --svg ../data/svgpaths/lboxmed.svg ../data/checkerboard8x1.png --height 8
 
+Make a confinement world with multiple regions
 
-
+$ python make_osg_corridor.py --svg ../../data/svgpaths/5circles_v2.svg ../../data/checkerboard.png --height 1
