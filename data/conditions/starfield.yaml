@@ -9,6 +9,8 @@ starfield_translation_infinity:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0., 0., 0.]
 starfield_rotation_infinity:
     svg_path: infinity07.svg
     gain: 0.0
@@ -20,6 +22,8 @@ starfield_rotation_infinity:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 3.0
+    star_color: [1., 1., 1.]
+    background_color: [0., 0., 0.]
 starfield_control:
     svg_path: infinity07.svg
     gain: 0.0
@@ -31,3 +35,5 @@ starfield_control:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0., 0., 0.]
