@@ -306,14 +306,14 @@ class MultipleSvgPathHitManager(object):
         return [hm.points for hm in self._hm]
 
     def contains_px(self, px, py):
-        return any(hm.contains_px(px,py) for hm in self._hm)
+        return tuple(i for i,hm in enumerate(self._hm) if hm.contains_px(px,py))
 
     def contains_m(self, x, y):
-        return any(hm.contains_m(x,y) for hm in self._hm)
+        return tuple(i for i,hm in enumerate(self._hm) if hm.contains_m(x,y))
 
     def distance_to_closest_point_px(self, px, py):
-        return [hm.disance_to_closest_point_px(px,py) for hm in self._hm]
+        return [hm.distance_to_closest_point_px(px,py) for hm in self._hm]
 
     def distance_to_closest_point_m(self, x, y):
-        return [hm.disance_to_closest_point_m(x,y) for hm in self._hm]
+        return [hm.distance_to_closest_point_m(x,y) for hm in self._hm]
 
