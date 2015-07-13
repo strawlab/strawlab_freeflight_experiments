@@ -252,10 +252,12 @@ public:
     virtual void setRotationRate( const double& rate );
     virtual void setObserverPosition( const osg::Vec3& v );
     virtual void setPixelSize( float size );
+    virtual void setColor( osg::Vec3 color );
     virtual void setAngularSizeFixed( bool is_fixed );
 private:
     particleDataType* _pd;
     osg::ref_ptr<osg::Uniform> _pixelsize;
+    osg::ref_ptr<osg::Uniform> _star_color;
     osg::ref_ptr<osg::Uniform> _angular_size_fixed;
 };
 
@@ -296,7 +298,8 @@ ParticleNode::ParticleNode( StimulusInterface& rsrc, osg::Vec3 bbmin, osg::Vec3 
     geode->getOrCreateStateSet()->addUniform( _pixelsize );
     _angular_size_fixed  = new osg::Uniform( "angular_size_fixed", false );
     geode->getOrCreateStateSet()->addUniform( _angular_size_fixed );
-    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "color", color ) );
+    _star_color = new osg::Uniform( "color", color );
+    geode->getOrCreateStateSet()->addUniform( _star_color );
     //geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "fog_color", fog_color));
     geode->setCullingActive( false );
 
@@ -330,6 +333,10 @@ void ParticleNode::setPixelSize( float size ) {
     _pixelsize->set(size);
 }
 
+void ParticleNode::setColor( osg::Vec3 color ) {
+    _star_color->set(color);
+}
+
 void ParticleNode::setAngularSizeFixed( bool is_fixed ) {
     _angular_size_fixed->set(is_fixed);
 }
@@ -359,6 +366,7 @@ public:
 private:
     osg::ref_ptr<osg::Group> _group;
     osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
+    osg::ref_ptr<osg::ShapeDrawable> particle_box;
     osg::Vec3 model_position;
     osg::Quat model_attitude;
 
@@ -369,6 +377,8 @@ private:
     osg::Vec3f star_translation_vel;
     float star_rotation_rate;
     float star_size;
+    osg::Vec3f _starColor;
+    osg::Vec3f _bgColor;
     bool particles_angular_size_fixed;
 
     // These require redrawing all particles and hence we have "dirty_particles".
@@ -381,6 +391,8 @@ private:
 StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
     star_rotation_rate(0.0f), star_size(101.0f), particles_angular_size_fixed(false),
     bb_size(10.0f), num_particles(2500), dirty_particles(true) {
+    _starColor = osg::Vec3f( 1.0, 1.0, 1.0 );
+    _bgColor = osg::Vec3f( 0.0, 0.0, 0.0 );
     flyvr_assert( is_CUDA_available()==true );
 
     _group = new osg::Group;
@@ -433,7 +445,7 @@ void StimulusCUDAStarFieldAndModel::_did_dirty_particles() {
     osg::Vec3f bbmax = osg::Vec3f(bb_size,bb_size,bb_size);
 
     if (num_particles >= 1) {
-        pn_white = new ParticleNode(*this,bbmin,bbmax, osg::Vec3(1,1,1), num_particles);
+        pn_white = new ParticleNode(*this,bbmin,bbmax, _starColor, num_particles);
         // Add our new particle node to the group.
         _group->addChild( pn_white.get() );
     }
@@ -448,9 +460,9 @@ void StimulusCUDAStarFieldAndModel::_did_dirty_particles() {
     // drawing OSG model.
 
     pn_geode = new osg::Geode;
-    osg::ShapeDrawable* sd = new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints());
-    sd->setColor(get_clear_color());
-    pn_geode->addDrawable(sd);
+    particle_box = new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints());
+    particle_box->setColor(osg::Vec4f(_bgColor[0], _bgColor[1], _bgColor[2], 1.0));
+    pn_geode->addDrawable(particle_box);
     pn_geode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
     pn_geode->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
 
@@ -461,6 +473,7 @@ void StimulusCUDAStarFieldAndModel::_did_dirty_particles() {
         pn_white->setVelocity(star_translation_vel);
         pn_white->setRotationRate(star_rotation_rate);
         pn_white->setPixelSize(star_size);
+        pn_white->setColor(_starColor);
         pn_white->setAngularSizeFixed(particles_angular_size_fixed);
     }
 
@@ -473,7 +486,7 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
 }
 
 osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
-    return osg::Vec4(0.0,0.0,0.0,1); // black
+    return osg::Vec4(_bgColor[0],_bgColor[1],_bgColor[2],1);
 }
 
 void StimulusCUDAStarFieldAndModel::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation ) {
@@ -487,6 +500,8 @@ std::vector<std::string> StimulusCUDAStarFieldAndModel::get_topic_names() const 
     result.push_back("star_velocity");
     result.push_back("star_rotation_rate");
     result.push_back("star_size");
+    result.push_back("star_color");
+    result.push_back("background_color");
     result.push_back("model_filename");
     result.push_back("model_pose");
     result.push_back("bb_size");
@@ -529,6 +544,16 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
         // call _did_dirty_pixels().
         if (pn_white) {
             pn_white->setPixelSize(star_size);
+        }
+    } else if (topic_name=="background_color") {
+        _bgColor = parse_vec3(root);
+        particle_box->setColor(osg::Vec4f(_bgColor[0], _bgColor[1], _bgColor[2], 1.0));
+    } else if (topic_name=="star_color") {
+        _starColor = parse_vec3(root);
+        // This can be updated without redrawing all stars, do not
+        // call _did_dirty_pixels().
+        if (pn_white) {
+            pn_white->setColor(_starColor);
         }
     } else if (topic_name=="model_filename") {
         std::string osg_filename = parse_string(root);
@@ -579,6 +604,10 @@ std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& t
         result = "std_msgs/Float32";
     } else if (topic_name=="particles_angular_size_fixed") {
         result = "std_msgs/Bool";
+    } else if (topic_name=="star_color") {
+        result = "geometry_msgs/Vector3";
+    } else if (topic_name=="background_color") {
+        result = "geometry_msgs/Vector3";
     } else if (topic_name=="num_particles") {
         result = "std_msgs/Int32";
     } else {

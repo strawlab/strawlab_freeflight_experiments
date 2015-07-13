@@ -10,7 +10,8 @@ from geometry_msgs.msg import Vector3
 
 import flyvr.display_client as display_client
 from strawlab_freeflight_experiments.topics import TOPIC_STAR_VELOCITY, \
-     TOPIC_STAR_ROTATION_RATE, TOPIC_STAR_SIZE
+     TOPIC_STAR_ROTATION_RATE, TOPIC_STAR_SIZE, \
+     TOPIC_STAR_COLOR, TOPIC_BACKGROUND_COLOR
 
 class Node(object):
     def __init__(self):
@@ -18,6 +19,8 @@ class Node(object):
         self.pub_star_velocity = rospy.Publisher(TOPIC_STAR_VELOCITY, Vector3)
         self.pub_star_rotation_rate = rospy.Publisher(TOPIC_STAR_ROTATION_RATE, Float32)
         self.pub_star_size = rospy.Publisher(TOPIC_STAR_SIZE, Float32)
+        self.pub_star_color = rospy.Publisher(TOPIC_STAR_COLOR, Vector3, latch=True)
+        self.pub_bg_color = rospy.Publisher(TOPIC_BACKGROUND_COLOR, Vector3, latch=True)
         self.pub_particles_angular_size_fixed = rospy.Publisher("particles_angular_size_fixed", Bool)
         self.pub_bbsize = rospy.Publisher("bb_size", Float32)
         self.pub_num_particles = rospy.Publisher("num_particles", Int32)
@@ -34,9 +37,12 @@ class Node(object):
         rospy.loginfo( 'num_particles: %s'%(num_particles,))
         self.pub_num_particles.publish( Int32 (num_particles ) )
 
+        self.pub_star_color.publish( Vector3( 0, 1.0, 0. ))
+        self.pub_bg_color.publish( Vector3( 0, 0.0, 0.6) )
+
         do_switch_angular_size = False
         do_change_bbsize = False
-        do_change_num_particles = True
+        do_change_num_particles = False
         while not rospy.is_shutdown():
             #self.step()
             t = rospy.get_time()
