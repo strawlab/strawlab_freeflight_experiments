@@ -44,6 +44,18 @@ foo2:
 """
         self.assertRaises(ValueError, sfe_conditions.Conditions, s)
 
+    def test_complex_types(self):
+        s = """
+foo:
+    bar: [1, 2, 3]
+    baz: test
+    bob: 1.234
+"""
+        c = sfe_conditions.Conditions(s)
+        cfoo = c['foo']
+        self.assertEqual(cfoo.to_slash_separated(), '[1, 2, 3]/test/1.234')
+        self.assertEqual(cfoo['bar'], [1,2,3])
+
     def test_api(self):
         c = sfe_conditions.Conditions(open(self._yaml))
 
