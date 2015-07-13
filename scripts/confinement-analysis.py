@@ -22,6 +22,7 @@ import analysislib.util as autil
 
 import flyflypath.model
 import flyflypath.mplview
+import flyflypath.transform
 
 def _unique_or_none(df,col):
     s = df[col].dropna().unique()
@@ -32,13 +33,18 @@ def _unique_or_none(df,col):
 def _svg_model(svg_filename):
     pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
     path = os.path.join(pkg_dir,"data","svgpaths",svg_filename)
-    return flyflypath.model.MovingPointSvgPath(path)
+    try:
+        mod = flyflypath.model.SvgPath(path)
+    except flyflypath.model.MultiplePathSvgError:
+        mod = flyflypath.model.MultipleSvgPath(path)
+    return mod
 
 def draw_confinement_area(ax, df, **kwargs):
     svg_filename = _unique_or_none(df, 'svg_filename')
     if svg_filename is not None:
+        t = flyflypath.transform.SVGTransform()
         m = _svg_model(svg_filename)
-        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+        flyflypath.mplview.plot_polygon(m,t,ax,**kwargs)
 
 def draw_lock_area(ax, df, prefix,**kwargs):
 
@@ -50,9 +56,10 @@ def draw_lock_area(ax, df, prefix,**kwargs):
         pat = matplotlib.patches.Circle((0,0),r,**kwargs)
         ax.add_patch(pat)
     elif (svg_filename is not None) and (buf is not None):
+        t = flyflypath.transform.SVGTransform()
         m = _svg_model(svg_filename)
         kwargs['scale'] = buf
-        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+        flyflypath.mplview.plot_polygon(m,t,ax,**kwargs)
 
 def plot_confine_traces(combine, args, figncols, in3d, name=None, show_starts=False, show_ends=False, alpha=0.5):
     figsize = (5.0*figncols,5.0)

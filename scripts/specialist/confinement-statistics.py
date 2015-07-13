@@ -54,8 +54,9 @@ def _svg_model(svg_filename):
 def draw_confinement_area(ax, df, **kwargs):
     svg_filename = _unique_or_none(df, 'svg_filename')
     if svg_filename is not None:
+        t = flyflypath.transform.SVGTransform()
         m = _svg_model(svg_filename)
-        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+        flyflypath.mplview.plot_polygon(m,t,ax,**kwargs)
 
 def draw_lock_area(ax, df, prefix,**kwargs):
 
@@ -67,9 +68,10 @@ def draw_lock_area(ax, df, prefix,**kwargs):
         pat = matplotlib.patches.Circle((0,0),r,**kwargs)
         ax.add_patch(pat)
     elif (svg_filename is not None) and (buf is not None):
+        t = flyflypath.transform.SVGTransform()
         m = _svg_model(svg_filename)
         kwargs['scale'] = buf
-        flyflypath.mplview.plot_polygon(m,ax,**kwargs)
+        flyflypath.mplview.plot_polygon(m,t,ax,**kwargs)
 
 def plot_confine_traces(combine, args, sorted_conditions):
     figncols = 4
@@ -114,7 +116,7 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
     results,dt = combine.get_results()
     arena = analysislib.arenas.get_arena_from_args(args)
 
-    data = {'condition':[],'time_in_area':[], 'percent_in_area':[], 'dist_to_wall':[], 'radius':[], 'len':[]}
+    data = {'condition':[],'time_in_area':[], 'percent_in_area':[], 'len':[]}
 
     t = flyflypath.transform.SVGTransform()
 
@@ -137,12 +139,13 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
 
         for df in r['df']:
 
-            in_area = [hm.contains_m(x,y) for x,y in zip(df['x'],df['y'])]
+            in_area = [bool(hm.contains_m(x,y)) for x,y in zip(df['x'],df['y'])]
             in_area_len = np.sum(in_area).astype(float)
             in_area_time = in_area_len*dt
             in_area_pct = in_area_len / len(df)
 
-            dist_to_wall = [hm.distance_to_closest_point_m(x,y) if hm.contains_m(x,y) else 0 for x,y in zip(df['x'],df['y'])]
+            #import random
+            #dist_to_wall = [random.random() for x,y in zip(df['x'],df['y'])]
 
             if df['z'].head(10).mean() > skip_high:
                 print "SKIP (too high)"
@@ -157,8 +160,7 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
             data['condition'].append(condn)
             data['time_in_area'].append(in_area_time)
             data['percent_in_area'].append(in_area_pct)
-            data['dist_to_wall'].append(np.nanmean(dist_to_wall).astype(float))
-            data['radius'].append(df['radius'].mean())
+            #data['dist_to_wall'].append(np.nanmean(dist_to_wall).astype(float))
             data['len'].append(len(df))
 
         if plot_filtered_trajectories:
@@ -175,7 +177,7 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
 
     df = pd.DataFrame(data)
 
-    for y,label in (('time_in_area','time in area (s)'), ('percent_in_area','time in area (pct)'), ('dist_to_wall', 'dist to wall (px)'), ('radius','distance from 0,0 (m)'), ('len','len (n)')):
+    for y,label in (('time_in_area','time in area (s)'), ('percent_in_area','time in area (pct)'), ('len','len (n)')):
         name = '%s_%s' % (combine.fname,y)
         with aplt.mpl_fig(name,args) as fig:
             ax = fig.add_subplot(1,1,1)
@@ -208,8 +210,6 @@ def plot_confine_times(combine, args, sorted_conditions, skip_high=np.inf, skip_
 
             if y == 'percent_in_area':
                 ax.set_xlim(0,1.2)
-            if y == 'radius':
-                ax.set_xlim(0,0.5)
 
             ax.set_xlabel(y)
 
