@@ -195,7 +195,7 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
         self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v': 17,  # bump this version when you change delicate combine machinery
+        self._configdict = {'v': 18,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
 
@@ -316,8 +316,8 @@ class _Combine(object):
         These are the data we deem worthy:
           - dt and results (see get_results)
           - skipped: a dictionary {condition -> number of skipped trials}
-          - conditions: a dictionary {normalised_condition_name -> condition_configuration_dict}
-          - condition_names: a dictionary {condition_name -> normalised_condition_name}
+          - conditions: a dictionary {condition -> condition_configuration_dict}
+          - condition_names: a dictionary {condition -> normalised_condition_name}
           - condition_switches: a dictionary {uuid -> df}; df contains [condition, t_sec, t_nsec]
           - metadata: a list of dictionaries, each containing the metadata for one experiment
           - csv_file: the path to the original experiment csv file or None if it was not used
@@ -542,13 +542,15 @@ class _Combine(object):
         """return a printable human readable condition name"""
         return self._condition_names.get(cond,cond)
 
-    def get_condition_configuration(self, cond_or_cond_name):
+    def get_condition_configuration(self, cond):
         """returns the full dictionary that defines the experimental condition"""
-        return self._conditions.get(self.get_condition_name(cond_or_cond_name),{})
+        return self._conditions.get(cond, {})
 
     def get_condition_object(self, cond):
+
         name = self.get_condition_name(cond)
-        condition_conf = self.get_condition_configuration(name)
+        condition_conf = self.get_condition_configuration(cond)
+
         if condition_conf:
             obj = Condition(condition_conf)
             obj.name = name
@@ -1364,9 +1366,8 @@ class CombineH5WithCSV(_Combine):
                     del this_exp_conditions['uuid']
                 except KeyError:
                     pass
-                self._conditions.update(this_exp_conditions)
         except:
-            self._conditions = {}
+            pass
 
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
@@ -1609,6 +1610,11 @@ class CombineH5WithCSV(_Combine):
                 self._debug_once("FIX:    #%5d: condition name %s -> %s" % (oid, original_condition_name, condition_name))
                 csv_df = csv_df.copy()  # use copy and not view
                 csv_df['condition_name'].replace(original_condition_name, condition_name, inplace=True)
+
+            # at this point all fixes that manipulate the condition string/name have
+            # been applied, so we can go and save the condition configuration
+            if cond not in self._conditions:
+                self._conditions[cond] = this_exp_conditions.get(original_condition_name, {})
 
             r = results[cond]
 
