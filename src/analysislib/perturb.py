@@ -194,7 +194,7 @@ def collect_perturbation_traces(combine,
         if not condition_obj.is_type('perturbation'):
             continue
 
-        condconf = combine.get_condition_configuration(combine.get_condition_name(cond))
+        condconf = combine.get_condition_configuration(cond)
         step_obj = find_step_obj(cond, condconf)
 
         if step_obj is None:
