@@ -56,10 +56,8 @@ if __name__=='__main__':
         "--help-features", action='store_true',
         help="list all the features that can be plotted")
 
-    print analysislib.features.get_all_columns(True)
-    
     args = parser.parse_args()
-    if args.help_fields:
+    if args.help_features:
         print "Available features (may not include some already in the csv)"
         for c in analysislib.features.get_all_columns(True):
             print "  * %s" % c
