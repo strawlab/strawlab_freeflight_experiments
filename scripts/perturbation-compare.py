@@ -91,6 +91,8 @@ def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, 
             name = combine.get_plot_filename('ts_compare_%s_%s' % (to_plot,condn))
             with aplt.mpl_fig(name,args) as fig:
 
+                fig.suptitle(cond_name)
+
                 ax = fig.add_subplot(1,1,1)
                 ax2 = ax.twinx()
 
