@@ -43,6 +43,8 @@ class Node(object):
         do_switch_angular_size = False
         do_change_bbsize = False
         do_change_num_particles = False
+        do_change_bg_color = True
+        t_last_bg_switch = rospy.get_time()
         while not rospy.is_shutdown():
             #self.step()
             t = rospy.get_time()
@@ -67,6 +69,12 @@ class Node(object):
                     bbsize = bbsize * 0.5
                     rospy.loginfo( 'bbsize: %s'%(bbsize,))
                     self.pub_bbsize.publish( Float32 (bbsize ) )
+
+            if do_change_bg_color:
+                t_since_last_bg = t - t_last_bg_switch
+                if t_since_last_bg >= 1.0:
+                    t_last_bg_switch = t
+                self.pub_bg_color.publish( Vector3( 0, 0.0, t_since_last_bg) )
 
             if do_change_num_particles:
                 t_since_last_bb = t - t_last_bb_switch

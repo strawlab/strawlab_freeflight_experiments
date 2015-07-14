@@ -362,7 +362,7 @@ public:
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
     void _did_dirty_particles();
-
+    void set_background_color_callback(flyvr::BackgroundColorCallback* cb);
 private:
     osg::ref_ptr<osg::Group> _group;
     osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
@@ -378,7 +378,7 @@ private:
     float star_rotation_rate;
     float star_size;
     osg::Vec3f _starColor;
-    osg::Vec3f _bgColor;
+    osg::Vec4f _bgColor;
     bool particles_angular_size_fixed;
 
     // These require redrawing all particles and hence we have "dirty_particles".
@@ -386,13 +386,14 @@ private:
     int num_particles;
 
     bool dirty_particles;
+    flyvr::BackgroundColorCallback *_bg_callback;
 };
 
 StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
     star_rotation_rate(0.0f), star_size(101.0f), particles_angular_size_fixed(false),
     bb_size(10.0f), num_particles(2500), dirty_particles(true) {
     _starColor = osg::Vec3f( 1.0, 1.0, 1.0 );
-    _bgColor = osg::Vec3f( 0.0, 0.0, 0.0 );
+    _bgColor = osg::Vec4f( 0.0, 0.0, 0.0, 1.0 );
     flyvr_assert( is_CUDA_available()==true );
 
     _group = new osg::Group;
@@ -461,7 +462,7 @@ void StimulusCUDAStarFieldAndModel::_did_dirty_particles() {
 
     pn_geode = new osg::Geode;
     particle_box = new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints());
-    particle_box->setColor(osg::Vec4f(_bgColor[0], _bgColor[1], _bgColor[2], 1.0));
+    particle_box->setColor(_bgColor);
     pn_geode->addDrawable(particle_box);
     pn_geode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
     pn_geode->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
@@ -486,7 +487,7 @@ void StimulusCUDAStarFieldAndModel::post_init(bool slave) {
 }
 
 osg::Vec4 StimulusCUDAStarFieldAndModel::get_clear_color() const {
-    return osg::Vec4(_bgColor[0],_bgColor[1],_bgColor[2],1);
+    return _bgColor;
 }
 
 void StimulusCUDAStarFieldAndModel::update( const double& time, const osg::Vec3& observer_position, const osg::Quat& observer_orientation ) {
@@ -546,8 +547,12 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
             pn_white->setPixelSize(star_size);
         }
     } else if (topic_name=="background_color") {
-        _bgColor = parse_vec3(root);
-        particle_box->setColor(osg::Vec4f(_bgColor[0], _bgColor[1], _bgColor[2], 1.0));
+        osg::Vec3 tmp = parse_vec3(root);
+        _bgColor = osg::Vec4f(tmp[0], tmp[1], tmp[2], 1.0);
+        particle_box->setColor(_bgColor);
+        if (_bg_callback) {
+            _bg_callback->setBackgroundColorImplementation(_bgColor);
+        }
     } else if (topic_name=="star_color") {
         _starColor = parse_vec3(root);
         // This can be updated without redrawing all stars, do not
@@ -614,6 +619,13 @@ std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& t
         throw std::runtime_error("unknown topic name");
     }
     return result;
+}
+
+void StimulusCUDAStarFieldAndModel::set_background_color_callback(flyvr::BackgroundColorCallback* cb) {
+    _bg_callback = cb;
+    if (_bg_callback) {
+        _bg_callback->setBackgroundColorImplementation(_bgColor);
+    }
 }
 
 POCO_BEGIN_MANIFEST(StimulusInterface)
