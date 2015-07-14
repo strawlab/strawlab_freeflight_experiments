@@ -36,7 +36,7 @@ import analysislib.features as afeat
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
 
-from strawlab_freeflight_experiments.conditions import Condition, ConditionCompat
+from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
 
 from whatami import What, MAX_EXT4_FN_LENGTH
 
@@ -123,6 +123,48 @@ def check_combine_health(combine, min_length_f=100):
     if len(with_missing) > 0:
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
                         with_missing[['uuid', 'oid', 'frame0']].to_string())
+
+def load_conditions(uuid):
+    """
+    Returns a dictionary of condition names and slash separated
+    strings after applying any fixes
+    """
+    fm = autodata.files.FileModel(uuid=uuid)
+    csv_fname = fm.get_file_model('*.csv').fullpath
+    h5_fname = fm.get_file_model('simple_flydra.h5').fullpath
+
+    this_exp_metadata = None
+    try:
+        metadata_fname = fm.get_file_model('experiment.yaml').fullpath
+        with open(metadata_fname, 'r') as f:
+            this_exp_metadata = yaml.safe_load(f)
+    except autodata.files.FileModelException:
+        pass
+
+    if this_exp_metadata is None:
+        this_exp_metadata = {}
+
+    this_exp_metadata['csv_file'] = csv_fname
+    this_exp_metadata['h5_file'] = h5_fname
+
+    condition_fname = fm.get_file_model('condition.yaml').fullpath
+    with open(condition_fname, 'r') as f:
+        this_exp_metadata['conditions'] = yaml.safe_load(f)
+        f.seek(0)
+        condition_object = Conditions(f)
+
+    fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
+
+    conditions = {}
+    for cond_name in condition_object:
+        cond_str = condition_object[cond_name].to_slash_separated()
+        if fix.should_fix_condition_name:
+            cond_name = fix.fix_condition_name(cond_name)
+        if fix.should_fix_condition:
+            cond_str = fix.fix_condition(cond_str)
+        conditions[cond_name] = cond_str
+    return conditions
+
 
 class CacheError(Exception):
     pass
