@@ -158,7 +158,7 @@ class CsvLogger(object):
 
     @property
     def condition(self):
-        return self._condition
+        return '"%s"' % self._condition
     @condition.setter
     def condition(self, v):
         if v is None:

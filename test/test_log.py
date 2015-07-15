@@ -5,9 +5,12 @@ import shutil
 import os.path
 import threading
 
+import pandas as pd
+
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import nodelib.log
+import strawlab_freeflight_experiments.conditions as sfe_cond
 
 TEST_STATE = {
 "a_float":float,
@@ -75,6 +78,30 @@ class TestLog(unittest.TestCase):
             self.assertTrue(s in cols)
         self.assertEqual(l.close(), fn)
 
+    def test_comma(self):
+        l = nodelib.log.CsvLogger(self._fn,'w', state=('a_int',))
+
+        c = sfe_cond.Condition({'data':'something,with,[weird,{charact ers  ,,;:'})
+        c.name = 'test_cond'
+        l.condition = c
+
+        l.a_int = 5
+
+        l.update()
+        fn2 = l.close()
+
+        #2 lines in file, second is known
+        with open(fn2) as f:
+            for s in f.readlines():
+                pass
+        self.assertTrue(s.startswith('5,"something,with,[weird,{charact ers  ,,;:",test_cond'))
+
+        df = pd.read_csv(fn2)
+        self.assertListEqual(df.columns.values.tolist(), ['a_int', 'condition', 'condition_name', 'lock_object', 'framenumber', 't_sec', 't_nsec', 'flydra_data_file', 'exp_uuid'])
+
+        self.assertEqual(len(df),1)
+        self.assertEqual(df['condition'].unique()[0],c['data'])
+
     def test_read(self):
         l = nodelib.log.CsvLogger(self._fn,'w',state=TEST_STATE_NAMES)
         for s in TEST_STATE_NAMES:
@@ -88,7 +115,7 @@ class TestLog(unittest.TestCase):
         with open(fn2) as f:
             header,line = f.readlines()
             self.assertEqual(header, HEAD)
-            self.assertTrue(line.startswith('50.0,50,50,,None,None,None,'))
+            self.assertTrue(line.startswith('50.0,50,50,"",None,None,None,'))
 
         #try duplicate csv row
         l = nodelib.log.CsvLogger(self._fn+'.2','w',state=TEST_STATE_NAMES+['framenumber'])
