@@ -78,8 +78,8 @@ if __name__ == "__main__":
     #draw lines at the max frequency tested in the stimulus
     for p,_lines in zip(pkls,lines):
 
-        p_desc = p['conditions'][p['condition_name']]['perturb_desc']
-        perturb_object = sfe_perturb.get_perturb_object(p_desc)
+        perturb_object = sfe_perturb.get_perturb_object_from_condition(p['condition_conf'])
+
         f0,f1 = perturb_object.get_frequency_limits()
 
         lm,lp = _lines
