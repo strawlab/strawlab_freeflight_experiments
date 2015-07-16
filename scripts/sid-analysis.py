@@ -505,6 +505,8 @@ if __name__=='__main__':
                         alldata_good_mdl.matlab_color = 'm'
                         extra_models.append(alldata_good_mdl)
                         py_mdl = alldata_good_mdl.get_control_object(mlab)
+
+                        #save python model
                         name = combine.get_plot_filename("py_mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
                         with open(name,'wb') as f:
                             pickle.dump({"n":len(individual_models[pm]),
@@ -514,6 +516,11 @@ if __name__=='__main__':
                                          "condition_name":combine.get_condition_name(cond),
                                          "model_spec":pm.spec},
                                         f)
+
+                        #save matlab model
+                        dest = combine.get_plot_filename("mdl_alldata_good_%s_%s_%s_%s.pkl" % (pm.spec,system_u_name,system_y_name,plot_fn))
+                        mlab.run_code("save('%s','%s');" % (dest,alldata_good_mdl.sid_model))
+                        _load_matlab_variable_as_same_name(mfile,dest,'mdl_iddata_good_%s_%s' % (pm.spec,cond_name))
 
                     #also show the model made on the basis of the mean trajectories
                     pm.matlab_color = 'r'
