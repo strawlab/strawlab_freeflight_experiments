@@ -217,8 +217,8 @@ class DThetaFeature(_GradientFeature):
     name = 'dtheta'
     depends = 'theta',
 
-class RotationRateFlyDthetaFeature(_Feature):
-    name = 'rotation_rate_dtheta_fly'
+class RotationRateFlyRetinaFeature(_Feature):
+    name = 'rotation_rate_fly_retina'
     depends = ('dtheta','rotation_rate')
 
     @staticmethod

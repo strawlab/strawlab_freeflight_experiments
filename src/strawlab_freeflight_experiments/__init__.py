@@ -2,6 +2,7 @@ INVALID_VALUE = 0xDEADBEEF
 
 COLUMN_NAMES_TO_HUMAN_NAMES = {
     'rotation_rate':'Stimulus angular velocity',
+    'rotation_rate_fly_retina':'Stimulus angular on fly retina',
     'dtheta':'Fly angular velocity',
 }
 
