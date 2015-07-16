@@ -143,6 +143,10 @@ if __name__=='__main__':
     parser.add_argument(
         "--system-output", type=str,
         default='dtheta',
+        help='output of system (dataframe column name)')
+    parser.add_argument(
+        "--system-input", type=str,
+        default='rotation_rate',
         help='input to system (dataframe column name)')
     parser.add_argument(
         "--also-plot", type=str, metavar="COL_NAME,COL_NAME",
@@ -153,9 +157,11 @@ if __name__=='__main__':
     analysislib.args.check_args(parser, args)
 
     system_y_name = args.system_output
+    system_u_name = args.system_input
 
     combine = autil.get_combiner_for_args(args)
     combine.add_feature(column_name=system_y_name)
+    combine.add_feature(column_name=system_u_name)
     combine.add_from_args(args)
 
     try:
@@ -163,6 +169,7 @@ if __name__=='__main__':
     except:
         to_plot = []
     to_plot.append(system_y_name)
+    to_plot.append(system_u_name)
 
     fname = combine.fname
     results,dt = combine.get_results()
