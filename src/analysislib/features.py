@@ -217,6 +217,15 @@ class DThetaFeature(_GradientFeature):
     name = 'dtheta'
     depends = 'theta',
 
+class RotationRateFlyDthetaFeature(_Feature):
+    name = 'rotation_rate_dtheta_fly'
+    depends = ('dtheta','rotation_rate')
+
+    @staticmethod
+    def compute_from_df(df,dt):
+        return df['rotation_rate'].values - df['dtheta'].values
+
+
 class RadiusFeature(_Feature):
     name = 'radius'
     depends = ('x','y')
