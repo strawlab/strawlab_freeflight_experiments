@@ -35,9 +35,17 @@ VERSION = 2
 PERTURBERS_FOR_SID = [sfe_perturb.PerturberMultiTone.NAME]
 PERTURBERS_FOR_SID.extend(sfe_perturb.PerturberIDINPUT.NAME + t for t in sfe_perturb.PerturberIDINPUT.TYPES)
 
+BODE_PLOT_DEFAULTS = {
+           "rotation_rate:dtheta":{"ylim":(-20,20)},
+           "rotation_rate_fly_retina:dtheta":{"ylim":None}
+}
+
 def get_matlab_file(name):
     return os.path.join(roslib.packages.get_pkg_dir('strawlab_freeflight_experiments'),
                         'src','strawlab_freeflight_experiments','matlab',name)
+
+def get_bode_ylimits(system_input,system_output):
+    return BODE_PLOT_DEFAULTS.get("%s:%s" % (system_input,system_output), {}).get("ylim",None)
 
 class _SIDFail(object):
     fitpct = 0
@@ -311,7 +319,7 @@ ax = findall(mf,'type','axes');
 legend(ax(2),%s);
 title(ax(2),figtitle,'Interpreter','none');""" % (','.join(model_varnames),','.join(model_names)))
 
-def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs,w=None):
+def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_objs,w=None,ylim=None):
     if w is None:
         w = np.logspace(-2,2,100)
 
@@ -333,17 +341,24 @@ def bode_models(mlab,title,show_confidence,show_legend,use_model_colors,result_o
     else:
         legend = ''
 
+    if ylim is not None:
+        y0,y1 = ylim
+        ylim_str = "ylims = getoptions(h,'YLim');\n"\
+                   "ylims{1} = [%f,%f];\n"\
+                   "setoptions(h,'YLimMode','manual','YLim',ylims);\n" % (y0,y1)
+    else:
+        ylim_str = "\n"
+
     mlab.run_code("""
 opt = bodeoptions;
 opt.FreqUnits = 'Hz';
 opt.Title.String = figtitle;
 opt.Title.Interpreter = 'none';
 h = bodeplot(%s,w,opt);
-ylims = getoptions(h,'YLim');
-ylims{1} = [-20,20];
-setoptions(h,'YLimMode','manual','YLim',ylims);
+%s
 %s
 %s""" % (plot_args,
+         ylim_str,
          legend,
          'showConfidence(h,1);' if show_confidence else ''))
 
