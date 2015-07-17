@@ -224,10 +224,11 @@ class RotationRateFlyRetinaFeature(_Feature):
     name = 'rotation_rate_fly_retina'
     depends = ('dtheta','rotation_rate')
 
+    version = 1
+
     @staticmethod
     def compute_from_df(df,dt):
-        return df['rotation_rate'].values - df['dtheta'].values
-
+        return df['dtheta'].values - df['rotation_rate'].values
 
 class RadiusFeature(_Feature):
     name = 'radius'
