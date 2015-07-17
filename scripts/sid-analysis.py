@@ -264,6 +264,8 @@ if __name__=='__main__':
 
         hints = perturbation_obj.get_analysis_hints(lookback=args.lookback)
 
+        bode_ylim = sfe_sid.get_bode_ylimits(system_u_name, system_y_name)
+
         pid = args.only_perturb_start_id
         lookback = hints['lookback']
         lookback_frames = int(lookback / combine.dt)
@@ -430,10 +432,12 @@ if __name__=='__main__':
             name = combine.get_plot_filename('bode_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Bode (mean response): %s v%d\n%s' % (cond_name,VERSION,perturbation_obj)
             with mlab.fig(name+'.png') as f:
-                sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
+                sfe_sid.bode_models(mlab,title,True,True,False,possible_models,
+                                    ylim=bode_ylim)
             if EPS:
                 with mlab.fig(name+'.eps',driver='epsc2') as f:
-                    sfe_sid.bode_models(mlab,title,True,True,False,possible_models)
+                    sfe_sid.bode_models(mlab,title,True,True,False,possible_models,
+                                        ylim=bode_ylim)
 
             name = combine.get_plot_filename('pz_%s_%s_%s' % (system_u_name,system_y_name,plot_fn))
             title = 'Pole Zero Plot (mean response): %s v%d\n%s' % (cond_name,VERSION,perturbation_obj)
@@ -550,10 +554,12 @@ if __name__=='__main__':
                     name = combine.get_plot_filename('bode_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                     with mlab.fig(name+'.png') as f:
-                        sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
+                        sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models,
+                                            ylim=bode_ylim)
                     if EPS:
                         with mlab.fig(name+'.eps',driver='epsc2') as f:
-                            sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models)
+                            sfe_sid.bode_models(mlab,title,False,False,True,indmdls+extra_models,
+                                                ylim=bode_ylim)
 
                     name = combine.get_plot_filename('pz_ind_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                     title = 'Pole Zero Plot %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
@@ -575,19 +581,23 @@ if __name__=='__main__':
                         name = combine.get_plot_filename('bode_alldata_good_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                         title = 'Bode %s (ind>%.1f%%): %s v%d\n%s\n%s' % (pm.spec,args.min_fit_pct_individual,cond_name,VERSION,perturbation_obj,extra_desc)
                         with mlab.fig(name+'.png') as f:
-                            sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl])
+                            sfe_sid.bode_models(mlab,title,True,False,True,[alldata_good_mdl],
+                                                ylim=bode_ylim)
                         if EPS:
                             with mlab.fig(name+'.eps',driver='epsc2') as f:
-                                sfe_sid.bode_models(mlab,title,True,True,True,[alldata_good_mdl])
+                                sfe_sid.bode_models(mlab,title,True,True,True,[alldata_good_mdl],
+                                                    ylim=bode_ylim)
 
                     if args.plot_bode_alldata:
                         name = combine.get_plot_filename('bode_alldata_%s_%s_%s_%s' % (pm.spec,system_u_name,system_y_name,plot_fn))
                         title = 'Bode %s (all data): %s v%d\n%s\n%s' % (pm.spec,cond_name,VERSION,perturbation_obj,extra_desc)
                         with mlab.fig(name+'.png') as f:
-                            sfe_sid.bode_models(mlab,title,True,True,True,[alldata_model])
+                            sfe_sid.bode_models(mlab,title,True,True,True,[alldata_model],
+                                                ylim=bode_ylim)
                         if EPS:
                             with mlab.fig(name+'.eps',driver='epsc2') as f:
-                                sfe_sid.bode_models(mlab,title,True,False,True,[alldata_mdl])
+                                sfe_sid.bode_models(mlab,title,True,False,True,[alldata_mdl],
+                                                    ylim=bode_ylim)
 
 
             name = combine.get_plot_filename('mdlfit_%s' % aplt.get_safe_filename(cond_name, **plot_fn_kwargs))
