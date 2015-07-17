@@ -90,7 +90,15 @@ if __name__=='__main__':
     title += (" v%s" % VERSION)
 
     with mlab.fig(args.save+'.png') as f:
-        sfe_sid.bode_models(mlab,title,True,'SouthWest',False,models,w)
+        ylim = sfe_sid.get_bode_ylimits(args.system_input, args.system_output)
+        sfe_sid.bode_models(mlab,title,
+                            show_confidence=True,
+                            show_legend='SouthWest',
+                            use_model_colors=False,
+                            result_objs=models,
+                            w=w,
+                            ylim=ylim)
+
         print "WROTE", args.save+'.png'
 
     if args.show:
