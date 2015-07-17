@@ -49,6 +49,15 @@ if __name__=='__main__':
     parser.add_argument('--labels', nargs='+', metavar='L')
     parser.add_argument('--show', action='store_true')
     parser.add_argument('--title',type=str,default='')
+    parser.add_argument(
+        "--system-input", type=str,
+        default='rotation_rate',
+        help='input to system (dataframe column name)')
+    parser.add_argument(
+        "--system-output", type=str,
+        default='dtheta',
+        help='input to system (dataframe column name)')
+
     args = parser.parse_args()
 
     mlab = sfe_matlab.get_mlab_instance(args.show)
@@ -65,6 +74,9 @@ if __name__=='__main__':
 
     models = []
     for lbl,m in zip(labels,args.models):
+        if '%s_%s' % (args.system_input, args.system_output) not in m:
+            raise ValueError('%s doesnt look like a %s -> %s spectral model' % (os.path.basename(m),args.system_input,args.system_output))
+
         idobj = load_iddata_object(mlab, m)
 
         n = get_iddata_size(mlab, idobj)
