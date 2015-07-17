@@ -57,6 +57,7 @@ class _DfDepAddMixin:
 class _Feature(object, _DfDepAddMixin):
 
     DEFAULT_OPTS = {}
+    version = None
 
     def __init__(self, **kwargs):
         opts = self.DEFAULT_OPTS.copy()
@@ -69,6 +70,8 @@ class _Feature(object, _DfDepAddMixin):
     def what(self):
         w = {'col':self.name}
         w.update(self._kwargs)
+        if self.version is not None:
+            w.update(version=self.version)
         return What(self.__class__.__name__,w)
 
     def process(self, df, dt, **state):
