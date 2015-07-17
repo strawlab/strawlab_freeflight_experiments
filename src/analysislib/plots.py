@@ -960,7 +960,7 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
             _axxy.legend(frameon=False,numpoints=1,prop={'size':8})
 
         for i,p in enumerate(_plot_axes):
-            _ax = plt.subplot2grid((n_plot_axes,2), (i,1))
+            _ax = plt.subplot2grid((n_plot_axes,2), (i,1), sharex=_axz)
 
             _ts = plot_timeseries(_ax, _df, p, 'k-')
             _ax.set_xlim(_ts[0], _ts[-1])
