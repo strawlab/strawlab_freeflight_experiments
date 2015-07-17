@@ -974,6 +974,9 @@ def plot_infinity(combine, args, _df, dt, plot_axes, ylimits=None, name=None, fi
                 for tl in _ax.get_xticklabels():
                     tl.set_visible(False)
 
+        if combine.has_time_index:
+            _fig.autofmt_xdate()
+
 def animate_infinity(combine, args,_df,data,plot_axes,ylimits=None, name=None, figsize=(16,8), title=None, show_trg=False, repeat=True):
     _plot_axes = [p for p in plot_axes if p in _df]
     n_plot_axes = len(_plot_axes)

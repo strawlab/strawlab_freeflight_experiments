@@ -439,6 +439,18 @@ class _Combine(object):
         return dt
 
     @property
+    def has_time_index(self):
+        try:
+            for cond,r in self._results.iteritems():
+                for df in r['df']:
+                    #present only on time indexes
+                    df.index.freq.nanos
+                    return True
+        except AttributeError:
+            pass
+        return False
+
+    @property
     def analysis_type(self):
         if self._analysistype is None:
             return os.path.basename(sys.argv[0])
