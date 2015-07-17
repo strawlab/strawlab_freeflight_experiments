@@ -123,7 +123,7 @@ def plot_perturbation_traces(combine, args, to_plot_cols, perturbation_options, 
 
                 ax.set_ylabel("%s (%s)" % strawlab_freeflight_experiments.get_human_names(to_plot))
 
-                if "ylim" in perturbation_options[to_plot]:
+                if "ylim" in perturbation_options.get(to_plot,{}):
                     ax.set_ylim(*perturbation_options[to_plot]["ylim"])
 
                 ax.legend()
@@ -190,6 +190,7 @@ if __name__=='__main__':
                "vz":{"ylim":(-0.5,+0.5)},
                "velocity":{},
                "rotation_rate":{},
+               "rotation_rate_fly_retina":{"ylim":(-5,5)}
     }
     #https://regex101.com/r/iB0mZ6/1
     F_RE = re.compile(r"^(?:FAKE(?:[_a-zA-Z]*))_(?P<real_col>[a-z]+)$")
