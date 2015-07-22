@@ -16,6 +16,8 @@ class TestFeaturesNumeric(unittest.TestCase):
         EXPECTED_V = 100.0
 
         dt = 1/100.0
+
+        #go from 0-99m in 100*dt (=1) seconds
         x = np.array(range(100))
         y = np.array(range(100))
         z = np.array(range(100))
@@ -35,6 +37,20 @@ class TestFeaturesNumeric(unittest.TestCase):
         vxy = np.sqrt((EXPECTED_V**2) + (EXPECTED_V**2))
         self.assertTrue( np.allclose(df['velocity'].values,vxy) )
 
+    def test_npgrad(self):
+        dt = 1./100
+        a = np.array(range(10))
+
+        b = np.gradient(a) / dt
+
+        #make same length (first difference is 1 shorter)
+        c = np.diff(a) / dt
+        self.assertTrue(np.allclose(b[:-1],c))
+
+
+        d = (a[1:] - a[:-1]) / dt
+        self.assertTrue(np.allclose(b[:-1],d))
+
     def test_dtheta(self):
         # 2*pi in 10 sec --> 0.628319 rad/s
         phi = np.linspace(0,2*np.pi, 1000)
@@ -52,6 +68,35 @@ class TestFeaturesNumeric(unittest.TestCase):
         dtheta = df['dtheta'].values
 
         self.assertTrue( np.allclose(dtheta[10:90],0.628319) )
+
+    def test_dtheta_multifps(self):
+        DURATION = 100. #seconds
+
+        for fps in (50.,100.,120.):
+            _dt = 1/fps
+            n_duration_seconds = int(DURATION/_dt)
+
+            # 2*pi in 10 sec --> 0.628319 rad/s
+            CORRECT_DTHETA = (2*np.pi) / DURATION
+
+            phi = np.linspace(0,2*np.pi,n_duration_seconds)
+            t = np.linspace(0,DURATION,n_duration_seconds) 
+            dt = t[1]-t[0] 
+
+            self.assertAlmostEqual(dt,_dt,4)
+
+            x = np.cos(phi)
+            y = np.sin(phi)
+            z = y*0
+            df = pd.DataFrame({'x': x, 'y': y, 'z':z})
+
+            m = afeat.MultiFeatureComputer('dtheta')
+            m.process(df, dt)
+
+            dtheta = df['dtheta'].values
+
+            self.assertTrue(np.allclose(dtheta[10:90],CORRECT_DTHETA))
+            self.assertAlmostEqual(np.mean(dtheta),CORRECT_DTHETA,4)
 
 class TestFeaturesAPI(unittest.TestCase):
 
