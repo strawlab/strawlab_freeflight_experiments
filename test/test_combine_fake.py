@@ -49,7 +49,11 @@ def simple_flydra_datatypes():
         ("first_timestamp_nsecs", np.uint64),
     ]
 
-    return traj_datatypes, traj_start_datatypes
+    experiment_info_datatypes = [
+        ("uuid", '|S32'),
+    ]
+
+    return traj_datatypes, traj_start_datatypes, experiment_info_datatypes
 
 
 def select_h5csv_oids(h5_file='/mnt/strawscience/data/csv-test-case-deleteme/katja-exp/'
@@ -153,7 +157,7 @@ def combine2h5csv(combine,
     # N.B. we are not populating the "flydra_data_file" field
 
     # fake h5 file
-    traj_datatypes, traj_start_datatypes = simple_flydra_datatypes()
+    traj_datatypes, traj_start_datatypes, experiment_info_datatypes = simple_flydra_datatypes()
     traj_data = {k[0]: [] for k in traj_datatypes}
     oid_starts = {}
     traj_starts_data = {k[0]: [] for k in traj_start_datatypes}
@@ -214,13 +218,22 @@ def combine2h5csv(combine,
     for k in traj_starts_data:
         traj_start_arr[k] = traj_starts_data[k]
 
+    experiment_info_arr = np.array(["0000000000000000000000000000000"], dtype=experiment_info_datatypes)
+
     # save to "simple flydra h5"
     # N.B. this compresses using gzip+9; that is slow, is all saved like this?
     # N.B. this does not save "experiment_info", a table with the uuid, which seems optional
-    save_as_flydra_hdf5(h5_fname,
-                        {"trajectories": traj_arr, "trajectory_start_times": traj_start_arr},
-                        "US/Pacific",
-                        fps)
+    oh5 = os.path.basename(combine.h5_file).replace('simple_flydra','mainbrain') or 'unknown.mainbrain.h5'
+
+    save_as_flydra_hdf5(newfilename=h5_fname,
+                        data={"trajectories":traj_arr, "trajectory_start_times":traj_start_arr, "experiment_info":experiment_info_arr},
+                        tzname=combine._tzname,
+                        fps=float(fps),
+                        smoothed_source='kalman_estimates',
+                        smoothed_data_filename=oh5, raw_data_filename=oh5,
+                        dynamic_model_name='EKF mamarama, units: mm',
+                        recording_flydra_version='0.6.1',
+                        smoothing_flydra_version='0.6.6')
 
     # combine expects a CSV sorted by framenumber, which is not the case
     # (objects have been shuffled in the result dictionary)
@@ -315,7 +328,7 @@ class TestCombineFake2(unittest.TestCase):
         csv_fname = os.path.join(self._tdir,"data.csv")
 
         #create the numpy datatypes
-        traj_datatypes, traj_start_datatypes = simple_flydra_datatypes()
+        traj_datatypes, traj_start_datatypes, experiment_info_datatypes = simple_flydra_datatypes()
 
         #we need to accumulate trajectory data from all flies (obj_ids)
         traj_data = {k[0]:[] for k in traj_datatypes}
