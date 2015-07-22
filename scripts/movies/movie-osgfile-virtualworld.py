@@ -37,6 +37,7 @@ import geometry_msgs.msg
 roslib.load_manifest('flycave')
 import autodata.files
 import strawlab.constants
+import strawlab_freeflight_experiments.perturb as sfe_perturb
 from strawlab_freeflight_experiments.topics import *
 
 roslib.load_manifest('flyvr')
@@ -205,6 +206,14 @@ def get_stimulus_from_condition(dsc, condition_obj):
         return StimulusOSGFile(dsc,fname,oxyz,sxyz)
     elif condition_obj.is_type('translation'):
         return StimulusStarField(dsc, float(condition_obj['star_size']))
+    elif condition_obj.is_type('perturbation'):
+        pobj = sfe_perturb.get_perturb_object_from_condition(condition_obj)
+        if pobj.what == 'rotation_rate':
+            return StimulusCylinderAndModel(dsc,
+                                    str(condition_obj['cylinder_image']),
+                                    abs(float(condition_obj['radius_when_locked'])),
+                                    model_fname='',
+                                    model_oxyz=None)
 
     raise ValueError('Unknown stimulus type for %r' % condition_obj)
 
