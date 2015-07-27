@@ -9,6 +9,8 @@ starfield_translation_infinity:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
 starfield_rotation_infinity:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -20,6 +22,8 @@ starfield_rotation_infinity:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 1.0
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
 starfield_control:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -31,6 +35,8 @@ starfield_control:
     particles_angular_size_fixed: false
     z_target: 0.12
     star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
 starfield_rotation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -43,7 +49,9 @@ starfield_rotation_perturbation:
     z_target: 0.12
     star_rotation_rate: 0.0
     perturb_desc: step_rotation_rate|5|3|0.1|0.97|0.98|0.98|0.99|0.99|1.0
-starfield_forward_translation_perturbation:
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
+starfield_backtofront_translation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
     advance_threshold: 0.1
@@ -57,7 +65,9 @@ starfield_forward_translation_perturbation:
     perturb_desc: step_translation_rate|12|3|0.1|0.97|0.98|0.98|0.99|0.99|1.0
     x_perturb_vector: 1.0
     y_perturb_vector: 0.0
-starfield_backward_translation_perturbation:
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
+starfield_fronttoback_translation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
     advance_threshold: 0.1
@@ -71,6 +81,8 @@ starfield_backward_translation_perturbation:
     perturb_desc: step_translation_rate|12|3|0.1|0.97|0.98|0.98|0.99|0.99|1.0
     x_perturb_vector: -1.0
     y_perturb_vector: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
 starfield_lateral_translation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -85,4 +97,6 @@ starfield_lateral_translation_perturbation:
     perturb_desc: step_translation_rate|12|3|0.1|0.97|0.98|0.98|0.99|0.99|1.0
     x_perturb_vector: 0.0
     y_perturb_vector: 1.0
+    star_color: [1., 1., 1.]
+    background_color: [0.25, 0.25, 0.25]
 
