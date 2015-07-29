@@ -1,0 +1,23 @@
+translation_Main:
+    svg_path: infinity04_fishtrax.svg
+    gain: 10.0
+    advance_threshold: 0.05
+    z_gain: 1.0
+    star_size: 5.0
+    z_target: -0.01
+translation_SS:
+    svg_path: infinity04_fishtrax.svg
+    gain: 10.0
+    advance_threshold: 0.05
+    z_gain: 1.0
+    star_size: 1.0
+    z_target: -0.01
+translation_Z:
+    svg_path: infinity04_fishtrax.svg
+    gain: 10.0
+    advance_threshold: 0.05
+    z_gain: 10.0
+    star_size: 5.0
+    z_target: -0.03
+
+
