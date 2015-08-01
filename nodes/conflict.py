@@ -119,7 +119,7 @@ class Node(nodelib.node.Experiment):
 
         self.drop_lock_on()
 
-        ssvg            = str(self.condition['svg_path'])
+        ssvg            = str(self.condition.get('svg_path',''))
         self.img_fn     = str(self.condition['cylinder_image'])
         self.p_const    = float(self.condition['gain'])
         self.v_gain     = float(self.condition['z_gain'])
