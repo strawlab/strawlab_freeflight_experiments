@@ -1240,10 +1240,32 @@ def save_results(combine, args, maxn=20):
 
     _perm_check(args)
 
-    name = combine.get_plot_filename("data.pkl")
+    name = combine.get_plot_filename("xyz.pkl")
+    results,dt = combine.get_results()
     with open(name, "w+b") as f:
+        dat = {}
         if WRITE_PKL:
-            pickle.dump(combine.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
+            # write small pickle for webserver
+            for current_condition,r in results.iteritems():
+                dat[current_condition] = {'start_obj_ids':[], 'df':[]}
+                for (x0,y0,obj_id,framenumber0,time0),df in zip(r['start_obj_ids'],r['df']):
+                    dat[current_condition]['start_obj_ids'].append(obj_id)
+                    dat[current_condition]['df'].append(
+                        {'x':df['x'].values,
+                         'y':df['y'].values,
+                         'z':df['z'].values})
+            pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
+            print "WROTE", name
+
+        try:
+            f = combine.get_plot_filename("_data.pkl")
+            if os.path.exists(f):
+                os.unlink(f)
+
+            os.symlink(combine.get_cache_name(), f)
+            print "WROTE", f
+        except OSError:
+            pass
 
     best = _get_flight_lengths(combine)
     name = combine.get_plot_filename("data.json")
