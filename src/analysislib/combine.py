@@ -247,14 +247,14 @@ class _Combine(object):
             fn = s + '.pkl'
         return os.path.join(AUTO_DATA_MNT,'cached','combine',fn), s
 
-    def _get_cache_name(self):
+    def get_cache_name(self):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
         if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
             return None
 
-        pkl = self._get_cache_name()
+        pkl = self.get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
             with open(pkl,"r+b") as f:
@@ -1282,7 +1282,7 @@ class CombineH5WithCSV(_Combine):
             uuid = self.add_csv_and_h5_file(csv_file, h5_file, args)
             self._update_plot_dir(args,uuid)
 
-        if cache_error or (not os.path.isfile(self._get_cache_name())):
+        if cache_error or (not os.path.isfile(self.get_cache_name())):
             if args.cached:
                 self._save_cache_file()
         elif args.recache:
