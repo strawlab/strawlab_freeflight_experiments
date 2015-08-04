@@ -1258,7 +1258,7 @@ def save_results(combine, args, maxn=20):
             print "WROTE", name
 
         try:
-            f = combine.get_plot_filename("_data.pkl")
+            f = combine.get_plot_filename("data.pkl")
             if os.path.exists(f):
                 os.unlink(f)
 
@@ -1271,6 +1271,7 @@ def save_results(combine, args, maxn=20):
     name = combine.get_plot_filename("data.json")
     with open(name, "w") as f:
         data = dict()
+        data["CACHE_VERSION"] = combine.cache_version
         data["conditions"] = results.keys()
         data["dt"] = dt
         data["longest_trajectories"] = {}
@@ -1286,6 +1287,7 @@ def save_results(combine, args, maxn=20):
             data["longest_trajectories"][cond] = trajs
 
         json.dump(data, f)
+        print "WROTE", name
 
     spanned = combine.get_spanned_results()
     if spanned:

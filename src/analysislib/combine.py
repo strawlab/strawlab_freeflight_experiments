@@ -426,6 +426,10 @@ class _Combine(object):
            return "<Combine %s idx=%s dt=%s>" % (os.path.basename(self.csv_file),self._index,self.dt)
 
     @property
+    def cache_version(self):
+        return self._configdict['v']
+
+    @property
     def dt(self):
         if not self._results:
             raise ValueError("instance contains no data")
