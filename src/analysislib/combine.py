@@ -257,7 +257,7 @@ class _Combine(object):
         pkl = self.get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
-            with open(pkl,"r+b") as f:
+            with open(pkl,"rb") as f:
                 # Speed optimisation, see:
                 #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
                 # and
