@@ -34,7 +34,8 @@ import analysislib.args
 import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv
+from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv, \
+    set_permissions
 
 from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
 
@@ -1265,6 +1266,12 @@ class CombineH5WithCSV(_Combine):
             csv_suffix = self._csv_suffix
 
         self._maybe_add_tfilt(args)
+
+        # fail right at the start if we won't be able to save the cache
+        if not set_permissions():
+            self._warn('Cannot set strawlab-friendly isilon permissions (gid=2046, umask=002)')
+            if not args.get('ignore_permission_errors', False):
+                raise CacheError('wrong umask or gid here, fix or use --ignore-permission-errors')
 
         if args.uuid:
             for uuid in args.uuid:
