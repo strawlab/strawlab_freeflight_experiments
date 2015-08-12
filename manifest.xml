@@ -12,7 +12,6 @@
   <depend package="std_msgs"/>
   <depend package="geometry_msgs"/>
   <depend package="rospy"/>
-  <depend package="rxbag"/>
   <depend package="flyvr"/>
   <depend package="flycave"/>
   <depend package="ros_flydra"/>
