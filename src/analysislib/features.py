@@ -1,6 +1,8 @@
 import itertools
+
 import numpy as np
 import pandas as pd
+import tables
 
 from whatami import What
 
@@ -11,6 +13,12 @@ import autodata.files
 from analysislib.curvature import calc_curvature
 from analysislib.compute import find_intervals
 from strawlab_freeflight_experiments.dynamics.inverse import compute_inverse_dynamics_matlab
+
+def _grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
+    args = [iter(iterable)] * n
+    return itertools.izip_longest(fillvalue=fillvalue, *args)
 
 class FeatureError(Exception):
     pass
@@ -111,6 +119,59 @@ class RatioMeasurement(_Measurement):
     name = 'ratio'
 class RotationRateMeasurement(_Measurement):
     name = 'rotation_rate'
+
+class _MainbrainH5Feature(_Feature):
+
+    def __init__(self, **kwargs):
+        _Feature.__init__(self, **kwargs)
+
+        #map of uuid:pytable
+        self._stores = {}
+        self._ML_estimates = {}
+        self._data2d_distorted = {}
+        self._ML_estimates_2d_idxs = {}
+
+    def process(self, df, dt, **opts):
+
+        try:
+            uuid = opts['uuid']
+            oid = opts['obj_id']
+            start_fn = opts['start_framenumber']
+            stop_fn = opts['stop_framenumber']
+
+            if uuid not in self._stores:
+                fm = autodata.files.FileModel()
+                fm.select_uuid(uuid)
+                h5_file = fm.get_file_model('mainbrain.h5').fullpath
+                h5 = tables.openFile(h5_file, 'r')
+                self._stores[uuid] = h5
+                self._ML_estimates[uuid] = h5.root.ML_estimates
+                self._data2d_distorted[uuid] = h5.root.data2d_distorted
+                self._ML_estimates_2d_idxs[uuid] = h5.root.ML_estimates_2d_idxs
+
+        except KeyError as ke:
+            raise FeatureError('Missing option %s' % ke)
+        except autodata.files.NoFile as fe:
+            raise FeatureError('Missing file %s' % fe)
+
+        ml_est = self._ML_estimates[uuid].readWhere("(obj_id == %d) & (frame >= %d) & (frame <= %d)" % (
+                                                     oid, start_fn, stop_fn))
+
+        res = []
+
+        #extract the index of the 2D observations for each frame in the ML estimate
+        for frame,obs_2d_idx in zip(ml_est['frame'], ml_est['obs_2d_idx']):
+            ML_estimate_2d_idxs = self._ML_estimates_2d_idxs[uuid][int(obs_2d_idx)]
+            #this is stored as a list of camn,2d_object_observation_idx pairs
+            obs_lum = []
+            obs_area = []
+            for camn,idx in _grouper(ML_estimate_2d_idxs, 2):
+                query = "(frame == %d) & (camn == %d) & (frame_pt_idx == %d)" % (frame,camn,idx)
+                res = self._data2d_distorted[uuid].readWhere(query)
+                obs_lum.append(res['cur_val']-res['mean_val'])
+                obs_area.append(res['area'])
+            print "%d %d obs lum:%s area:%s area/lum:%s" % (frame, len(obs_lum), np.mean(obs_lum), np.mean(obs_area), np.mean(obs_area)/np.mean(obs_lum))
+
 
 class _ReproErrorsFeature(_Feature):
 
