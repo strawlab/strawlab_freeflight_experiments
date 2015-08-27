@@ -149,8 +149,17 @@ class Node(nodelib.node.Experiment):
         star_size       = float(self.condition['star_size'])
         num_particles   = int(self.condition['num_particles'])
         bb_size         = float(self.condition['bb_size'])  # size of the stars cloud
-        star_color      = Vector3(*self.condition['star_color'])
-        bg_color        = Vector3(*self.condition['background_color'])
+
+        try:
+            star_color      = Vector3(*self.condition['star_color'])
+            self.pub_star_color.publish(star_color)
+        except KeyError:
+            pass
+        try:
+            bg_color        = Vector3(*self.condition['background_color'])
+            self.pub_bg_color.publish(bg_color)
+        except KeyError:
+            pass
 
         # If false: size inversely proportional to distance; if true: size remains constant
         particles_angular_size_fixed = bool(self.condition['particles_angular_size_fixed'])
@@ -171,8 +180,6 @@ class Node(nodelib.node.Experiment):
         self.pub_star_size.publish(star_size)
         self.pub_num_particles.publish(num_particles)
         self.pub_bb_size.publish(bb_size)
-        self.pub_star_color.publish(star_color)
-        self.pub_bg_color.publish(bg_color)
         self.pub_particles_angular_size_fixed.publish(particles_angular_size_fixed)
 
         rospy.loginfo('condition: %s' % (self.condition))
