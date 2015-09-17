@@ -11,6 +11,7 @@ import numpy as np
 import threading
 import argparse
 import os.path
+import time
 import collections
 
 PACKAGE='strawlab_freeflight_experiments'
@@ -48,8 +49,9 @@ START_ZDIST     = 0.4
 START_Z         = -0.015
 
 # z range for fly tracking (dropped outside)
-Z_MINIMUM = -0.1
-Z_MAXIMUM = 0.01
+Z_MINIMUM = -0.15
+Z_MAXIMUM = 0.02
+MAX_DIST_TO_CENTER = 0.21
 
 WRAP_MODEL_H_Z      = 5.0
 
@@ -236,6 +238,7 @@ class Node(nodelib.node.Experiment):
         while not rospy.is_shutdown():
             with self.trackinglock:
                 currently_locked_obj_id = self.currently_locked_obj_id
+		fly = self.fly
                 fly_x = self.fly.x; fly_y = self.fly.y; fly_z = self.fly.z
                 fly_vx = self.flyv.x; fly_vy = self.flyv.y; fly_vz = self.flyv.z
                 framenumber = self.framenumber
@@ -249,17 +252,14 @@ class Node(nodelib.node.Experiment):
                     rospy.loginfo('TIMEOUT: time since last seen >%.1fs' % (TIMEOUT))
                     continue
 
-                if (fly_z > Z_MAXIMUM) or (fly_z < Z_MINIMUM):
-                    self.drop_lock_on('z range')
+                if not self._is_in_bowl_for_start(fly):
+                    self.drop_lock_on('left volume')
                     continue
 
                 if np.isnan(fly_x):
                     #we have a race  - a fly to track with no pose yet
                     continue
 
-                if self.has_left_stop_volume(Pos(fly_x,fly_y,fly_z)):
-                    self.drop_lock_on('left volume')
-                    continue
 
                 active = True
 
@@ -303,29 +303,31 @@ class Node(nodelib.node.Experiment):
 
         rospy.loginfo('%s finished. saved data to %s' % (rospy.get_name(), self.log.close()))
 
-    def _is_in_circle_at_origin(self,pos,rad):
-        c = np.array( (self.x0,self.y0) )
-        p = np.array( (pos.x, pos.y) )
-        dist = np.sqrt(np.sum((c-p)**2))
-	print '#'*20
-	print abs(pos.z-START_Z), START_ZDIST
-	print dist,  rad
-        if (dist < rad) and (abs(pos.z-START_Z) < START_ZDIST):
-            return True
-        return False
+
+    def _is_in_bowl_for_start(self,pos):
+	_center_bowl = 0.12
+	_dist_to_center = math.sqrt((0 - pos.x)**2 + (0-pos.y)**2 + (_center_bowl - pos.z)**2)
+	if (pos.z > Z_MAXIMUM):
+		print 'skipping Obj: z ...', pos.z, 'z >',  Z_MAXIMUM
+		return False
+	elif (_dist_to_center >  MAX_DIST_TO_CENTER):
+		print 'skipping Obj: dist ...', _dist_to_center, 'dist to center >',  MAX_DIST_TO_CENTER
+		return False
+	return True
+
 
     def is_in_trigger_volume(self,pos):
         if self.hitm_start is not None:
             return self.hitm_start.contains_m(pos.x, pos.y)
         else:
-            return self._is_in_circle_at_origin(pos,self.startr)
+            return self._is_in_bowl_for_start(pos)
 
     def has_left_stop_volume(self,pos):
         if self.hitm_stop is not None:
             return not self.hitm_stop.contains_m(pos.x, pos.y)
         else:
             if self.stopr is not None:
-                return not self._is_in_circle_at_origin(pos,self.stopr)
+                return not self._is_in_bowl_for_start(pos)
             else:
                 return False
 
@@ -377,6 +379,7 @@ class Node(nodelib.node.Experiment):
 
             self.log.lock_object = IMPOSSIBLE_OBJ_ID
             self.log.framenumber = 0
+	    time.sleep(0.1)
 
         if (dt > 30) and (old_id is not None):
             self.save_cool_condition(old_id, note="Fly %s confined for %.1fs" % (old_id, dt))
