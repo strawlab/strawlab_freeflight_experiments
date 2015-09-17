@@ -1,5 +1,5 @@
 confine_lbox:
-    stimulus_filename: test_poste.osgt
+    stimulus_filename: fish_post.osgt
     x0: 0.0
     y0: 0.0
     z0: 0.0

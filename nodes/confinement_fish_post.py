@@ -40,7 +40,7 @@ pkg_dir = roslib.packages.get_pkg_dir(PACKAGE)
 
 CONTROL_RATE        = 80.0      #Hz
 
-HOLD_COND = "midgray.osg"
+HOLD_COND = "fish_bowl.osgt"
 
 FLY_DIST_CHECK_TIME = 5.0
 FLY_DIST_MIN_DIST   = 0.2
