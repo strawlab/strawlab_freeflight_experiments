@@ -52,6 +52,10 @@ add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp src/json2osg.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
+add_library(StimulusFear SHARED src/StimulusFear.cpp src/json2osg.cpp)
+target_link_libraries(StimulusFear ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+
 add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
