@@ -32,8 +32,11 @@ std::string name() const {
 }
 
 virtual void post_init(bool slave) {
+    _l = 0.005;
     _L = 4;
     _bL = _L * 2;
+    _az = -0.1;
+    _bz = -0.4;
 	_virtual_world = create_virtual_world();
 }
 
@@ -58,6 +61,14 @@ std::vector<std::string> get_topic_names() const {
 	return result;
 }
 
+void update_vert_wall(void) {
+    osg::Vec3 center = osg::Vec3(0.0f, 0.0f, ((_bz - _az) / 2.0) + _az);
+    osg::Vec3 halflengths = osg::Vec3(_l / 2.0, _L / 2.0, (_bz - _az) / 2.0);
+    _plane_vert->set(center, halflengths);
+    _shape_vert->dirtyDisplayList();
+    _shape_vert->dirtyBound();
+}
+
 void receive_json_message(const std::string& topic_name, const std::string& json_message) {
     float f;
     json_t *root;
@@ -78,13 +89,17 @@ void receive_json_message(const std::string& topic_name, const std::string& json
         q.makeRotate(osg::DegreesToRadians(f),osg::Vec3(0,0,1)); 
         _virtual_world->setAttitude(q);
     } else if (topic_name=="fear_floor_b_height") {
+        _bz = f;
         _plane_z_b->setCenter(osg::Vec3(0.0f, 0.0f, f));
         _shape_b->dirtyDisplayList();
         _shape_b->dirtyBound();
+        update_vert_wall();
     } else if (topic_name=="fear_floor_a_height") {
+        _az = f;
         _plane_z_a_xminus->setCenter(osg::Vec3(_L/-2.0, 0.0f, f));
         _shape_a->dirtyDisplayList();
         _shape_a->dirtyBound();
+        update_vert_wall();
     } else if (topic_name=="fear_floor_a_image") {
         std::string s = parse_string(root);
         _texture_a->setImage(load_image_file(s));
@@ -131,9 +146,15 @@ osg::ref_ptr<osg::PositionAttitudeTransform> create_virtual_world()
   osg::ref_ptr<osg::Geode> geode = new osg::Geode;
   myroot->addChild(geode.get());
 
-  float l = 0.005f;
+//osg::Switch* switch = new osg::Switch();
+//switch->addChild(node, false);
 
-  _plane_z_b = new osg::Box(osg::Vec3(0.0f, 0.0f, -0.4f),_bL,_bL,l);
+  _plane_vert = new osg::Box(osg::Vec3(0.0f, 0.0f, 0.0f),_l,_L,_L);
+  _shape_vert = new osg::ShapeDrawable(_plane_vert);
+  _shape_vert->setColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+  geode->addDrawable(_shape_vert.get());
+
+  _plane_z_b = new osg::Box(osg::Vec3(0.0f, 0.0f, _bz),_bL,_bL,_l);
   _shape_b = new osg::ShapeDrawable(_plane_z_b);
 #if SOLID_COLOR
   _shape_b->setColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -146,7 +167,7 @@ osg::ref_ptr<osg::PositionAttitudeTransform> create_virtual_world()
 #endif
   geode->addDrawable(_shape_b.get());
 
-  _plane_z_a_xminus = new osg::Box(osg::Vec3(_L/-2.0, 0.0f, -0.1f),_L,_L,l);
+  _plane_z_a_xminus = new osg::Box(osg::Vec3(_L/-2.0, 0.0f, _az),_L,_L,_l);
   _shape_a = new osg::ShapeDrawable(_plane_z_a_xminus);
 #if SOLID_COLOR
   _shape_a->setColor(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f));
@@ -159,13 +180,16 @@ osg::ref_ptr<osg::PositionAttitudeTransform> create_virtual_world()
 #endif
   geode->addDrawable(_shape_a.get());
 
+  update_vert_wall();
+
   return myroot;
 }
 
 
 
 private:
-    float                                           _L,_bL;
+    float                                           _l, _L,_bL;
+    float                                           _az, _bz;
     osg::ref_ptr<osg::Geode> _geode;
     osg::ref_ptr<osg::PositionAttitudeTransform>    _virtual_world;
     osg::ref_ptr<osg::Box>                          _plane_z_b;
@@ -173,6 +197,8 @@ private:
     osg::ref_ptr<osg::Texture2D>                    _texture_b;
     osg::ref_ptr<osg::Box>                          _plane_z_a_xminus;
     osg::ref_ptr<osg::ShapeDrawable>                _shape_a;
+    osg::ref_ptr<osg::Box>                          _plane_vert;
+    osg::ref_ptr<osg::ShapeDrawable>                _shape_vert;
     osg::ref_ptr<osg::Texture2D>                    _texture_a;
 
 };
