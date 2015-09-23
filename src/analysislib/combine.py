@@ -1936,7 +1936,8 @@ class CombineH5WithCSV(_Combine):
 
         h5.close()  # maybe this should go in a finally?
 
-        if args.get('check', False):
+        args = vars(args)  # never remember how to use NameSpace
+        if args.get('check', True):
             check_combine_health(self, args.get('lenfilt', None))
 
         return uuid
