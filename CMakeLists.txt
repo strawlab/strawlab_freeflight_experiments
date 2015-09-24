@@ -72,6 +72,10 @@ add_library(StimulusCylinderGrating SHARED src/StimulusCylinderGrating.cpp src/j
 target_link_libraries(StimulusCylinderGrating ${OSG_LIBS} ${POCO_LIBRARIES}
   ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
 
+add_library(StimulusCylinderMaskedGrating SHARED src/StimulusCylinderMaskedGrating.cpp src/json2osg.cpp)
+target_link_libraries(StimulusCylinderMaskedGrating ${OSG_LIBS} ${POCO_LIBRARIES}
+  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+
 SET(MY_CUDA_SOURCE_FILES
 	src/PtclKernels.cu
 )
