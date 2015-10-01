@@ -46,7 +46,7 @@ if __name__=='__main__':
         default=("theta","dtheta","rotation_rate","velocity","ratio","radius"))
     parser.add_argument(
         "--test-filter-args",
-        help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim')")
+        help="test filter args (e.g. '--xfilt triminterval --yfilt triminterval --vfilt triminterval --zfilt trim', or '--arena flycave')")
     parser.add_argument(
         "--ylimits", help="y-axis limits name:min:max,[name2:min2:max2]")
     parser.add_argument(
@@ -88,7 +88,7 @@ if __name__=='__main__':
     if args.outdir:
         basedir = args.outdir
     elif args.save_animation:
-        basedir = strawlab.constants.get_movie_dir(uuid, camera=combine.analysis_type)
+        basedir = strawlab.constants.get_movie_dir(uuid)
         if not os.path.isdir(basedir):
             os.makedirs(basedir)
     else:
@@ -121,8 +121,12 @@ if __name__=='__main__':
                 name = analysislib.combine.safe_condition_string(current_condition)
 
 
-                if args.save_plot or args.save_animation:
+                if args.save_plot:
+                    # full path
                     filename = combine.get_plot_filename("%s_%s_%s" % (obj_id, framenumber0, name))
+                elif args.save_animation:
+                    # this gets joined to a full path later
+                    filename = "%s_%s_%s" % (obj_id, framenumber0, name)
                 else:
                     filename = '/tmp/trajectory_viewer'
 
@@ -162,12 +166,12 @@ if __name__=='__main__':
             if args.no_h264:
                 writer = Writer(fps=15, metadata=dict(title=title), bitrate=1800)
                 anim.save(filename, writer=writer)
-                print "WROTE mp4v"
+                print "WROTE mp4v", filename
             else:
                 try:
                     writer = Writer(fps=15, metadata=dict(title=title), extra_args=['-vcodec', 'h264', '-pix_fmt', 'yuv420p'])
                     anim.save(filename, writer=writer)
-                    print "WROTE h264"
+                    print "WROTE h264", filename
                 except RuntimeError:
                     print "FAILED TO WRITE h264: Your FFMPEG is too old. Upgrade or call with --no-h264"
 
