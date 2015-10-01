@@ -95,7 +95,7 @@ if __name__=='__main__':
                 in3d=True)
 
     aplt.plot_histograms(combine, args,
-                figncols=ncond)
+                figncols=ncond, nbins=40)
 
     aplt.plot_nsamples(combine, args)
 
