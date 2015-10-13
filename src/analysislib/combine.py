@@ -23,9 +23,8 @@ import pytz
 import scipy.io
 import yaml
 
-import roslib
-
-roslib.load_manifest('strawlab_freeflight_experiments')
+from strawlab.constants import maybe_fake_ros
+maybe_fake_ros('strawlab_freeflight_experiments')
 
 import autodata.files
 
