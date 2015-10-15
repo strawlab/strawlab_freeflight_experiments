@@ -33,13 +33,14 @@ RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
 WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
 WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
 WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
+OUTSIDE_LEGEND=bool(int(os.environ.get('OUTSIDE_LEGEND','1')))
+
 SVG_SUFFIX=os.environ.get('SVG_SUFFIX','.svg')
 
 LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 9
 
-OUTSIDE_LEGEND = True
 
 def colorline(ax,x,y,v,linewidth=1, colormap='jet', norm=None, zorder=1, alpha=1, linestyle='solid', cmap=None):
     """
