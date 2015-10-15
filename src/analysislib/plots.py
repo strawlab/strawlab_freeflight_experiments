@@ -15,6 +15,7 @@ import matplotlib.colorbar
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.colors as colors
+import matplotlib.cm as cmx
 import matplotlib.dates as mdates
 import matplotlib.gridspec as gridspec
 import matplotlib.legend as mlegend
@@ -41,6 +42,28 @@ LEGEND_TEXT_BIG     = 10
 LEGEND_TEXT_SML     = 8
 TITLE_FONT_SIZE     = 9
 
+def get_colormap(N):
+    """
+    returns a function that maps each index in 0, 1, ... N-1 to a distinct
+    RGB color
+    """
+    color_norm  = colors.Normalize(vmin=0, vmax=N)
+    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='hsv')
+    def map_index_to_rgb_color(index):
+        return scalar_map.to_rgba(index)[:3]
+    return map_index_to_rgb_color
+
+
+def get_colors(N, integer=True):
+    """
+    returns a tuple of 3-tuple (rgb) of N distinct colors
+    """
+    c = get_colormap(N)
+    if integer:
+        conv_func = lambda _t: (int(_t[0] * 255), int(_t[1] * 255), int(_t[2] * 255.))
+    else:
+        conv_func = lambda _t: _t
+    return tuple(conv_func(c(i)) for i in range(N))
 
 def colorline(ax,x,y,v,linewidth=1, colormap='jet', norm=None, zorder=1, alpha=1, linestyle='solid', cmap=None):
     """
