@@ -34,8 +34,12 @@ if __name__=='__main__':
         '--index', default='framenumber',
         help='the index of the returned dataframe (framenumber, none, time+NN)')
     parser.add_argument(
-        '--dest', required=True, type=str,
+        '--dest', type=str,
         help='osg filename')
+    parser.add_argument(
+        '--point-radius', type=float, default=0.001,
+        help='radius of trajectory point in osg file')
+
     args = parser.parse_args()
 
     analysislib.args.check_args(parser, args, max_uuids=1)
@@ -52,6 +56,11 @@ if __name__=='__main__':
 
     results, dt = combine.get_results()
 
+    if args.dest:
+        dest = args.dest
+    else:
+        dest = combine.get_plot_filename('%s.osg' % '_'.join(str(obj_id) for obj_id in obj_ids))
+
     colors = aplt.get_colors(len(obj_ids), integer=False)
     cmap = {obj_id:colors[i] for i,obj_id in enumerate(obj_ids)}
 
@@ -66,11 +75,11 @@ if __name__=='__main__':
             if obj_id in obj_ids:
                 color = cmap[obj_id]
                 for x,y,z in zip(df['x'],df['y'],df['z']):
-                    geode.append(shapelib.Shape(color, shapelib.SphereChild((x,y,z),0.01)))
+                    geode.append(shapelib.Shape(color, shapelib.SphereChild((x,y,z),args.point_radius)))
 
-    with open(args.dest, 'w') as f:
+    with open(dest, 'w') as f:
         g.save(f)
-        print "WROTE", f
+        print "WROTE", dest
 
     sys.exit(0)
 
