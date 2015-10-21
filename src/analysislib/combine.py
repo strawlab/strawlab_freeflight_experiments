@@ -681,7 +681,7 @@ class _Combine(object):
 
         """
 
-        DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0']
+        DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0', 'start_time']
         all_cols = set(itertools.chain.from_iterable((DEFAULT,cols)))
 
         data = {k:[] for k in all_cols}
@@ -693,7 +693,6 @@ class _Combine(object):
                 continue
 
             for df,uuid,(start_x, start_y, oid, start_framenumber, start_time) in zip(r['df'], r['uuids'],r['start_obj_ids']):
-
                 if fill:
                     _df = df.ffill().bfill()
                 else:
@@ -708,6 +707,7 @@ class _Combine(object):
                 data['obj_id'].extend(itertools.repeat(oid, n))
                 data['uuid'].extend(itertools.repeat(uuid, n))
                 data['framenumber0'].extend(itertools.repeat(start_framenumber, n))
+                data['start_time'].extend(itertools.repeat(start_time, n))
 
                 if extra_col_cb is not None:
                     extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
