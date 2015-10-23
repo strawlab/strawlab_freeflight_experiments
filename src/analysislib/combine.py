@@ -681,7 +681,7 @@ class _Combine(object):
 
         """
 
-        DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0']
+        DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0', 'start_time']
         all_cols = set(itertools.chain.from_iterable((DEFAULT,cols)))
 
         data = {k:[] for k in all_cols}
@@ -693,7 +693,6 @@ class _Combine(object):
                 continue
 
             for df,uuid,(start_x, start_y, oid, start_framenumber, start_time) in zip(r['df'], r['uuids'],r['start_obj_ids']):
-
                 if fill:
                     _df = df.ffill().bfill()
                 else:
@@ -708,6 +707,7 @@ class _Combine(object):
                 data['obj_id'].extend(itertools.repeat(oid, n))
                 data['uuid'].extend(itertools.repeat(uuid, n))
                 data['framenumber0'].extend(itertools.repeat(start_framenumber, n))
+                data['start_time'].extend(itertools.repeat(start_time, n))
 
                 if extra_col_cb is not None:
                     extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
@@ -1173,14 +1173,6 @@ class CombineH5WithCSV(_Combine):
 
     def __init__(self, *csv_cols, **kwargs):
         _Combine.__init__(self, **kwargs)
-        #framenumber must be present
-        cols = ["framenumber","tnsec","tsec"]
-        cols.extend(csv_cols)
-        #some rows are handled differently
-        #condition, exp_uuid, flydra_data_file are strings,
-        #lock_object, t_sec, t_nsec have to be present
-        self._cols = set(cols) - set(['condition','lock_object','t_sec','t_nsec','exp_uuid','flydra_data_file'])
-
         self._csv_suffix = kwargs.get("csv_suffix")
 
         #use this for keeping track of results that span multiple conditions

@@ -247,3 +247,11 @@ def check_args(parser, args, max_uuids=1000, defaults_from_arena=True):
             except ValueError:
                 parser.error("could not parse tfilt-%s: %s" % (f,v))
 
+def describe(combine, args):
+    print "The configuration was (including default values)"
+    for k,v in args._get_kwargs():
+        print "%s\n    %r" % (k,v)
+    if 'index' not in args:  # index was set programmatically and not reflected in args
+        print "index\n    %r" % combine._index
+    print "features\n    %s" % ','.join(combine.get_features())
+

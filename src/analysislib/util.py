@@ -33,13 +33,9 @@ def get_combiner_for_uuid(uuid, fm=None):
     """
     if fm is None:
         fm = _get_csv_fm_for_uuid(uuid)
-    with open(fm.fullpath, 'r') as f:
-        for l in f:
-            csv_cols = l.strip().split(',')
-            break
     suffix = '.'.join(fm.filename.rsplit('.',2)[1:])
 
-    return analysislib.combine.CombineH5WithCSV(*csv_cols, csv_suffix=suffix)
+    return analysislib.combine.CombineH5WithCSV(csv_suffix=suffix)
 
 def get_combiner_for_args(args):
     """

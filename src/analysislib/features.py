@@ -270,9 +270,35 @@ class AzFeature(_GradientFeature):
     name = 'az'
     depends = 'vz',
 
+class OriginPostAngleDegFeature(_Feature):
+    name = 'angle_to_post_at_origin_deg'
+    depends = ('x','y','vx','vy')
+
+    version = 8
+
+    @staticmethod
+    def compute_from_df(df,dt):
+        ang = np.arctan2(df['vy'].values, df['vx'].values) - \
+              np.arctan2(-df['y'].values, -df['x'].values)
+        deg = np.rad2deg(ang)
+
+        deg[deg > +180] %= -180
+        deg[deg < -180] %= +180
+
+        return deg
+
+class OriginPostAngleFeature(_Feature):
+    name = 'angle_to_post_at_origin'
+    depends = 'angle_to_post_at_origin_deg',
+
+    @staticmethod
+    def compute_from_df(df,dt):
+        return np.deg2rad(df['angle_to_post_at_origin_deg'].values)
+
 class ThetaFeature(_Feature):
     name = 'theta'
     depends = ('vx','vy')
+
     @staticmethod
     def compute_from_df(df,dt):
         return np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
@@ -280,6 +306,15 @@ class ThetaFeature(_Feature):
 class DThetaFeature(_GradientFeature):
     name = 'dtheta'
     depends = 'theta',
+
+class DThetaDegFeature(_Feature):
+    name = 'dtheta_deg'
+    depends = 'dtheta',
+
+    @staticmethod
+    def compute_from_df(df,dt):
+        return np.rad2deg(df['dtheta'].values)
+
 
 class RotationRateFlyRetinaFeature(_Feature):
     name = 'rotation_rate_fly_retina'

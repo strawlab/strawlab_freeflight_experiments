@@ -63,6 +63,8 @@ class Node(nodelib.node.Experiment):
         self._pub_stim_mode = display_client.DisplayServerProxy.set_stimulus_mode(
             'StimulusCylinderAndModel')
 
+        self.pub_lag = rospy.Publisher('extra_lag_msec', Float32, latch=True, tcp_nodelay=True)
+
         self.pub_rotation = rospy.Publisher(TOPIC_CYL_ROTATION, Float32, latch=True, tcp_nodelay=True)
         self.pub_rotation_velocity = rospy.Publisher(TOPIC_CYL_ROTATION_RATE, Float32, latch=True, tcp_nodelay=True)
         self.pub_v_offset_value = rospy.Publisher(TOPIC_CYL_V_OFFSET_VALUE, Float32, latch=True, tcp_nodelay=True)
@@ -132,6 +134,9 @@ class Node(nodelib.node.Experiment):
         else:
             model_filename = '/dev/null'
             model_x = model_y = model_z = INVALID_VALUE
+
+        lag             = float(self.condition.get('lag',0.0))
+        self.pub_lag.publish(lag)
 
         self.log.cyl_r = self.rad_locked
 
