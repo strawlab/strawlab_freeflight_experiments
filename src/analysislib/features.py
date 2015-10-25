@@ -277,9 +277,9 @@ class OriginPostAngleDegFeature(_Feature):
     version = 8
 
     @staticmethod
-    def compute_from_df(df,dt):
+    def compute_from_df(df,dt,postx=0,posty=0):
         ang = np.arctan2(df['vy'].values, df['vx'].values) - \
-              np.arctan2(-df['y'].values, -df['x'].values)
+              np.arctan2(posty-df['y'].values, postx-df['x'].values)
         deg = np.rad2deg(ang)
 
         deg[deg > +180] %= -180
