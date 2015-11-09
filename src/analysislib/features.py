@@ -153,7 +153,7 @@ class _MainbrainH5Feature(_Feature):
                 self._ML_estimates_2d_idxs[uuid] = h5.root.ML_estimates_2d_idxs
 
         except KeyError as ke:
-            raise FeatureError('Missing option %s' % ke)
+            raise MissingStateFeatureError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
             raise FeatureError('Missing file %s' % fe)
 
@@ -199,7 +199,7 @@ class _ReproErrorsFeature(_Feature):
                 self._stores[uuid] = pd.HDFStore(h5_file, 'r')
 
         except KeyError as ke:
-            raise FeatureError('Missing option %s' % ke)
+            raise MissingStateFeatureError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
             raise FeatureError('Missing file %s' % fe)
 
@@ -550,7 +550,7 @@ class MultiFeatureComputer(object):
                     try:
                         f.process(df,dt,**state)
                         computed.append(f.name)
-                    except FeatureError as fe:
+                    except MissingStateFeatureError as fe:
                         pass
         not_computed = set(f.name for f in self._get_features()) - set(computed)
         missing = set(itertools.chain(self.get_columns_added(),self.get_measurements_required())) - set(df.columns.tolist())
