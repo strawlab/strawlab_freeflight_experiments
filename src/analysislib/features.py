@@ -23,6 +23,9 @@ def _grouper(iterable, n, fillvalue=None):
 class FeatureError(Exception):
     pass
 
+class MissingStateFeatureError(FeatureError):
+    pass
+
 class Node:
     def __init__(self, name):
         self.name = name
@@ -294,6 +297,21 @@ class OriginPostAngleFeature(_Feature):
     @staticmethod
     def compute_from_df(df,dt):
         return np.deg2rad(df['angle_to_post_at_origin_deg'].values)
+
+class PostAngleDegFeature(_Feature):
+    name = 'angle_to_post_deg'
+    depends = ('x','y','vx','vy')
+
+    def process(self, df, dt, **state):
+
+        try:
+            cond_obj = state['condition_object']
+            s = cond_obj['model_descriptor']
+        except KeyError:
+            raise MissingStateFeatureError
+
+        x,y,z = map(float,s.split('|')[1:])
+        df[self.name] = OriginPostAngleDegFeature.compute_from_df(df,dt,postx=x,posty=y)
 
 class ThetaFeature(_Feature):
     name = 'theta'

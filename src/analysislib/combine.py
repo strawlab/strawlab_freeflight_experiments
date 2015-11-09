@@ -1718,6 +1718,9 @@ class CombineH5WithCSV(_Combine):
             #compute those features we can (such as those that only need x,y,z)
             try:
                 computed,not_computed,missing = self.features.process(h5_df, self._dt)
+            except afeat.MissingStateFeatureError:
+                # this needs full state, and will be computed later
+                pass
             except Exception, e:
                 self._skipped[cond] += 1
                 self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
@@ -1897,7 +1900,9 @@ class CombineH5WithCSV(_Combine):
                             'start_framenumber':start_framenumber,
                             'stop_framenumber':stop_framenumber,
                             'start_time':start_time,
-                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt)}
+                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt),
+                            'condition':cond,
+                            'condition_object':self.get_condition_object(cond)}
 
                     computed,not_computed,missing = self.features.process(df, dt, **opts)
                     if missing:
