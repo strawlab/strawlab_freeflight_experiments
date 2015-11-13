@@ -1414,7 +1414,7 @@ class CombineH5WithCSV(_Combine):
                         yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
                 except Exception as e:
-                    self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
+                    self._debug("IO:     ERROR writing %s\n%s" % (fn, e))
             except Exception as e:
                 self._debug("IO:     ERROR reading from database\n%s" % e)
                 with open(fn) as f:
@@ -1460,9 +1460,10 @@ class CombineH5WithCSV(_Combine):
         self._debug("IO:     reading %s" % h5_file)
         h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
         trajectories = self._get_trajectories(h5)
-        dt = 1.0/trajectories.attrs['frames_per_second']
+        dt = 1.0 / trajectories.attrs['frames_per_second']
         tzname = h5.root.trajectory_start_times.attrs['timezone']
 
+        # workaround old pytables not able to read unicode
         try:
             pytz.timezone(tzname)
         except UnicodeDecodeError:
