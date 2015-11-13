@@ -1451,6 +1451,7 @@ class CombineH5WithCSV(_Combine):
         # read conditions and experimental metadata
         this_exp_conditins, this_exp_metadata = self.read_metadata(uuid, csv_fname)
 
+        # find single applicable data fixer
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
             self._debug("FIX:    fixing data %s" % fix)
