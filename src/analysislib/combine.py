@@ -1344,6 +1344,37 @@ class CombineH5WithCSV(_Combine):
 
         return uuid
 
+    def _read_csv(self, csv_fname):
+        """
+        Reads the csv file as a dataframe.
+        If memory ever is a problem, look here (and just read incrementally).
+        """
+
+        # N.B. we only need self for emitting log messages
+
+        self._debug("IO:     reading %s" % csv_fname)
+
+        try:
+            csv = pd.read_csv(csv_fname, na_values=('None',),
+                              error_bad_lines=False,
+                              dtype={'framenumber': int,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
+        except:  # Fixme: narrow down except
+            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % csv_fname)
+            # protect against rubbish in the framenumber column
+            csv = pd.read_csv(csv_fname, na_values=('None',),
+                              error_bad_lines=False,
+                              low_memory=False,
+                              dtype={'framenumber': float,
+                                     'condition': str,
+                                     'exp_uuid': str,
+                                     'flydra_data_file': str})
+            csv = csv.dropna(subset=['framenumber'])
+            csv['framenumber'] = csv['framenumber'].astype(int)
+        return csv
+
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
@@ -1354,28 +1385,8 @@ class CombineH5WithCSV(_Combine):
         self.csv_file = csv_fname
         self.h5_file = h5_file
 
-        self._debug("IO:     reading %s" % csv_fname)
-
-        # open the csv file as a dataframe (if memory ever is a problem, look here)
-        try:
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
-                              error_bad_lines=False,
-                              dtype={'framenumber': int,
-                                     'condition': str,
-                                     'exp_uuid': str,
-                                     'flydra_data_file': str})
-        except:
-            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
-            # protect against rubbish in the framenumber column
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
-                              error_bad_lines=False,
-                              low_memory=False,
-                              dtype={'framenumber': float,
-                                     'condition': str,
-                                     'exp_uuid': str,
-                                     'flydra_data_file': str})
-            csv = csv.dropna(subset=['framenumber'])
-            csv['framenumber'] = csv['framenumber'].astype(int)
+        # Read full csv into memory
+        csv = self._read_csv(csv_fname)
 
         # infer uuid
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
