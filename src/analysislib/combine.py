@@ -1391,25 +1391,7 @@ class CombineH5WithCSV(_Combine):
             pass
         return this_exp_conditions
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
-        """Add a single csv and h5 file"""
-
-        # Update self.csv_file for every csv file, even if we contain
-        # data from many. This for historical reasons as the csv file is used
-        # as the basename for generated plots, so saving a few test
-        # analyses with --outdir /tmp/ gives distinct named plots
-        self.csv_file = csv_fname
-        self.h5_file = h5_file
-
-        # Read full csv into memory
-        csv = self._read_csv(csv_fname)
-
-        # infer uuid
-        uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
-
-        # try to open the experiment and condition metadata files
-        this_exp_conditions = self.read_conditions(csv_fname)
-
+    def read_metadata(self, uuid, csv_fname):
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
         try:
@@ -1419,7 +1401,7 @@ class CombineH5WithCSV(_Combine):
                 self._debug("IO:     reading from database")
                 _, arena, this_exp_metadata = find_experiment(uuid)
                 this_exp_metadata['arena'] = arena
-                self._metadata.append( this_exp_metadata )
+                self._metadata.append(this_exp_metadata)  # FIXME: we should restrict combine to just one exp at a time
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:
@@ -1442,6 +1424,28 @@ class CombineH5WithCSV(_Combine):
 
         if this_exp_metadata is None:
             this_exp_metadata = {}
+        return this_exp_metadata
+
+    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
+        """Add a single csv and h5 file"""
+
+        # Update self.csv_file for every csv file, even if we contain
+        # data from many. This for historical reasons as the csv file is used
+        # as the basename for generated plots, so saving a few test
+        # analyses with --outdir /tmp/ gives distinct named plots
+        self.csv_file = csv_fname
+        self.h5_file = h5_file
+
+        # Read full csv into memory
+        csv = self._read_csv(csv_fname)
+
+        # infer uuid
+        uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
+
+        # try to open the experiment and condition metadata files
+        this_exp_conditions = self.read_conditions(csv_fname)
+        this_exp_metadata = self.read_metadata(uuid, csv_fname)
+
         this_exp_metadata['csv_file'] = csv_fname
         this_exp_metadata['h5_file'] = h5_file
         this_exp_metadata['conditions'] = this_exp_conditions
