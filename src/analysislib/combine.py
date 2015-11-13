@@ -1503,6 +1503,8 @@ class CombineH5WithCSV(_Combine):
         skipped = self._skipped
 
         #
+        # split trials
+        #
         # The CSV (output from the controller) indicates how to segment trials, although not
         # always in an unambiguous way. We should force stimuli writers to do the right thing,
         # letting them know what that right is.
