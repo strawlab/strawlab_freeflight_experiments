@@ -1695,17 +1695,16 @@ class CombineH5WithCSV(_Combine):
 
             n_samples = len(validframenumber)
 
-            #check if the query returned all the data it should have
-            if (n_samples < dur_samples):
-                #but this happens quite often (due to estimation of positions) so
-                #only print the error when the missing data is large enough for us to
-                #skip the trial
-                if ((trial_framenumbers[-1] - start_frame) > dur_samples):
-                    self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" % (oid, trial_framenumbers[-1]-start_frame, query))
-
+            # check if the query returned all the data it should have
             if n_samples < dur_samples:
-                #we could have made this check before the query, but sometimes
-                #we get less data that we request from the h5 file
+                # but this happens quite often (due to estimation of positions) so
+                # only print the error when the missing data is large enough for us to
+                # skip the trial
+                if (trial_framenumbers[-1] - start_frame) > dur_samples:
+                    self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" %
+                               (oid, trial_framenumbers[-1] - start_frame, query))
+                # we could have made this check before the query, but sometimes
+                # we get less data that we request from the h5 file
                 self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples))
                 self._skipped[cond] += 1
                 continue
