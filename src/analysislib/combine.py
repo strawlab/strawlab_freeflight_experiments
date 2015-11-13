@@ -1475,12 +1475,15 @@ class CombineH5WithCSV(_Combine):
         # read conditions and experimental metadata
         this_exp_conditions, this_exp_metadata = self.read_metadata(uuid, csv_fname)
 
+        # infer arena
+        arena = analysislib.args.get_arena_from_args(args)
+
         # find single applicable data fixer
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
             self._debug("FIX:    fixing data %s" % fix)
 
-        # open simple-flydra h5 file
+        # open simple-flydra h5 file (for sanity checks and dt/tz population)
         h5, trajectories = self._read_h5(h5_file, args.reindex)
 
         # setup lenfilt
@@ -1489,15 +1492,15 @@ class CombineH5WithCSV(_Combine):
         else:
             assert self._lenfilt == args.lenfilt  # FIXME: this might not be correct under certain lifecycles
 
+        # frames start offset
+        frames_start_offset = int(args.trajectory_start_offset / self._dt)
+
         # minimum length of 2 to prevent later errors calculating derivitives
         dur_samples = max(2, self.min_num_frames)
 
+        # aliases
         results = self._results
         skipped = self._skipped
-
-        arena = analysislib.args.get_arena_from_args(args)
-
-        frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
         #
         # The CSV (output from the controller) indicates how to segment trials, although not
