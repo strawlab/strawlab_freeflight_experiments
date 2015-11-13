@@ -1449,7 +1449,7 @@ class CombineH5WithCSV(_Combine):
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
         # read conditions and experimental metadata
-        this_exp_conditins, this_exp_metadata = self.read_metadata(uuid, csv_fname)
+        this_exp_conditions, this_exp_metadata = self.read_metadata(uuid, csv_fname)
 
         # find single applicable data fixer
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
