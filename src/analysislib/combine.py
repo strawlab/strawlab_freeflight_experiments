@@ -1375,6 +1375,22 @@ class CombineH5WithCSV(_Combine):
             csv['framenumber'] = csv['framenumber'].astype(int)
         return csv
 
+    def read_experimental_conditions(self, csv_fname):
+        this_exp_conditions = {}
+        path, fname = os.path.split(csv_fname)
+        try:
+            fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
+            with open(fn) as f:
+                self._debug("IO:     reading %s" % fn)
+                this_exp_conditions = yaml.safe_load(f)
+                try:
+                    del this_exp_conditions['uuid']
+                except KeyError:
+                    pass
+        except:  # FIXME
+            pass
+        return this_exp_conditions
+
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
@@ -1391,20 +1407,8 @@ class CombineH5WithCSV(_Combine):
         # infer uuid
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
-        # try and open the experiment and condition metadata files
-        this_exp_conditions = {}
-        path, fname = os.path.split(csv_fname)
-        try:
-            fn = os.path.join(path, fname.split('.')[0] + '.condition.yaml')
-            with open(fn) as f:
-                self._debug("IO:     reading %s" % fn)
-                this_exp_conditions = yaml.safe_load(f)
-                try:
-                    del this_exp_conditions['uuid']
-                except KeyError:
-                    pass
-        except:
-            pass
+        # try to open the experiment and condition metadata files
+        this_exp_conditions = self.read_experimental_conditions(csv_fname)
 
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
