@@ -1416,14 +1416,14 @@ class CombineH5WithCSV(_Combine):
                     with open(fn, 'w') as f:
                         yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
-                except Exception, e:
+                except Exception as e:
                     self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
-            except Exception, e:
+            except Exception as e:
                 self._debug("IO:     ERROR reading from database\n%s" % e)
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
                     self._metadata.append(yaml.safe_load(f))
-        except Exception, e:
+        except Exception as e:
             self._debug("IO:     ERROR reading metadata\n%s" % e)
 
         if this_exp_metadata is None:
@@ -1729,7 +1729,7 @@ class CombineH5WithCSV(_Combine):
             #compute those features we can (such as those that only need x,y,z)
             try:
                 computed,not_computed,missing = self.features.process(h5_df, self._dt)
-            except Exception, e:
+            except Exception as e:
                 self._skipped[cond] += 1
                 self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
@@ -1873,7 +1873,7 @@ class CombineH5WithCSV(_Combine):
                             # modify in place
                             try:
                                 df.loc[_ix, col] = fixed[col]
-                            except IndexError, e:
+                            except IndexError as e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
                 if fix.should_fix_dataframe:
@@ -1916,7 +1916,7 @@ class CombineH5WithCSV(_Combine):
                     if missing:
                         for m in missing:
                             self._warn_once("ERROR: column/feature '%s' not computed" % m)
-                except Exception, e:
+                except Exception as e:
                     self._skipped[cond] += 1
                     self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                     continue
