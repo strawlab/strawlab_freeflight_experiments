@@ -1392,6 +1392,7 @@ class CombineH5WithCSV(_Combine):
         return this_exp_conditions
 
     def read_metadata(self, uuid, csv_fname):
+        this_exp_conditions = self.read_conditions(csv_fname)
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
         try:
@@ -1424,7 +1425,12 @@ class CombineH5WithCSV(_Combine):
 
         if this_exp_metadata is None:
             this_exp_metadata = {}
-        return this_exp_metadata
+
+        this_exp_metadata['csv_file'] = self.csv_file  # FIXME: this will get us into troubles, not needed
+        this_exp_metadata['h5_file'] = self.h5_file  # FIXME: this will get us into troubles, not needed
+        this_exp_metadata['conditions'] = this_exp_conditions
+
+        return this_exp_conditions, this_exp_metadata
 
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
@@ -1442,13 +1448,8 @@ class CombineH5WithCSV(_Combine):
         # infer uuid
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
-        # try to open the experiment and condition metadata files
-        this_exp_conditions = self.read_conditions(csv_fname)
-        this_exp_metadata = self.read_metadata(uuid, csv_fname)
-
-        this_exp_metadata['csv_file'] = csv_fname
-        this_exp_metadata['h5_file'] = h5_file
-        this_exp_metadata['conditions'] = this_exp_conditions
+        # read conditions and experimental metadata
+        this_exp_conditins, this_exp_metadata = self.read_metadata(uuid, csv_fname)
 
         fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
         if fix.active:
