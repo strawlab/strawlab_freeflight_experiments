@@ -14,14 +14,15 @@ import calendar
 import collections
 import copy
 import itertools
-from pandas.tseries.index import DatetimeIndex
 
 import tables
 import pandas as pd
+from pandas.tseries.index import DatetimeIndex
 import numpy as np
 import pytz
 import scipy.io
 import yaml
+from whatami import What
 
 from strawlab.constants import maybe_fake_ros
 maybe_fake_ros('strawlab_freeflight_experiments')
@@ -33,12 +34,11 @@ import analysislib.args
 import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv, \
-    set_permissions
+from strawlab.constants import (DATE_FMT, AUTO_DATA_MNT, find_experiment,
+                                uuids_from_flydra_h5, uuids_from_experiment_csv,
+                                set_permissions)
 
 from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
-
-from whatami import What
 
 # results = {
 #   condition:{
