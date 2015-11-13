@@ -1432,6 +1432,30 @@ class CombineH5WithCSV(_Combine):
 
         return this_exp_conditions, this_exp_metadata
 
+    def _read_h5(self, h5_file, reindex):
+        # open h5 file
+        self._debug("IO:     reading %s" % h5_file)
+        h5 = tables.openFile(h5_file, mode='r+' if reindex else 'r')
+        trajectories = self._get_trajectories(h5)
+        dt = 1.0 / trajectories.attrs['frames_per_second']
+        tzname = h5.root.trajectory_start_times.attrs['timezone']
+
+        # workaround old pytables not able to read unicode
+        try:
+            pytz.timezone(tzname)
+        except UnicodeDecodeError:
+            self._warn("ERROR: PYTABLES UNICODE DECODE ERROR. UPGRADE PYTABLES")
+            tzname = 'CET'
+
+        if self._dt is None:
+            self._dt = dt
+            self._tzname = tzname
+        else:
+            assert dt == self._dt
+            assert tzname == self._tzname
+
+        return h5, trajectories
+
     def add_csv_and_h5_file(self, csv_fname, h5_file, args):
         """Add a single csv and h5 file"""
 
@@ -1456,27 +1480,14 @@ class CombineH5WithCSV(_Combine):
         if fix.active:
             self._debug("FIX:    fixing data %s" % fix)
 
-        # open h5 file (TODO: in a with statement, indent all under this)
-        self._debug("IO:     reading %s" % h5_file)
-        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
-        trajectories = self._get_trajectories(h5)
-        dt = 1.0 / trajectories.attrs['frames_per_second']
-        tzname = h5.root.trajectory_start_times.attrs['timezone']
+        # open simple-flydra h5 file
+        h5, trajectories = self._read_h5(h5_file, args.reindex)
 
-        # workaround old pytables not able to read unicode
-        try:
-            pytz.timezone(tzname)
-        except UnicodeDecodeError:
-            self._warn("ERROR: PYTABLES UNICODE DECODE ERROR. UPGRADE PYTABLES")
-            tzname = 'CET'
-
-        if self._dt is None:
-            self._dt = dt
+        # setup lenfilt
+        if self._lenfilt is None:
             self._lenfilt = args.lenfilt
-            self._tzname = tzname
         else:
-            assert dt == self._dt
-            assert tzname == self._tzname
+            assert self._lenfilt == args.lenfilt  # FIXME: this might not be correct under certain lifecycles
 
         # minimum length of 2 to prevent later errors calculating derivitives
         dur_samples = max(2, self.min_num_frames)
