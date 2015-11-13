@@ -1375,7 +1375,7 @@ class CombineH5WithCSV(_Combine):
             csv['framenumber'] = csv['framenumber'].astype(int)
         return csv
 
-    def read_experimental_conditions(self, csv_fname):
+    def read_conditions(self, csv_fname):
         this_exp_conditions = {}
         path, fname = os.path.split(csv_fname)
         try:
@@ -1408,13 +1408,12 @@ class CombineH5WithCSV(_Combine):
         uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
 
         # try to open the experiment and condition metadata files
-        this_exp_conditions = self.read_experimental_conditions(csv_fname)
+        this_exp_conditions = self.read_conditions(csv_fname)
 
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
         try:
             # get it from the database, if it fails, try from the yaml
-            # TODO: get this refactored-out to a ExperimentMetadata class
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
             try:
                 self._debug("IO:     reading from database")
