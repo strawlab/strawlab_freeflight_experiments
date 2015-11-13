@@ -1653,7 +1653,7 @@ class CombineH5WithCSV(_Combine):
                 try:
                     condition_name = csv_df['condition_name'].iloc[0]
                 except:
-                    #old data with no condition name
+                    # old data with no condition name
                     pass
 
             original_condition_name = condition_name
@@ -1665,7 +1665,8 @@ class CombineH5WithCSV(_Combine):
                 self._condition_names[cond] = condition_name
 
             if (condition_name is not None) and (original_condition_name != condition_name):
-                self._debug_once("FIX:    #%5d: condition name %s -> %s" % (oid, original_condition_name, condition_name))
+                self._debug_once("FIX:    #%5d: condition name %s -> %s" %
+                                 (oid, original_condition_name, condition_name))
                 csv_df = csv_df.copy()  # use copy and not view
                 csv_df['condition_name'].replace(original_condition_name, condition_name, inplace=True)
 
@@ -1714,7 +1715,7 @@ class CombineH5WithCSV(_Combine):
                     (oid, start_frame, trial_framenumbers[-1])
 
             if fix.active and (fix.identifier == 'OLD_CONFINEMENT_CSVS_ARE_BROKEN'):
-                #sorry everyone
+                # sorry everyone
                 query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_frame)
                 self._warn_once("WARN: THIS DATA IS BROKEN IF OBJ_ID SPANS CONDITIONS")
 
@@ -1757,16 +1758,16 @@ class CombineH5WithCSV(_Combine):
             h5_df = pd.concat(flydra_series, axis=1)
             n_samples_before = len(h5_df)
 
-            #compute those features we can (such as those that only need x,y,z)
+            # compute those features we can (such as those that only need x,y,z)
             try:
-                computed,not_computed,missing = self.features.process(h5_df, self._dt)
+                self.features.process(h5_df, self._dt)
             except Exception as e:
                 self._skipped[cond] += 1
                 self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
                 continue
 
             # apply filters
-            filter_cond, _ = arena.apply_filters(args, h5_df, dt)
+            filter_cond, _ = arena.apply_filters(args, h5_df, self._dt)
             h5_df = h5_df.iloc[filter_cond]
 
             n_samples = len(h5_df)
@@ -1822,7 +1823,7 @@ class CombineH5WithCSV(_Combine):
                         self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c, c))
                         cv = csv_df[c].values
                         del csv_df[c]
-                        csv_df['_'+c] = cv
+                        csv_df['_' + c] = cv
 
                     df = pd.concat((csv_df.set_index('framenumber'), h5_df),
                                    axis=1, join='outer')
@@ -1930,26 +1931,27 @@ class CombineH5WithCSV(_Combine):
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
 
-                #compute the remaining features (which might have come from the CSV)
+                # compute the remaining features (which might have come from the CSV)
                 try:
                     dt = self._get_df_sample_interval(df) or self._dt
 
-                    opts = {'uuid':uuid,
-                            'obj_id':oid,
-                            'start_framenumber':start_framenumber,
-                            'stop_framenumber':stop_framenumber,
-                            'start_time':start_time,
-                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt),
-                            'condition':cond,
-                            'condition_object':self.get_condition_object(cond)}
+                    opts = {'uuid': uuid,
+                            'obj_id': oid,
+                            'start_framenumber': start_framenumber,
+                            'stop_framenumber': stop_framenumber,
+                            'start_time': start_time,
+                            'stop_time': start_time + ((stop_framenumber - start_framenumber) * dt),
+                            'condition': cond,
+                            'condition_object': self.get_condition_object(cond)}
 
-                    computed,not_computed,missing = self.features.process(df, dt, **opts)
+                    computed, not_computed, missing = self.features.process(df, dt, **opts)
                     if missing:
                         for m in missing:
                             self._warn_once("ERROR: column/feature '%s' not computed" % m)
                 except Exception as e:
                     self._skipped[cond] += 1
-                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" %
+                               (oid, n_samples, e))
                     continue
 
                 # provide a nanoseconds after the epoc column (use at your own risk(TM))
@@ -2091,6 +2093,7 @@ the data types and values for all with full precision
 
 """
 
+
 def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True):
     dest = dest + '_' + safe_condition_string(index)
 
@@ -2101,20 +2104,20 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
         kwargs['index_label'] = 'time'
 
     if to_csv:
-        df.to_csv(dest+'.csv',**kwargs)
+        df.to_csv(dest + '.csv', **kwargs)
 
     if to_df:
-        df.to_pickle(dest+'.df')
+        df.to_pickle(dest + '.df')
 
     if to_mat:
         dict_df = df.to_dict('list')
         dict_df['index'] = df.index.values
-        scipy.io.savemat(dest+'.mat', dict_df, oned_as='column')
+        scipy.io.savemat(dest + '.mat', dict_df, oned_as='column')
 
     formats = ('csv' if to_csv else '',
                'df' if to_df else '',
                'mat' if to_mat else '')
 
-    return "%s.{%s}" % (dest, ','.join(filter(len,formats)))
+    return "%s.{%s}" % (dest, ','.join(filter(len, formats)))
 
 # TODO: whatid and other stuff should be saved to the cache
