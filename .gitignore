@@ -7,3 +7,4 @@ src/strawlab_freeflight_experiments/msg/
 *~
 *.cache
 *.egg-info
+test/.cache
