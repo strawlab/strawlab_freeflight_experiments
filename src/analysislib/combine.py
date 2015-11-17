@@ -64,6 +64,13 @@ def condition_switches_from_controller_csv(csv):
     # could also save framenumbers from last / next obs?
 
 
+def is_testing():
+    """Returns True iff we detect we are testing.
+    If this is the case, combine caches are never read.
+    """
+    return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
+
+
 def check_combine_health(combine, min_length_f=100):
     """Checks some invariants in combine.
 
@@ -249,7 +256,7 @@ class _Combine(object):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
-        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+        if is_testing():
             return None
 
         pkl = self.get_cache_name()
