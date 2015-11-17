@@ -5,3 +5,5 @@ case
 msg_gen/
 src/strawlab_freeflight_experiments/msg/
 *~
+*.cache
+*.egg-info
