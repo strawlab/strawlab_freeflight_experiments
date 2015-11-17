@@ -1286,6 +1286,12 @@ def save_results(combine, args, maxn=20):
             if os.path.exists(f):
                 os.unlink(f)
 
+            # we need to do this because now we symlink to the cache, which may not exist
+            # We usually run tests with NOSETEST_FLAGS=1, which disables caching.
+            # This needs to be once at least once
+            if not os.path.isfile(combine.get_cache_name()):
+                combine.save_cache_file()
+
             os.symlink(combine.get_cache_name(), f)
             print "WROTE", f
         except OSError:
