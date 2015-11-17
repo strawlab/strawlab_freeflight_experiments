@@ -331,7 +331,7 @@ class _Combine(object):
             "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
         }
 
-    def _save_cache_file(self):
+    def save_cache_file(self):
         pkl, whatid = self._get_cache_name_and_config_string()
         # Save the pickle
         with open(pkl,"w+b") as f:
@@ -1282,9 +1282,9 @@ class CombineH5WithCSV(_Combine):
 
         if cache_error or (not os.path.isfile(self.get_cache_name())):
             if args.cached:
-                self._save_cache_file()
+                self.save_cache_file()
         elif args.recache:
-            self._save_cache_file()
+            self.save_cache_file()
 
     def get_spanned_results(self):
         spanned = {}
