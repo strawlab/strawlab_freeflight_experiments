@@ -248,8 +248,8 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
-        whatid = s = self.what().id()
-        whatid_hash = hashlib.sha224(s).hexdigest()
+        whatid = self.what().id()
+        whatid_hash = hashlib.sha224(whatid).hexdigest()
         return os.path.join(AUTO_DATA_MNT, 'cached', 'combine', whatid_hash[:2], whatid_hash + '.pkl'), whatid
 
     def get_cache_name(self):
