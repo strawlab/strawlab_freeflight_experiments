@@ -231,9 +231,10 @@ def get_rotation_rate_limit_for_plotting(combine, cond=None):
     #else gues the max from the arena(s)
     rr_abs_max = [0]
     for m in combine.get_experiment_metadata():
-        if m.get('arena') == 'flycave':
+        arena = m.get('arena')
+        if arena == 'flycave':
             rr_abs_max.append(10)
-        elif m.get('arena') == 'flycube':
+        elif arena and arena.startswith('flycube'):
             rr_abs_max.append(5)
     return max(rr_abs_max)
 
