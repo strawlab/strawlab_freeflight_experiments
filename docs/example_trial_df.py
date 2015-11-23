@@ -26,11 +26,16 @@ def get_combine_dataframe(uuids, csv_suffix, **filter_args):
 
 def perform_an_operation_on_every_trial(combine, df):
 
+    res = []
     for trial,_df in df.groupby(['uuid','obj_id','framenumber0']):
         uuid,obj_id,framenumber0 = trial
-        condition = _df['condition'].unique()[0]
+        #condition = _df['condition'].unique()[0]
+        res.append(_df['radius'].mean())
 
-        print _df['radius'].mean()
+    fig,ax = plt.subplots()
+    ax.hist(res)
+    ax.set_xlabel('all radius')
+
 
 if __name__ == "__main__":
     df,combine = get_combine_dataframe('13b5593e386711e582c06c626d3a008a',
@@ -48,3 +53,4 @@ if __name__ == "__main__":
     perform_an_operation_on_every_trial(combine,df)
 
     plt.show()
+
