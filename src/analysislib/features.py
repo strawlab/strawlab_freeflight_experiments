@@ -338,9 +338,12 @@ class DThetaDegShiftFeature(_Feature):
     name = 'dtheta_deg_shift'
     depends = 'dtheta_deg',
 
+    SHIFT = -5
+    version = 1*SHIFT
+
     @staticmethod
     def compute_from_df(df,dt):
-        return df['dtheta_deg'].shift(-5).values
+        return df['dtheta_deg'].shift(DThetaDegShiftFeature.SHIFT).values
 
 class RotationRateFlyRetinaFeature(_Feature):
     name = 'rotation_rate_fly_retina'
