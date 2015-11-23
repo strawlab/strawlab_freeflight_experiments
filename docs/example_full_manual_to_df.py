@@ -22,12 +22,18 @@ def get_combine_dataframe(uuids, csv_suffix, **filter_args):
 
     df = c.get_results_dataframe(cols=('radius','dtheta_deg','angle_to_post_at_origin_deg'))
 
-    return df
+    return df,c
 
+def perform_an_operation_on_every_trial(combine, df):
 
+    for trial,_df in df.groupby(['uuid','obj_id','framenumber0']):
+        uuid,obj_id,framenumber0 = trial
+        condition = _df['condition'].unique()[0]
+
+        print _df['radius'].mean()
 
 if __name__ == "__main__":
-    df = get_combine_dataframe('13b5593e386711e582c06c626d3a008a',
+    df,combine = get_combine_dataframe('13b5593e386711e582c06c626d3a008a',
                                'conflict.csv',
                                arena='flycave',
                                lenfilt=2,
@@ -38,5 +44,7 @@ if __name__ == "__main__":
         fig,ax = plt.subplots()
         fig.suptitle(cond)
         ax.hist(_df['radius'].values)
+
+    perform_an_operation_on_every_trial(combine,df)
 
     plt.show()
