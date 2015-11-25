@@ -33,6 +33,7 @@ import strawlab.constants
 RASTERIZE=bool(int(os.environ.get('RASTERIZE','1')))
 WRAP_TEXT=bool(int(os.environ.get('WRAP_TEXT','1')))
 WRITE_SVG=bool(int(os.environ.get('WRITE_SVG','0')))
+WRITE_PDF=bool(int(os.environ.get('WRITE_PDF','0')))
 WRITE_PKL=bool(int(os.environ.get('WRITE_PKL','1')))
 OUTSIDE_LEGEND=bool(int(os.environ.get('OUTSIDE_LEGEND','1')))
 
@@ -228,7 +229,7 @@ def show_plots():
     except NameError:
         plt.show()
 
-def save_fig(fig,fname_base,write_svg=None):
+def save_fig(fig,fname_base,write_svg=None,write_pdf=None):
 
     bbox_extra_artists = []
     for ax in fig.axes:
@@ -245,6 +246,9 @@ def save_fig(fig,fname_base,write_svg=None):
 
         if WRITE_SVG or write_svg:
             fig.savefig(fname_base+SVG_SUFFIX,bbox_inches='tight')
+        if WRITE_PDF or write_pdf:
+            fig.savefig(fname_base+'.pdf',bbox_inches='tight', dpi=400)
+
 
         print "WROTE",fname_base
     except Exception, e:
