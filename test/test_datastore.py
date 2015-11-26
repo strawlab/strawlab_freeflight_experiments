@@ -55,7 +55,7 @@ class TestDataStore(unittest.TestCase):
     def testCache(self):
         combine = autil.get_combiner_for_uuid(self.uuid)
         combine.add_from_uuid(self.uuid, cached=False, reindex=False)
-        self.assertTrue(os.path.exists(combine.get_cache_name()))
+        self.assertTrue(os.path.exists(combine.get_cache_pkl_path()))
         combine = autil.get_combiner_for_uuid(self.uuid)
         combine.add_from_uuid(self.uuid, cached=True, reindex=False)
         df,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = combine.get_one_result(5)

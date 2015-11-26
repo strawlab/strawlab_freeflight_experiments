@@ -1262,19 +1262,18 @@ def save_args(combine, args, name="README"):
         f.write("features\n    %s\n" % ','.join(combine.get_features()))
         f.write("\n")
 
-def save_results(combine, args, maxn=20):
-
-    results,dt = combine.get_results()
+def save_results(combine, args, maxn=20, use_central_cache=True):
 
     _perm_check(args)
 
     name = combine.get_plot_filename("xyz.pkl")
-    results,dt = combine.get_results()
-    with open(name, "w+b") as f:
+    results, dt = combine.get_results()
+
+    with open(name, "w+b") as dest_pkl:
         dat = {}
         if WRITE_PKL:
             # write small pickle for webserver
-            for current_condition,r in results.iteritems():
+            for current_condition,r in results.items():
                 dat[current_condition] = {'start_obj_ids':[], 'df':[]}
                 for (x0,y0,obj_id,framenumber0,time0),df in zip(r['start_obj_ids'],r['df']):
                     dat[current_condition]['start_obj_ids'].append(obj_id)
@@ -1282,28 +1281,28 @@ def save_results(combine, args, maxn=20):
                         {'x':df['x'].values,
                          'y':df['y'].values,
                          'z':df['z'].values})
-            pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
-            print "WROTE", name
+            pickle.dump(dat, dest_pkl, protocol=pickle.HIGHEST_PROTOCOL)
+            print("WROTE", name)
 
         try:
-            f = combine.get_plot_filename("data.pkl")
-            if os.path.exists(f):
-                os.unlink(f)
+
+            dest_pkl = combine.get_plot_filename("data.pkl")
 
             # we need to do this because now we symlink to the cache, which may not exist
             # We usually run tests with NOSETEST_FLAGS=1, which disables caching.
-            # This needs to be once at least once
-            if not os.path.isfile(combine.get_cache_name()):
-                combine.save_cache_file()
+            # This needs to be done at least once
+            if use_central_cache:
+                combine.symlink_central_cache_to(os.path.dirname(dest_pkl))
+            else:
+                combine.save_cache(pkl=dest_pkl)
 
-            os.symlink(combine.get_cache_name(), f)
-            print "WROTE", f
+            print("WROTE", dest_pkl)
         except OSError:
             pass
 
     best = _get_flight_lengths(combine)
     name = combine.get_plot_filename("data.json")
-    with open(name, "w") as f:
+    with open(name, "w") as dest_pkl:
         data = dict()
         data["CACHE_VERSION"] = combine.cache_version
         data["conditions"] = results.keys()
@@ -1320,30 +1319,30 @@ def save_results(combine, args, maxn=20):
                     break
             data["longest_trajectories"][cond] = trajs
 
-        json.dump(data, f)
+        json.dump(data, dest_pkl)
         print "WROTE", name
 
     spanned = combine.get_spanned_results()
     if spanned:
         name = combine.get_plot_filename("SPANNED_OBJ_IDS.md")
-        with open(name, 'w') as f:
+        with open(name, 'w') as dest_pkl:
             l = "object ids which span multiple conditions"
-            f.write("%s\n"%l)
-            f.write("%s\n\n"%('-'*len(l)))
+            dest_pkl.write("%s\n"%l)
+            dest_pkl.write("%s\n\n"%('-'*len(l)))
 
-            f.write("| obj_id | condition | length (frames) |\n")
-            f.write("| --- | --- | --- |\n")
+            dest_pkl.write("| obj_id | condition | length (frames) |\n")
+            dest_pkl.write("| --- | --- | --- |\n")
             for oid,sval in spanned.iteritems():
                 for i,s in enumerate(sval):
                     #make condition markdown table safe
                     cond = s[0].replace('|','&#124;')
                     if i == 0:
                         #first row
-                        f.write("| %s | %s | %s |\n" % (oid, cond, s[1]))
+                        dest_pkl.write("| %s | %s | %s |\n" % (oid, cond, s[1]))
                     else:
-                        f.write("|    | %s | %s |\n" % (cond, s[1]))
+                        dest_pkl.write("|    | %s | %s |\n" % (cond, s[1]))
 
-            f.write("\n")
+            dest_pkl.write("\n")
 
 #scary matplotlib autowrap title logic from
 #http://stackoverflow.com/questions/4018860/text-box-in-matplotlib/4056853

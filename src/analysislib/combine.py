@@ -22,9 +22,9 @@ import numpy as np
 import pytz
 import scipy.io
 import yaml
-from whatami import What
 
-from strawlab.constants import maybe_fake_ros
+from strawlab.constants import maybe_fake_ros, ensure_dir
+
 maybe_fake_ros('strawlab_freeflight_experiments')
 
 import autodata.files
@@ -39,6 +39,8 @@ from strawlab.constants import (DATE_FMT, AUTO_DATA_MNT, find_experiment,
                                 set_permissions)
 
 from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
+
+from whatami import What
 
 # results = {
 #   condition:{
@@ -247,18 +249,23 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
+        """Returns a two tuple (pkl, whatid).
+          - pkl is the cached pkl path in the central data repository.
+          - whatid is the configuration string identifying this combine object.
+        """
         whatid = self.what().id()
         whatid_hash = hashlib.sha224(whatid).hexdigest()
         return os.path.join(AUTO_DATA_MNT, 'cached', 'combine', whatid_hash[:2], whatid_hash + '.pkl'), whatid
 
-    def get_cache_name(self):
+    def get_cache_pkl_path(self):
+        """Returns the path that would correspond to a pickle caching this combine object in the central repository."""
         return self._get_cache_name_and_config_string()[0]
 
-    def _get_cache_file(self):
+    def _read_cache_file(self):
         if is_testing():
             return None
 
-        pkl = self.get_cache_name()
+        pkl = self.get_cache_pkl_path()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
             with open(pkl, "rb") as f:
@@ -337,15 +344,59 @@ class _Combine(object):
             "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
         }
 
-    def save_cache_file(self):
-        pkl, whatid = self._get_cache_name_and_config_string()
+    def is_populated(self):
+        return len(self._results) > 0
+
+    def save_cache(self, pkl=None):
+        central_pkl, whatid = self._get_cache_name_and_config_string()
+        pkl = central_pkl if pkl is None else pkl
         # Save the pickle
-        with open(pkl,"w+b") as f:
+        with open(pkl, "w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump(self.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
         # Save the id
-        with open(pkl.replace('.pkl','.txt'),"w") as f:
+        with open(os.path.splitext(pkl)[0] + '.txt', "w") as f:
             f.write(whatid)
+
+    def symlink_central_cache_to(self, to_dir, prefix='data', overwrite=False):
+        """Symlinks the central cache for this combine object into a directory.
+
+        If the central cache does not exist, saves it.
+        Note that at the moment this is brittle and would lead to "empty" cache files
+        if we call this before populating the Combine object with data. So use this
+        function with caution.
+
+        Parameters
+        ----------
+        to_dir : string
+          The directory where the cache files will be symlinked
+
+        prefix : string, default 'data'
+          The name prefix for the symlink files
+
+        overwrite : boolean, default False
+          Existing targets will be overwritten only if this is True
+          Note that the cache can still be recreated even if the targets
+          already exist but the cache have been purged.
+        """
+        # Create cache if needed
+        central_cache_pkl, _ = self.get_cache_pkl_path()
+        central_cache_txt = os.path.splitext(central_cache_pkl)[0] + '.txt'
+        if not os.path.isfile(central_cache_pkl) or not os.path.isfile(central_cache_txt):
+            if not self.is_populated():
+                raise Exception('Cannot symlink uncached, unpopulated combine')
+            self.save_cache(pkl=None)
+        # Symlink
+        ensure_dir(to_dir)
+        dest_pkl = os.path.join(to_dir, prefix + '.pkl')
+        dest_txt = os.path.join(to_dir, prefix + '.txt')
+        for path in (dest_pkl, dest_txt):
+            if os.path.exists(path):
+                if not overwrite:
+                    raise IOError('The file %s already exists and overwrite is False' % path)
+                os.unlink(path)
+        os.symlink(central_cache_pkl, dest_pkl)
+        os.symlink(central_cache_txt, dest_txt)
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -1232,6 +1283,15 @@ class CombineH5WithCSV(_Combine):
 
         return args
 
+    def populate_from_dictionary(self, d):
+        self._results = d['results']
+        self._dt = d['dt']
+        self._skipped = d['skipped']
+        self.csv_file = d['csv_file']   # for plot names
+        self._conditions = d['conditions']
+        self._condition_names = d['condition_names']
+        self._metadata = d['metadata']
+
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
@@ -1246,23 +1306,16 @@ class CombineH5WithCSV(_Combine):
         if args.cached:
 
             try:
-                d = self._get_cache_file()
+                cached_dict = self._read_cache_file()
             except CacheError:
-                d = None
+                cached_dict = None
                 cache_error = True
                 
-            if d is not None:
-                self._results = d['results']
-                self._dt = d['dt']
-                self._skipped = d['skipped']
-                self.csv_file = d['csv_file']   #for plot names
-                self._conditions = d['conditions']
-                self._condition_names = d['condition_names']
-                self._metadata = d['metadata']
-
-                uuids = set(itertools.chain.from_iterable(self._results[cond]['uuids'] for cond in self._results))
-                self._update_plot_dir(args,None,uuids)
-
+            if cached_dict is not None:
+                self.populate_from_dictionary(cached_dict)
+                uuids = set(itertools.chain.from_iterable(self._results[cond]['uuids']
+                                                          for cond in self._results))
+                self._update_plot_dir(args, None, uuids)
                 return
 
         if not csv_suffix:
@@ -1296,11 +1349,11 @@ class CombineH5WithCSV(_Combine):
             uuid = self.add_csv_and_h5_file(csv_file, h5_file, args)
             self._update_plot_dir(args,uuid)
 
-        if cache_error or (not os.path.isfile(self.get_cache_name())):
+        if cache_error or (not os.path.isfile(self.get_cache_pkl_path())):
             if args.cached:
-                self.save_cache_file()
+                self.save_cache()
         elif args.recache:
-            self.save_cache_file()
+            self.save_cache()
 
     def get_spanned_results(self):
         spanned = {}
