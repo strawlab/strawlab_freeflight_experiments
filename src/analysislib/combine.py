@@ -380,7 +380,7 @@ class _Combine(object):
           already exist but the cache have been purged.
         """
         # Create cache if needed
-        central_cache_pkl, _ = self.get_cache_pkl_path()
+        central_cache_pkl = self.get_cache_pkl_path()
         central_cache_txt = os.path.splitext(central_cache_pkl)[0] + '.txt'
         if not os.path.isfile(central_cache_pkl) or not os.path.isfile(central_cache_txt):
             if not self.is_populated():
