@@ -1266,40 +1266,37 @@ def save_results(combine, args, maxn=20, use_central_cache=True):
 
     _perm_check(args)
 
-    name = combine.get_plot_filename("xyz.pkl")
+    # read the results (might trigger a cache read)
     results, dt = combine.get_results()
 
-    with open(name, "w+b") as dest_pkl:
-        dat = {}
-        if WRITE_PKL:
-            # write small pickle for webserver
+    # write small pickle for webserver
+    if WRITE_PKL:
+        xyz_pickle_path = combine.get_plot_filename("xyz.pkl")
+        with open(xyz_pickle_path, "w+b") as dest_pkl:
+            dat = {}
             for current_condition,r in results.items():
-                dat[current_condition] = {'start_obj_ids':[], 'df':[]}
-                for (x0,y0,obj_id,framenumber0,time0),df in zip(r['start_obj_ids'],r['df']):
+                dat[current_condition] = {'start_obj_ids': [], 'df': []}
+                for (x0, y0, obj_id, framenumber0, time0), df in zip(r['start_obj_ids'], r['df']):
                     dat[current_condition]['start_obj_ids'].append(obj_id)
                     dat[current_condition]['df'].append(
-                        {'x':df['x'].values,
-                         'y':df['y'].values,
-                         'z':df['z'].values})
+                        {'x': df['x'].values,
+                         'y': df['y'].values,
+                         'z': df['z'].values})
             pickle.dump(dat, dest_pkl, protocol=pickle.HIGHEST_PROTOCOL)
-            print("WROTE", name)
+            print("WROTE", xyz_pickle_path)
 
-        try:
+    # write combine cache
+    dest_pkl = combine.get_plot_filename("data.pkl")
+    try:
+        if use_central_cache:
+            combine.symlink_central_cache_to(os.path.dirname(dest_pkl))
+        else:
+            combine.save_cache(pkl=dest_pkl)
+        print("WROTE", dest_pkl)
+    except OSError as ex:
+        print('ERROR writing %s: %s' % (dest_pkl, str(ex)))
 
-            dest_pkl = combine.get_plot_filename("data.pkl")
-
-            # we need to do this because now we symlink to the cache, which may not exist
-            # We usually run tests with NOSETEST_FLAGS=1, which disables caching.
-            # This needs to be done at least once
-            if use_central_cache:
-                combine.symlink_central_cache_to(os.path.dirname(dest_pkl))
-            else:
-                combine.save_cache(pkl=dest_pkl)
-
-            print("WROTE", dest_pkl)
-        except OSError:
-            pass
-
+    # write parameters and data summary json
     best = _get_flight_lengths(combine)
     name = combine.get_plot_filename("data.json")
     with open(name, "w") as dest_pkl:
@@ -1322,6 +1319,7 @@ def save_results(combine, args, maxn=20, use_central_cache=True):
         json.dump(data, dest_pkl)
         print "WROTE", name
 
+    # write object ids that are found in more than one condition
     spanned = combine.get_spanned_results()
     if spanned:
         name = combine.get_plot_filename("SPANNED_OBJ_IDS.md")
