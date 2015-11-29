@@ -230,9 +230,10 @@ class _Combine(object):
         return self.features.get_columns_added()
 
     def set_index(self, index):
-        VALID_INDEXES = ('framenumber','none')
+        VALID_INDEXES = ('framenumber', 'none')
         if (index not in VALID_INDEXES) and (not index.startswith('time')):
-            raise ValueError('index must be one of %s,time+NN (where NN is a pandas resample specifier)' % ', '.join(VALID_INDEXES))
+            raise ValueError('index must be one of %s, time+NN (where NN is a pandas resample specifier)' %
+                             ', '.join(VALID_INDEXES))
         self._index = index
         self._configdict['index'] = self._index
 
