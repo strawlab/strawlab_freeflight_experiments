@@ -84,6 +84,8 @@ def get_parser(*only_these_options, **defaults):
     filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL)
 
     parser = _ArenaAwareArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    # --- Combine input data coordinates
     if not only_these_options or "csv-file" in only_these_options:
         parser.add_argument(
             '--csv-file', type=str,
@@ -94,21 +96,28 @@ def get_parser(*only_these_options, **defaults):
             '--h5-file', type=str,
             default=defaults.get('h5_file', None),
             help='path to simple_flydra.h5 file (if not using --uuid)')
-    if not only_these_options or "show-obj-ids" in only_these_options:
+    if not only_these_options or "arena" in only_these_options:
         parser.add_argument(
-            '--show-obj-ids', action='store_true',
-            default=defaults.get('show_obj_ids', False),
-            help='show obj_ids on plots where appropriate')
-    if not only_these_options or "reindex" in only_these_options:
+            '--arena', type=str,
+            default=defaults.get('arena', 'flycave'),
+            required=True if 'arena' not in defaults else False,
+            help='name of arena type')
+    if not only_these_options or "uuid" in only_these_options:
+        ud = defaults.get('uuid', None)
+        if ud is not None:
+            ud = ud if isinstance(ud, list) else [ud]
         parser.add_argument(
-            '--no-reindex', action='store_false', dest='reindex',
-            default=defaults.get('no_reindex') if 'no_reindex' in defaults else not defaults.get('reindex', False),
-            help='reindex simple_flydra h5 file')
-    if not only_these_options or "show" in only_these_options:
+            '--uuid', type=str, nargs='*',
+            default=ud,
+            help='get the appropriate csv and h5 file for this UUID (multiple may be specified)')
+    if not only_these_options or "basedir" in only_these_options:
         parser.add_argument(
-            '--show', action='store_true',
-            default=defaults.get('show', False),
-            help='show plots')
+            '--basedir', type=str,
+            default=defaults.get('basedir', None),
+            help='base directory in which data files can be found by UUID'
+        )
+
+    # --- Combine central cache management
     if not only_these_options or "cached" in only_these_options:
         parser.add_argument(
             '--no-cached', action='store_false', dest='cached',
@@ -119,17 +128,23 @@ def get_parser(*only_these_options, **defaults):
             '--recache', action='store_true', dest='recache',
             default=defaults.get('recache') if 'recached' in defaults else defaults.get('recache', False),
             help='force to recache even if the cache already exists')
-    if not only_these_options or "ignore-permission-errors" in only_these_options:
-        parser.add_argument(
-            '--ignore-permission-errors', action='store_true',
-            default=defaults.get('ignore_permission_errors', False),
-            help='ignore permission errors (warning, plots might not be readable by others)')
-    if not only_these_options or "no-trackingstats" in only_these_options:
-        parser.add_argument(
-            '--plot-tracking-stats', action='store_true',
-            default=defaults.get('no_trackingstats', False),
-            help='plot tracking length distribution for all flies in h5 file (takes some time)')
 
+    # --- Combine performance tweaks
+    if not only_these_options or "reindex" in only_these_options:
+        parser.add_argument(
+            '--no-reindex', action='store_false', dest='reindex',
+            default=defaults.get('no_reindex') if 'no_reindex' in defaults else not defaults.get('reindex', False),
+            help='reindex simple_flydra h5 file')
+
+    # --- Dynamic checking of data contracts after combination
+    if not only_these_options or "check" in only_these_options:
+        parser.add_argument(
+            '--nocheck', action='store_false',
+            default=defaults.get('check', True),
+            required=False,
+            help='disable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
+
+    # --- Preprocessing / filtering / selection that happens inside Combine
     if not only_these_options or "disable-filters" in only_these_options:
         parser.add_argument(
             '--disable-filters', action='store_true',
@@ -157,26 +172,6 @@ def get_parser(*only_these_options, **defaults):
                 default=defaults.get('%sfilt_interval' % i, None),
                 help="when using 'triminterval' filter methods, the number of seconds over "
                      "which the filter must match in order for data to be trimmed. ")
-
-    if not only_these_options or "uuid" in only_these_options:
-        ud = defaults.get('uuid', None)
-        if ud is not None:
-            ud = ud if isinstance(ud, list) else [ud]
-        parser.add_argument(
-            '--uuid', type=str, nargs='*',
-            default=ud,
-            help='get the appropriate csv and h5 file for this UUID (multiple may be specified)')
-    if not only_these_options or "basedir" in only_these_options:
-        parser.add_argument(
-            '--basedir', type=str,
-            default=defaults.get('basedir', None),
-            help='base directory in which data files can be found by UUID'
-        )
-    if not only_these_options or "outdir" in only_these_options:
-        parser.add_argument(
-            '--outdir', type=str,
-            default=defaults.get('outdir', None),
-            help='directory to save plots')
     if not only_these_options or "lenfilt" in only_these_options:
         parser.add_argument(
             '--lenfilt', type=float,
@@ -195,12 +190,6 @@ def get_parser(*only_these_options, **defaults):
                  '(i.e. from the csv) trajectory from which to keep data. if negative '
                  'this means include data before the trial began. if positive this '
                  'ignores data at the start of a trajectory')
-    if not only_these_options or "arena" in only_these_options:
-        parser.add_argument(
-            '--arena', type=str,
-            default=defaults.get('arena', 'flycave'),
-            required=True if 'arena' not in defaults else False,
-            help='name of arena type')
     if not only_these_options or "tfilt" in only_these_options:
         parser.add_argument(
             '--tfilt-before', type=str,
@@ -214,12 +203,33 @@ def get_parser(*only_these_options, **defaults):
             help='keep only trajectories after this time (%s). '
                  'note: in local time (i.e. the times in the start_time plot)'
                  % DATE_FMT.replace("%", "%%"))
-    if not only_these_options or "check" in only_these_options:
+
+    # --- Plotting parameters
+    if not only_these_options or "show-obj-ids" in only_these_options:
         parser.add_argument(
-            '--nocheck', action='store_false',
-            default=defaults.get('check', True),
-            required=False,
-            help='disable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
+            '--show-obj-ids', action='store_true',
+            default=defaults.get('show_obj_ids', False),
+            help='show obj_ids on plots where appropriate')
+    if not only_these_options or "show" in only_these_options:
+        parser.add_argument(
+            '--show', action='store_true',
+            default=defaults.get('show', False),
+            help='show plots')
+    if not only_these_options or "no-trackingstats" in only_these_options:
+        parser.add_argument(
+            '--plot-tracking-stats', action='store_true',
+            default=defaults.get('no_trackingstats', False),
+            help='plot tracking length distribution for all flies in h5 file (takes some time)')
+    if not only_these_options or "ignore-permission-errors" in only_these_options:
+        parser.add_argument(
+            '--ignore-permission-errors', action='store_true',
+            default=defaults.get('ignore_permission_errors', False),
+            help='ignore permission errors (warning, plots might not be readable by others)')
+    if not only_these_options or "outdir" in only_these_options:
+        parser.add_argument(
+            '--outdir', type=str,
+            default=defaults.get('outdir', None),
+            help='directory to save plots')
 
     return parser
 
