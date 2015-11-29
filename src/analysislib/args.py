@@ -30,6 +30,7 @@ DATA_MODIFYING_ARGS.extend(REQUIRED_ARENA_DEFAULTS)
 
 
 class _ArenaAwareArgumentParser(argparse.ArgumentParser):
+    """An argument parser that knows how to find defaults given the arena a experiment have been run in."""
     def parse_args(self, *args, **kwargs):
         args = argparse.ArgumentParser.parse_args(self, *args, **kwargs)
         arena = None
@@ -40,6 +41,7 @@ class _ArenaAwareArgumentParser(argparse.ArgumentParser):
             self.error(str(ex))
 
         # disable-filters can override
+        # note: no-disable-filters comes from the trajectory viewer
         if (not getattr(args, "no_disable_filters", False)) and getattr(args, "disable_filters", False):
             for f in arena.filters:
                 f.disable()
@@ -81,8 +83,7 @@ def get_parser(*only_these_options, **defaults):
     :py:meth:`analysislib.combine.CombineH5WithCSV.add_from_args`
     """
 
-    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL)
-
+    # We will get non-overriden defaults from the arena
     parser = _ArenaAwareArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     # --- Combine input data coordinates
@@ -150,6 +151,7 @@ def get_parser(*only_these_options, **defaults):
             '--disable-filters', action='store_true',
             default=defaults.get('disable_filters', False),
             help='disables all filters (overrides other command line options)')
+    filt_choices = (FILTER_REMOVE, FILTER_TRIM, FILTER_NOOP, FILTER_TRIM_INTERVAL)
     for i, desc in FILTER_TYPES.items():
         if not only_these_options or ("%sfilt" % i) in only_these_options:
             parser.add_argument(
