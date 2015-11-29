@@ -1262,7 +1262,7 @@ def save_args(combine, args, name="README"):
         f.write("features\n    %s\n" % ','.join(combine.get_features()))
         f.write("\n")
 
-def save_results(combine, args, maxn=20, use_central_cache=True):
+def save_results(combine, args, maxn=20, symlink_from_central_cache=True):
 
     _perm_check(args)
 
@@ -1288,7 +1288,7 @@ def save_results(combine, args, maxn=20, use_central_cache=True):
     # write combine cache
     dest_pkl = combine.get_plot_filename("data.pkl")
     try:
-        if use_central_cache:
+        if symlink_from_central_cache:
             combine.symlink_central_cache_to(os.path.dirname(dest_pkl))
         else:
             combine.save_cache(pkl=dest_pkl)
