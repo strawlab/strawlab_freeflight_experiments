@@ -72,46 +72,146 @@ def is_testing():
     return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
 
 
+def find_some_overlaps(expdf, start='start', end='end', as_tidy=False):
+    """
+    Checks that no unit overlaps any other unit in time.
+
+    N.B. This should probably be moved to our "intervals" lib.
+
+    Parameters
+    ----------
+    expdf : pandas DataFrame
+      Each row should correspond to a unit (e.g. an experiment).
+      The index should identify a unit.
+      It should contain at least two columns: start and end.
+
+    start : string, default 'frame0'
+      The column name where the start of each unit is stored.
+
+    end : string, default 'end'
+      The column name where the end of each unit is stored.
+
+    Returns
+    -------
+    A list of row tuples (index1, index2) indicating overlapping units.
+    (index1, index2) are the corresponding index values for the overlapping rows.
+    Albeit possibly non exhaustive, if there exist an overlap, this list is guaranteed to be non-empty.
+    Returns an empty list iff there are no two overlapping units.
+
+    Examples
+    --------
+    Here we find the two overlapping units
+    >>> df = pd.DataFrame([[0, 3], [1, 10], [9, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    [(0, 1), (1, 2)]
+
+    But the returned overlapping intervals are not exhaustive (note (0, 2) is missing from the result).
+    >>> df = pd.DataFrame([[0, 30], [5, 10], [10, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    [(0, 1)]
+
+    Intervals are assumed to be half-closed [start, end)
+    >>> df = pd.DataFrame([[0, 3], [5, 10], [10, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    []
+
+    For empty dataframes, we return an empty list
+    >>> df = pd.DataFrame([], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    []
+
+    0-length intervals and ill-defined intervals trigger a ValueError
+    >>> df = pd.DataFrame([[0, 0], [0, 10]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    Traceback (most recent call last):
+     ...
+    ValueError: Intersections might be ill defined because there are empty intervals (start >= end)
+    >>> df = pd.DataFrame([[0, 0], [3, 2]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    Traceback (most recent call last):
+     ...
+    ValueError: Intersections might be ill defined because there are empty intervals (start >= end)
+    """
+    if (expdf[end] <= expdf[start]).any():
+        raise ValueError('Intersections might be ill defined because there are empty intervals (start >= end)')
+    try:
+        expdf = expdf.sort_values(by=[start, end])  # pandas >= 0.17
+    except AttributeError:
+        expdf = expdf.sort([start, end])  # deprecated
+    starts_before_previous_ends = expdf[start].shift(-1).iloc[:-1] < expdf[end].iloc[:-1]
+    if starts_before_previous_ends.any():
+        firsts = expdf.iloc[:-1][starts_before_previous_ends.values].index
+        overlaps = expdf.iloc[1:][starts_before_previous_ends.values].index
+        return list(zip(firsts, overlaps))
+    return []
+
+
+def overlaps2tidy(df, overlaps, columns=('uuid', 'oid', 'startf')):
+
+    def loc_and_select(rows, prefix='pre_'):
+        return df.loc[rows][list(columns)].rename(columns=lambda col: prefix + col).reset_index()
+
+    if len(overlaps) > 0:
+        overlaps = np.array(overlaps)
+        overlaps_pre = loc_and_select(overlaps[:, 0], prefix='pre_')
+        overlaps_post = loc_and_select(overlaps[:, 0], prefix='post_')
+        return pd.concat(overlaps_pre, overlaps_post, ignore_index=True, axis=1)
+
+    return None
+
+
 def check_combine_health(combine, min_length_f=100):
     """Checks some invariants in combine.
 
     Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
     """
-
     results, dt = combine.get_results()
 
-    # Aggregate results in a handy dataframe
+    # Aggregate results in a handy dataframe (this should be in combine / use conversions)
+    # This is tidy at the trial level (one row per trial)
     dfs_stuff = []
-    for cond, cond_dict in results.iteritems():
+    for cond, cond_dict in results.items():
         dfs = cond_dict['df']
         sois = cond_dict['start_obj_ids']
         uuids = cond_dict['uuids']
         for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
             dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
-    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'frame0', 'time0', 'length_f', 'series'])
-    df = df.sort('frame0')
-    df['end'] = df['frame0'] + df['length_f']
+    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'startf', 'time0', 'length_f', 'series'])
+    df = df.sort('startf')
+    df['endf'] = df['startf'] + df['length_f']  # half-open interval
 
-    # Check all trajectories are long enough
-    if min_length_f is not None:
-        if df['length_f'].min() < min_length_f:
-            raise Exception('There are too short trials')
+    check_trials_health(df, dt=dt, min_length_f=min_length_f, start='startf', end='endf')
+
+
+def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf'):
+
+    #
+    # See also flycave/scripts/filemaintenance/mainbrains.py for checks on similar issues
+    # (holes, jumps in time...) for mainbrain files.
+    #
+    # These are more composable and it would repay to bring together these two realisations
+    # of data contracts dynamic checks.
+    #
+
+    # Check all trajectories are long enough; we never allow 0-length trajectories
+    if min_length_f is None or min_length_f < 1:
+        min_length_f = 1
+    # noinspection PyUnresolvedReferences
+    if (df.length_f < min_length_f).any():
+        raise Exception('There are trials without observations')
 
     # Check there are not overlapping trajectories
-    overlapping = {}
+    overlapping = []
     for uuid, expdf in df.groupby('uuid'):
-        starts_before_ends = expdf['frame0'].shift(-1).iloc[:-1] < expdf['end'].iloc[:-1]
-        if starts_before_ends.any():
-            firsts = expdf.iloc[:-1][starts_before_ends.values].index
-            overlaps = expdf.iloc[1:][starts_before_ends.values].index
-            overlapping[uuid] = zip(firsts, overlaps)
+        overlaps = find_some_overlaps(expdf, start=start, end=end)
+        if len(overlaps) > 0:
+            overlapping.append(overlaps2tidy(expdf, overlaps, columns=['uuid', 'oid', start, end]))
     if len(overlapping) > 0:
-        report = ['%s: %r' % (uuid, overlaps) for uuid, overlaps in sorted(overlapping.items())]
-        raise Exception('There are overlapping trials!\n%s' % '\n'.join(report))
+        raise Exception('There are overlapping trials!\n%s' % str(pd.concat(overlapping, ignore_index=True)))
 
     # Check that trial id is indeed unique
-    if not len(df.groupby(['uuid', 'oid', 'frame0'])) == len(df):
-        raise Exception('There are duplicated (uuid, oid, frame0) tuples!')
+    if not len(df.groupby(['uuid', 'oid', start])) == len(df):
+        raise Exception('There are duplicated (uuid, oid, %s) tuples!' % start)
 
     # Check that there are no holes in the dataframes
     def has_holes(df, dt):
@@ -131,7 +231,8 @@ def check_combine_health(combine, min_length_f=100):
     with_missing = df[df['series'].apply(has_missings)]
     if len(with_missing) > 0:
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
-                        with_missing[['uuid', 'oid', 'frame0']].to_string())
+                        with_missing[['uuid', 'oid', start]].to_string())
+
 
 def load_conditions(uuid):
     """
