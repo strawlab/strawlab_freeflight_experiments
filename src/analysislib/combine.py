@@ -155,7 +155,7 @@ def overlaps2tidy(df, overlaps, columns=('uuid', 'oid', 'startf')):
         overlaps = np.array(overlaps)
         overlaps_pre = loc_and_select(overlaps[:, 0], prefix='pre_')
         overlaps_post = loc_and_select(overlaps[:, 0], prefix='post_')
-        return pd.concat(overlaps_pre, overlaps_post, ignore_index=True, axis=1)
+        return pd.concat([overlaps_pre, overlaps_post], ignore_index=True, axis=1)
 
     return None
 
