@@ -203,7 +203,7 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
         self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v': 18,  # bump this version when you change delicate combine machinery
+        self._configdict = {'v': 19,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
 
@@ -1458,6 +1458,11 @@ class CombineH5WithCSV(_Combine):
 
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
+        # the csv may be written at a faster rate than the framerate,
+        # causing there to be multiple rows with the same framenumber.
+        # find the last index for all unique framenumbers
+        csv = csv.drop_duplicates(cols=('framenumber',), take_last=True)
+
         #
         # The CSV (output from the controller) indicates how to segment trials, although not
         # always in an unambiguous way. We should force stimuli writers to do the right thing,
@@ -1635,10 +1640,7 @@ class CombineH5WithCSV(_Combine):
 
             r = results[cond]
 
-            # the csv may be written at a faster rate than the framerate,
-            # causing there to be multiple rows with the same framenumber.
-            # find the last index for all unique framenumbers for this trial
-            csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
+            # framenumbers
             trial_framenumbers = csv_df['framenumber'].values
 
             # there is sometimes some erronous entries in the csv due to some race
