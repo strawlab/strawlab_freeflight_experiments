@@ -165,22 +165,9 @@ def check_combine_health(combine, min_length_f=100):
 
     Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
     """
-    results, dt = combine.get_results()
-
-    # Aggregate results in a handy dataframe (this should be in combine / use conversions)
-    # This is tidy at the trial level (one row per trial)
-    dfs_stuff = []
-    for cond, cond_dict in results.items():
-        dfs = cond_dict['df']
-        sois = cond_dict['start_obj_ids']
-        uuids = cond_dict['uuids']
-        for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
-            dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
-    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'startf', 'time0', 'length_f', 'series'])
-    df = df.sort('startf')
-    df['endf'] = df['startf'] + df['length_f']  # half-open interval
-
-    check_trials_health(df, dt=dt, min_length_f=min_length_f, start='startf', end='endf')
+    df = combine.get_trials_dataframe(startf_name='frame0', endf_name='endf')
+    df = df.sort('frame0')
+    check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf')
 
 
 def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf'):
@@ -871,6 +858,34 @@ class _Combine(object):
                     extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
 
         return pd.DataFrame(data)
+
+    def get_trials_dataframe(self,
+                             add_dt=False,
+                             startf_name='frame0',
+                             endf_name='endf',
+                             startt_name='time0'):
+        """
+        Aggregate the results to a trial-level (one trial per row) tidy dataframe.
+        """
+        # See also flydata conversions
+
+        results, dt = self.get_results()
+
+        dfs_stuff = []
+        for cond, cond_dict in results.items():
+            dfs = cond_dict['df']
+            sois = cond_dict['start_obj_ids']
+            uuids = cond_dict['uuids']
+            for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
+                dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
+        df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid',
+                                              startf_name, startt_name, 'length_f', 'series'])
+        if endf_name is not None:
+            df[endf_name] = df[startf_name] + df['length_f']  # half-open interval
+        if add_dt:
+            df['dt'] = dt  # no support for multiple dt in combine ATM
+
+        return df
 
     def get_obj_ids_sorted_by_length(self):
         """
