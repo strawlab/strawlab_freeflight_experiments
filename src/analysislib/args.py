@@ -138,10 +138,10 @@ def get_parser(*only_these_options, **defaults):
             help='reindex simple_flydra h5 file')
 
     # --- Dynamic checking of data contracts after combination
-    if not only_these_options or "check" in only_these_options:
+    if not only_these_options or "nocheck" in only_these_options:
         parser.add_argument(
             '--nocheck', action='store_false',
-            default=defaults.get('check', True),
+            default=defaults.get('nocheck', True),
             required=False,
             help='disable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
 

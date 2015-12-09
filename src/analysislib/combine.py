@@ -223,7 +223,7 @@ def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf
     with_holes = df[df['series'].apply(partial(has_holes, dt=dt))]
     if len(with_holes) > 0:
         raise Exception('There are trajectories with holes: \n%s' %
-                        with_holes[['uuid', 'oid', 'frame0']].to_string())
+                        with_holes[['uuid', 'oid', start]].to_string())
 
     # Check no missings in x, y, z
     def has_missings(df, cols=('x', 'y', 'z')):
@@ -2129,9 +2129,9 @@ class CombineH5WithCSV(_Combine):
         h5.close()  # maybe this should go in a finally?
 
         args = vars(args)  # never remember how to use NameSpace
-        if args.get('check', True):
+        if not args.get('nocheck', False):
             self._warn('Checking combine health...')
-            check_combine_health(self, args.get('lenfilt', None))
+            check_combine_health(self, min_length_f=args.get('lenfilt', None))
             self._warn('Combine seems healthy...')
         else:
             self._warn('Combine health was not checked')
