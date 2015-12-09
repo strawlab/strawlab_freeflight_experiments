@@ -201,11 +201,14 @@ def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf
         raise Exception('There are duplicated (uuid, oid, %s) tuples!' % start)
 
     # Check that there are no holes in the dataframes
-    def has_holes(df, dt):
+    def find_holes(df, dt):
         observations_distances = df.index.values[1:] - df.index.values[0:-1]
         if isinstance(df.index, DatetimeIndex):
-            return (observations_distances != dt).any()
-        return (observations_distances != 1).any()
+            return observations_distances != dt
+        return observations_distances != 1
+
+    def has_holes(df, dt):
+        return find_holes(df, dt).any()
 
     with_holes = df[df['series'].apply(partial(has_holes, dt=dt))]
     if len(with_holes) > 0:
