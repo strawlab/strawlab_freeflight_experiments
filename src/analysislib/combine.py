@@ -888,7 +888,9 @@ class _Combine(object):
         if add_dt:
             df['dt'] = dt  # no support for multiple dt in combine ATM
 
-        return df
+        columns_order = ['uuid', 'oid', startf_name, endf_name, 'length_f', startt_name, 'series']
+
+        return df[[col for col in columns_order if col in df.columns]]
 
     def get_obj_ids_sorted_by_length(self):
         """
