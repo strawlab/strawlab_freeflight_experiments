@@ -1668,7 +1668,7 @@ class CombineH5WithCSV(_Combine):
         # frames start offset
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
-        # minimum length of 2 to prevent later errors calculating derivitives
+        # minimum length of 2 to prevent later errors calculating derivatives
         dur_samples = max(2, self.min_num_frames)
 
         # aliases
