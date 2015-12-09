@@ -1903,6 +1903,25 @@ class CombineH5WithCSV(_Combine):
 
             n_samples = len(validframenumber)
 
+            #
+            # A combine data contract is that returned time series do not have holes.
+            #
+            # This makes combine skip trials for which data coming from flydra has
+            # holes, which in turn would result in a time series dataframe with holes.
+            # An example:
+            #   uuid='15268c1c256a11e5abf760a44c2451e5', obj_id=501804,
+            #        there is a large hole around frame 132149 in the simple.flydra.h5 file
+            #
+            # Note that this lets pass any data from flydra that misses frames only at
+            # the beginning or at the end. These are handled later on.
+            #
+            framenumber_diff = validframenumber[1:] - validframenumber[:-1]
+            if (framenumber_diff != 1).any():
+                self._debug('SKIP:   flydra data has holes for obj_id %d start_frame %d' %
+                            (oid, start_frame))
+                self._skipped[cond] += 1
+                continue
+
             # check if the query returned all the data it should have
             if n_samples < dur_samples:
                 # but this happens quite often (due to estimation of positions) so
