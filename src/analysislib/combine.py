@@ -1918,6 +1918,7 @@ class CombineH5WithCSV(_Combine):
             # An example:
             #   uuid='15268c1c256a11e5abf760a44c2451e5', obj_id=501804,
             #        there is a large hole around frame 132149 in the simple.flydra.h5 file
+            # TODO: add this unit test (extract that trial, make it test data, check it gets skipped)
             #
             # Note that this lets pass any data from flydra that misses frames only at
             # the beginning or at the end. These are handled later on.
