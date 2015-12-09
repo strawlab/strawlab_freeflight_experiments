@@ -1668,6 +1668,11 @@ class CombineH5WithCSV(_Combine):
         # frames start offset
         frames_start_offset = int(args.trajectory_start_offset / self._dt)
 
+        # the csv may be written at a faster rate than the framerate,
+        # causing there to be multiple rows with the same framenumber.
+        # find the last index for all unique framenumbers
+        csv = csv.drop_duplicates(cols=('framenumber',), take_last=True)
+
         # minimum length of 2 to prevent later errors calculating derivatives
         dur_samples = max(2, self.min_num_frames)
 
@@ -1855,10 +1860,7 @@ class CombineH5WithCSV(_Combine):
 
             r = results[cond]
 
-            # the csv may be written at a faster rate than the framerate,
-            # causing there to be multiple rows with the same framenumber.
-            # find the last index for all unique framenumbers for this trial
-            csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
+            # framenumbers from the CSV
             trial_framenumbers = csv_df['framenumber'].values
 
             # there is sometimes some erronous entries in the csv due to some race
