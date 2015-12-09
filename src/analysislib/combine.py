@@ -1904,7 +1904,7 @@ class CombineH5WithCSV(_Combine):
                 continue
             validframenumber = valid['framenumber']
 
-            n_samples = len(validframenumber)
+            n_samples_from_flydra = len(validframenumber)
 
             #
             # A combine data contract is that returned time series do not have holes.
@@ -1926,7 +1926,7 @@ class CombineH5WithCSV(_Combine):
                 continue
 
             # check if the query returned all the data it should have
-            if n_samples < dur_samples:
+            if n_samples_from_flydra < dur_samples:
                 # but this happens quite often (due to estimation of positions) so
                 # only print the error when the missing data is large enough for us to
                 # skip the trial
@@ -1935,7 +1935,7 @@ class CombineH5WithCSV(_Combine):
                                (oid, trial_framenumbers[-1] - start_frame, query))
                 # we could have made this check before the query, but sometimes
                 # we get less data that we request from the h5 file
-                self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples))
+                self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples_from_flydra))
                 self._skipped[cond] += 1
                 continue
 
@@ -1960,20 +1960,20 @@ class CombineH5WithCSV(_Combine):
                 self.features.process(h5_df, self._dt)
             except Exception as e:
                 self._skipped[cond] += 1
-                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples_from_flydra, e))
                 continue
 
             # apply filters
             filter_cond, _ = arena.apply_filters(args, h5_df, self._dt)
             h5_df = h5_df.iloc[filter_cond]
 
-            n_samples = len(h5_df)
-            if n_samples < dur_samples:
-                self._debug('FILT:   #%5d: %d/%d valid samples' % (oid, n_samples, len(valid)))
+            n_samples_from_flydra = len(h5_df)
+            if n_samples_from_flydra < dur_samples:
+                self._debug('FILT:   #%5d: %d/%d valid samples' % (oid, n_samples_from_flydra, len(valid)))
                 self._skipped[cond] += 1
                 continue
-            if n_samples != n_samples_before:
-                self._debug('TRIM:   #%5d: removed %d frames' % (oid, n_samples_before - n_samples))
+            if n_samples_from_flydra != n_samples_before:
+                self._debug('TRIM:   #%5d: removed %d frames' % (oid, n_samples_before - n_samples_from_flydra))
 
             traj_start_frame = h5_df['framenumber'].values[0]
             traj_stop_frame = h5_df['framenumber'].values[-1]
@@ -1985,13 +1985,13 @@ class CombineH5WithCSV(_Combine):
 
             if h5_df is not None:
 
-                n_samples = len(h5_df)
-                span_details = (cond, n_samples)
+                n_samples_from_flydra = len(h5_df)
+                span_details = (cond, n_samples_from_flydra)
                 self._results_by_condition.setdefault(oid, []).append(span_details)
 
                 self._debug('SAVE:   #%5d: %d samples (%d -> %d) (%s)' %
                             (oid,
-                             n_samples,
+                             n_samples_from_flydra,
                              traj_start_frame, traj_stop_frame,
                              self.get_condition_name(cond)))
 
@@ -2148,7 +2148,7 @@ class CombineH5WithCSV(_Combine):
                 except Exception as e:
                     self._skipped[cond] += 1
                     self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" %
-                               (oid, n_samples, e))
+                               (oid, n_samples_from_flydra, e))
                     continue
 
                 # provide a nanoseconds after the epoc column (use at your own risk(TM))
