@@ -1920,9 +1920,9 @@ class CombineH5WithCSV(_Combine):
             # Note that this lets pass any data from flydra that misses frames only at
             # the beginning or at the end. These are handled later on.
             #
-            framenumber_diff = validframenumber[1:] - validframenumber[:-1]
+            framenumber_diff = np.diff(validframenumber)
             if (framenumber_diff != 1).any():
-                self._debug('SKIP:   flydra data has holes for obj_id %d start_frame %d' %
+                self._debug('SKIP:   #%5d: flydra data has holes (start_frame=%d)' %
                             (oid, start_frame))
                 self._skipped[cond] += 1
                 continue
