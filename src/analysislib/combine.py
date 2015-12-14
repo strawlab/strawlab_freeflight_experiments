@@ -880,15 +880,15 @@ class _Combine(object):
             sois = cond_dict['start_obj_ids']
             uuids = cond_dict['uuids']
             for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
-                dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
+                dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), cond, df))
         df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid',
-                                              startf_name, startt_name, 'length_f', 'series'])
+                                              startf_name, startt_name, 'length_f', 'condition', 'series'])
         if endf_name is not None:
             df[endf_name] = df[startf_name] + df['length_f']  # half-open interval
         if add_dt:
             df['dt'] = dt  # no support for multiple dt in combine ATM
 
-        columns_order = ['uuid', 'oid', startf_name, endf_name, 'length_f', startt_name, 'series']
+        columns_order = ['uuid', 'oid', startf_name, endf_name, 'length_f', startt_name, 'condition', 'series']
 
         return df[[col for col in columns_order if col in df.columns]]
 
