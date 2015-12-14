@@ -1,0 +1,11 @@
+<launch>
+  <!-- Spawn the display server. -->
+  <node name="ds_debug_vworld" pkg="flyvr" type="display_server" args="--mode=virtual_world">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+
+  <!-- And show another display_server to see the cubemap -->
+  <node name="ds_debug_cubemap" pkg="flyvr" type="display_server" args="--mode=cubemap">
+    <rosparam command="load" file="$(find strawlab_freeflight_experiments)/data/test/display_server_config.yaml" />
+  </node>
+</launch>

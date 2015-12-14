@@ -231,12 +231,21 @@ def get_rotation_rate_limit_for_plotting(combine, cond=None):
     #else gues the max from the arena(s)
     rr_abs_max = [0]
     for m in combine.get_experiment_metadata():
-        if m.get('arena') == 'flycave':
+        arena = m.get('arena')
+        if arena == 'flycave':
             rr_abs_max.append(10)
-        elif m.get('arena') == 'flycube':
+        elif arena and arena.startswith('flycube'):
             rr_abs_max.append(5)
     return max(rr_abs_max)
 
-
+def get_post_radius(combine, cond):
+    obj = combine.get_condition_object(cond)
+    try:
+        return obj['post_radius']
+    except KeyError:
+        postfn = obj['model_descriptor'].split('|')[0]
+        if postfn in {'justpostgrey1.osg', 'justpostcheck1.osg'}:
+            return 0.0375
+    raise ValueError("unknown post radius: %s" % cond)
 
 

@@ -99,6 +99,8 @@ if __name__=='__main__':
     if args.test_filter_args:
         filt_parser = analysislib.args.get_parser(arena=args.arena)
         filt_args = filt_parser.parse_args(args.test_filter_args.split(' '))
+        if args.animate:
+            parser.error('--animate and --test-filter-args can not be combined')
     else:
         filt_args = None
 

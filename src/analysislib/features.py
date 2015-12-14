@@ -23,6 +23,9 @@ def _grouper(iterable, n, fillvalue=None):
 class FeatureError(Exception):
     pass
 
+class MissingStateFeatureError(FeatureError):
+    pass
+
 class Node:
     def __init__(self, name):
         self.name = name
@@ -150,7 +153,7 @@ class _MainbrainH5Feature(_Feature):
                 self._ML_estimates_2d_idxs[uuid] = h5.root.ML_estimates_2d_idxs
 
         except KeyError as ke:
-            raise FeatureError('Missing option %s' % ke)
+            raise MissingStateFeatureError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
             raise FeatureError('Missing file %s' % fe)
 
@@ -196,7 +199,7 @@ class _ReproErrorsFeature(_Feature):
                 self._stores[uuid] = pd.HDFStore(h5_file, 'r')
 
         except KeyError as ke:
-            raise FeatureError('Missing option %s' % ke)
+            raise MissingStateFeatureError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
             raise FeatureError('Missing file %s' % fe)
 
@@ -274,18 +277,19 @@ class OriginPostAngleDegFeature(_Feature):
     name = 'angle_to_post_at_origin_deg'
     depends = ('x','y','vx','vy')
 
-    version = 8
+    version = 9
 
     @staticmethod
-    def compute_from_df(df,dt):
+    def compute_from_df(df,dt,postx=0,posty=0):
         ang = np.arctan2(df['vy'].values, df['vx'].values) - \
-              np.arctan2(-df['y'].values, -df['x'].values)
+              np.arctan2(posty-df['y'].values, postx-df['x'].values)
         deg = np.rad2deg(ang)
+
 
         deg[deg > +180] %= -180
         deg[deg < -180] %= +180
 
-        return deg
+        return deg * -1
 
 class OriginPostAngleFeature(_Feature):
     name = 'angle_to_post_at_origin'
@@ -294,6 +298,21 @@ class OriginPostAngleFeature(_Feature):
     @staticmethod
     def compute_from_df(df,dt):
         return np.deg2rad(df['angle_to_post_at_origin_deg'].values)
+
+class PostAngleDegFeature(_Feature):
+    name = 'angle_to_post_deg'
+    depends = ('x','y','vx','vy')
+
+    def process(self, df, dt, **state):
+
+        try:
+            cond_obj = state['condition_object']
+            s = cond_obj['model_descriptor']
+        except KeyError:
+            raise MissingStateFeatureError
+
+        x,y,z = map(float,s.split('|')[1:])
+        df[self.name] = OriginPostAngleDegFeature.compute_from_df(df,dt,postx=x,posty=y)
 
 class ThetaFeature(_Feature):
     name = 'theta'
@@ -315,6 +334,16 @@ class DThetaDegFeature(_Feature):
     def compute_from_df(df,dt):
         return np.rad2deg(df['dtheta'].values)
 
+class DThetaDegShiftFeature(_Feature):
+    name = 'dtheta_deg_shift'
+    depends = 'dtheta_deg',
+
+    SHIFT = -5
+    version = 1*SHIFT
+
+    @staticmethod
+    def compute_from_df(df,dt):
+        return df['dtheta_deg'].shift(DThetaDegShiftFeature.SHIFT).values
 
 class RotationRateFlyRetinaFeature(_Feature):
     name = 'rotation_rate_fly_retina'
@@ -531,7 +560,7 @@ class MultiFeatureComputer(object):
                     try:
                         f.process(df,dt,**state)
                         computed.append(f.name)
-                    except FeatureError as fe:
+                    except MissingStateFeatureError as fe:
                         pass
         not_computed = set(f.name for f in self._get_features()) - set(computed)
         missing = set(itertools.chain(self.get_columns_added(),self.get_measurements_required())) - set(df.columns.tolist())

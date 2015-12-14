@@ -449,6 +449,17 @@ class TestCombineFake2(unittest.TestCase):
             cn = analysislib.util.get_combiner_for_csv(csv_fname)
             cn.set_index(index)
 
+            # Our fake csv generator, based on CSVLogger, will put sometimes condition switch marker rows
+            # Filter them out here, but:
+            #   - make fake generation somehow deterministic
+            #   - investigate further if this is an actual bug in production
+            #     (my feel is that no, unless maybe for single-condition experiments)
+            # And here a nasty temporary workaround...
+            with open(csv_fname) as reader:
+                lines = [line for line in reader.readlines() if not line.startswith('0.0')]
+                with open(csv_fname, 'w') as writer:
+                    writer.write(''.join(lines))
+
             cn.add_csv_and_h5_file(csv_fname, h5_fname, args)
             dfn,dt,(x0,y0,obj_id,framenumber0,time0,_,_) = cn.get_one_result(1)
 

@@ -102,19 +102,19 @@ class TestFeaturesAPI(unittest.TestCase):
 
     def test_set(self):
         m = afeat.MultiFeatureComputer('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
 
         m.set_features()
         self.assertListEqual(m.features, [])
 
         m.set_features('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
 
         #no-op
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -123,19 +123,19 @@ class TestFeaturesAPI(unittest.TestCase):
         self.assertListEqual(m.features, [])
 
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
         #add same feature again
         m.add_feature('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
         #add an already added feature
         m.add_feature('x')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -144,7 +144,7 @@ class TestFeaturesAPI(unittest.TestCase):
         self.assertListEqual(m.features, [])
 
         m.add_feature_by_column_added('vx')
-        self.assertEqual(repr(m.features), "[Measurement#col='x', VxFeature#col='vx']")
+        self.assertEqual(repr(m.features), "[Measurement(col='x'), VxFeature(col='vx')]")
         self.assertEqual(len(m.features), 2)
         self.assertTupleEqual(m.get_columns_added(), ('vx',))
 
@@ -171,10 +171,10 @@ class TestFeaturesAPI(unittest.TestCase):
 
     def test_what(self):
         cls = afeat.get_feature_class('rcurve')
-        self.assertEqual(cls().what().id(), "RCurveFeature#clip=(0, 1)#col='rcurve'#method='leastsq'#npts=10")
+        self.assertEqual(cls().what().id(), "RCurveFeature(clip=(0,1),col='rcurve',method='leastsq',npts=10)")
 
         m = afeat.MultiFeatureComputer('vx')
-        self.assertEqual(m.what().id(),"MultiFeatureComputer#features=[VxFeature#col='vx']")
+        self.assertEqual(m.what().id(),"MultiFeatureComputer(features=[VxFeature(col='vx')])")
 
 
     def test_api(self):
@@ -233,14 +233,17 @@ class TestSomeFeatures(unittest.TestCase):
     def test_all_features_and_deps(self):
         for name in afeat.ALL_FEATURE_NAMES:
             if name in ('reprojection_error_smoothed', 'reprojection_error','inverse_dynamics'):
-                #needs to load extra h5 data and uuid not known
+                # needs to load extra h5 data and uuid not known
+                continue
+            if name in('angle_to_post_deg',):
+                # needs "condition_object" passed via the state parameter to process
                 continue
 
             m = afeat.MultiFeatureComputer(name)
             df = self._df.copy()
             computed, not_computed, missing = m.process(df, self._dt)
             self.assertNotEqual(len(computed), 0)
-            self.assertTupleEqual(missing,())
+            self.assertTupleEqual(missing, ())  # ,
 
 if __name__=='__main__':
     unittest.main()

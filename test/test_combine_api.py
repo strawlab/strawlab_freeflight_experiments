@@ -16,6 +16,11 @@ import autodata.files
 def _quiet(combine):
     combine.disable_debug()
 
+
+if not analysislib.combine.is_testing():
+    raise Exception('Combine tests must run under nose or with the environment var NOSETEST_FLAG=1')
+
+
 class TestCombineAPI(unittest.TestCase):
 
     def setUp(self):

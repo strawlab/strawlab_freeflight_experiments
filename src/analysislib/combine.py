@@ -39,8 +39,7 @@ from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_f
 
 from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
 
-from whatami import What, MAX_EXT4_FN_LENGTH
-
+from whatami import What
 
 # results = {
 #   condition:{
@@ -50,6 +49,7 @@ from whatami import What, MAX_EXT4_FN_LENGTH
 #       uuids:[uuid,...],
 #   }
 # }
+
 
 def safe_condition_string(s):
     return "".join([c for c in s if re.match(r'\w', c)])
@@ -62,6 +62,13 @@ def condition_switches_from_controller_csv(csv):
     cond_changes = cond_or_trial_change['condition'].shift() != cond_or_trial_change['condition']
     return cond_or_trial_change[cond_changes][['condition', 't_sec', 't_nsec']]
     # could also save framenumbers from last / next obs?
+
+
+def is_testing():
+    """Returns True iff we detect we are testing.
+    If this is the case, combine caches are never read.
+    """
+    return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
 
 
 def check_combine_health(combine, min_length_f=100):
@@ -241,24 +248,21 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
-        s = self.what().id()
-        if len(s) > (MAX_EXT4_FN_LENGTH - 4): #4=.pkl
-            fn = hashlib.sha224(s).hexdigest() + '.pkl'
-        else:
-            fn = s + '.pkl'
-        return os.path.join(AUTO_DATA_MNT,'cached','combine',fn), s
+        whatid = self.what().id()
+        whatid_hash = hashlib.sha224(whatid).hexdigest()
+        return os.path.join(AUTO_DATA_MNT, 'cached', 'combine', whatid_hash[:2], whatid_hash + '.pkl'), whatid
 
     def get_cache_name(self):
         return self._get_cache_name_and_config_string()[0]
 
     def _get_cache_file(self):
-        if ('NOSETEST_FLAG' in os.environ) or ('nosetests' in sys.argv[0]):
+        if is_testing():
             return None
 
         pkl = self.get_cache_name()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
-            with open(pkl,"rb") as f:
+            with open(pkl, "rb") as f:
                 # Speed optimisation, see:
                 #   http://stackoverflow.com/questions/16833124/pickle-faster-than-cpickle-with-numeric-data
                 # and
@@ -280,7 +284,7 @@ class _Combine(object):
                         #   http://pandas.pydata.org/pandas-docs/stable/io.html#io-pickle
                         # So let's treat it as a black box and do not directly use pandas compat pickle.
                         return pd.read_pickle(pkl)
-                    except Exception, e:
+                    except Exception as e:
                         self._warn('Could not unpickle %s, recombining and recaching' % pkl)
                         self._warn('The error was %s' % str(e))
                         raise CacheError(pkl)
@@ -334,17 +338,15 @@ class _Combine(object):
             "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
         }
 
-    def _save_cache_file(self):
-        pkl,s = self._get_cache_name_and_config_string()
+    def save_cache_file(self):
+        pkl, whatid = self._get_cache_name_and_config_string()
+        # Save the pickle
         with open(pkl,"w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump(self.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
-
-        #if the string has been truncted to a hash then also write a text file with
-        #the calibration string
-        if os.path.basename(os.path.splitext(pkl)[0]) != s:
-            with open(pkl.replace('.pkl','.txt'),"w") as f:
-                f.write(s)
+        # Save the id
+        with open(pkl.replace('.pkl','.txt'),"w") as f:
+            f.write(whatid)
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -1287,9 +1289,9 @@ class CombineH5WithCSV(_Combine):
 
         if cache_error or (not os.path.isfile(self.get_cache_name())):
             if args.cached:
-                self._save_cache_file()
+                self.save_cache_file()
         elif args.recache:
-            self._save_cache_file()
+            self.save_cache_file()
 
     def get_spanned_results(self):
         spanned = {}
@@ -1897,7 +1899,9 @@ class CombineH5WithCSV(_Combine):
                             'start_framenumber':start_framenumber,
                             'stop_framenumber':stop_framenumber,
                             'start_time':start_time,
-                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt)}
+                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt),
+                            'condition':cond,
+                            'condition_object':self.get_condition_object(cond)}
 
                     computed,not_computed,missing = self.features.process(df, dt, **opts)
                     if missing:
@@ -2065,3 +2069,4 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
 
     return "%s.{%s}" % (dest, ','.join(filter(len,formats)))
 
+# TODO: whatid and other stuff should be saved to the cache
