@@ -672,7 +672,8 @@ class _Combine(object):
         Parameters
         ----------
         cols: list of columns from the individual dataframes
-        to put in the merged dataframe
+        to put in the merged dataframe. If cols is None, return a dataframe with
+        all availalable columns
 
         fill: forward and backward fill individual dataframes
 
@@ -684,6 +685,9 @@ class _Combine(object):
         """
 
         DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0', 'start_time']
+
+        if cols is None:
+            cols = set(self.get_result_columns()) - set(DEFAULT)
         all_cols = set(itertools.chain.from_iterable((DEFAULT,cols)))
 
         data = {k:[] for k in all_cols}
@@ -738,6 +742,8 @@ class _Combine(object):
         """get the names of the columns in the combined dataframe"""
         for current_condition,r in self._results.iteritems():
             for df in r['df']:
+                if not r['count']:
+                    continue
                 return list(df.columns)
         return []
 
