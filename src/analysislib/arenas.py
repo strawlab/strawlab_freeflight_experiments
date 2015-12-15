@@ -60,6 +60,9 @@ class ArenaBase(object):
 
         return valid, cond
 
+    def get_filter_columns(self):
+        return [f.colname for f in self.filters if f.active]
+
 class FlyCaveCylinder(ArenaBase):
     name = "flycave"
     def __init__(self,args,radius=0.5,height=1.0):

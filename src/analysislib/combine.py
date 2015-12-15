@@ -1231,6 +1231,10 @@ class CombineH5WithCSV(_Combine):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
         """
+        arena = analysislib.args.get_arena_from_args(args)
+        for c in arena.get_filter_columns():
+            self.add_feature(column_name=c)
+
         self._args_to_configuration(args)
 
         cache_error = False
