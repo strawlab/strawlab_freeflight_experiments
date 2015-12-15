@@ -36,6 +36,14 @@ def perform_an_operation_on_every_trial(combine, df):
     ax.hist(res)
     ax.set_xlabel('all radius')
 
+def perform_an_operation_on_every_condition(combine, df):
+
+    res = {}
+    for condition,_df in df.groupby('condition'):
+        print combine.get_condition_object(condition)
+        res[combine.get_condition_name(condition)] = _df['radius'].mean()
+
+    print res
 
 if __name__ == "__main__":
     df,combine = get_combine_dataframe('13b5593e386711e582c06c626d3a008a',
@@ -51,6 +59,7 @@ if __name__ == "__main__":
         ax.hist(_df['radius'].values)
 
     perform_an_operation_on_every_trial(combine,df)
+    perform_an_operation_on_every_condition(combine,df)
 
     plt.show()
 
