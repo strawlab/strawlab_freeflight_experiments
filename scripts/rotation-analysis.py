@@ -145,7 +145,10 @@ if __name__=='__main__':
 
     curve.plot_correlation_analysis(args, combine, correlations, correlation_options)
 
-    plot_distance_from_path(combine, args)
+    try:
+        plot_distance_from_path(combine, args)
+    except KeyError as e:
+        print "ERROR: no %s to measure distance to path" % e
 
     if args.plot_saccades:
         aplt.plot_saccades(combine, args, ncond)
