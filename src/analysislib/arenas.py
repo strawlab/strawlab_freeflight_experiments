@@ -2,13 +2,13 @@ import numpy as np
 
 from .filters import filter_cond, FILTER_TYPES, FILTER_DF_COLUMNS, Filter
 
-def get_arena(name, args=None):
+def get_arena(name, args=None, **kwargs):
     if name =='flycave':
-        arena = FlyCaveCylinder(args)
+        arena = FlyCaveCylinder(args, **kwargs)
     elif name == 'flycube':
-        arena = FlyCube(args)
+        arena = FlyCube(args, **kwargs)
     elif name =='fishbowl':
-        arena = FishBowl(args)
+        arena = FishBowl(args, **kwargs)
     else:
         raise ValueError('unknown arena %r'%args.arena)
     return arena
