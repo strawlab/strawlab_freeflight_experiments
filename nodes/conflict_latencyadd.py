@@ -348,6 +348,9 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
 
+            self.fly = obj.position
+            self.flyv = obj.velocity
+
             if self.svg_fn:
                 px,py = XFORM.xy_to_pxpy(obj.position.x,obj.position.y)
                 closest,ratio = self.model.connect_closest(p=None, px=px, py=py)
