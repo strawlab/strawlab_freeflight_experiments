@@ -314,6 +314,21 @@ class PostAngleDegFeature(_Feature):
         x,y,z = map(float,s.split('|')[1:])
         df[self.name] = OriginPostAngleDegFeature.compute_from_df(df,dt,postx=x,posty=y)
 
+class PostDistanceFeature(_Feature):
+    name = 'distance_to_post'
+    depends = ('x','y')
+
+    def process(self, df, dt, **state):
+
+        try:
+            cond_obj = state['condition_object']
+            s = cond_obj['model_descriptor']
+        except KeyError:
+            raise MissingStateFeatureError
+
+        x,y,z = map(float,s.split('|')[1:])
+        df[self.name] = np.sqrt( ((x - df['x'].values)**2) + ((y - df['y'].values)**2) )
+
 class ThetaFeature(_Feature):
     name = 'theta'
     depends = ('vx','vy')
