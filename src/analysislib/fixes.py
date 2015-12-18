@@ -238,14 +238,29 @@ def get_rotation_rate_limit_for_plotting(combine, cond=None):
             rr_abs_max.append(5)
     return max(rr_abs_max)
 
-def get_post_radius(combine, cond):
-    obj = combine.get_condition_object(cond)
+def get_post_radius(cond_obj, uuid=''):
     try:
-        return obj['post_radius']
+        return cond_obj['post_radius']
     except KeyError:
-        postfn = obj['model_descriptor'].split('|')[0]
+        if cond_obj.name.startswith('real_post'):
+            return 0.0375
+
+        postfn = cond_obj['model_descriptor'].split('|')[0]
         if postfn in {'justpostgrey1.osg', 'justpostcheck1.osg'}:
             return 0.0375
-    raise ValueError("unknown post radius: %s" % cond)
+
+    raise ValueError("unknown post radius: %s" % cond_obj)
+
+def get_post_location(cond_obj, uuid=''):
+    if uuid in ('13b5593e386711e582c06c626d3a008a', '69a958aa393811e5bde36c626d3a008a'):
+        return 0,0
+    
+    # calculate post position
+    try:
+        s = cond_obj['model_descriptor']
+        x,y,z = map(float,s.split('|')[1:])
+        return x,y
+    except KeyError:
+        raise ValueError("unknown - assuming at -0.1,0.0")
 
 
