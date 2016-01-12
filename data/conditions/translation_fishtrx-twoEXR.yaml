@@ -1,0 +1,18 @@
+set3_exr:
+    svg_path: infinity04_fishtrax.svg
+    gain: 1.0
+    advance_threshold: 0.05
+    z_gain: 1.0
+    star_size: 5.0
+    z_target: -0.01
+    geom_json_buf: '{"model": "sphere", "center": {"x": 0.0, "y": 0.0, "z": 0.12}, "base": {"y": 0.0, "x": 0.0, "z": 0.0}, "radius": 0.210}'
+    p2g_calibration_filename: $(find flycave)/calibration/fishtrax/2015-Dec/from_spheremodel-s3.exr
+set4_exr:
+    svg_path: infinity04_fishtrax.svg
+    gain: 1.0
+    advance_threshold: 0.05
+    z_gain: 1.0
+    star_size: 5.0
+    z_target: -0.01
+    geom_json_buf: '{"model": "from_file", "filename": "$(find flycave)/conf/fishtrax/fish_icosphere_6_tex.osgt", "precision": 1.0e-6}'
+    p2g_calibration_filename: $(find flycave)/calibration/fishtrax/2015-Dec/from_osgfilecalibration-s4.exr

@@ -86,6 +86,11 @@ class Node(nodelib.node.Experiment):
         self.pub_lock_object = rospy.Publisher('lock_object', UInt32, latch=True, tcp_nodelay=True)
         self.pub_lock_object.publish(IMPOSSIBLE_OBJ_ID)
 
+
+        # for mulit exr
+        self.exr_filename_pub = rospy.Publisher('p2g_calibration_filename', String)
+        self.geom_json_buf_pub = rospy.Publisher('geom_json_buf', String)
+
         #protect the tracked id and fly position between the time syncronous main loop and the asyn
         #tracking/lockon/off updates
         self.trackinglock = threading.Lock()
@@ -133,10 +138,17 @@ class Node(nodelib.node.Experiment):
         return np.isnan(self.v_gain)
 
     def switch_conditions(self):
-	self.condition_switch_count += 1
+        self.condition_switch_count += 1
         self.drop_lock_on()
+    
+        # mods for milti exr
+        self.exr_filename_pub.publish(String(self.condition.get("p2g_calibration_filename", "")))
+	print '#'*20, String(self.condition.get("geom_json_buf", ""))
+        self.geom_json_buf_pub.publish(String(self.condition.get("geom_json_buf", "")))
+        
 
-        stimulus_filename = str(self.condition.get("stimulus_filename", ""))
+        stimulus_filename = str(self.condition.get("displayserver", ""))
+        
         if stimulus_filename:
             self._pub_stim_mode.publish('StimulusOSGFile')
             self.pub_stimulus.publish(stimulus_filename)
