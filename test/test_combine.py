@@ -13,6 +13,10 @@ import analysislib.util as autil
 import autodata.files
 
 
+if not analysislib.combine.is_testing():
+    raise Exception('Combine tests must run under nose or with the environment var NOSETEST_FLAG=1')
+
+
 def _quiet(combine):
     combine.disable_debug()
 
