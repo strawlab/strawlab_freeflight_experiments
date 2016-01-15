@@ -26,7 +26,7 @@ class TestScript(unittest.TestCase):
     def test_rotation_analysis_flycube(self):
         proc = subprocess.Popen(
                 "./rotation-analysis.py --uuid 0b813e6435ac11e3944b10bf48d76973 "\
-                "--zfilt trim --zfilt-max 0.45 --rfilt trim --rfilt-max 0.5 "\
+                "--no-cached --zfilt trim --zfilt-max 0.45 --rfilt trim --rfilt-max 0.5 "\
                 "--arena flycube --outdir %s --idfilt 4200" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -39,7 +39,7 @@ class TestScript(unittest.TestCase):
     def test_rotation_analysis_flycave(self):
         proc = subprocess.Popen(
                 "./rotation-analysis.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 "\
+                "--no-cached --zfilt trim --rfilt trim --lenfilt 1 "\
                 "--arena flycave --outdir %s --idfilt 9" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -52,7 +52,7 @@ class TestScript(unittest.TestCase):
     def test_trajectory_viewer(self):
         proc = subprocess.Popen(
                 "./trajectory-viewer.py --uuid 9b97392ebb1611e2a7e46c626d3a008a "\
-                "--lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 --arena flycave --save-plot "\
+                "--no-cached --lenfilt 1 --idfilt 9 --rfilt none --zfilt none --lenfilt 1 --arena flycave --save-plot "\
                 "--outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -65,7 +65,7 @@ class TestScript(unittest.TestCase):
     def test_conflict_analysis(self):
         proc = subprocess.Popen(
                 "./conflict-analysis.py --uuid 74bb2ece2f6e11e395fa6c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
+                "--no-cached --zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -77,7 +77,7 @@ class TestScript(unittest.TestCase):
     def test_confinement_analysis(self):
         proc = subprocess.Popen(
                 "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
-                "--zfilt trim --rfilt trim --arena flycave --outdir %s" % self._tdir,
+                "--no-cached --zfilt trim --rfilt trim --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -89,7 +89,7 @@ class TestScript(unittest.TestCase):
     def test_perturbation_analysis(self):
         proc = subprocess.Popen(
                 "./perturbation-analysis.py --uuid 2a8386e0dd1911e3bd786c626d3a008a "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
+                "--no-cached --zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                 cwd=self._sdir,
@@ -105,7 +105,7 @@ class TestScript(unittest.TestCase):
         )
         proc = subprocess.Popen(
                 "./rotation-analysis.py --csv-file %s --h5-file %s "\
-                "--zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % (
+                "--no-cached --zfilt trim --rfilt trim --lenfilt 1 --arena flycave --outdir %s" % (
                     os.path.join(ddir,'20131004_161631.rotation.csv'),
                     os.path.join(ddir,'20131004_161625.simple_flydra.h5'),
                     self._tdir),
@@ -122,4 +122,3 @@ class TestScript(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
-
