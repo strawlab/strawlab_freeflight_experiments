@@ -69,7 +69,10 @@ def is_testing():
     """Returns True iff we detect we are testing.
     If this is the case, combine caches are never read.
     """
-    return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
+    return 'NOSETEST_FLAG' in os.environ or \
+           'nosetests' in sys.argv[0] or \
+           'py.test' in sys.argv[0] or \
+           'pytestrunner.py' in sys.argv[0]
 
 
 def find_some_overlaps(expdf, start='start', end='end', as_tidy=False):
