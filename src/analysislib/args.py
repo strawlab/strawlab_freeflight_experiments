@@ -140,8 +140,8 @@ def get_parser(*only_these_options, **defaults):
     # --- Dynamic checking of data contracts after combination
     if not only_these_options or "nocheck" in only_these_options:
         parser.add_argument(
-            '--nocheck', action='store_false',
-            default=defaults.get('nocheck', True),
+            '--nocheck', action='store_true',
+            default=defaults.get('nocheck', False),
             required=False,
             help='disable dynamic checks on data invariants (i.e. check for bad smells in combined data)')
 
