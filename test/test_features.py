@@ -242,8 +242,8 @@ class TestSomeFeatures(unittest.TestCase):
             m = afeat.MultiFeatureComputer(name)
             df = self._df.copy()
             computed, not_computed, missing = m.process(df, self._dt)
-            self.assertNotEqual(len(computed), 0)
-            self.assertTupleEqual(missing, ())  # ,
+            self.assertNotEqual(len(computed), 0, msg='feature %s could not be computed')
+            self.assertTupleEqual(missing, ())
 
 if __name__=='__main__':
     unittest.main()
