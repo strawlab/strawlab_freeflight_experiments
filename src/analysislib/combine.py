@@ -170,7 +170,8 @@ def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True)
     """
     df = combine.get_trials_dataframe(startf_name='frame0', endf_name='endf')
     df = df.sort('frame0')
-    check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf')
+    check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf',
+                        ignore_repeated_trials=ignore_repeated_trials)
 
 
 def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf', ignore_repeated_trials=True):
