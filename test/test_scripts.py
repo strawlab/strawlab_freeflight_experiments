@@ -60,7 +60,7 @@ class TestScript(unittest.TestCase):
         stdout,stderr = proc.communicate()
         self.assertEqual(proc.returncode,0,stderr)
         #uuid_obj_id_fn0_condition
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"trajectory-viewer.py","9_11902_checkerboard16pnginfinitysvg031000102.png")))
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir,"trajectory-viewer.py","9_11900_checkerboard16pnginfinitysvg031000102.png")))
 
     def test_conflict_analysis(self):
         proc = subprocess.Popen(
