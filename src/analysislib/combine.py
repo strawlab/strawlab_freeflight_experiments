@@ -207,7 +207,10 @@ def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf
     def find_holes(df, dt):
         observations_distances = df.index.values[1:] - df.index.values[0:-1]
         if isinstance(df.index, DatetimeIndex):
-            return observations_distances != dt
+            # http://stackoverflow.com/questions/14920903/time-difference-in-seconds-from-numpy-timedelta64
+            # needs numpy >= 1.7
+            seconds = observations_distances / np.timedelta64(1, 's')
+            return seconds != dt  # maybe here we should add tolerance
         return observations_distances != 1
 
     def has_holes(df, dt):
