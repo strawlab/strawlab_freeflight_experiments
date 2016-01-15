@@ -163,7 +163,7 @@ def overlaps2tidy(df, overlaps, columns=('uuid', 'oid', 'startf')):
     return None
 
 
-def check_combine_health(combine, min_length_f=100):
+def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True):
     """Checks some invariants in combine.
 
     Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
@@ -173,7 +173,10 @@ def check_combine_health(combine, min_length_f=100):
     check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf')
 
 
-def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf'):
+def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf', ignore_repeated_trials=True):
+
+    if ignore_repeated_trials:
+        df = df.drop_duplicates(subset=['uuid', 'oid', start])
 
     #
     # See also flycave/scripts/filemaintenance/mainbrains.py for checks on similar issues

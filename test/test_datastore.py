@@ -63,10 +63,7 @@ class TestDataStore(unittest.TestCase):
 
     def testCache2(self):
 
-        # FIXME
-        # What is the purpose of this test? There is not a single expectation checked...
-        # The test failing now shows a limitation of health checks: they do not allow repeated trials
-
+        # FIXME: What is the purpose of this test? There is not a single expectation checked...
 
         combine = autil.get_combiner_for_uuid(self.uuid)
         parser,args = analysislib.args.get_default_args(
