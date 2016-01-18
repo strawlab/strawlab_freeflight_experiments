@@ -187,9 +187,8 @@ class TestCombine(unittest.TestCase):
         combine.add_from_args(args)
 
         self.assertEqual(combine.get_num_conditions(), 3)
-        self.assertEqual(combine.get_total_trials(), 1375)   # new expectation: 1011; recheck what is different
-        self.assertEqual(combine.get_total_analysed(), 165)  # new expectation: 164; recheck what is different
-
+        self.assertEqual(combine.get_total_trials(), 1011)
+        self.assertEqual(combine.get_total_analysed(), 164)
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()
