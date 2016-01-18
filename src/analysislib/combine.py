@@ -163,7 +163,7 @@ def overlaps2tidy(df, overlaps, columns=('uuid', 'oid', 'startf')):
     return None
 
 
-def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True):
+def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True, hole_tolerance_s=0):
     """Checks some invariants in combine.
 
     Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
@@ -171,10 +171,16 @@ def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True)
     df = combine.get_trials_dataframe(startf_name='frame0', endf_name='endf')
     df = df.sort('frame0')
     check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf',
-                        ignore_repeated_trials=ignore_repeated_trials)
+                        ignore_repeated_trials=ignore_repeated_trials,
+                        hole_tolerance_s=hole_tolerance_s)
 
 
-def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf', ignore_repeated_trials=True):
+def check_trials_health(df,
+                        dt=0.01,
+                        min_length_f=100,
+                        start='startf', end='endf',
+                        ignore_repeated_trials=True,
+                        hole_tolerance_s=0):
 
     if ignore_repeated_trials:
         df = df.drop_duplicates(subset=['uuid', 'oid', start])
@@ -214,7 +220,7 @@ def check_trials_health(df, dt=0.01, min_length_f=100, start='startf', end='endf
             # http://stackoverflow.com/questions/14920903/time-difference-in-seconds-from-numpy-timedelta64
             # needs numpy >= 1.7
             seconds = observations_distances / np.timedelta64(1, 's')
-            return seconds != dt  # maybe here we should add tolerance
+            return np.abs(seconds - dt) > hole_tolerance_s
         return observations_distances != 1
 
     def has_holes(df, dt):
@@ -2183,8 +2189,19 @@ class CombineH5WithCSV(_Combine):
         args = vars(args)  # never remember how to use NameSpace
         if not args.get('nocheck', False):
             self._warn('Checking combine health...')
-            check_combine_health(self, min_length_f=args.get('lenfilt', None))
+            # When we request a time index but not resampling (i.e. when index is 'time'),
+            # the separation of the observations might not be completelly regular.
+            # We account for this special case by adding a tolerance on observation spaces
+            # much smaller than dt. Maybe we could:
+            #  - also add a warning that the index is not completelly regular
+            #  - or instead resample to dt when resamplespec (see above) is None
+            hole_tolerance_s = 0 if self._index != 'time' else self.dt * 0.001
+            check_combine_health(self,
+                                 min_length_f=args.get('lenfilt', None),
+                                 hole_tolerance_s=hole_tolerance_s)
             self._warn('Combine seems healthy...')
+            if hole_tolerance_s != 0:
+                self._warn('Note that because we did not resample, observations will not be perfectly spaced in time')
         else:
             self._warn('Combine health was not checked')
 
