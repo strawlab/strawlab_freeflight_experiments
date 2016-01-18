@@ -2193,8 +2193,15 @@ class CombineH5WithCSV(_Combine):
             # the separation of the observations might not be completelly regular.
             # We account for this special case by adding a tolerance on observation spaces
             # much smaller than dt. Maybe we could:
-            #  - also add a warning that the index is not completelly regular
-            #  - or instead resample to dt when resamplespec (see above) is None
+            #  1- also add a warning that the index is not completelly regular
+            #  2- or instead resample to dt when resamplespec (see above) is None.
+            # Option 2 would make behavior and expectations uniform
+            # regardless on whether we explicitly indicate the resampling spec.
+            # We would then have uniform spacing and therefore be able to retrieve
+            # perfectly dt from the series dataframes, eliminating this special case.
+            # To do so, just change above:
+            #     if resamplespec is None:
+            #         resamplespec = '%dL' % (self._dt * 1000)
             hole_tolerance_s = 0 if self._index != 'time' else self.dt * 0.001
             check_combine_health(self,
                                  min_length_f=args.get('lenfilt', None),
