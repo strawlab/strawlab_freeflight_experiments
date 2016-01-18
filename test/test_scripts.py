@@ -76,7 +76,7 @@ class TestScript(unittest.TestCase):
 
     def test_confinement_analysis(self):
         proc = subprocess.Popen(
-                "./confinement-analysis.py --uuid 3cdbff26c93211e2b3606c626d3a008a "\
+                "./confinement-analysis.py --uuid 8958df922b0311e587dc6c626d3a008a "\
                 "--no-cached --zfilt trim --rfilt trim --arena flycave --outdir %s" % self._tdir,
                 shell=True,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -84,34 +84,7 @@ class TestScript(unittest.TestCase):
                 env=self._env)
         stdout,stderr = proc.communicate()
         self.assertEqual(proc.returncode,0,stderr)
-        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "confinement-analysis.py","20130530_160318.traces.png")))
-        #
-        #         Exception: There are overlapping trials!
-        #     index                          pre_uuid  pre_oid  pre_frame0  pre_endf  \
-        # 0      42  3cdbff26c93211e2b3606c626d3a008a    10915     1000024   1000828
-        # 1     157  3cdbff26c93211e2b3606c626d3a008a    11270     1043593   1044430
-        # 2      72  3cdbff26c93211e2b3606c626d3a008a    27524     4855208   4856063
-        # 3      78  3cdbff26c93211e2b3606c626d3a008a    28226     5131749   5133150
-        # 4      83  3cdbff26c93211e2b3606c626d3a008a    29011     5371520   5372872
-        # 5      84  3cdbff26c93211e2b3606c626d3a008a    29011     5372022   5372872
-        # 6     216  3cdbff26c93211e2b3606c626d3a008a    31299     6003984   6005638
-        # 7     101  3cdbff26c93211e2b3606c626d3a008a    31705     6177407   6177970
-        # 8     224  3cdbff26c93211e2b3606c626d3a008a    31722     6192419   6193066
-        # 9     109  3cdbff26c93211e2b3606c626d3a008a    32261     6349298   6351173
-        # 10    110  3cdbff26c93211e2b3606c626d3a008a    32261     6350303   6351173
-        #
-        #     index                         post_uuid  post_oid  post_frame0  post_endf
-        # 0      43  3cdbff26c93211e2b3606c626d3a008a     10915      1000531    1000828
-        # 1     158  3cdbff26c93211e2b3606c626d3a008a     11270      1044093    1044430
-        # 2      73  3cdbff26c93211e2b3606c626d3a008a     27524      4855712    4856063
-        # 3      79  3cdbff26c93211e2b3606c626d3a008a     28226      5132253    5133150
-        # 4      84  3cdbff26c93211e2b3606c626d3a008a     29011      5372022    5372872
-        # 5      85  3cdbff26c93211e2b3606c626d3a008a     29011      5372524    5372872
-        # 6     217  3cdbff26c93211e2b3606c626d3a008a     31299      6004486    6005638
-        # 7     222  3cdbff26c93211e2b3606c626d3a008a     31705      6177605    6177970
-        # 8     225  3cdbff26c93211e2b3606c626d3a008a     31722      6192923    6193066
-        # 9     110  3cdbff26c93211e2b3606c626d3a008a     32261      6350303    6351173
-        # 10    111  3cdbff26c93211e2b3606c626d3a008a     32261      6350803    6351173
+        self.assertTrue(os.path.isfile(os.path.join(self._tdir, "confinement-analysis.py","20150715_170642.traces.png")))
 
     def test_perturbation_analysis(self):
         proc = subprocess.Popen(
