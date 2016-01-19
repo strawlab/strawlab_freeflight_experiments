@@ -210,7 +210,7 @@ def check_trials_health(df,
         raise Exception('There are overlapping trials!\n%s' % str(pd.concat(overlapping, ignore_index=True)))
 
     # Check that trial id is indeed unique
-    if not len(df.groupby(['uuid', 'oid', start])) == len(df):
+    if not len(df.drop_duplicates(['uuid', 'oid', start])) == len(df):
         raise Exception('There are duplicated (uuid, oid, %s) tuples!' % start)
 
     # Check that there are no holes in the dataframes
