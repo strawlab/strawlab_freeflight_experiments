@@ -14,18 +14,18 @@ import calendar
 import collections
 import copy
 import itertools
-from pandas.tseries.index import DatetimeIndex
 
 import tables
 import pandas as pd
+from pandas.tseries.index import DatetimeIndex
 import numpy as np
 import pytz
 import scipy.io
 import yaml
 
-import roslib
+from strawlab.constants import maybe_fake_ros, ensure_dir
 
-roslib.load_manifest('strawlab_freeflight_experiments')
+maybe_fake_ros('strawlab_freeflight_experiments')
 
 import autodata.files
 
@@ -34,8 +34,9 @@ import analysislib.args
 import analysislib.features as afeat
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
-from strawlab.constants import DATE_FMT, AUTO_DATA_MNT, find_experiment, uuids_from_flydra_h5, uuids_from_experiment_csv, \
-    set_permissions
+from strawlab.constants import (DATE_FMT, AUTO_DATA_MNT, find_experiment,
+                                uuids_from_flydra_h5, uuids_from_experiment_csv,
+                                set_permissions)
 
 from strawlab_freeflight_experiments.conditions import Condition, Conditions, ConditionCompat
 
@@ -68,61 +69,167 @@ def is_testing():
     """Returns True iff we detect we are testing.
     If this is the case, combine caches are never read.
     """
-    return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
+    return 'NOSETEST_FLAG' in os.environ or \
+           'nosetests' in sys.argv[0] or \
+           'py.test' in sys.argv[0] or \
+           'pytestrunner.py' in sys.argv[0]
 
 
-def check_combine_health(combine, min_length_f=100):
+def find_some_overlaps(expdf, start='start', end='end', as_tidy=False):
+    """
+    Checks that no unit overlaps any other unit in time.
+
+    N.B. This should probably be moved to our "intervals" lib.
+
+    Parameters
+    ----------
+    expdf : pandas DataFrame
+      Each row should correspond to a unit (e.g. an experiment).
+      The index should identify a unit.
+      It should contain at least two columns: start and end.
+
+    start : string, default 'frame0'
+      The column name where the start of each unit is stored.
+
+    end : string, default 'end'
+      The column name where the end of each unit is stored.
+
+    Returns
+    -------
+    A list of row tuples (index1, index2) indicating overlapping units.
+    (index1, index2) are the corresponding index values for the overlapping rows.
+    Albeit possibly non exhaustive, if there exist an overlap, this list is guaranteed to be non-empty.
+    Returns an empty list iff there are no two overlapping units.
+
+    Examples
+    --------
+    Here we find the two overlapping units
+    >>> df = pd.DataFrame([[0, 3], [1, 10], [9, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    [(0, 1), (1, 2)]
+
+    But the returned overlapping intervals are not exhaustive (note (0, 2) is missing from the result).
+    >>> df = pd.DataFrame([[0, 30], [5, 10], [10, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    [(0, 1)]
+
+    Intervals are assumed to be half-closed [start, end)
+    >>> df = pd.DataFrame([[0, 3], [5, 10], [10, 12]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    []
+
+    For empty dataframes, we return an empty list
+    >>> df = pd.DataFrame([], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    []
+
+    0-length intervals and ill-defined intervals trigger a ValueError
+    >>> df = pd.DataFrame([[0, 0], [0, 10]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    Traceback (most recent call last):
+     ...
+    ValueError: Intersections might be ill defined because there are empty intervals (start >= end)
+    >>> df = pd.DataFrame([[0, 0], [3, 2]], columns=['start', 'end'])
+    >>> find_some_overlaps(df, start='start', end='end')
+    Traceback (most recent call last):
+     ...
+    ValueError: Intersections might be ill defined because there are empty intervals (start >= end)
+    """
+    if (expdf[end] <= expdf[start]).any():
+        raise ValueError('Intersections might be ill defined because there are empty intervals (start >= end)')
+    try:
+        expdf = expdf.sort_values(by=[start, end])  # pandas >= 0.17
+    except AttributeError:
+        expdf = expdf.sort([start, end])  # deprecated
+    starts_before_previous_ends = expdf[start].shift(-1).iloc[:-1] < expdf[end].iloc[:-1]
+    if starts_before_previous_ends.any():
+        firsts = expdf.iloc[:-1][starts_before_previous_ends.values].index
+        overlaps = expdf.iloc[1:][starts_before_previous_ends.values].index
+        return list(zip(firsts, overlaps))
+    return []
+
+
+def overlaps2tidy(df, overlaps, columns=('uuid', 'oid', 'startf')):
+
+    def loc_and_select(rows, prefix='pre_'):
+        return df.loc[rows][list(columns)].rename(columns=lambda col: prefix + col).reset_index()
+
+    if len(overlaps) > 0:
+        overlaps = np.array(overlaps)
+        overlaps_pre = loc_and_select(overlaps[:, 0], prefix='pre_')
+        overlaps_post = loc_and_select(overlaps[:, 1], prefix='post_')
+        return pd.concat([overlaps_pre, overlaps_post], axis=1)
+
+    return None
+
+
+def check_combine_health(combine, min_length_f=100, ignore_repeated_trials=True, hole_tolerance_s=0):
     """Checks some invariants in combine.
 
     Each of these (should) have a "contract" class if flydata (or whatever we end up calling that package).
     """
-
-    results, dt = combine.get_results()
-
-    # Aggregate results in a handy dataframe
-    dfs_stuff = []
-    for cond, cond_dict in results.iteritems():
-        dfs = cond_dict['df']
-        sois = cond_dict['start_obj_ids']
-        uuids = cond_dict['uuids']
-        for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
-            dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), df))
-    df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid', 'frame0', 'time0', 'length_f', 'series'])
+    df = combine.get_trials_dataframe(startf_name='frame0', endf_name='endf')
     df = df.sort('frame0')
-    df['end'] = df['frame0'] + df['length_f']
+    check_trials_health(df, dt=combine.dt, min_length_f=min_length_f, start='frame0', end='endf',
+                        ignore_repeated_trials=ignore_repeated_trials,
+                        hole_tolerance_s=hole_tolerance_s)
 
-    # Check all trajectories are long enough
-    if min_length_f is not None:
-        if df['length_f'].min() < min_length_f:
-            raise Exception('There are too short trials')
+
+def check_trials_health(df,
+                        dt=0.01,
+                        min_length_f=100,
+                        start='startf', end='endf',
+                        ignore_repeated_trials=True,
+                        hole_tolerance_s=0):
+
+    if ignore_repeated_trials:
+        df = df.drop_duplicates(subset=['uuid', 'oid', start])
+
+    #
+    # See also flycave/scripts/filemaintenance/mainbrains.py for checks on similar issues
+    # (holes, jumps in time...) for mainbrain files.
+    #
+    # These are more composable and it would repay to bring together these two realisations
+    # of data contracts dynamic checks.
+    #
+
+    # Check all trajectories are long enough; we never allow 0-length trajectories
+    if min_length_f is None or min_length_f < 1:
+        min_length_f = 1
+    # noinspection PyUnresolvedReferences
+    if (df.length_f < min_length_f).any():
+        raise Exception('There are trials without observations')
 
     # Check there are not overlapping trajectories
-    overlapping = {}
+    overlapping = []
     for uuid, expdf in df.groupby('uuid'):
-        starts_before_ends = expdf['frame0'].shift(-1).iloc[:-1] < expdf['end'].iloc[:-1]
-        if starts_before_ends.any():
-            firsts = expdf.iloc[:-1][starts_before_ends.values].index
-            overlaps = expdf.iloc[1:][starts_before_ends.values].index
-            overlapping[uuid] = zip(firsts, overlaps)
+        overlaps = find_some_overlaps(expdf, start=start, end=end)
+        if len(overlaps) > 0:
+            overlapping.append(overlaps2tidy(expdf, overlaps, columns=['uuid', 'oid', start, end]))
     if len(overlapping) > 0:
-        report = ['%s: %r' % (uuid, overlaps) for uuid, overlaps in sorted(overlapping.items())]
-        raise Exception('There are overlapping trials!\n%s' % '\n'.join(report))
+        raise Exception('There are overlapping trials!\n%s' % str(pd.concat(overlapping, ignore_index=True)))
 
     # Check that trial id is indeed unique
-    if not len(df.groupby(['uuid', 'oid', 'frame0'])) == len(df):
-        raise Exception('There are duplicated (uuid, oid, frame0) tuples!')
+    if not len(df.drop_duplicates(['uuid', 'oid', start])) == len(df):
+        raise Exception('There are duplicated (uuid, oid, %s) tuples!' % start)
 
     # Check that there are no holes in the dataframes
-    def has_holes(df, dt):
+    def find_holes(df, dt):
         observations_distances = df.index.values[1:] - df.index.values[0:-1]
         if isinstance(df.index, DatetimeIndex):
-            return (observations_distances != dt).any()
-        return (observations_distances != 1).any()
+            # http://stackoverflow.com/questions/14920903/time-difference-in-seconds-from-numpy-timedelta64
+            # needs numpy >= 1.7
+            seconds = observations_distances / np.timedelta64(1, 's')
+            return np.abs(seconds - dt) > hole_tolerance_s
+        return observations_distances != 1
+
+    def has_holes(df, dt):
+        return find_holes(df, dt).any()
 
     with_holes = df[df['series'].apply(partial(has_holes, dt=dt))]
     if len(with_holes) > 0:
         raise Exception('There are trajectories with holes: \n%s' %
-                        with_holes[['uuid', 'oid', 'frame0']].to_string())
+                        with_holes[['uuid', 'oid', start]].to_string())
 
     # Check no missings in x, y, z
     def has_missings(df, cols=('x', 'y', 'z')):
@@ -130,7 +237,8 @@ def check_combine_health(combine, min_length_f=100):
     with_missing = df[df['series'].apply(has_missings)]
     if len(with_missing) > 0:
         raise Exception('There are trajectories with unexpected missing values: \n%s' %
-                        with_missing[['uuid', 'oid', 'frame0']].to_string())
+                        with_missing[['uuid', 'oid', start]].to_string())
+
 
 def load_conditions(uuid):
     """
@@ -203,7 +311,7 @@ class _Combine(object):
         self._condition_names = {}
         self._metadata = []
         self._condition_switches = {}  # {uuid: df['condition', 't_sec', 't_nsec']}; useful esp. when randomising
-        self._configdict = {'v': 18,  # bump this version when you change delicate combine machinery
+        self._configdict = {'v': 19,  # bump this version when you change delicate combine machinery
                             'index': self._index
         }
 
@@ -229,9 +337,10 @@ class _Combine(object):
         return self.features.get_columns_added()
 
     def set_index(self, index):
-        VALID_INDEXES = ('framenumber','none')
+        VALID_INDEXES = ('framenumber', 'none')
         if (index not in VALID_INDEXES) and (not index.startswith('time')):
-            raise ValueError('index must be one of %s,time+NN (where NN is a pandas resample specifier)' % ', '.join(VALID_INDEXES))
+            raise ValueError('index must be one of %s, time+NN (where NN is a pandas resample specifier)' %
+                             ', '.join(VALID_INDEXES))
         self._index = index
         self._configdict['index'] = self._index
 
@@ -248,18 +357,23 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
+        """Returns a two tuple (pkl, whatid).
+          - pkl is the cached pkl path in the central data repository.
+          - whatid is the configuration string identifying this combine object.
+        """
         whatid = self.what().id()
         whatid_hash = hashlib.sha224(whatid).hexdigest()
         return os.path.join(AUTO_DATA_MNT, 'cached', 'combine', whatid_hash[:2], whatid_hash + '.pkl'), whatid
 
-    def get_cache_name(self):
+    def get_cache_pkl_path(self):
+        """Returns the path that would correspond to a pickle caching this combine object in the central repository."""
         return self._get_cache_name_and_config_string()[0]
 
-    def _get_cache_file(self):
+    def _read_cache_file(self):
         if is_testing():
             return None
 
-        pkl = self.get_cache_name()
+        pkl = self.get_cache_pkl_path()
         if os.path.exists(pkl):
             self._debug("IO:     reading %s" % pkl)
             with open(pkl, "rb") as f:
@@ -338,15 +452,59 @@ class _Combine(object):
             "csv_file": self.csv_file if hasattr(self, 'csv_file') else None  # do we use CombineH5 for something?
         }
 
-    def save_cache_file(self):
-        pkl, whatid = self._get_cache_name_and_config_string()
+    def is_populated(self):
+        return len(self._results) > 0
+
+    def save_cache(self, pkl=None):
+        central_pkl, whatid = self._get_cache_name_and_config_string()
+        pkl = central_pkl if pkl is None else pkl
         # Save the pickle
-        with open(pkl,"w+b") as f:
+        with open(pkl, "w+b") as f:
             self._debug("IO:     writing %s" % pkl)
             cPickle.dump(self.get_data_dictionary(), f, protocol=pickle.HIGHEST_PROTOCOL)
         # Save the id
-        with open(pkl.replace('.pkl','.txt'),"w") as f:
+        with open(os.path.splitext(pkl)[0] + '.txt', "w") as f:
             f.write(whatid)
+
+    def symlink_central_cache_to(self, to_dir, prefix='data', overwrite=False):
+        """Symlinks the central cache for this combine object into a directory.
+
+        If the central cache does not exist, saves it.
+        Note that at the moment this is brittle and would lead to "empty" cache files
+        if we call this before populating the Combine object with data. So use this
+        function with caution.
+
+        Parameters
+        ----------
+        to_dir : string
+          The directory where the cache files will be symlinked
+
+        prefix : string, default 'data'
+          The name prefix for the symlink files
+
+        overwrite : boolean, default False
+          Existing targets will be overwritten only if this is True
+          Note that the cache can still be recreated even if the targets
+          already exist but the cache have been purged.
+        """
+        # Create cache if needed
+        central_cache_pkl = self.get_cache_pkl_path()
+        central_cache_txt = os.path.splitext(central_cache_pkl)[0] + '.txt'
+        if not os.path.isfile(central_cache_pkl) or not os.path.isfile(central_cache_txt):
+            if not self.is_populated():
+                raise Exception('Cannot symlink uncached, unpopulated combine')
+            self.save_cache(pkl=None)
+        # Symlink
+        ensure_dir(to_dir)
+        dest_pkl = os.path.join(to_dir, prefix + '.pkl')
+        dest_txt = os.path.join(to_dir, prefix + '.txt')
+        for path in (dest_pkl, dest_txt):
+            if os.path.exists(path):
+                if not overwrite:
+                    raise IOError('The file %s already exists and overwrite is False' % path)
+                os.unlink(path)
+        os.symlink(central_cache_pkl, dest_pkl)
+        os.symlink(central_cache_txt, dest_txt)
 
     def _get_trajectories(self, h5):
         trajectories = h5.root.trajectories
@@ -654,12 +812,12 @@ class _Combine(object):
 
         raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
-    def get_results_dataframe(self, cols, fill=True, extra_col_cb=None):
+    def get_observations_dataframe(self, cols, fill=True, extra_col_cb=None):
         """
         Return a single dataframe containing the supplied columns from 
         all trials.
 
-        This is a long-form dataframe with the additional colums
+        This is a long-form, one observation per row, dataframe with the additional colums
             ['condition','condition_name','obj_id','uuid','framenumber0']
 
         To extract trials one can do something like
@@ -719,6 +877,77 @@ class _Combine(object):
                     extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
 
         return pd.DataFrame(data)
+
+    def get_trials_dataframe(self,
+                             add_dt=False,
+                             oid_name='oid',
+                             startf_name='startf',
+                             endf_name='endf',
+                             startt_name='startt'):
+        """
+        Aggregate the results to a trial-level (one trial per row) tidy dataframe.
+
+        The resulting dataframe will have the following columns:
+          - uuid: the experiment id
+          - oid: the object_id
+          - startf: the starting frame of the trial
+          - endf (optional): the end frame (ala python, endf is not part of the trial)
+          - length_f: the length of the trial, in number of frames
+          - startt: the UTC unix time stamp for when the trial started
+          - condition: the condition spec string (like 'gray.png/infinity07.svg/0.3/-10.0/0.1/0.18/')
+          - dt (optional): the sampling rate for the experiment(s); a constant column
+          - series: a pandas dataframe with the time series of each experiment
+                    note that at the moment this is the dataframe as in the combine objects, so beware of side effects
+                    note that at the moment column selection needs to be done after this function returns
+
+        Parameters
+        ----------
+        add_dt : boolean, default False
+          If True, a constant column with the corresponding sample rate is added to the dataframe.
+
+        oid_name : string, default 'oid'
+          The name given to the object id column. Other names used are 'obj_id' and 'lock_object'
+
+        startf_name : string, default 'startf'
+          The name given to the start frame column. Other names used are 'frame0' and 'framenumber0'
+
+        endf_name : string, default 'endf'
+          The name given to the end frame column. If None, no end frame column will be added to the dataframe.
+          This is equivalent to startf + length_f.
+
+        startt_name : string, default 'startt'
+          The name given to the start time column.
+
+        See Also
+        --------
+        `analysislib.combine#CombineH5WithCSV.get_observations_dataframe`
+        `flydata.strawlab.conversions#observationsdf2trialsdf`
+        `flydata.strawlab.conversions#trialsdf2observationsdf`
+        """
+        # See also flydata conversions
+        # Should allow column selection in time series dataframes
+        # Should allow to copy the dataframes and do by default
+        # Like other new things, this needs proper tests
+
+        results, dt = self.get_results()
+
+        dfs_stuff = []
+        for cond, cond_dict in results.items():
+            dfs = cond_dict['df']
+            sois = cond_dict['start_obj_ids']
+            uuids = cond_dict['uuids']
+            for uuid, (x0, y0, obj_id, framenumber0, time0), df in zip(uuids, sois, dfs):
+                dfs_stuff.append((uuid, obj_id, framenumber0, time0, len(df), cond, df))
+        df = pd.DataFrame(dfs_stuff, columns=['uuid', 'oid',
+                                              startf_name, startt_name, 'length_f', 'condition', 'series'])
+        if endf_name is not None:
+            df[endf_name] = df[startf_name] + df['length_f']  # half-open interval
+        if add_dt:
+            df['dt'] = dt  # no support for multiple dt in combine ATM
+
+        columns_order = ['uuid', oid_name, startf_name, endf_name, 'length_f', startt_name, 'condition', 'series']
+
+        return df[[col for col in columns_order if col in df.columns]]
 
     def get_obj_ids_sorted_by_length(self):
         """
@@ -1233,6 +1462,15 @@ class CombineH5WithCSV(_Combine):
 
         return args
 
+    def populate_from_dictionary(self, d):
+        self._results = d['results']
+        self._dt = d['dt']
+        self._skipped = d['skipped']
+        self.csv_file = d['csv_file']   # for plot names
+        self._conditions = d['conditions']
+        self._condition_names = d['condition_names']
+        self._metadata = d['metadata']
+
     def add_from_args(self, args, csv_suffix=None):
         """Add possibly multiple csv and h5 files based on the command line
         arguments given
@@ -1247,23 +1485,16 @@ class CombineH5WithCSV(_Combine):
         if args.cached:
 
             try:
-                d = self._get_cache_file()
+                cached_dict = self._read_cache_file()
             except CacheError:
-                d = None
+                cached_dict = None
                 cache_error = True
                 
-            if d is not None:
-                self._results = d['results']
-                self._dt = d['dt']
-                self._skipped = d['skipped']
-                self.csv_file = d['csv_file']   #for plot names
-                self._conditions = d['conditions']
-                self._condition_names = d['condition_names']
-                self._metadata = d['metadata']
-
-                uuids = set(itertools.chain.from_iterable(self._results[cond]['uuids'] for cond in self._results))
-                self._update_plot_dir(args,None,uuids)
-
+            if cached_dict is not None:
+                self.populate_from_dictionary(cached_dict)
+                uuids = set(itertools.chain.from_iterable(self._results[cond]['uuids']
+                                                          for cond in self._results))
+                self._update_plot_dir(args, None, uuids)
                 return
 
         if not csv_suffix:
@@ -1297,11 +1528,11 @@ class CombineH5WithCSV(_Combine):
             uuid = self.add_csv_and_h5_file(csv_file, h5_file, args)
             self._update_plot_dir(args,uuid)
 
-        if cache_error or (not os.path.isfile(self.get_cache_name())):
+        if cache_error or (not os.path.isfile(self.get_cache_pkl_path())):
             if args.cached:
-                self.save_cache_file()
+                self.save_cache()
         elif args.recache:
-            self.save_cache_file()
+            self.save_cache()
 
     def get_spanned_results(self):
         spanned = {}
@@ -1345,30 +1576,27 @@ class CombineH5WithCSV(_Combine):
 
         return uuid
 
-    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
-        """Add a single csv and h5 file"""
+    def _read_csv(self, csv_fname):
+        """
+        Reads the csv file as a dataframe.
+        If memory ever is a problem, look here (and just read incrementally).
+        """
 
-        # Update self.csv_file for every csv file, even if we contain
-        # data from many. This for historical reasons as the csv file is used
-        # as the basename for generated plots, so saving a few test
-        # analyses with --outdir /tmp/ gives distinct named plots
-        self.csv_file = csv_fname
-        self.h5_file = h5_file
+        # N.B. we only need self for emitting log messages
 
         self._debug("IO:     reading %s" % csv_fname)
 
-        # open the csv file as a dataframe (if memory ever is a problem, look here)
         try:
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
+            csv = pd.read_csv(csv_fname, na_values=('None',),
                               error_bad_lines=False,
                               dtype={'framenumber': int,
                                      'condition': str,
                                      'exp_uuid': str,
                                      'flydra_data_file': str})
-        except:
-            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % self.csv_file)
+        except:  # Fixme: narrow down except
+            self._warn("ERROR: possibly corrupt csv. Re-parsing %s" % csv_fname)
             # protect against rubbish in the framenumber column
-            csv = pd.read_csv(self.csv_file, na_values=('None',),
+            csv = pd.read_csv(csv_fname, na_values=('None',),
                               error_bad_lines=False,
                               low_memory=False,
                               dtype={'framenumber': float,
@@ -1377,11 +1605,9 @@ class CombineH5WithCSV(_Combine):
                                      'flydra_data_file': str})
             csv = csv.dropna(subset=['framenumber'])
             csv['framenumber'] = csv['framenumber'].astype(int)
+        return csv
 
-        # infer uuid
-        uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
-
-        # try and open the experiment and condition metadata files
+    def read_conditions(self, csv_fname):
         this_exp_conditions = {}
         path, fname = os.path.split(csv_fname)
         try:
@@ -1393,20 +1619,22 @@ class CombineH5WithCSV(_Combine):
                     del this_exp_conditions['uuid']
                 except KeyError:
                     pass
-        except:
+        except:  # FIXME
             pass
+        return this_exp_conditions
 
+    def read_metadata(self, uuid, csv_fname):
+        this_exp_conditions = self.read_conditions(csv_fname)
         this_exp_metadata = {}
         path, fname = os.path.split(csv_fname)
         try:
             # get it from the database, if it fails, try from the yaml
-            # TODO: get this refactored-out to a ExperimentMetadata class
             fn = os.path.join(path, fname.split('.')[0] + '.experiment.yaml')
             try:
                 self._debug("IO:     reading from database")
                 _, arena, this_exp_metadata = find_experiment(uuid)
                 this_exp_metadata['arena'] = arena
-                self._metadata.append( this_exp_metadata )
+                self._metadata.append(this_exp_metadata)  # FIXME: we should restrict combine to just one exp at a time
                 # try to update the yaml
                 # (we need to tell to people these yaml are read-only, subject to change for them)
                 try:
@@ -1417,33 +1645,34 @@ class CombineH5WithCSV(_Combine):
                     with open(fn, 'w') as f:
                         yaml.safe_dump(this_exp_metadata, f, default_flow_style=False)
                         self._debug("IO:     wrote %s" % fn)
-                except Exception, e:
-                    self._debug("IO:     ERROR writing %s\n%s" % (fn,e))
-            except Exception, e:
+                except Exception as e:
+                    self._debug("IO:     ERROR writing %s\n%s" % (fn, e))
+            except Exception as e:
                 self._debug("IO:     ERROR reading from database\n%s" % e)
                 with open(fn) as f:
                     self._debug("IO:     reading %s" % fn)
                     self._metadata.append(yaml.safe_load(f))
-        except Exception, e:
+        except Exception as e:
             self._debug("IO:     ERROR reading metadata\n%s" % e)
 
         if this_exp_metadata is None:
             this_exp_metadata = {}
-        this_exp_metadata['csv_file'] = csv_fname
-        this_exp_metadata['h5_file'] = h5_file
+
+        this_exp_metadata['csv_file'] = self.csv_file  # FIXME: this will get us into troubles, not needed
+        this_exp_metadata['h5_file'] = self.h5_file  # FIXME: this will get us into troubles, not needed
         this_exp_metadata['conditions'] = this_exp_conditions
 
-        fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
-        if fix.active:
-            self._debug("FIX:    fixing data %s" % fix)
+        return this_exp_conditions, this_exp_metadata
 
-        # open h5 file (TODO: in a with statement, indent all under this)
+    def _read_h5(self, h5_file, reindex):
+        # open h5 file
         self._debug("IO:     reading %s" % h5_file)
-        h5 = tables.openFile(h5_file, mode='r+' if args.reindex else 'r')
+        h5 = tables.openFile(h5_file, mode='r+' if reindex else 'r')
         trajectories = self._get_trajectories(h5)
-        dt = 1.0/trajectories.attrs['frames_per_second']
+        dt = 1.0 / trajectories.attrs['frames_per_second']
         tzname = h5.root.trajectory_start_times.attrs['timezone']
 
+        # workaround old pytables not able to read unicode
         try:
             pytz.timezone(tzname)
         except UnicodeDecodeError:
@@ -1452,22 +1681,66 @@ class CombineH5WithCSV(_Combine):
 
         if self._dt is None:
             self._dt = dt
-            self._lenfilt = args.lenfilt
             self._tzname = tzname
         else:
             assert dt == self._dt
             assert tzname == self._tzname
 
-        # minimum length of 2 to prevent later errors calculating derivitives
+        return h5, trajectories
+
+    def add_csv_and_h5_file(self, csv_fname, h5_file, args):
+        """Add a single csv and h5 file"""
+
+        # Update self.csv_file for every csv file, even if we contain
+        # data from many. This for historical reasons as the csv file is used
+        # as the basename for generated plots, so saving a few test
+        # analyses with --outdir /tmp/ gives distinct named plots
+        self.csv_file = csv_fname
+        self.h5_file = h5_file
+
+        # Read full csv into memory
+        csv = self._read_csv(csv_fname)
+
+        # infer uuid
+        uuid = self.infer_uuid(args.uuid, csv, csv_fname, h5_file)
+
+        # read conditions and experimental metadata
+        this_exp_conditions, this_exp_metadata = self.read_metadata(uuid, csv_fname)
+
+        # infer arena
+        arena = analysislib.args.get_arena_from_args(args)
+
+        # find single applicable data fixer
+        fix = analysislib.fixes.load_csv_fixups(**this_exp_metadata)
+        if fix.active:
+            self._debug("FIX:    fixing data %s" % fix)
+
+        # open simple-flydra h5 file (for sanity checks and dt/tz population)
+        h5, trajectories = self._read_h5(h5_file, args.reindex)
+
+        # setup lenfilt
+        if self._lenfilt is None:
+            self._lenfilt = args.lenfilt
+        else:
+            assert self._lenfilt == args.lenfilt  # FIXME: this might not be correct under certain lifecycles
+
+        # frames start offset
+        frames_start_offset = int(args.trajectory_start_offset / self._dt)
+
+        # the csv may be written at a faster rate than the framerate,
+        # causing there to be multiple rows with the same framenumber.
+        # find the last index for all unique framenumbers
+        csv = csv.drop_duplicates(cols=('framenumber',), take_last=True)
+
+        # minimum length of 2 to prevent later errors calculating derivatives
         dur_samples = max(2, self.min_num_frames)
 
+        # aliases
         results = self._results
         skipped = self._skipped
 
-        arena = analysislib.args.get_arena_from_args(args)
-
-        frames_start_offset = int(args.trajectory_start_offset / self._dt)
-
+        #
+        # split trials
         #
         # The CSV (output from the controller) indicates how to segment trials, although not
         # always in an unambiguous way. We should force stimuli writers to do the right thing,
@@ -1622,7 +1895,7 @@ class CombineH5WithCSV(_Combine):
                 try:
                     condition_name = csv_df['condition_name'].iloc[0]
                 except:
-                    #old data with no condition name
+                    # old data with no condition name
                     pass
 
             original_condition_name = condition_name
@@ -1634,7 +1907,8 @@ class CombineH5WithCSV(_Combine):
                 self._condition_names[cond] = condition_name
 
             if (condition_name is not None) and (original_condition_name != condition_name):
-                self._debug_once("FIX:    #%5d: condition name %s -> %s" % (oid, original_condition_name, condition_name))
+                self._debug_once("FIX:    #%5d: condition name %s -> %s" %
+                                 (oid, original_condition_name, condition_name))
                 csv_df = csv_df.copy()  # use copy and not view
                 csv_df['condition_name'].replace(original_condition_name, condition_name, inplace=True)
 
@@ -1645,10 +1919,7 @@ class CombineH5WithCSV(_Combine):
 
             r = results[cond]
 
-            # the csv may be written at a faster rate than the framerate,
-            # causing there to be multiple rows with the same framenumber.
-            # find the last index for all unique framenumbers for this trial
-            csv_df = csv_df.drop_duplicates(cols=('framenumber',), take_last=True)
+            # framenumbers from the CSV
             trial_framenumbers = csv_df['framenumber'].values
 
             # there is sometimes some erronous entries in the csv due to some race
@@ -1683,7 +1954,7 @@ class CombineH5WithCSV(_Combine):
                     (oid, start_frame, trial_framenumbers[-1])
 
             if fix.active and (fix.identifier == 'OLD_CONFINEMENT_CSVS_ARE_BROKEN'):
-                #sorry everyone
+                # sorry everyone
                 query = "(obj_id == %d) & (framenumber >= %d)" % (oid, start_frame)
                 self._warn_once("WARN: THIS DATA IS BROKEN IF OBJ_ID SPANS CONDITIONS")
 
@@ -1694,20 +1965,39 @@ class CombineH5WithCSV(_Combine):
                 continue
             validframenumber = valid['framenumber']
 
-            n_samples = len(validframenumber)
+            n_samples_from_flydra = len(validframenumber)
 
-            #check if the query returned all the data it should have
-            if (n_samples < dur_samples):
-                #but this happens quite often (due to estimation of positions) so
-                #only print the error when the missing data is large enough for us to
-                #skip the trial
-                if ((trial_framenumbers[-1] - start_frame) > dur_samples):
-                    self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" % (oid, trial_framenumbers[-1]-start_frame, query))
+            #
+            # A combine data contract is that returned time series do not have holes.
+            #
+            # This makes combine skip trials for which data coming from flydra has
+            # holes, which in turn would result in a time series dataframe with holes.
+            # An example:
+            #   uuid='15268c1c256a11e5abf760a44c2451e5', obj_id=501804,
+            #        there is a large hole around frame 132149 in the simple.flydra.h5 file
+            # TODO: add this unit test (extract that trial, make it test data, check it gets skipped)
+            #
+            # Note that this lets pass any data from flydra that misses frames only at
+            # the beginning or at the end. These are handled later on.
+            #
+            framenumber_diff = np.diff(validframenumber)
+            if (framenumber_diff != 1).any():
+                self._debug('SKIP:   #%5d: flydra data has holes (start_frame=%d)' %
+                            (oid, start_frame))
+                self._skipped[cond] += 1
+                continue
 
-            if n_samples < dur_samples:
-                #we could have made this check before the query, but sometimes
-                #we get less data that we request from the h5 file
-                self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples))
+            # check if the query returned all the data it should have
+            if n_samples_from_flydra < dur_samples:
+                # but this happens quite often (due to estimation of positions) so
+                # only print the error when the missing data is large enough for us to
+                # skip the trial
+                if (trial_framenumbers[-1] - start_frame) > dur_samples:
+                    self._warn("WARN:   obj_id %d missing %d frames from h5 file\n        %s" %
+                               (oid, trial_framenumbers[-1] - start_frame, query))
+                # we could have made this check before the query, but sometimes
+                # we get less data that we request from the h5 file
+                self._debug('SKIP:   #%5d: %d valid samples' % (oid, n_samples_from_flydra))
                 self._skipped[cond] += 1
                 continue
 
@@ -1727,25 +2017,25 @@ class CombineH5WithCSV(_Combine):
             h5_df = pd.concat(flydra_series, axis=1)
             n_samples_before = len(h5_df)
 
-            #compute those features we can (such as those that only need x,y,z)
+            # compute those features we can (such as those that only need x,y,z)
             try:
-                computed,not_computed,missing = self.features.process(h5_df, self._dt)
-            except Exception, e:
+                self.features.process(h5_df, self._dt)
+            except Exception as e:
                 self._skipped[cond] += 1
-                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples_from_flydra, e))
                 continue
 
             # apply filters
-            filter_cond, _ = arena.apply_filters(args, h5_df, dt)
+            filter_cond, _ = arena.apply_filters(args, h5_df, self._dt)
             h5_df = h5_df.iloc[filter_cond]
 
-            n_samples = len(h5_df)
-            if n_samples < dur_samples:
-                self._debug('FILT:   #%5d: %d/%d valid samples' % (oid, n_samples, len(valid)))
+            n_samples_from_flydra = len(h5_df)
+            if n_samples_from_flydra < dur_samples:
+                self._debug('FILT:   #%5d: %d/%d valid samples' % (oid, n_samples_from_flydra, len(valid)))
                 self._skipped[cond] += 1
                 continue
-            if n_samples != n_samples_before:
-                self._debug('TRIM:   #%5d: removed %d frames' % (oid, n_samples_before - n_samples))
+            if n_samples_from_flydra != n_samples_before:
+                self._debug('TRIM:   #%5d: removed %d frames' % (oid, n_samples_before - n_samples_from_flydra))
 
             traj_start_frame = h5_df['framenumber'].values[0]
             traj_stop_frame = h5_df['framenumber'].values[-1]
@@ -1757,13 +2047,13 @@ class CombineH5WithCSV(_Combine):
 
             if h5_df is not None:
 
-                n_samples = len(h5_df)
-                span_details = (cond, n_samples)
+                n_samples_from_flydra = len(h5_df)
+                span_details = (cond, n_samples_from_flydra)
                 self._results_by_condition.setdefault(oid, []).append(span_details)
 
                 self._debug('SAVE:   #%5d: %d samples (%d -> %d) (%s)' %
                             (oid,
-                             n_samples,
+                             n_samples_from_flydra,
                              traj_start_frame, traj_stop_frame,
                              self.get_condition_name(cond)))
 
@@ -1792,7 +2082,7 @@ class CombineH5WithCSV(_Combine):
                         self._warn_once('ERROR: renaming duplicated colum name "%s" to "_%s"' % (c, c))
                         cv = csv_df[c].values
                         del csv_df[c]
-                        csv_df['_'+c] = cv
+                        csv_df['_' + c] = cv
 
                     df = pd.concat((csv_df.set_index('framenumber'), h5_df),
                                    axis=1, join='outer')
@@ -1874,7 +2164,7 @@ class CombineH5WithCSV(_Combine):
                             # modify in place
                             try:
                                 df.loc[_ix, col] = fixed[col]
-                            except IndexError, e:
+                            except IndexError as e:
                                 self._warn("ERROR: could not apply fixup to obj_id %s (column '%s'): %s" %
                                            (oid, col, str(e)))
                 if fix.should_fix_dataframe:
@@ -1900,26 +2190,27 @@ class CombineH5WithCSV(_Combine):
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
 
-                #compute the remaining features (which might have come from the CSV)
+                # compute the remaining features (which might have come from the CSV)
                 try:
                     dt = self._get_df_sample_interval(df) or self._dt
 
-                    opts = {'uuid':uuid,
-                            'obj_id':oid,
-                            'start_framenumber':start_framenumber,
-                            'stop_framenumber':stop_framenumber,
-                            'start_time':start_time,
-                            'stop_time':start_time + ((stop_framenumber-start_framenumber)*dt),
-                            'condition':cond,
-                            'condition_object':self.get_condition_object(cond)}
+                    opts = {'uuid': uuid,
+                            'obj_id': oid,
+                            'start_framenumber': start_framenumber,
+                            'stop_framenumber': stop_framenumber,
+                            'start_time': start_time,
+                            'stop_time': start_time + ((stop_framenumber - start_framenumber) * dt),
+                            'condition': cond,
+                            'condition_object': self.get_condition_object(cond)}
 
-                    computed,not_computed,missing = self.features.process(df, dt, **opts)
+                    computed, not_computed, missing = self.features.process(df, dt, **opts)
                     if missing:
                         for m in missing:
                             self._warn_once("ERROR: column/feature '%s' not computed" % m)
-                except Exception, e:
+                except Exception as e:
                     self._skipped[cond] += 1
-                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" % (oid, n_samples, e))
+                    self._warn("ERROR: could not calc trajectory metrics for oid %s (%s long)\n\t%s" %
+                               (oid, n_samples_from_flydra, e))
                     continue
 
                 # provide a nanoseconds after the epoc column (use at your own risk(TM))
@@ -1935,6 +2226,32 @@ class CombineH5WithCSV(_Combine):
                 self._results[cond]['uuids'].append(uuid)
 
         h5.close()  # maybe this should go in a finally?
+
+        args = vars(args)  # never remember how to use NameSpace
+        if not args.get('nocheck', False):
+            self._warn('Checking combine health...')
+            # When we request a time index but not resampling (i.e. when index is 'time'),
+            # the separation of the observations might not be completelly regular.
+            # We account for this special case by adding a tolerance on observation spaces
+            # much smaller than dt. Maybe we could:
+            #  1- also add a warning that the index is not completelly regular
+            #  2- or instead resample to dt when resamplespec (see above) is None.
+            # Option 2 would make behavior and expectations uniform
+            # regardless on whether we explicitly indicate the resampling spec.
+            # We would then have uniform spacing and therefore be able to retrieve
+            # perfectly dt from the series dataframes, eliminating this special case.
+            # To do so, just change above:
+            #     if resamplespec is None:
+            #         resamplespec = '%dL' % (self._dt * 1000)
+            hole_tolerance_s = 0 if self._index != 'time' else self.dt * 0.001
+            check_combine_health(self,
+                                 min_length_f=args.get('lenfilt', None),
+                                 hole_tolerance_s=hole_tolerance_s)
+            self._warn('Combine seems healthy...')
+            if hole_tolerance_s != 0:
+                self._warn('Note that because we did not resample, observations will not be perfectly spaced in time')
+        else:
+            self._warn('Combine health was not checked')
 
         return uuid
 
@@ -2053,6 +2370,7 @@ the data types and values for all with full precision
 
 """
 
+
 def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True):
     dest = dest + '_' + safe_condition_string(index)
 
@@ -2063,20 +2381,20 @@ def write_result_dataframe(dest, df, index, to_df=True, to_csv=True, to_mat=True
         kwargs['index_label'] = 'time'
 
     if to_csv:
-        df.to_csv(dest+'.csv',**kwargs)
+        df.to_csv(dest + '.csv', **kwargs)
 
     if to_df:
-        df.to_pickle(dest+'.df')
+        df.to_pickle(dest + '.df')
 
     if to_mat:
         dict_df = df.to_dict('list')
         dict_df['index'] = df.index.values
-        scipy.io.savemat(dest+'.mat', dict_df, oned_as='column')
+        scipy.io.savemat(dest + '.mat', dict_df, oned_as='column')
 
     formats = ('csv' if to_csv else '',
                'df' if to_df else '',
                'mat' if to_mat else '')
 
-    return "%s.{%s}" % (dest, ','.join(filter(len,formats)))
+    return "%s.{%s}" % (dest, ','.join(filter(len, formats)))
 
 # TODO: whatid and other stuff should be saved to the cache

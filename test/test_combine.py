@@ -13,6 +13,10 @@ import analysislib.util as autil
 import autodata.files
 
 
+if not analysislib.combine.is_testing():
+    raise Exception('Combine tests must run under nose or with the environment var NOSETEST_FLAG=1')
+
+
 def _quiet(combine):
     combine.disable_debug()
 
@@ -183,9 +187,8 @@ class TestCombine(unittest.TestCase):
         combine.add_from_args(args)
 
         self.assertEqual(combine.get_num_conditions(), 3)
-        self.assertEqual(combine.get_total_trials(), 1375)
-        self.assertEqual(combine.get_total_analysed(), 165)
-
+        self.assertEqual(combine.get_total_trials(), 1011)
+        self.assertEqual(combine.get_total_analysed(), 164)
 
     def test_multi_csv_args(self):
         c1 = analysislib.combine.CombineCSV()

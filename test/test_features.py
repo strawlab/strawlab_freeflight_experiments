@@ -235,15 +235,15 @@ class TestSomeFeatures(unittest.TestCase):
             if name in ('reprojection_error_smoothed', 'reprojection_error','inverse_dynamics'):
                 # needs to load extra h5 data and uuid not known
                 continue
-            if name in('angle_to_post_deg',):
+            if name in('angle_to_post_deg', 'distance_to_post'):
                 # needs "condition_object" passed via the state parameter to process
                 continue
 
             m = afeat.MultiFeatureComputer(name)
             df = self._df.copy()
             computed, not_computed, missing = m.process(df, self._dt)
-            self.assertNotEqual(len(computed), 0)
-            self.assertTupleEqual(missing, ())  # ,
+            self.assertNotEqual(len(computed), 0, msg='feature %s could not be computed' % name)
+            self.assertTupleEqual(missing, ())
 
 if __name__=='__main__':
     unittest.main()
