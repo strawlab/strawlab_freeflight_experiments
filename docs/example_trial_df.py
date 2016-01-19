@@ -20,7 +20,7 @@ def get_combine_dataframe(uuids, csv_suffix, **filter_args):
 
     aargs.describe(c,args)
 
-    df = c.get_results_dataframe(cols=('radius','dtheta_deg','angle_to_post_at_origin_deg'))
+    df = c.get_observations_dataframe(cols=('radius', 'dtheta_deg', 'angle_to_post_at_origin_deg'))
 
     return df,c
 

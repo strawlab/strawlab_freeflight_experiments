@@ -812,12 +812,12 @@ class _Combine(object):
 
         raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
-    def get_results_dataframe(self, cols, fill=True, extra_col_cb=None):
+    def get_observations_dataframe(self, cols, fill=True, extra_col_cb=None):
         """
         Return a single dataframe containing the supplied columns from 
         all trials.
 
-        This is a long-form dataframe with the additional colums
+        This is a long-form, one observation per row, dataframe with the additional colums
             ['condition','condition_name','obj_id','uuid','framenumber0']
 
         To extract trials one can do something like
