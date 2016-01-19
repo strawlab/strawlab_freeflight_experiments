@@ -880,13 +880,54 @@ class _Combine(object):
 
     def get_trials_dataframe(self,
                              add_dt=False,
-                             startf_name='frame0',
+                             oid_name='oid',
+                             startf_name='startf',
                              endf_name='endf',
-                             startt_name='time0'):
+                             startt_name='startt'):
         """
         Aggregate the results to a trial-level (one trial per row) tidy dataframe.
+
+        The resulting dataframe will have the following columns:
+          - uuid: the experiment id
+          - oid: the object_id
+          - startf: the starting frame of the trial
+          - endf (optional): the end frame (ala python, endf is not part of the trial)
+          - length_f: the length of the trial, in number of frames
+          - startt: the UTC unix time stamp for when the trial started
+          - condition: the condition spec string (like 'gray.png/infinity07.svg/0.3/-10.0/0.1/0.18/')
+          - dt (optional): the sampling rate for the experiment(s); a constant column
+          - series: a pandas dataframe with the time series of each experiment
+                    note that at the moment this is the dataframe as in the combine objects, so beware of side effects
+                    note that at the moment column selection needs to be done after this function returns
+
+        Parameters
+        ----------
+        add_dt : boolean, default False
+          If True, a constant column with the corresponding sample rate is added to the dataframe.
+
+        oid_name : string, default 'oid'
+          The name given to the object id column. Other names used are 'obj_id' and 'lock_object'
+
+        startf_name : string, default 'startf'
+          The name given to the start frame column. Other names used are 'frame0' and 'framenumber0'
+
+        endf_name : string, default 'endf'
+          The name given to the end frame column. If None, no end frame column will be added to the dataframe.
+          This is equivalent to startf + length_f.
+
+        startt_name : string, default 'startt'
+          The name given to the start time column.
+
+        See Also
+        --------
+        `analysislib.combine#CombineH5WithCSV.get_observations_dataframe`
+        `flydata.strawlab.conversions#observationsdf2trialsdf`
+        `flydata.strawlab.conversions#trialsdf2observationsdf`
         """
         # See also flydata conversions
+        # Should allow column selection in time series dataframes
+        # Should allow to copy the dataframes and do by default
+        # Like other new things, this needs proper tests
 
         results, dt = self.get_results()
 
@@ -904,7 +945,7 @@ class _Combine(object):
         if add_dt:
             df['dt'] = dt  # no support for multiple dt in combine ATM
 
-        columns_order = ['uuid', 'oid', startf_name, endf_name, 'length_f', startt_name, 'condition', 'series']
+        columns_order = ['uuid', oid_name, startf_name, endf_name, 'length_f', startt_name, 'condition', 'series']
 
         return df[[col for col in columns_order if col in df.columns]]
 
