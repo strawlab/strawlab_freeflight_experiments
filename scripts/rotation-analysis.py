@@ -15,7 +15,7 @@ try:
     maybe_fake_ros(rospkg='strawlab_freeflight_analysis')
 except ImportError:
     import roslib
-    roslib.load_manifest('strawlab_freeflight_analysis')
+    roslib.load_manifest('strawlab_freeflight_experiments')
 
 import autodata.files
 import analysislib.filters
