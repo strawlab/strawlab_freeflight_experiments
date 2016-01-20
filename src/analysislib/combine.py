@@ -252,7 +252,7 @@ def load_conditions(uuid):
     this_exp_metadata = None
     try:
         metadata_fname = fm.get_file_model('experiment.yaml').fullpath
-        metadata_fname = os.path.abspath(metadata_fname)
+        metadata_fname = os.path.realpath(metadata_fname)
         with open(metadata_fname, 'r') as f:
             this_exp_metadata = yaml.safe_load(f)
     except autodata.files.FileModelException:
