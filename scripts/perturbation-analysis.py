@@ -2,21 +2,24 @@
 import re
 import os.path
 import sys
-import operator
 import numpy as np
 import pandas as pd
 
+# Avoid matplotlib crashes when sshing or in the cluster
 if not os.environ.get('DISPLAY'):
-    print "DISPLAY NOT SET: USING AGG BACKEND"
+    print('DISPLAY NOT SET: USING AGG BACKEND')
     import matplotlib
     matplotlib.use('agg')
 
-import matplotlib.pyplot as plt
+# Support ros for setting the PYTHONPATH
+try:
+    from strawlab.constants import maybe_fake_ros
+    maybe_fake_ros(rospkg='strawlab_freeflight_analysis')
+except ImportError:
+    import roslib
+    roslib.load_manifest('strawlab_freeflight_experiments')
+    maybe_fake_ros = None
 
-import roslib
-roslib.load_manifest('strawlab_freeflight_experiments')
-
-import autodata.files
 import analysislib.filters
 import analysislib.combine
 import analysislib.args
