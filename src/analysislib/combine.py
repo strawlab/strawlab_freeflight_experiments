@@ -1326,8 +1326,9 @@ class CombineCSV(_Combine):
             return True
 
     def _get_result(self, df):
+        # x0,y0,obj_id,framenumber0,time0
         ser = df.irow(0)
-        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time'],'',''
+        return ser['x'],ser['y'],ser['lock_object'],ser.name,ser['time']
 
     def get_one_result(self, obj_id, condition=None, framenumber0=None):
         df = self._df[self._df['lock_object'] == obj_id]
