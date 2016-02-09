@@ -71,7 +71,7 @@ if __name__=='__main__':
 
     combine = autil.get_combiner_for_args(args)
     if args.plot_saccades:
-        combine.add_feature(column_name='saccade')
+        combine.add_series(column_name='saccade', column_name='saccade')
     combine.add_from_args(args)
 
     fname = combine.fname

@@ -271,4 +271,4 @@ def describe(combine, args):
         print("%s\n    %r" % (k, v))
     if 'index' not in args:  # index was set programmatically and not reflected in args
         print("index\n    %r" % combine._index)
-    print("features\n    %s" % ','.join(combine.get_features()))
+    print("series\n    %s" % ','.join(combine.get_series()))

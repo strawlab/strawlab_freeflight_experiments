@@ -17,7 +17,7 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.fixes
-import analysislib.features
+import analysislib.series
 import analysislib.plots as aplt
 import analysislib.curvature as acurve
 import analysislib.util as autil
@@ -59,7 +59,7 @@ if __name__=='__main__':
     args = parser.parse_args()
     if args.help_features:
         print "Available features (may not include some already in the csv)"
-        for c in analysislib.features.get_all_columns(True):
+        for c in analysislib.series.get_all_columns(True):
             print "  * %s" % c
         parser.exit(0)
 
@@ -76,7 +76,7 @@ if __name__=='__main__':
     combine.set_index(args.index)
     for p in plot_axes:
         try:
-            combine.add_feature(column_name=p)
+            combine.add_series(column_name=p, column_name=p)
         except ValueError, e:
             print e.message + " ... assuming it is in the csv"
 

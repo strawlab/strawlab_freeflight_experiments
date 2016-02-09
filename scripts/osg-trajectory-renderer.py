@@ -19,7 +19,7 @@ import analysislib.filters
 import analysislib.combine
 import analysislib.args
 import analysislib.fixes
-import analysislib.features
+import analysislib.series
 import analysislib.plots as aplt
 import analysislib.curvature as acurve
 import analysislib.util as autil

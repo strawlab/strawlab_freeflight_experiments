@@ -5,7 +5,7 @@ import analysislib.util
 UUID = "17b2a814ee8b11e4b9316c626d3a008a"
 
 combine = analysislib.util.get_combiner_for_uuid(UUID)
-combine.add_feature(column_name='saccade')
+combine.add_series(column_name='saccade', column_name='saccade')
 combine.add_from_uuid(UUID)
 
 #get the results of one flight (by object id)

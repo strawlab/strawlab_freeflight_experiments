@@ -20,10 +20,10 @@ def _grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.izip_longest(fillvalue=fillvalue, *args)
 
-class FeatureError(Exception):
+class SeriesError(Exception):
     pass
 
-class MissingStateFeatureError(FeatureError):
+class MissingStateSeriesError(SeriesError):
     pass
 
 class Node:
@@ -53,9 +53,9 @@ def _all_subclasses(cls):
 
 class _DfDepAddMixin:
 
-    name = None     #name of feature (str)
+    name = None     #name of series (str)
     adds = None     #columns added to df (tuple) (if None, assume one col called 'name' is added)
-    depends = ()    #columns this feature depends on (tuple)
+    depends = ()    #columns this series depends on (tuple)
 
     @classmethod
     def get_depends(cls):
@@ -65,7 +65,8 @@ class _DfDepAddMixin:
     def get_adds(cls):
         return (cls.name,) if cls.adds is None else cls.adds
 
-class _Feature(object, _DfDepAddMixin):
+
+class _Series(object, _DfDepAddMixin):
 
     DEFAULT_OPTS = {}
     version = None
@@ -92,7 +93,7 @@ class _Feature(object, _DfDepAddMixin):
     def compute_from_df(self, **kwargs):
         raise NotImplementedError
 
-class _GradientFeature(_Feature):
+class _GradientSeries(_Series):
 
     def process(self, df, dt, **state):
         df[self.name] = self.compute_from_df(df,dt,col=self.get_depends()[0])
@@ -123,10 +124,10 @@ class RatioMeasurement(_Measurement):
 class RotationRateMeasurement(_Measurement):
     name = 'rotation_rate'
 
-class _MainbrainH5Feature(_Feature):
+class _MainbrainH5Series(_Series):
 
     def __init__(self, **kwargs):
-        _Feature.__init__(self, **kwargs)
+        _Series.__init__(self, **kwargs)
 
         #map of uuid:pytable
         self._stores = {}
@@ -153,9 +154,9 @@ class _MainbrainH5Feature(_Feature):
                 self._ML_estimates_2d_idxs[uuid] = h5.root.ML_estimates_2d_idxs
 
         except KeyError as ke:
-            raise MissingStateFeatureError('Missing option %s' % ke)
+            raise MissingStateSeriesError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
-            raise FeatureError('Missing file %s' % fe)
+            raise SeriesError('Missing file %s' % fe)
 
         ml_est = self._ML_estimates[uuid].readWhere("(obj_id == %d) & (frame >= %d) & (frame <= %d)" % (
                                                      oid, start_fn, stop_fn))
@@ -176,10 +177,10 @@ class _MainbrainH5Feature(_Feature):
             print "%d %d obs lum:%s area:%s area/lum:%s" % (frame, len(obs_lum), np.mean(obs_lum), np.mean(obs_area), np.mean(obs_area)/np.mean(obs_lum))
 
 
-class _ReproErrorsFeature(_Feature):
+class _ReproErrorsSeries(_Series):
 
     def __init__(self, **kwargs):
-        _Feature.__init__(self, **kwargs)
+        _Series.__init__(self, **kwargs)
 
         #map of uuid:pandas.HDFStore
         self._stores = {}
@@ -199,9 +200,9 @@ class _ReproErrorsFeature(_Feature):
                 self._stores[uuid] = pd.HDFStore(h5_file, 'r')
 
         except KeyError as ke:
-            raise MissingStateFeatureError('Missing option %s' % ke)
+            raise MissingStateSeriesError('Missing option %s' % ke)
         except autodata.files.NoFile as fe:
-            raise FeatureError('Missing file %s' % fe)
+            raise SeriesError('Missing file %s' % fe)
 
         clause = 'obj_id = %d & frame >= %d & frame <= %d' % (int(oid), int(start_fn), int(stop_fn))
         _df = self._stores[uuid].select('/reprojection', where=clause)
@@ -217,21 +218,21 @@ class _ReproErrorsFeature(_Feature):
         df[self.adds[0]] = pd.Series(dists,index=fns)
         df[self.adds[1]] = pd.Series(ncams,index=fns)
 
-class ReproErrorsSmoothedFeature(_ReproErrorsFeature):
+class ReproErrorsSmoothedSeries(_ReproErrorsSeries):
 
     name = 'reprojection_error_smoothed'
     adds = ('mean_reproj_error_smoothed_px', 'visible_in_cams_smoothed_n')
 
     _filename = "smoothed_repro_errors.h5"
 
-class ReproErrorsFeature(_ReproErrorsFeature):
+class ReproErrorsSeries(_ReproErrorsSeries):
 
     name = 'reprojection_error'
     adds = ('mean_reproj_error_mle_px', 'visible_in_cams_mle_n')
 
     _filename = "repro_errors.h5"
 
-class ErrorPositionStddev(_Feature):
+class ErrorPositionStddev(_Series):
     name = 'err_pos_stddev_m'
     depends = ()
 
@@ -247,33 +248,33 @@ class ErrorPositionStddev(_Feature):
             v = 0.0
         return v
 
-class VxFeature(_GradientFeature):
+class VxSeries(_GradientSeries):
     name = 'vx'
     depends = 'x',
-class VyFeature(_GradientFeature):
+class VySeries(_GradientSeries):
     name = 'vy'
     depends = 'y',
-class VzFeature(_GradientFeature):
+class VzSeries(_GradientSeries):
     name = 'vz'
     depends = 'z',
-class VelocityFeature(_Feature):
+class VelocitySeries(_Series):
     name = 'velocity'
     depends = ('vx','vy')
     @staticmethod
     def compute_from_df(df,dt):
         return np.sqrt( (df['vx'].values**2) + (df['vy'].values**2) )
 
-class AxFeature(_GradientFeature):
+class AxSeries(_GradientSeries):
     name = 'ax'
     depends = 'vx',
-class AyFeature(_GradientFeature):
+class AySeries(_GradientSeries):
     name = 'ay'
     depends = 'vy',
-class AzFeature(_GradientFeature):
+class AzSeries(_GradientSeries):
     name = 'az'
     depends = 'vz',
 
-class OriginPostAngleDegFeature(_Feature):
+class OriginPostAngleDegSeries(_Series):
     name = 'angle_to_post_at_origin_deg'
     depends = ('x','y','vx','vy')
 
@@ -291,7 +292,7 @@ class OriginPostAngleDegFeature(_Feature):
 
         return deg * -1
 
-class OriginPostAngleFeature(_Feature):
+class OriginPostAngleSeries(_Series):
     name = 'angle_to_post_at_origin'
     depends = 'angle_to_post_at_origin_deg',
 
@@ -299,7 +300,7 @@ class OriginPostAngleFeature(_Feature):
     def compute_from_df(df,dt):
         return np.deg2rad(df['angle_to_post_at_origin_deg'].values)
 
-class PostAngleDegFeature(_Feature):
+class PostAngleDegSeries(_Series):
     name = 'angle_to_post_deg'
     depends = ('x','y','vx','vy')
 
@@ -309,12 +310,12 @@ class PostAngleDegFeature(_Feature):
             cond_obj = state['condition_object']
             s = cond_obj['model_descriptor']
         except KeyError:
-            raise MissingStateFeatureError
+            raise MissingStateSeriesError
 
         x,y,z = map(float,s.split('|')[1:])
-        df[self.name] = OriginPostAngleDegFeature.compute_from_df(df,dt,postx=x,posty=y)
+        df[self.name] = OriginPostAngleDegSeries.compute_from_df(df, dt, postx=x, posty=y)
 
-class PostDistanceFeature(_Feature):
+class PostDistanceSeries(_Series):
     name = 'distance_to_post'
     depends = ('x','y')
 
@@ -324,12 +325,12 @@ class PostDistanceFeature(_Feature):
             cond_obj = state['condition_object']
             s = cond_obj['model_descriptor']
         except KeyError:
-            raise MissingStateFeatureError
+            raise MissingStateSeriesError
 
         x,y,z = map(float,s.split('|')[1:])
         df[self.name] = np.sqrt( ((x - df['x'].values)**2) + ((y - df['y'].values)**2) )
 
-class ThetaFeature(_Feature):
+class ThetaSeries(_Series):
     name = 'theta'
     depends = ('vx','vy')
 
@@ -337,11 +338,11 @@ class ThetaFeature(_Feature):
     def compute_from_df(df,dt):
         return np.unwrap(np.arctan2(df['vy'].values,df['vx'].values))
 
-class DThetaFeature(_GradientFeature):
+class DThetaSeries(_GradientSeries):
     name = 'dtheta'
     depends = 'theta',
 
-class DThetaDegFeature(_Feature):
+class DThetaDegSeries(_Series):
     name = 'dtheta_deg'
     depends = 'dtheta',
 
@@ -349,7 +350,7 @@ class DThetaDegFeature(_Feature):
     def compute_from_df(df,dt):
         return np.rad2deg(df['dtheta'].values)
 
-class DThetaDegShiftFeature(_Feature):
+class DThetaDegShiftSeries(_Series):
     name = 'dtheta_deg_shift'
     depends = 'dtheta_deg',
 
@@ -358,9 +359,9 @@ class DThetaDegShiftFeature(_Feature):
 
     @staticmethod
     def compute_from_df(df,dt):
-        return df['dtheta_deg'].shift(DThetaDegShiftFeature.SHIFT).values
+        return df['dtheta_deg'].shift(DThetaDegShiftSeries.SHIFT).values
 
-class RotationRateFlyRetinaFeature(_Feature):
+class RotationRateFlyRetinaSeries(_Series):
     name = 'rotation_rate_fly_retina'
     depends = ('dtheta','rotation_rate')
 
@@ -370,14 +371,14 @@ class RotationRateFlyRetinaFeature(_Feature):
     def compute_from_df(df,dt):
         return df['dtheta'].values - df['rotation_rate'].values
 
-class RadiusFeature(_Feature):
+class RadiusSeries(_Series):
     name = 'radius'
     depends = ('x','y')
     @staticmethod
     def compute_from_df(df,dt):
         return np.sqrt( (df['x'].values**2) + (df['y'].values**2) )
 
-class RCurveFeature(_Feature):
+class RCurveSeries(_Series):
     name = 'rcurve'
     depends = ('x','y')
 
@@ -387,7 +388,7 @@ class RCurveFeature(_Feature):
     def compute_from_df(df,dt,**kwargs):
         return calc_curvature(df, dt, **kwargs)
 
-class RCurveContFeature(_Feature):
+class RCurveContSeries(_Series):
     name = 'rcurve_cont'
     depends = ('x','y')
 
@@ -398,7 +399,7 @@ class RCurveContFeature(_Feature):
         return calc_curvature(df, dt, **kwargs)
 
 
-class RatioUnwrappedFeature(_Feature):
+class RatioUnwrappedSeries(_Series):
     name = 'ratiouw'
     depends = 'ratio',
 
@@ -416,7 +417,7 @@ class RatioUnwrappedFeature(_Feature):
             ratiouw.append(r+wrap)
         return np.array(ratiouw)
 
-class SaccadeFeature(_Feature):
+class SaccadeSeries(_Series):
     name = 'saccade'
     depends = ('dtheta','velocity')
 
@@ -441,7 +442,7 @@ class SaccadeFeature(_Feature):
 
         return saccade
 
-class InverseDynamicsFeature(_Feature):
+class InverseDynamicsSeries(_Series):
     name = 'inverse_dynamics'
     depends = ('x','y','z','vx','vy','vz','ax','ay','az','theta')
     adds = ('invdyn_Fx', 'invdyn_Fy', 'invdyn_Fz', 'invdyn_T_phi', 'invdyn_T_theta', 'invdyn_T_eta')
@@ -452,19 +453,19 @@ class InverseDynamicsFeature(_Feature):
     def process(self, df, dt, **state):
         compute_inverse_dynamics_matlab(df, dt, window_size=25, full_model=True)
 
-class _FakeGaussianFeature(_Feature):
+class _FakeGaussianSeries(_Series):
 
     @staticmethod
     def compute_from_df(df,dt,loc,scale):
         return np.random.normal(loc=loc,scale=scale,size=len(df))
 
-class FakeGaussianDthetaFeature(_FakeGaussianFeature):
+class FakeGaussianDthetaSeries(_FakeGaussianSeries):
 
     name = 'FAKE_gaussian_dtheta'
     depends = 'dtheta',
     DEFAULT_OPTS = {'loc':0.0,'scale':5.0}
 
-class FakeScaledDthetaFeature(_FakeGaussianFeature):
+class FakeScaledDthetaSeries(_FakeGaussianSeries):
 
     name = 'FAKE_scaled_dtheta'
     depends = 'rotation_rate',
@@ -481,118 +482,118 @@ class FakeScaledDthetaFeature(_FakeGaussianFeature):
         dtheta *= scale
         dtheta += np.random.normal(loc=0.0,scale=noise,size=len(dtheta))
         return dtheta
-        
 
-ALL_FEATURES = [cls for cls in _all_subclasses(_Feature) if cls.name is not None]
-ALL_FEATURE_NAMES = [cls.name for cls in ALL_FEATURES]
 
-def get_feature_class(name):
-    for f in ALL_FEATURES:
+ALL_SERIES = [cls for cls in _all_subclasses(_Series) if cls.name is not None]
+ALL_SERIES_NAMES = [cls.name for cls in ALL_SERIES]
+
+def get_series_class(name):
+    for f in ALL_SERIES:
         if f.name == name:
             return f
     return None
 
-def get_feature(name,**kwargs):
-    return get_feature_class(name)(**kwargs)
+def get_series(name, **kwargs):
+    return get_series_class(name)(**kwargs)
 
 def get_all_columns(include_measurements):
     a = []
-    a.extend(ALL_FEATURES)
+    a.extend(ALL_SERIES)
     if include_measurements:
         a.extend(cls for cls in _all_subclasses(_Measurement) if cls.name is not None)
     return tuple(itertools.chain.from_iterable(i.get_adds() for i in a))
 
-class MultiFeatureComputer(object):
+class MultiSeriesComputer(object):
 
-    def __init__(self, *features):
+    def __init__(self, *series):
         all_measurements = [cls for cls in _all_subclasses(_Measurement) if cls.name is not None]
-        all_fandm = ALL_FEATURES + all_measurements
+        all_fandm = ALL_SERIES + all_measurements
 
-        #build a dict of all features
-        self._feats = {f.name:f for f in all_fandm}
+        # build a dict of all series
+        self._sers = {f.name:f for f in all_fandm}
 
-        #build a graph of all feature dependencies
+        # build a graph of all series dependencies
         self._nodes = {f.name:Node(f.name) for f in all_fandm}
         for n in self._nodes.itervalues():
-            for dep in self._feats[n.name].get_depends():
+            for dep in self._sers[n.name].get_depends():
                 n.add_edge(self._nodes[dep])
 
-        map(self._check_feature_exists, features)
+        map(self._check_series_exists, series)
 
-        self._features = list(features)
-        self._init_features_and_dependencies()
+        self._series = list(series)
+        self._init_series_and_dependencies()
 
-    def _init_features_and_dependencies(self):
+    def _init_series_and_dependencies(self):
 
-        #now add a top node that is the list of features we actually want
+        # now add a top node that is the list of series we actually want
         top = Node('TOP')
-        for f in self._features:
+        for f in self._series:
             top.add_edge(self._nodes[f])
 
-        #now traverse the graph to find the resolution order
+        # now traverse the graph to find the resolution order
         resolved = []
         unresolved = []
         resolve_dependencies(top, resolved, unresolved)
 
         if unresolved:
-            raise ValueError('Could not determine features to compute')
+            raise ValueError('Could not determine series to compute')
 
-        self.features = [self._feats[r.name]() for r in resolved if r is not top]
+        self.series = [self._sers[r.name]() for r in resolved if r is not top]
 
-    def _check_feature_exists(self, f):
-        if f not in self._feats:
-            raise ValueError("Unknown feature '%s'" % f)
+    def _check_series_exists(self, s):
+        if s not in self._sers:
+            raise ValueError("Unknown series '%s'" % s)
 
-    def _get_features(self):
-        return [f for f in self.features if isinstance(f,_Feature)]
+    def _get_series(self):
+        return [f for f in self.series if isinstance(f, _Series)]
 
-    def set_features(self, *features):
-        self._features = list(features)
-        self._init_features_and_dependencies()
+    def set_series(self, *series):
+        self._series = list(series)
+        self._init_series_and_dependencies()
 
-    def add_feature(self, feature):
-        self._check_feature_exists(feature)
-        #check if the new features is nowhere in the resolved dependency list
-        if feature not in [f.name for f in self.features]:
-            self._features.append(feature)
-        self._init_features_and_dependencies()
+    def add_series(self, series):
+        self._check_series_exists(series)
+        # check if the new series is nowhere in the resolved dependency list
+        if series not in [f.name for f in self.series]:
+            self._series.append(series)
+        self._init_series_and_dependencies()
 
-    def add_feature_by_column_added(self, col_name):
+    def add_series_by_column_added(self, col_name):
         if col_name not in self.get_columns_added():
-            for feature_name,cls in self._feats.iteritems():
+            for series_name,cls in self._sers.iteritems():
                 if col_name in cls.get_adds():
-                    self.add_feature(feature_name)
+                    self.add_series(series_name)
                     return
-            raise ValueError("No feature adds the column '%s'" % col_name)
+            raise ValueError("No series adds the column '%s'" % col_name)
 
     def process(self, df, dt, **state):
         computed = []
-        for f in self._get_features():
-            #has the feature already been computed
+        for f in self._get_series():
+            # has the series already been computed
             if not all(c in df for c in f.get_adds()):
-                #are all the dependencies satisfied
+                # are all the dependencies satisfied
                 if all(c in df for c in f.get_depends()):
                     try:
                         f.process(df,dt,**state)
                         computed.append(f.name)
-                    except MissingStateFeatureError as fe:
+                    except MissingStateSeriesError as fe:
                         pass
-        not_computed = set(f.name for f in self._get_features()) - set(computed)
+        not_computed = set(f.name for f in self._get_series()) - set(computed)
         missing = set(itertools.chain(self.get_columns_added(),self.get_measurements_required())) - set(df.columns.tolist())
         return tuple(computed), tuple(not_computed), tuple(missing)
 
     def get_columns_added(self):
-        #Measurements don't add columns, Features do
-        return tuple(itertools.chain.from_iterable(f.get_adds() for f in self.features if isinstance(f,_Feature)))
+        # Measurements don't add columns, Series do
+        return tuple(itertools.chain.from_iterable(f.get_adds() for f in self.series if isinstance(f, _Series)))
 
     def get_measurements_required(self):
-        #Measurements don't add columns, Features do
-        return tuple(f.name for f in self.features if isinstance(f,_Measurement))
+        # Measurements don't add columns, Series do
+        return tuple(f.name for f in self.series if isinstance(f, _Measurement))
 
     def what(self):
-        #The presence of measurements is checked when features are computed and as such
-        #are already validated. For combine, the cache name should depend on those things
-        #that are added (features) as those that are assumed (measurements) are kind of
-        #already described by the VERSION attribute of the combine cache machinery
-        return What('MultiFeatureComputer',{'features':[f for f in self.features if isinstance(f,_Feature)]})
+        # The presence of measurements is checked when series are computed and as such
+        # are already validated. For combine, the cache name should depend on those things
+        # that are added (series) as those that are assumed (measurements) are kind of
+        # already described by the VERSION attribute of the combine cache machinery
+        return What('MultiSeriesComputer', {'series':[s for s in self.series if isinstance(s, _Series)]})
 

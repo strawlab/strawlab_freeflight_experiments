@@ -29,7 +29,7 @@ if __name__=='__main__':
 
     combine = autil.get_combiner_for_args(args)
     if args.plot_rcurve_cont:
-        combine.add_feature(column_name='rcurve_cont')
+        combine.add_series(column_name='rcurve_cont', column_name='rcurve_cont')
     combine.add_from_args(args)
 
     fname = combine.fname

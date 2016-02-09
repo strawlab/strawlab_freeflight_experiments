@@ -16,8 +16,8 @@ if __name__ == "__main__":
     UUID = "9b97392ebb1611e2a7e46c626d3a008a"
 
     combine = analysislib.util.get_combiner_for_uuid(UUID)
-    combine.add_feature(column_name='velocity')
-    combine.add_feature(column_name='theta')
+    combine.add_series(column_name='velocity', column_name='velocity')
+    combine.add_series(column_name='theta', column_name='theta')
     combine.add_from_uuid(UUID)
 
     arena = analysislib.arenas.get_arena('flycave')

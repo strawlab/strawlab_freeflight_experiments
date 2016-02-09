@@ -31,7 +31,7 @@ import autodata.files
 
 import analysislib.fixes
 import analysislib.args
-import analysislib.features as afeat
+import analysislib.series as aseries
 
 from ros_flydra.constants import IMPOSSIBLE_OBJ_ID, IMPOSSIBLE_OBJ_ID_ZERO_POSE
 from strawlab.constants import (DATE_FMT, AUTO_DATA_MNT, find_experiment,
@@ -288,7 +288,7 @@ class CacheError(Exception):
 
 class _Combine(object):
 
-    DEFAULT_FEATURES = ('vx','vy','vz','ax','ay','az','velocity','dtheta','radius','err_pos_stddev_m')
+    DEFAULT_SERIES = ('vx', 'vy', 'vz', 'ax', 'ay', 'az', 'velocity', 'dtheta', 'radius', 'err_pos_stddev_m')
 
     def __init__(self, **kwargs):
         self._enable_debug = kwargs.get("debug",True)
@@ -316,26 +316,26 @@ class _Combine(object):
                             'index': self._index
         }
 
-        self.features = afeat.MultiFeatureComputer(*kwargs.get("features",self.DEFAULT_FEATURES))
-        self._configdict['features'] = self.features    #is whatable
+        self.series = aseries.MultiSeriesComputer(*kwargs.get('series', self.DEFAULT_SERIES))
+        self._configdict['series'] = self.series    #is whatable
 
-    def add_feature(self, feature_name=None, column_name=None):
-        if feature_name and column_name:
+    def add_series(self, series_name=None, column_name=None):
+        if series_name and column_name:
             raise ValueError('Only one of feature_name and column_name may be provided')
-        elif feature_name:
-            self.features.add_feature(feature_name)
+        elif series_name:
+            self.series.add_series(series_name)
         elif column_name:
-            self.features.add_feature_by_column_added(column_name)
+            self.series.add_series_by_column_added(column_name)
         else:
             raise ValueError('feature_name or column_name are required')
-        self._configdict['features'] = self.features
+        self._configdict['series'] = self.series
 
-    def set_features(self, *features):
-        self.features.set_features(*features)
-        self._configdict['features'] = self.features
+    def set_series(self, *series):
+        self.series.set_series(*series)
+        self._configdict['series'] = self.series
 
-    def get_features(self):
-        return self.features.get_columns_added()
+    def get_series(self):
+        return self.series.get_columns_added()
 
     def set_index(self, index):
         VALID_INDEXES = ('framenumber', 'none')
@@ -1072,7 +1072,7 @@ class _CombineFakeInfinity(_Combine):
                     continue
 
                 dt = self._dt
-                self.features.process(df, dt)
+                self.series.process(df, dt)
 
                 first = df.irow(0)
                 last = df.irow(-1)
@@ -1145,7 +1145,7 @@ class _CombineFakeInfinity(_Combine):
 
         #despite these being recomputed later, we need to get them first
         #to make sure rrate is correlated to dtheta, we remove the added colums later
-        m = afeat.MultiFeatureComputer('dtheta')
+        m = aseries.MultiSeriesComputer('dtheta')
         m.process(df, dt)
 
         #add some uncorrelated noise to rrate
@@ -1287,7 +1287,7 @@ class CombineCSV(_Combine):
                         pass
 
                 dt = self._dt
-                self.features.process(df, dt)
+                self.series.process(df, dt)
 
                 self._results[cond]['df'].append(odf)
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
@@ -1392,7 +1392,7 @@ class CombineH5(_Combine):
         )
 
         dt = self._dt
-        self.features.process(df, dt)
+        self.series.process(df, dt)
 
         return df,self._dt,(traj['x'][0],traj['y'][0],obj_id,traj['framenumber'][0],t0,'','')
 
@@ -1478,7 +1478,7 @@ class CombineH5WithCSV(_Combine):
         """
         arena = analysislib.args.get_arena_from_args(args)
         for c in arena.get_filter_columns():
-            self.add_feature(column_name=c)
+            self.add_series(column_name=c)
 
         self._args_to_configuration(args)
 
@@ -2018,12 +2018,12 @@ class CombineH5WithCSV(_Combine):
             h5_df = pd.concat(flydra_series, axis=1)
             n_samples_before = len(h5_df)
 
-            # compute those features we can (such as those that only need x,y,z)
+            # compute those series we can (such as those that only need x,y,z)
             try:
-                self.features.process(h5_df, self._dt)
+                self.series.process(h5_df, self._dt)
             except Exception as e:
                 self._skipped[cond] += 1
-                self._warn("ERROR: could not compute features for oid %s (%s long)\n\t%s" % (oid, n_samples_from_flydra, e))
+                self._warn("ERROR: could not compute series for oid %s (%s long)\n\t%s" % (oid, n_samples_from_flydra, e))
                 continue
 
             # apply filters
@@ -2191,7 +2191,7 @@ class CombineH5WithCSV(_Combine):
                 start_x = valid['x'][0]
                 start_y = valid['y'][0]
 
-                # compute the remaining features (which might have come from the CSV)
+                # compute the remaining series (which might have come from the CSV)
                 try:
                     dt = self._get_df_sample_interval(df) or self._dt
 
@@ -2204,7 +2204,7 @@ class CombineH5WithCSV(_Combine):
                             'condition': cond,
                             'condition_object': self.get_condition_object(cond)}
 
-                    computed, not_computed, missing = self.features.process(df, dt, **opts)
+                    computed, not_computed, missing = self.series.process(df, dt, **opts)
                     if missing:
                         for m in missing:
                             self._warn_once("ERROR: column/feature '%s' not computed" % m)

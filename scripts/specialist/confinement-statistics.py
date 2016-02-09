@@ -222,7 +222,7 @@ if __name__=='__main__':
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
-    combine.add_feature(column_name='saccade')
+    combine.add_series(column_name='saccade', column_name='saccade')
     combine.add_from_args(args)
 
     #order the conditions by lag with infinite lag last, and zero texture dead last

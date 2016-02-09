@@ -13,9 +13,9 @@ def get_combine_dataframe(uuids, csv_suffix, **filter_args):
     parser,args = aargs.get_default_args(**filter_args)
 
     c = acombine.CombineH5WithCSV(csv_suffix=csv_suffix)
-    c.add_feature(column_name='radius')
-    c.add_feature(column_name='dtheta_deg')
-    c.add_feature(column_name='angle_to_post_at_origin_deg')
+    c.add_series(column_name='radius', column_name='radius')
+    c.add_series(column_name='dtheta_deg', column_name='dtheta_deg')
+    c.add_series(column_name='angle_to_post_at_origin_deg', column_name='angle_to_post_at_origin_deg')
     c.add_from_args(args)
 
     aargs.describe(c,args)
