@@ -1026,6 +1026,9 @@ class CombineCSV(_Combine):
             #check the new csv file was recorded with the same timebase
             assert abs(dt-self._dt) < 1e-4
 
+        dt = self._dt
+        self.features.process(df, dt)
+
         for obj_id, lodf in df.groupby('lock_object'):
 
             # Continuous grouping, see CombineH5WithCSV
@@ -1055,9 +1058,6 @@ class CombineCSV(_Combine):
                         self._condition_names[cond] = odf['condition_name'].iloc[0]
                     except:
                         pass
-
-                dt = self._dt
-                self.features.process(df, dt)
 
                 self._results[cond]['df'].append(odf)
                 self._results[cond]['start_obj_ids'].append(self._get_result(odf))
