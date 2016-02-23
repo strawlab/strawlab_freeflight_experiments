@@ -213,8 +213,9 @@ class CsvLogger(object):
 
         if check and None in vals:
             self._warn("no state to save")
-
-        self._fd.write(",".join(map(str,vals)))
+	
+	vals_no_comma = [v.replace(',','#') if isinstance(v, str) else v for v in vals]
+	self._fd.write(",".join(map(str,vals_no_comma)))
         self._fd.write(",%d,%d,%s,%s\n" % (tsecs,tnsecs,self._flydra_data_file,self._exp_uuid))
         self._fd.flush()
 

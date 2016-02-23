@@ -142,18 +142,20 @@ class Node(nodelib.node.Experiment):
         self.drop_lock_on()
     
         # mods for milti exr
-        self.exr_filename_pub.publish(String(self.condition.get("p2g_calibration_filename", "")))
-	print '#'*20, String(self.condition.get("geom_json_buf", ""))
+
         self.geom_json_buf_pub.publish(String(self.condition.get("geom_json_buf", "")))
-        
+        self.exr_filename_pub.publish(String(self.condition.get("p2g_calibration_filename", "")))
+	print '#'*20, String(self.condition.get("geom_json_buf", ""))        
 
         stimulus_filename = str(self.condition.get("displayserver", ""))
         
         if stimulus_filename:
-            self._pub_stim_mode.publish('StimulusOSGFile')
-            self.pub_stimulus.publish(stimulus_filename)
+            #self._pub_stim_mode.publish('StimulusOSGFile')
+            #self.pub_stimulus.publish(stimulus_filename)
+	    pass
         else:
-            self._pub_stim_mode.publish('StimulusStarField')
+            #self._pub_stim_mode.publish('StimulusStarField')
+            pass
         self.log.stimulus_filename = stimulus_filename
 
 

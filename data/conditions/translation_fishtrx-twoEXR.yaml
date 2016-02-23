@@ -1,6 +1,6 @@
 set3_exr:
     svg_path: infinity04_fishtrax.svg
-    gain: 1.0
+    gain: 10.0
     advance_threshold: 0.05
     z_gain: 1.0
     star_size: 5.0
@@ -9,7 +9,7 @@ set3_exr:
     p2g_calibration_filename: $(find flycave)/calibration/fishtrax/2015-Dec/from_spheremodel-s3.exr
 set4_exr:
     svg_path: infinity04_fishtrax.svg
-    gain: 1.0
+    gain: 10.0
     advance_threshold: 0.05
     z_gain: 1.0
     star_size: 5.0
