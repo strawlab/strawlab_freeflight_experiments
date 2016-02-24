@@ -813,7 +813,11 @@ class _Combine(object):
 
         raise ValueError("No such obj_id: %s (condition: %s framenumber0: %s)" % (obj_id, condition, framenumber0))
 
-    def get_observations_dataframe(self, cols, fill=True, extra_col_cb=None):
+    def get_observations_dataframe(self,
+                                   cols,
+                                   fill=True,
+                                   extra_col_cb=None,
+                                   framenumber_col=None):
         """
         Return a single dataframe containing the supplied columns from 
         all trials.
@@ -841,6 +845,8 @@ class _Combine(object):
 
             def add_ts_things(combine, data, uuid, current_condition, oid, start_framenumber, df)
 
+        framenumber_col: string or None, default None
+          if a string is given, an extra column with the framenumber of the observation will be added
         """
 
         DEFAULT = ['condition','condition_name','obj_id','uuid','framenumber0', 'start_time']
@@ -849,9 +855,14 @@ class _Combine(object):
             cols = set(self.get_result_columns()) - set(DEFAULT)
         all_cols = set(itertools.chain.from_iterable((DEFAULT,cols)))
 
+        if framenumber_col is not None:
+            if framenumber_col in all_cols:
+                raise Exception('frame number column %s would override another column' % framenumber_col)
+            all_cols.add(framenumber_col)
+
         data = {k:[] for k in all_cols}
 
-        for current_condition,r in self._results.iteritems():
+        for current_condition,r in self._results.items():
             cond_name = self.get_condition_name(current_condition)
 
             if not r['count']:
@@ -871,8 +882,11 @@ class _Combine(object):
                 data['condition_name'].extend(itertools.repeat(cond_name, n))
                 data['obj_id'].extend(itertools.repeat(oid, n))
                 data['uuid'].extend(itertools.repeat(uuid, n))
-                data['framenumber0'].extend(itertools.repeat(start_framenumber, n))
                 data['start_time'].extend(itertools.repeat(start_time, n))
+                data['framenumber0'].extend(itertools.repeat(start_framenumber, n))
+                if framenumber_col is not None:
+                    # as usual, we assume no holes
+                    data[framenumber_col].extend(range(start_framenumber, start_framenumber + n))
 
                 if extra_col_cb is not None:
                     extra_col_cb(self, data, uuid, current_condition, oid, start_framenumber, _df)
