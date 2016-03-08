@@ -226,6 +226,9 @@ if __name__=='__main__':
         "--also-plot", type=str, metavar="COL_NAME",
         default="z,vz,velocity,rotation_rate",
         help="also plot these during the perturbation period")
+    parser.add_argument(
+        "--tracking-series", action="store_true",
+        help='extract mean reprojection error and number of tracking cameras series')
 
     args = parser.parse_args()
 
@@ -235,8 +238,14 @@ if __name__=='__main__':
     system_u_name = args.system_input
 
     combine = autil.get_combiner_for_args(args)
+
     combine.add_feature(column_name=system_y_name)
     combine.add_feature(column_name=system_u_name)
+
+    if args.tracking_series:
+        combine.add_feature(column_name='mean_reproj_error_mle_px')
+        combine.add_feature(column_name='visible_in_cams_mle_n')
+
     combine.add_from_args(args)
 
     try:

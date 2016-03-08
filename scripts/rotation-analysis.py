@@ -63,6 +63,9 @@ if __name__=='__main__':
         "--force-max-latency", type=int, default=None,
         help='plot latency at this many frames (rather than plotting the max)')
     parser.add_argument(
+        "--tracking-series", action="store_true",
+        help='extract mean reprojection error and number of tracking cameras series')
+    parser.add_argument(
         "--plot-saccades", action="store_true")
 
     args = parser.parse_args()
@@ -70,8 +73,14 @@ if __name__=='__main__':
     analysislib.args.check_args(parser, args)
 
     combine = autil.get_combiner_for_args(args)
+
+    if args.tracking_series:
+        combine.add_feature(column_name='mean_reproj_error_mle_px')
+        combine.add_feature(column_name='visible_in_cams_mle_n')
+
     if args.plot_saccades:
         combine.add_feature(column_name='saccade')
+
     combine.add_from_args(args)
 
     fname = combine.fname
