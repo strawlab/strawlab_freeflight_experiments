@@ -10,13 +10,6 @@ if not os.environ.get('DISPLAY'):
     import matplotlib
     matplotlib.use('agg')
 
-try:
-    from strawlab.constants import maybe_fake_ros
-    maybe_fake_ros(rospkg='strawlab_freeflight_analysis')
-except ImportError:
-    import roslib
-    roslib.load_manifest('strawlab_freeflight_experiments')
-
 import autodata.files
 import analysislib.filters
 import analysislib.combine
