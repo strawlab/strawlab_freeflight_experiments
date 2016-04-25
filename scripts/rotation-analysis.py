@@ -118,7 +118,7 @@ if __name__=='__main__':
             _rrmax = analysislib.fixes.get_rotation_rate_limit_for_plotting(_comb, _cond)
             return (-_rrmax,_rrmax)
         return None
-    
+
     rrate_max_abs = analysislib.fixes.get_rotation_rate_limit_for_plotting(combine)
 
     fml = args.force_max_latency
@@ -129,7 +129,7 @@ if __name__=='__main__':
                                            [40,80] +\
                                            [fml if fml is not None else 0]),
                            "latencies_to_plot":(0,2,5,8,10,15,20,40,80),
-        
+
     }
     histograms = ("velocity","dtheta","rotation_rate","v_offset_rate")
 
@@ -163,4 +163,3 @@ if __name__=='__main__':
         aplt.show_plots()
 
     sys.exit(0)
-
