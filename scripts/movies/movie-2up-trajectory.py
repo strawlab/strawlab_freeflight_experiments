@@ -61,7 +61,17 @@ def draw_flycube2(ax):
              alpha=0.0001,
              markersize=0.0001 )
 
-def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values):
+def append_camera(orig_R, camera):
+    sccs = [orig_R.get_SingleCameraCalibration(cam_id)
+            for cam_id in orig_R.cam_ids]
+    sccs.append(flydra.reconstruct.SingleCameraCalibration.from_pymvg(camera))
+    new_R = flydra.reconstruct.Reconstructor(sccs,
+                                             minimum_eccentricity=orig_R.minimum_eccentricity)
+    new_R.add_water(orig_R.wateri)
+    del orig_R, sccs, camera
+    return new_R
+
+def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, show_framenumber, zoom_fly, show_values, orig_R):
     h5_file = combine.h5_file
 
     arena = analysislib.arenas.get_arena_from_args(args)
@@ -75,6 +85,9 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
 
     with rosbag.Bag(calibration) as bag:
         camera = pymvg.camera_model.CameraModel.load_camera_from_opened_bagfile(bag)
+
+    # Need to use flydra Reconstructor in case we are dealing with fish.
+    new_R = append_camera(orig_R, camera)
 
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
@@ -94,7 +107,11 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                         dt)
 
     xyz = np.c_[valid['x'],valid['y'],valid['z']]
-    pixel = camera.project_3d_to_pixel(xyz)
+    pixel = []
+    for xyzi in xyz:
+        pixeli = new_R.find2d(camera.name, xyzi, Lcoords=None, distorted=True, bypass_refraction=False)
+        pixel.append( pixeli )
+    pixel = np.array(pixel)
 
     fmftimestamps = fmf.get_all_timestamps()
 
@@ -204,7 +221,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                         _canv.text("%s: %+.1f" % (s,dfrow[s]),
                                    m["dw"]-200, h, color_rgba=(0.5,0.5,0.5,1.0))
                         h += 12
-                        
+
             canv.save()
 
     pbar.finish()
@@ -250,10 +267,12 @@ if __name__ == "__main__":
         uuid = args.uuid[0]
         combine = analysislib.util.get_combiner_for_args(args)
         combine.add_from_args(args)
+        mainbrain = autodata.files.FileModel.mainbrain(uuid=uuid, basedir=args.basedir).fullpath
     else:
         uuid = ''
         combine = analysislib.combine.CombineH5()
         combine.add_h5_file(args.h5_file)
+        raise NotImplementedError('need to find location of mainbrain file')
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
@@ -274,12 +293,12 @@ if __name__ == "__main__":
     else:
         show_values = []
 
+    orig_R = flydra.reconstruct.Reconstructor(mainbrain)
+
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(combine, args, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values)
+            doit(combine, args, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, args.framenumber, args.zoom_fly, show_values, orig_R)
         except IOError, e:
             print "missing file", e
         except ValueError, e:
             print "missing data", e
-
-
