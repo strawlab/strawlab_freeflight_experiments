@@ -10,6 +10,7 @@ import time
 import shutil
 
 import motmot.FlyMovieFormat.FlyMovieFormat
+import flydra.reconstruct
 
 import roslib
 
@@ -27,7 +28,17 @@ import analysislib.args
 import analysislib.movie
 import analysislib.combine
 
-def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
+def append_camera(orig_R, camera):
+    sccs = [orig_R.get_SingleCameraCalibration(cam_id)
+            for cam_id in orig_R.cam_ids]
+    sccs.append(flydra.reconstruct.SingleCameraCalibration.from_pymvg(camera))
+    new_R = flydra.reconstruct.Reconstructor(sccs,
+                                             minimum_eccentricity=orig_R.minimum_eccentricity)
+    new_R.add_water(orig_R.wateri)
+    del orig_R, sccs, camera
+    return new_R
+
+def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, orig_R):
     combine = analysislib.combine.CombineH5()
     combine.add_h5_file(h5_file)
 
@@ -35,6 +46,9 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
 
     with rosbag.Bag(calibration) as bag:
         camera = pymvg.camera_model.CameraModel.load_camera_from_opened_bagfile(bag)
+
+    # Need to use flydra Reconstructor in case we are dealing with fish.
+    new_R = append_camera(orig_R, camera)
 
     if not os.path.isfile(fmf_fname):
         raise IOError(fmf_fname)
@@ -52,7 +66,11 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
                         dt)
 
     xyz = np.c_[valid['x'],valid['y'],valid['z']]
-    pixel = camera.project_3d_to_pixel(xyz)
+    pixel = []
+    for xyzi in xyz:
+        pixeli = new_R.find2d(camera.name, xyzi, Lcoords=None, distorted=True, bypass_refraction=False)
+        pixel.append( pixeli )
+    pixel = np.array(pixel)
 
     fmftimestamps = fmf.get_all_timestamps()
 
@@ -132,10 +150,14 @@ if __name__ == "__main__":
         uuid = args.uuid[0]
 
         h5_file = autodata.files.FileModel.simple_flydra(uuid=uuid, basedir=args.basedir).fullpath
+        mainbrain = autodata.files.FileModel.mainbrain(uuid=uuid, basedir=args.basedir).fullpath
     else:
         uuid = ''
 
         h5_file = args.h5_file
+        raise NotImplementedError('need to find location of mainbrain file')
+
+    orig_R = flydra.reconstruct.Reconstructor(mainbrain)
 
     outdir = args.outdir if args.outdir is not None else strawlab.constants.get_movie_dir(uuid)
 
@@ -153,8 +175,6 @@ if __name__ == "__main__":
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration)
+            doit(h5_file, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration, orig_R)
         except IOError, e:
             print "missing file", e
-
-
