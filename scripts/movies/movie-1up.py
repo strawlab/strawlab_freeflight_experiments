@@ -131,9 +131,7 @@ if __name__ == "__main__":
 
         uuid = args.uuid[0]
 
-        fm = autodata.files.FileModel(basedir=args.basedir)
-        fm.select_uuid(uuid)
-        h5_file = fm.get_file_model("simple_flydra.h5").fullpath
+        h5_file = autodata.files.FileModel.simple_flydra(uuid=uuid, basedir=args.basedir).fullpath
     else:
         uuid = ''
 
