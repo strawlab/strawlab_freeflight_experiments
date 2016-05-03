@@ -28,6 +28,16 @@ import analysislib.args
 import analysislib.movie
 import analysislib.combine
 
+
+def ensure_frame_is_bgr(fmf, frame):
+    if fmf.format == 'RAW8:BGGR':
+        return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2BGR)
+    elif fmf.format == 'RAW8':
+        return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    else:
+        raise ValueError('unable to convert frame: unknown format %s' % fmf.format)
+
+
 def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
     combine = analysislib.combine.CombineH5()
     combine.add_h5_file(h5_file)
@@ -86,14 +96,10 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
 
             imgfname = movie.next_frame()
 
-            #see fmfcat commit for why this is right
-            rgb_image = cv2.cvtColor(img[:,1:],cv2.COLOR_BAYER_GR2RGB)
-            #and this is wrong?
-            #rgb_image = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2RGB)
+            bgr_image = ensure_frame_is_bgr(fmf, img)
 
-            #color is BGR
-            cv2.circle(rgb_image, tuple(map(int,uv)), 10, (0, 0, 255), 3)
-            cv2.imwrite(imgfname,rgb_image)
+            cv2.circle(bgr_image, tuple(map(int,uv)), 10, (0, 0, 255), 3)
+            cv2.imwrite(imgfname, bgr_image)
 
     pbar.finish()
 
