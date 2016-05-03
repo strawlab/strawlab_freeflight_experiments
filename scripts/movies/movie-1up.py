@@ -6,7 +6,6 @@ import scipy.misc
 import cv2
 import os.path
 import tempfile
-import sh
 import time
 import shutil
 
