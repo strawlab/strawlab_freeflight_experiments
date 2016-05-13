@@ -1,0 +1,8 @@
+bowl_post:
+    stimulus_filename: fish_post.osgt
+    x0: 0.0
+    y0: 0.0
+    z0: 0.0
+    lag: 0.0
+    start_radius: 0.21
+    duration: 10
