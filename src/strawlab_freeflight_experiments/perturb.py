@@ -13,7 +13,6 @@ import pandas as pd
 import roslib
 roslib.load_manifest('strawlab_freeflight_experiments')
 import strawlab_freeflight_experiments.frequency as sfe_frequency
-import analysislib.plots
 
 # see the end of the file for populating this
 PERTURBERS = []
@@ -866,6 +865,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     def _plot(f,obj):
+        import analysislib.plots
+
         f0,f1 = obj.get_frequency_limits()
         if np.isnan(f1):
             f1 = 12 #historical
