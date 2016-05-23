@@ -21,7 +21,6 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 import flyflypath.model
 import flyflypath.transform
 import nodelib.node
-import strawlab_freeflight_experiments.replay as sfe_replay
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
@@ -113,9 +112,6 @@ class Node(nodelib.node.Experiment):
 
             self.ratio_total = 0
 
-            self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
-            self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
-
             self.blacklist = {}
 
         #start criteria for experiment
@@ -138,12 +134,6 @@ class Node(nodelib.node.Experiment):
     @property
     def is_perturbation_experiment(self):
         return not isinstance(self.perturber, sfe_perturb.NoPerturb)
-    @property
-    def is_replay_experiment_rotation(self):
-        return np.isnan(self.p_const)
-    @property
-    def is_replay_experiment_z(self):
-        return np.isnan(self.v_gain)
 
     def switch_conditions(self):
 
@@ -210,15 +200,11 @@ class Node(nodelib.node.Experiment):
         rospy.loginfo('condition: %s %r' % (self.condition.name,self.condition))
         
     def get_v_rate(self,fly_z):
-        #return early if this is a replay experiment
-        if self.is_replay_experiment_z:
-            return self.replay_z.next()
-
         return self.v_gain*(fly_z-self.z_target)
 
     def get_rotation_velocity_vector(self, fly_x, fly_y, fly_z, fly_vx, fly_vy, fly_vz, now, framenumber, currently_locked_obj_id):
         could_perturb = False
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
+        if self.svg_fn:
             could_perturb = self.is_perturbation_experiment
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
@@ -259,10 +245,6 @@ class Node(nodelib.node.Experiment):
                     rospy.loginfo('perturbation finished')
 
                 return rate, self.trg_x,self.trg_y
-
-        #return early if this is a replay experiment
-        if self.is_replay_experiment_rotation:
-            return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
@@ -441,8 +423,6 @@ class Node(nodelib.node.Experiment):
             self.ratio_total = 0
 
             self.perturber.reset()
-            self.replay_rotation.reset()
-            self.replay_z.reset()
 
         self.pub_image.publish(self.img_fn)
         self.pub_cyl_radius.publish(np.abs(self.rad_locked))
