@@ -21,7 +21,6 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 import flyflypath.model
 import flyflypath.transform
 import nodelib.node
-import strawlab_freeflight_experiments.replay as sfe_replay
 import strawlab_freeflight_experiments.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
@@ -111,9 +110,6 @@ class Node(nodelib.node.Experiment):
 
             self.ratio_total = 0
 
-            self.replay_rotation = sfe_replay.ReplayStimulus(default=0.0)
-            self.replay_z = sfe_replay.ReplayStimulus(default=0.0)
-
             self.blacklist = {}
 
         #start criteria for experiment
@@ -132,12 +128,6 @@ class Node(nodelib.node.Experiment):
                          flydra_mainbrain_super_packet,
                          self.on_flydra_mainbrain_super_packets)
 
-    @property
-    def is_replay_experiment_rotation(self):
-        return np.isnan(self.p_const)
-    @property
-    def is_replay_experiment_z(self):
-        return np.isnan(self.v_gain)
 
     def switch_conditions(self):
 
@@ -185,14 +175,10 @@ class Node(nodelib.node.Experiment):
         rospy.loginfo('condition: %s' % (self.condition))
 
     def get_v_rate(self,fly_z):
-        #return early if this is a replay experiment
-        if self.is_replay_experiment_z:
-            return self.replay_z.next()
-
         return self.v_gain*(self.z_target - fly_z)
 
     def get_starfield_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
+        if self.svg_fn:
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -202,10 +188,6 @@ class Node(nodelib.node.Experiment):
                     self.ratio_total += ADVANCE_RATIO
         else:
             self.trg_x = self.trg_y = 0.0
-
-        #return early if this is a replay experiment
-        if self.is_replay_experiment_rotation:
-            return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dx = self.trg_x-fly_x
         dy = self.trg_y-fly_y
@@ -213,7 +195,7 @@ class Node(nodelib.node.Experiment):
         return self.p_const*dx,self.p_const*dy,self.trg_x,self.trg_y
 
     def get_rotation_velocity_vector(self,fly_x,fly_y,fly_z, fly_vx, fly_vy, fly_vz):
-        if self.svg_fn and (not self.is_replay_experiment_rotation):
+        if self.svg_fn:
             with self.trackinglock:
                 px,py = XFORM.xy_to_pxpy(fly_x,fly_y)
                 segment = self.model.connect_to_moving_point(p=None, px=px,py=py)
@@ -223,10 +205,6 @@ class Node(nodelib.node.Experiment):
                     self.ratio_total += ADVANCE_RATIO
         else:
             self.trg_x = self.trg_y = 0.0
-
-        #return early if this is a replay experiment
-        if self.is_replay_experiment_rotation:
-            return self.replay_rotation.next(), self.trg_x,self.trg_y
 
         dpos = np.array((self.trg_x-fly_x,self.trg_y-fly_y))
         vel  = np.array((fly_vx, fly_vy))
@@ -393,9 +371,6 @@ class Node(nodelib.node.Experiment):
                 self.trg_x = self.trg_y = 0.0
 
             self.ratio_total = 0
-
-            self.replay_rotation.reset()
-            self.replay_z.reset()
 
         self.update()
 
