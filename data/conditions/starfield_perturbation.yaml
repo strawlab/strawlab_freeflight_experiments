@@ -10,7 +10,7 @@ starfield_translation_infinity:
     z_target: 0.12
     star_rotation_rate: 0.0
     star_color: [1., 1., 1.]
-    background_color: [0.6, 0.6, 0.6]
+    background_color: [0.4, 0.4, 0.4]
 starfield_rotation_infinity:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -66,7 +66,7 @@ starfield_backtofront_translation_perturbation:
     x_perturb_vector: 1.0
     y_perturb_vector: 0.0
     star_color: [1., 1., 1.]
-    background_color: [0.6, 0.6, 0.6]
+    background_color: [0.4, 0.4, 0.4]
 starfield_fronttoback_translation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -82,7 +82,7 @@ starfield_fronttoback_translation_perturbation:
     x_perturb_vector: -1.0
     y_perturb_vector: 0.0
     star_color: [1., 1., 1.]
-    background_color: [0.6, 0.6, 0.6]
+    background_color: [0.4, 0.4, 0.4]
 starfield_lateral_translation_perturbation:
     svg_path: infinity07.svg
     star_translation_gain: 0.0
@@ -98,5 +98,5 @@ starfield_lateral_translation_perturbation:
     x_perturb_vector: 0.0
     y_perturb_vector: 1.0
     star_color: [1., 1., 1.]
-    background_color: [0.6, 0.6, 0.6]
+    background_color: [0.4, 0.4, 0.4]
 
