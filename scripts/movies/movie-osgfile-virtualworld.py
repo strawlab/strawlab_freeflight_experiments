@@ -295,6 +295,17 @@ def get_vr_view(arena, vr_mode, condition, condition_obj):
                 msg.center.y = -0.0655635818839
                 msg.center.z = 0.54163891077
                 msg.distance = 1.26881285595
+
+                msg.rotation.x = -0.0563853703639
+                msg.rotation.y = -0.249313040186
+                msg.rotation.z = -0.959619648636
+                msg.rotation.w = -0.117447128336
+                msg.center.x = -0.00815043784678
+                msg.center.y = -0.0655635818839
+                msg.center.z = 0.54163891077
+                msg.distance = 0.832468026577
+
+
             elif re.match(".*kitchen_[ab].*\.osgt.*",condition):
                 print "view for kitchen"
                 msg.rotation.x = -0.561771881545
