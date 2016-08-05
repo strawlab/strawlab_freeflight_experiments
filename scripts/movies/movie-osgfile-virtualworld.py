@@ -139,14 +139,19 @@ class StimulusCylinderAndModel(flyvr.display_client.StimulusSlave, _SafePubMixin
             self.pub_pose(self.pub_model_centre,0.,0.,0.)
 
         self.pub_image.publish(cyl_fname)
-        self.pub_cyl_radius.publish(radius)
+        self.pub_cyl_radius.publish(abs(radius))
         self.pub_rotation.publish(0)
         self.pub_v_offset_value.publish(0)
 
     def set_state(self, row):
         self.pub_scalar_safe(self.pub_rotation_velocity, row, 'rotation_rate')
-        self.pub_scalar_safe(self.pub_v_offset_rate, row, 'v_offset_rate')
-        self.pub_vector(self.pub_cyl_centre,row['cyl_x'],row['cyl_y'],0)
+        self.pub_scalar_safe(self.pub_v_offset_rate, row, 'v_offset_rate', mult=1/8.0)
+
+        if self._radius < 0:
+            self.pub_vector(self.pub_cyl_centre,0,0,0)
+        else:
+            self.pub_vector(self.pub_cyl_centre,row['cyl_x'],row['cyl_y'],0)
+
         try:
             cr = abs(row['cyl_r'])
         except KeyError:
@@ -202,7 +207,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
     if condition_obj.is_type('rotation','conflict'):
         return StimulusCylinderAndModel(dsc,
                                 str(condition_obj['cylinder_image']),
-                                abs(float(condition_obj['radius_when_locked'])),
+                                float(condition_obj['radius_when_locked']),
                                 model_fname='',
                                 model_oxyz=None)
     elif condition_obj.is_type('conflict'):
@@ -213,7 +218,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
         model_oxyz = (float(x),float(y),float(z))
         return StimulusCylinderAndModel(dsc,
                                 str(condition_obj['cylinder_image']),
-                                abs(float(condition_obj['radius_when_locked'])),
+                                float(condition_obj['radius_when_locked']),
                                 model_fname,
                                 model_oxyz)
     elif condition_obj.is_type('confine','post','kitchen'):
@@ -228,7 +233,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
         if pobj.what == 'rotation_rate':
             return StimulusCylinderAndModel(dsc,
                                     str(condition_obj['cylinder_image']),
-                                    abs(float(condition_obj['radius_when_locked'])),
+                                    float(condition_obj['radius_when_locked']),
                                     model_fname='',
                                     model_oxyz=None)
 
