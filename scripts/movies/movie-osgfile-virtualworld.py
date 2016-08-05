@@ -20,8 +20,18 @@ import roslib
 roslib.load_manifest('rospy')
 import rospy
 
-roslib.load_manifest('camera_model')
-import camera_model
+roslib.load_manifest('rosbag')
+import rosbag
+
+# the 2013 camera calibration must be loaded with the old library...
+HACK_OLD_CAMERA_MODEL = 1
+
+if HACK_OLD_CAMERA_MODEL:
+    print "WARNING OLD CAMERA MODEL"
+    roslib.load_manifest('camera_model')
+    import camera_model
+else:
+    import pymvg.camera_model
 
 roslib.load_manifest('strawlab_freeflight_experiments')
 import autodata.files
@@ -347,7 +357,12 @@ def doit(combine, args, fmf_fname, flip, obj_id, framenumber0, tmpdir, outdir, c
             renderers[name].set_view(msg)
 
     if calibration:
-        camera = camera_model.load_camera_from_bagfile( open(calibration) )
+        if HACK_OLD_CAMERA_MODEL:
+            camera = camera_model.load_camera_from_bagfile( open(calibration) )
+            print "OLD CAMERA MODEL SHOULD ONLY BE USED WITH OLD FLYCAVE CALIBRATION"
+        else:
+            with rosbag.Bag(calibration) as bag:
+                camera = pymvg.camera_model.CameraModel.load_camera_from_opened_bagfile(bag)
     else:
         camera = None
 
@@ -491,7 +506,6 @@ def doit(combine, args, fmf_fname, flip, obj_id, framenumber0, tmpdir, outdir, c
 
             t0 = ts
 
-            col,row = uv
             x,y,z = xyz
 
             xhist.append(x)
