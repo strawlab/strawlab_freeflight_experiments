@@ -75,13 +75,18 @@ def ensure_frame_is_color(fmf, frame, color_format='bgr'):
 
 class _SafePubMixin:
 
-    def pub_scalar(self, pub, val):
+    def pub_scalar(self, pub, val, mult=1.0):
         if not pd.isnull(val):
-            pub.publish(val)
+            if not isinstance(val, str):
+                val = val * mult
+            try:
+                pub.publish(val)
+            except TypeError:
+                print val
 
-    def pub_scalar_safe(self, pub, row, name):
+    def pub_scalar_safe(self, pub, row, name, mult=1.0):
         try:
-            self.pub_scalar(pub, row[name])
+            self.pub_scalar(pub, row[name], mult)
         except KeyError:
             pass
 
