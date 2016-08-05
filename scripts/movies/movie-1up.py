@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import pandas
-import tables
 import numpy as np
 import scipy.misc
 import cv2
@@ -27,20 +25,28 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 import analysislib.args
 import analysislib.movie
 import analysislib.combine
+import analysislib.util
 
 
-def ensure_frame_is_bgr(fmf, frame):
+
+def ensure_frame_is_color(fmf, frame, color_format='bgr'):
+    assert color_format in ('bgr', 'rgb')
+
     if fmf.format == 'RAW8:BGGR':
-        return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2BGR)
+        if color_format == 'bgr':
+            return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2BGR)
+        else:
+            return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2RGB)
     elif fmf.format == 'RAW8':
-        return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        if color_format == 'bgr':
+            return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        else:
+            return cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
     else:
-        raise ValueError('unable to convert frame: unknown format %s' % fmf.format)
+        raise ValueError('unable to convert frame: unknown source format %s' % fmf.format)
 
 
-def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
-    combine = analysislib.combine.CombineH5()
-    combine.add_h5_file(h5_file)
+def doit(combine, fmf_fname, flip, obj_id, framenumber0, tmpdir, outdir, calibration):
 
     valid,dt,(x0,y0,obj_id,framenumber0,start,condition,uuid) = combine.get_one_result(obj_id, framenumber0=framenumber0)
 
@@ -52,7 +58,6 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
 
     movie = analysislib.movie.MovieMaker(tmpdir, str(obj_id))
 
-
     print "fmf fname", fmf_fname
 
     fmf = motmot.FlyMovieFormat.FlyMovieFormat.FlyMovie(fmf_fname)
@@ -62,11 +67,16 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
                         start+(len(valid)*dt),
                         dt)
 
+    #convert flip character into opencv flipcode (0=x,1=y,-1=xy)
+    flip = {'x':0,'y':1,'xy':-1,'yx':-1,'':None}[flip]
+
     xyz = np.c_[valid['x'],valid['y'],valid['z']]
     pixel = camera.project_3d_to_pixel(xyz)
 
     fmftimestamps = fmf.get_all_timestamps()
 
+    print "dt", dt
+    print "trajectory frame0", framenumber0
     print "trajectory ranges from", timestamps[0], "to", timestamps[-1]
     print "fmf ranges from", fmftimestamps[0], "to", fmftimestamps[-1]
 
@@ -76,7 +86,7 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
 
     pbar = analysislib.get_progress_bar(str(obj_id), len(timestamps))
 
-    for n,(t,uv,xyz) in enumerate(zip(timestamps,pixel,xyz)):
+    for n,(t,uv,xyz,(dfidx,dfrow)) in enumerate(zip(timestamps,pixel,xyz,valid.iterrows())):
 
         pbar.update(n)
 
@@ -91,14 +101,14 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
         if ts > t0:
             t0 = ts
 
-            col,row = uv
-            x,y,z = xyz
-
             imgfname = movie.next_frame()
 
-            bgr_image = ensure_frame_is_bgr(fmf, img)
-
+            bgr_image = ensure_frame_is_color(fmf, img, 'bgr')
             cv2.circle(bgr_image, tuple(map(int,uv)), 10, (0, 0, 255), 3)
+
+            if flip is not None:
+                bgr_image = cv2.flip(bgr_image, flip)
+
             cv2.imwrite(imgfname, bgr_image)
 
     pbar.finish()
@@ -110,10 +120,13 @@ def doit(h5_file, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration):
 
 
 if __name__ == "__main__":
-    parser = analysislib.args.get_parser("uuid", "h5-file", "idfilt", "outdir", "basedir", "arena")
+    parser = analysislib.args.get_parser(disable_filters=True)
     parser.add_argument(
         '--fmf-file', type=str, nargs='+',
         help='path to fmf file (if not using --uuid)')
+    parser.add_argument(
+        '--movie-flip', type=str, default='', choices=('x','y','xy','yx',''),
+        help='flip the image movie along x,y or both')
     parser.add_argument(
         '--calibration', type=str, required=True,
         help='path to camera calibration file')
@@ -158,11 +171,16 @@ if __name__ == "__main__":
     if not obj_ids:
         parser.error("You must specify --idfilt or --fmf-file")
 
-    print "h5 fname", h5_file
+    try:
+        combine = analysislib.util.get_combiner_for_args(args)
+        combine.add_from_args(args)
+    except autodata.files.NoFile:
+        combine = analysislib.combine.CombineH5()
+        combine.add_from_args(args)
 
     for obj_id,fmf_fname in zip(obj_ids,fmf_files):
         try:
-            doit(h5_file, fmf_fname, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration)
+            doit(combine, fmf_fname, args.movie_flip, obj_id, args.framenumber0, args.tmpdir, outdir, args.calibration)
         except IOError, e:
             print "missing file", e
 
