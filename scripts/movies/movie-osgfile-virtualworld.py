@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import tables
 import numpy as np
 import pandas as pd
 import scipy.misc
@@ -198,7 +197,7 @@ def get_stimulus_from_osgdesc(dsc, osgdesc):
     return StimulusOSGFile(dsc,fname,map(float,oxyz.split(',')),map(float,sxyz.split(',')))
 
 def get_stimulus_from_condition(dsc, condition_obj):
-    print "guessing best stimulus for", condition_obj
+    print "guessing best stimulus for", condition_obj, condition_obj['radius_when_locked']
 
     if condition_obj.is_type('rotation','conflict'):
         return StimulusCylinderAndModel(dsc,
@@ -534,17 +533,26 @@ def doit(combine, args, fmf_fname, flip, obj_id, framenumber0, tmpdir, outdir, c
 
                 renderers[name].render_frame(myfname, msg)
 
-                time.sleep(0.01) # disk i/o
-
                 m = panels[name]
                 device_rect = (m["device_x0"], device_y0, m["dw"], m["dh"])
                 user_rect = (0,0,m["width"], m["height"])
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
-                    a = scipy.misc.imread(myfname)
-                    if a.dtype == np.object:
-                        print "ERROR", myfname
+
+                    # wait for the file to be readable
+                    a = None
+                    _t0 = _t1 = time.time()
+                    while os.path.isfile(myfname) and ((_t1 - _t0 < 1.0)):
+                        a = scipy.misc.imread(myfname)
+                        if (a is not None) and (a.dtype != np.object):
+                            break
+                        time.sleep(0.01)
+                        _t1 = time.time()
+
+                    if a is None:
+                        print "ERROR READING FILE (CORRUPT?)", os.path.isfile(myfname)
                         ok = False
                         continue
+
                     _canv.imshow( a, 0,0, filter='best' )
 
             canv.save()
