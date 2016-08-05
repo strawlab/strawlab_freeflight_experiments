@@ -46,6 +46,24 @@ import flyvr.display_client
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
 
+
+def ensure_frame_is_color(fmf, frame, color_format='bgr'):
+    assert color_format in ('bgr', 'rgb')
+
+    if fmf.format == 'RAW8:BGGR':
+        if color_format == 'bgr':
+            return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2BGR)
+        else:
+            return cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2RGB)
+    elif fmf.format == 'RAW8':
+        if color_format == 'bgr':
+            return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        else:
+            return cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    else:
+        raise ValueError('unable to convert frame: unknown source format %s' % fmf.format)
+
+
 class _SafePubMixin:
 
     def pub_scalar(self, pub, val):
@@ -285,7 +303,7 @@ def get_vr_view(arena, vr_mode, condition, condition_obj):
         
         return msg
 
-def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_panels):
+def doit(combine, args, fmf_fname, flip, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_panels):
     VR_PANELS = vr_panels
 
     arena = analysislib.arenas.get_arena_from_args(args)
@@ -339,7 +357,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
         if fmf_fname.endswith(".fmf"):
             print "fmf fname", fmf_fname
             fmf = motmot.FlyMovieFormat.FlyMovieFormat.FlyMovie(fmf_fname)
-            movie_is_rgb = False #fixe
+            movie_is_rgb = False
         else:
             path,fps,tstart = fmf_fname.split("|")
             print "move from image frames in %s at %s fps (ts=%s)" % (path,fps,tstart)
@@ -348,6 +366,9 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
     else:
         fmf = None
 
+    #convert flip character into opencv flipcode (0=x,1=y,-1=xy)
+    flip = {'x':0,'y':1,'xy':-1,'yx':-1,'':None}[flip]
+
     xyz = np.c_[valid['x'],valid['y'],valid['z']]
     if camera:
         pixel = camera.project_3d_to_pixel(xyz)
@@ -355,7 +376,9 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
         pixel = np.ones((xyz.shape[0],2),dtype=xyz.dtype)
         pixel.fill(np.nan)
 
-    print "trajectory ranges from %f to %f (framenumber: %d)" % (timestamps[0], timestamps[-1], framenumber0)
+    print "dt", dt
+    print "trajectory frame0", framenumber0
+    print "trajectory ranges from %f to %f" % (timestamps[0], timestamps[-1])
 
     if fmf is not None:
         fmftimestamps = fmf.get_all_timestamps()
@@ -365,6 +388,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
             raise IOError("%s (contains no overlapping time period)" % fmf_fname)
     else:
         t0 = timestamps[0]
+
 
     if not sml:
         target_out_w = TARGET_OUT_W*2
@@ -466,10 +490,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                 if movie_is_rgb:
                     rgb_image = img
                 else:
-                    #see fmfcat commit for why this is right
-                    rgb_image = cv2.cvtColor(img[:,1:],cv2.COLOR_BAYER_GR2RGB)
-                    #and this is wrong?
-                    #rgb_image = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2RGB)
+                    rgb_image = ensure_frame_is_color(fmf, img, color_format='rgb')
 
             imgfname = movie.next_frame()
             canv = benu.benu.Canvas(imgfname,actual_out_w,actual_out_h)
@@ -481,9 +502,17 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                 device_rect = (m["device_x0"], device_y0, m["dw"], m["dh"])
                 user_rect = (0,0,m["width"], m["height"])
                 with canv.set_user_coords(device_rect, user_rect) as _canv:
-                    _canv.imshow(rgb_image, 0,0, filter='best' )
-                    if (not np.isnan(col)) and (not np.isnan(row)):
-                        _canv.scatter([col], [row], color_rgba=(1,0,0,0.8), radius=6, markeredgewidth=5 )
+
+                    # draw a circle around the object
+                    if (not np.isnan(uv[0])) and (not np.isnan(uv[1])):
+                        cv2.circle(rgb_image, tuple(map(int,uv)), 10, (255, 0, 0), 3)
+
+                    if flip is not None:
+                        final_rgb = cv2.flip(rgb_image, flip)
+                    else:
+                        final_rgb = rgb_image
+
+                    _canv.imshow(final_rgb, 0,0, filter='best' )
 
             if plot:
                 m = panels["plot"]
@@ -531,6 +560,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
 
     print "wrote", moviefname
 
+
 if __name__ == "__main__":
     rospy.init_node('osgrender')
 
@@ -538,6 +568,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--movie-file', type=str, nargs='+',
         help='path to movie file (fmf or mp4)')
+    parser.add_argument(
+        '--movie-flip', type=str, default='', choices=('x','y','xy','yx',''),
+        help='flip the image movie along x,y or both')
     parser.add_argument(
         '--calibration', type=str, required=False,
         help='path to camera calibration file')
@@ -598,6 +631,7 @@ if __name__ == "__main__":
             doit(combine,
                  args,
                  fmf_fname,
+                 args.movie_flip,
                  obj_id, args.framenumber0,
                  args.tmpdir,
                  outdir, args.calibration, args.framenumber,
@@ -609,6 +643,6 @@ if __name__ == "__main__":
         except IOError, e:
             print "missing file", e
         except ValueError, e:
-            print "missing data", e
+            print "missing data or missing frame0", e
 
 
