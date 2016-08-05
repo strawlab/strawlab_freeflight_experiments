@@ -245,7 +245,15 @@ def get_vr_view(arena, vr_mode, condition, condition_obj):
     msg = flyvr.msg.TrackballManipulatorState()
 
     if arena.name == 'fishbowl':
-        return None
+        msg.rotation.x = 0.256442281137
+        msg.rotation.y = 0.279976257302
+        msg.rotation.z = 0.697818441121
+        msg.rotation.w = 0.607371447324
+        msg.center.x = 0.0773570016026
+        msg.center.y = 0.00664760777727
+        msg.center.z = 0.0821325033903
+        msg.distance = 0.29318102863
+        return msg
     elif arena.name == 'flycube':
         if vr_mode == 'geometry':
             print "view for flycube2"
