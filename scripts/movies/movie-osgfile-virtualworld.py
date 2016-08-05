@@ -221,12 +221,12 @@ def get_stimulus_from_condition(dsc, condition_obj):
                                 float(condition_obj['radius_when_locked']),
                                 model_fname,
                                 model_oxyz)
-    elif condition_obj.is_type('confine','post','kitchen'):
+    elif condition_obj.is_type('confine','post','kitchen') or ('stimulus_filename' in condition_obj):
         fname = condition_obj['stimulus_filename'].replace('lboxmed8x1.osg','lboxmed.svg.osg')
-        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),0.)
+        oxyz = (float(condition_obj['x0']),float(condition_obj['y0']),float(condition_obj.get('z0',0.0)))
         sxyz = (1.,1.,1.)
         return StimulusOSGFile(dsc,fname,oxyz,sxyz)
-    elif condition_obj.is_type('translation'):
+    elif condition_obj.is_type('translation') or condition_obj.is_type('stars'):
         return StimulusStarField(dsc, float(condition_obj['star_size']))
     elif condition_obj.is_type('perturbation'):
         pobj = sfe_perturb.get_perturb_object_from_condition(condition_obj)
