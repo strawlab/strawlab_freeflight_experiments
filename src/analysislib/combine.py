@@ -14,10 +14,10 @@ import calendar
 import collections
 import copy
 import itertools
-from pandas.tseries.index import DatetimeIndex
 
 import tables
 import pandas as pd
+from pandas.tseries.index import DatetimeIndex
 import numpy as np
 import pytz
 import scipy.io
@@ -68,7 +68,10 @@ def is_testing():
     """Returns True iff we detect we are testing.
     If this is the case, combine caches are never read.
     """
-    return 'NOSETEST_FLAG' in os.environ or 'nosetests' in sys.argv[0]
+    return 'NOSETEST_FLAG' in os.environ or \
+           'nosetests' in sys.argv[0] or \
+           'py.test' in sys.argv[0] or \
+           'pytestrunner.py' in sys.argv[0]
 
 
 def check_combine_health(combine, min_length_f=100):
@@ -144,6 +147,7 @@ def load_conditions(uuid):
     this_exp_metadata = None
     try:
         metadata_fname = fm.get_file_model('experiment.yaml').fullpath
+        metadata_fname = os.path.realpath(metadata_fname)
         with open(metadata_fname, 'r') as f:
             this_exp_metadata = yaml.safe_load(f)
     except autodata.files.FileModelException:
@@ -248,6 +252,10 @@ class _Combine(object):
                 self._configdict[k] = v
 
     def _get_cache_name_and_config_string(self):
+        """Returns a two tuple (pkl, whatid).
+          - pkl is the cached pkl path in the central data repository.
+          - whatid is the configuration string identifying this combine object.
+        """
         whatid = self.what().id()
         whatid_hash = hashlib.sha224(whatid).hexdigest()
         return os.path.join(AUTO_DATA_MNT, 'cached', 'combine', whatid_hash[:2], whatid_hash + '.pkl'), whatid
@@ -612,7 +620,7 @@ class _Combine(object):
         Returns:
             A two-tuple.
 
-            the first retured variable is a nested dict of the following 
+            the first retured variable is a nested dict of the following
             structure
 
             results = {
