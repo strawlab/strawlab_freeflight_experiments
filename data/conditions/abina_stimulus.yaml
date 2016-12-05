@@ -6,9 +6,10 @@ no-perturbation_no-conflict_just-a-checkerboard-post:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: step_rotation_rate|0|5|0.1|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost1.osg|0.25|0.0|-0.1
-perturbation_tone_5s_2hz_conflict:
+
+perturbation_tone_10s_1hz_mag.2_conflict:
     cylinder_image: checkerboard16.png
     svg_path: infinity07.svg
     gain: 0.0
@@ -16,9 +17,10 @@ perturbation_tone_5s_2hz_conflict:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.2|20|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|0.2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost1.osg|0.25|0.0|-0.1
-perturbation_tone_5s_2hz:
+
+perturbation_tone_10s_1hz_mag.1_conflict:
     cylinder_image: checkerboard16.png
     svg_path: infinity07.svg
     gain: 0.0
@@ -26,4 +28,38 @@ perturbation_tone_5s_2hz:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|1|5|0|2|0.1|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|0.1|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.05_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.05|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.02_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.02|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+
+perturbation_tone_10s_1hz:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
