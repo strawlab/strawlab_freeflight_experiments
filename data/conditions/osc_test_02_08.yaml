@@ -1,0 +1,54 @@
+no-perturbation_no-conflict_just-a-checkerboard-post:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.4_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.4|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.6_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.6|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.8_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.8|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
+
+perturbation_tone_10s_1hz_mag.2_conflict:
+    cylinder_image: checkerboard16.png
+    svg_path: infinity07.svg
+    gain: 0.0
+    radius_when_locked: -5.0
+    advance_threshold: 0.16
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: tone_rotation_rate|0.2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: justpost1.osg|0.25|0.0|-0.1
