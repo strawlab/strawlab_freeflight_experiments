@@ -56,7 +56,7 @@ no_perturbation_no_post.4_just_background:
     
     
     
-    perturbation_tone_10s_1hz_mag.4_just_background:
+perturbation_tone_10s_1hz_mag.4_just_background:
     cylinder_image: checkerboard16.png
     svg_path: infinity07.svg
     gain: 0.0
