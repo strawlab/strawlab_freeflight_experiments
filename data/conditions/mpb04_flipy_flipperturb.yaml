@@ -12,7 +12,7 @@ no-perturbation_no-conflict_just-a-checkerboard-post:
  
  no-perturbation_no-conflict_just-a-checkerboard-post-flipy:
     cylinder_image: checkerboard16.png
-    svg_path: infinity07-flipy.svg
+    svg_path: infinity07.svg
     gain: 0.0
     radius_when_locked: -5.0
     advance_threshold: 0.16
