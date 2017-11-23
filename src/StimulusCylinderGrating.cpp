@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "flyvr/StimulusInterface.hpp"
-#include "flyvr/flyvr_assert.h"
+#include "freemovr_engine/StimulusInterface.hpp"
+#include "freemovr_engine/freemovr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -37,33 +37,33 @@ GratingParams parse_grating_info(const json_t * const root) {
     json_t *data_json;
 
     data_json = json_object_get(root, "reset_phase_position");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_boolean(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_boolean(data_json));
     result.reset_phase_position = json_is_true( data_json );
 
     data_json = json_object_get(root, "phase_position");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_real(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_real(data_json));
     result.phase_position = json_real_value( data_json );
 
     data_json = json_object_get(root, "phase_velocity");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_real(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_real(data_json));
     result.phase_velocity = json_real_value( data_json );
 
     data_json = json_object_get(root, "wavelength");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_real(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_real(data_json));
     result.wavelength = json_real_value( data_json );
 
     data_json = json_object_get(root, "contrast");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_real(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_real(data_json));
     result.contrast = json_real_value( data_json );
 
     data_json = json_object_get(root, "orientation");
-    flyvr_assert(data_json != NULL);
-    flyvr_assert(json_is_real(data_json));
+    freemovr_assert(data_json != NULL);
+    freemovr_assert(json_is_real(data_json));
     result.orientation = json_real_value( data_json );
 
     return result;
@@ -197,7 +197,7 @@ void StimulusCylinderGrating::receive_json_message(const std::string& topic_name
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    flyvr_assert(root != NULL);
+    freemovr_assert(root != NULL);
 
     if (topic_name=="grating_info") {
         GratingParams new_values;
@@ -309,7 +309,7 @@ void StimulusCylinderGrating::init_cyl(CylInfo& cyl) {
             contrast_name="contrast0";
             orientation_name="orientation0";
         } else {
-            flyvr_assert(false);
+            freemovr_assert(false);
         }
 
         cyl.gratings[i].u_phase_position = new osg::Uniform( osg::Uniform::FLOAT, phase_position_name );
@@ -380,7 +380,7 @@ void StimulusCylinderGrating::init_square(SquareInfo& square) {
             contrast_name="contrast0";
             orientation_name="orientation0";
         } else {
-            flyvr_assert(false);
+            freemovr_assert(false);
         }
 
         square.gratings[i].u_phase_position = new osg::Uniform( osg::Uniform::FLOAT, phase_position_name );

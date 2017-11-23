@@ -1,1 +1,1 @@
-../../../flyvr/cmake/Modules/FindOsgCompute.cmake
+../../../freemovr_engine/cmake/Modules/FindOsgCompute.cmake

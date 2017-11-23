@@ -1,15 +1,18 @@
-cmake_minimum_required(VERSION 2.4.6)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/cuda")
+cmake_minimum_required(VERSION 2.8.3)
+project(strawlab_freeflight_experiments)
+find_package(catkin REQUIRED COMPONENTS
+  rospy
+  message_generation
+  freemovr_engine
+)
+
+MESSAGE(STATUS "Setting CMAKE_MODULE_PATH: ${CMAKE_SOURCE_DIR}/strawlab_freeflight_experiments/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/strawlab_freeflight_experiments/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/strawlab_freeflight_experiments/cmake/Modules/cuda")
 
 SET(CUDA_TOOLKIT_ROOT "/usr/local/cuda")
 FIND_PACKAGE(OsgCompute)
 INCLUDE(FindCuda)
-
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 FIND_PACKAGE(OpenThreads)
 FIND_PACKAGE(osg)
@@ -23,7 +26,7 @@ FIND_PACKAGE(osgGA)
 FIND_PACKAGE(osgWidget)
 FIND_PACKAGE(osgParticle)
 
-SET(OSG_LIBS ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGWIDGET_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGTEXT_LIBRARIES} ${OSGPARTICLE_LIBRARIES})
+find_package(geometry_msgs)
 
 SET(POCO_FIND_REQUIRED 1)
 FIND_PACKAGE(Poco)
@@ -31,46 +34,65 @@ FIND_PACKAGE(Poco)
 SET(JANSSON_FIND_REQUIRED 1)
 FIND_PACKAGE(jansson)
 
-SET(FLYVR_PATH "../flyvr")
-SET(FLYVR_INCLUDE_PATH "${FLYVR_PATH}/include")
+SET(FREEMOVR_ENGINE_PATH "../freemovr_engine")
+SET(FREEMOVR_ENGINE_INCLUDE_PATH "${FREEMOVR_ENGINE_PATH}/include")
 
-FIND_LIBRARY(FLYVR_LIBRARY
-	NAMES flyvr
-	PATHS "${FLYVR_PATH}/lib")
+FIND_LIBRARY(FREEMOVR_ENGINE_LIBRARY
+	NAMES freemovr_engine
+	PATHS "${FREEMOVR_ENGINE_PATH}/lib")
 
-IF (FLYVR_LIBRARY)
-  MESSAGE(STATUS "Found flyvr: ${FLYVR_LIBRARY}")
-ELSE(FLYVR_LIBRARY)
-  MESSAGE(FATAL_ERROR "Could not find flyvr library")
-ENDIF(FLYVR_LIBRARY)
+IF (FREEMOVR_ENGINE_LIBRARY)
+  MESSAGE(STATUS "Found freemovr_engine: ${FREEMOVR_ENGINE_LIBRARY}")
+ELSE(FREEMOVR_ENGINE_LIBRARY)
+  MESSAGE(FATAL_ERROR "Could not find freemovr_engine library")
+ENDIF(FREEMOVR_ENGINE_LIBRARY)
+
+SET(OSG_LIBS ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGWIDGET_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGTEXT_LIBRARIES} ${OSGPARTICLE_LIBRARIES})
+
+catkin_python_setup()
+
+add_message_files(
+  FILES
+  CylinderGratingInfo.msg
+)
+
+generate_messages(DEPENDENCIES geometry_msgs)
+
+catkin_package(
+  CATKIN_DEPENDS message_runtime rospy
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  )
 
 add_library(StimulusAltitudeEdge SHARED src/StimulusAltitudeEdge.cpp)
 target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp src/json2osg.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusCylinderAndModel SHARED src/StimulusCylinderAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinderAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 add_library(StimulusCylinderGrating SHARED src/StimulusCylinderGrating.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinderGrating ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FLYVR_LIBRARY})
+  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
 
 SET(MY_CUDA_SOURCE_FILES
 	src/PtclKernels.cu
@@ -94,17 +116,13 @@ IF(OSG_COMPUTE_FOUND)
   INCLUDE_DIRECTORIES(
     ${OSG_COMPUTE_INCLUDE_PATHS}
     ${CUDA_TOOLKIT_INCLUDE}
-    ${FLYVR_INCLUDE_PATH}
+    ${FREEMOVR_ENGINE_INCLUDE_PATH}
   )
   target_link_libraries(StimulusCUDAStarFieldAndModel
     ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} ${OSG_COMPUTE_LIBRARIES}
-    ${FLYVR_LIBRARY})
+    ${FREEMOVR_ENGINE_LIBRARY})
 ELSE(OSG_COMPUTE_FOUND)
   INCLUDE_DIRECTORIES(
-    ${FLYVR_INCLUDE_PATH}
+    ${FREEMOVR_ENGINE_INCLUDE_PATH}
   )
 ENDIF(OSG_COMPUTE_FOUND)
-
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-rosbuild_init()
-rosbuild_genmsg()

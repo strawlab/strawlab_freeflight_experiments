@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "flyvr/StimulusInterface.hpp"
-#include "flyvr/flyvr_assert.h"
+#include "freemovr_engine/StimulusInterface.hpp"
+#include "freemovr_engine/freemovr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -362,7 +362,7 @@ public:
     void _load_stimulus_filename( std::string osg_filename );
     void _update_pat();
     void _did_dirty_particles();
-    void set_background_color_callback(flyvr::BackgroundColorCallback* cb);
+    void set_background_color_callback(freemovr_engine::BackgroundColorCallback* cb);
 private:
     osg::ref_ptr<osg::Group> _group;
     osg::ref_ptr<osg::PositionAttitudeTransform> switch_node;
@@ -386,7 +386,7 @@ private:
     int num_particles;
 
     bool dirty_particles;
-    flyvr::BackgroundColorCallback *_bg_callback;
+    freemovr_engine::BackgroundColorCallback *_bg_callback;
 };
 
 StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
@@ -394,7 +394,7 @@ StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
     bb_size(10.0f), num_particles(2500), dirty_particles(true) {
     _starColor = osg::Vec3f( 1.0, 1.0, 1.0 );
     _bgColor = osg::Vec4f( 0.0, 0.0, 0.0, 1.0 );
-    flyvr_assert( is_CUDA_available()==true );
+    freemovr_assert( is_CUDA_available()==true );
 
     _group = new osg::Group;
     switch_node = new osg::PositionAttitudeTransform;
@@ -405,7 +405,7 @@ StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
 }
 
 void StimulusCUDAStarFieldAndModel::_update_pat() {
-    flyvr_assert(switch_node.valid());
+    freemovr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
     switch_node->setAttitude( model_attitude );
 }
@@ -428,7 +428,7 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
 
     // now load it with new contents
     osg::Node* tmp = load_osg_file(osg_filename);
-    flyvr_assert(tmp!=NULL);
+    freemovr_assert(tmp!=NULL);
     switch_node->addChild( tmp );
     _group->addChild(switch_node);
 }
@@ -522,7 +522,7 @@ void StimulusCUDAStarFieldAndModel::receive_json_message(const std::string& topi
         std::ostringstream errstream;
         errstream << "ERROR: could not load JSON message \"" << json_message << "\" to topic \"" << topic_name << "\".";
         std::string errmsg = errstream.str();
-        flyvr_assert_msg(false, errmsg.c_str());
+        freemovr_assert_msg(false, errmsg.c_str());
     }
 
     if (topic_name=="star_velocity") {
@@ -621,7 +621,7 @@ std::string StimulusCUDAStarFieldAndModel::get_message_type(const std::string& t
     return result;
 }
 
-void StimulusCUDAStarFieldAndModel::set_background_color_callback(flyvr::BackgroundColorCallback* cb) {
+void StimulusCUDAStarFieldAndModel::set_background_color_callback(freemovr_engine::BackgroundColorCallback* cb) {
     _bg_callback = cb;
     if (_bg_callback) {
         _bg_callback->setBackgroundColorImplementation(_bgColor);

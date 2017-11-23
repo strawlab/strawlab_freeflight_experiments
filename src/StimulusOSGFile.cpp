@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "flyvr/StimulusInterface.hpp"
-#include "flyvr/flyvr_assert.h"
+#include "freemovr_engine/StimulusInterface.hpp"
+#include "freemovr_engine/freemovr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -30,7 +30,7 @@ class StimulusOSGFile: public StimulusInterface
 {
 public:
 
-StimulusOSGFile() : 
+StimulusOSGFile() :
     model_scale(1.0,1.0,1.0),
     model_position(0.,0.,0.) {
     ;
@@ -106,7 +106,7 @@ void _load_skybox_basename( std::string basename ) {
 }
 
 void _update_pat() {
-    flyvr_assert(switch_node.valid());
+    freemovr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
     switch_node->setScale( model_scale );
     switch_node->setAttitude( model_attitude );
@@ -153,7 +153,7 @@ void receive_json_message(const std::string& topic_name, const std::string& json
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    flyvr_assert(root != NULL);
+    freemovr_assert(root != NULL);
 
     if (topic_name=="stimulus_filename") {
         _load_stimulus_filename( parse_string(root) );

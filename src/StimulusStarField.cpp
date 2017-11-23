@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "flyvr/StimulusInterface.hpp"
-#include "flyvr/flyvr_assert.h"
+#include "freemovr_engine/StimulusInterface.hpp"
+#include "freemovr_engine/freemovr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -227,7 +227,7 @@ void StimulusStarField::receive_json_message(const std::string& topic_name,
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    flyvr_assert(root != NULL);
+    freemovr_assert(root != NULL);
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);

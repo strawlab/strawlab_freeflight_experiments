@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-#include "flyvr/StimulusInterface.hpp"
-#include "flyvr/flyvr_assert.h"
+#include "freemovr_engine/StimulusInterface.hpp"
+#include "freemovr_engine/freemovr_assert.h"
 
 #include "json2osg.hpp"
 
@@ -147,7 +147,7 @@ StimulusStarFieldAndModel::StimulusStarFieldAndModel() {
 }
 
 void StimulusStarFieldAndModel::_update_pat() {
-    flyvr_assert(switch_node.valid());
+    freemovr_assert(switch_node.valid());
     switch_node->setPosition( model_position );
     switch_node->setAttitude( model_attitude );
 }
@@ -170,7 +170,7 @@ void StimulusStarFieldAndModel::_load_stimulus_filename( std::string osg_filenam
 
     // now load it with new contents
     osg::Node* tmp = osgDB::readNodeFile(osg_filename);
-    flyvr_assert(tmp!=NULL);
+    freemovr_assert(tmp!=NULL);
     switch_node->addChild( tmp );
     _group->addChild(switch_node);
 }
@@ -270,7 +270,7 @@ void StimulusStarFieldAndModel::receive_json_message(const std::string& topic_na
     json_error_t error;
 
     root = json_loads(json_message.c_str(), 0, &error);
-    flyvr_assert(root != NULL);
+    freemovr_assert(root != NULL);
 
     if (topic_name=="star_velocity") {
         osg::Vec3 vel = parse_vec3(root);
