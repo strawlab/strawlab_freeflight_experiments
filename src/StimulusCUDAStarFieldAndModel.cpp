@@ -27,7 +27,6 @@
 #include <osgCompute/Computation>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
-#include <osgCuda/Program>
 #include <osgCudaStats/Stats>
 #include <osgCudaInit/Init>
 
@@ -50,7 +49,7 @@ extern "C" void move(
                      float rot_mat_10, float rot_mat_11,
                      float centerx, float centery);
 
-class MovePtcls : public osgCompute::Computation
+class MovePtcls : public osgCompute::Program
 {
 public:
     MovePtcls() : _rotation_rate(0.0) {}
@@ -141,7 +140,7 @@ extern "C" void emit(
                      osg::Vec3f bbmin,
                      osg::Vec3f bbmax );
 
-class EmitPtcls : public osgCompute::Computation
+class EmitPtcls : public osgCompute::Program
 {
 public:
     EmitPtcls( osg::Vec3f min, osg::Vec3f max ) : _min(min), _max(max) {}
@@ -207,7 +206,7 @@ class particleDataType : public osg::Referenced
 public:
     particleDataType(osg::Node*n, osg::ref_ptr<osgCompute::Memory> ptcls, osg::Vec3f bbmin, osg::Vec3f bbmax );
 
-    osg::ref_ptr<osgCompute::Computation> _emit;
+    osg::ref_ptr<osgCompute::Program> _emit;
     osg::ref_ptr<MovePtcls> _move;
 };
 
