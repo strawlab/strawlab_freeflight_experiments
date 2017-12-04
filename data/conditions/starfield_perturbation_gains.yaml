@@ -1,0 +1,104 @@
+starfield_translation_infinity_10:
+    svg_path: infinity07.svg
+    star_translation_gain: 10.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.4, 0.4, 0.4]
+starfield_translation_infinity_30:
+    svg_path: infinity07.svg
+    star_translation_gain: 30.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.4, 0.4, 0.4]
+starfield_translation_infinity_90:
+    svg_path: infinity07.svg
+    star_translation_gain: 90.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.4, 0.4, 0.4]
+starfield_translation_infinity_270:
+    svg_path: infinity07.svg
+    star_translation_gain: 270.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 0.0
+    star_color: [1., 1., 1.]
+    background_color: [0.4, 0.4, 0.4]
+starfield_rotation_infinity_0.33:
+    svg_path: infinity07.svg
+    star_translation_gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 0.33
+    star_color: [1., 1., 1.]
+    background_color: [0.2, 0.2, 0.2]
+starfield_rotation_infinity_1:
+    svg_path: infinity07.svg
+    star_translation_gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 1.
+    star_color: [1., 1., 1.]
+    background_color: [0.2, 0.2, 0.2]
+starfield_rotation_infinity_3:
+    svg_path: infinity07.svg
+    star_translation_gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 3.
+    star_color: [1., 1., 1.]
+    background_color: [0.2, 0.2, 0.2]
+starfield_rotation_infinity_9:
+    svg_path: infinity07.svg
+    star_translation_gain: 0.0
+    advance_threshold: 0.1
+    z_gain: 50.0
+    star_size: 170.0
+    num_particles: 2500
+    bb_size: 10.0
+    particles_angular_size_fixed: false
+    z_target: 0.12
+    star_rotation_rate: 9.
+    star_color: [1., 1., 1.]
+    background_color: [0.2, 0.2, 0.2]
