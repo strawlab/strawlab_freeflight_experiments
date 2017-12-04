@@ -6,7 +6,7 @@ from ros_flydra.msg import flydra_mainbrain_super_packet
 from std_msgs.msg import String, Float32, UInt32
 import rospy
 
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 
 # other imports
 import datetime

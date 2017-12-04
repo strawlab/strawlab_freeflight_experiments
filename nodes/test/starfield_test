@@ -8,7 +8,7 @@ import rospy
 from std_msgs.msg import Float32, Int32, Bool
 from geometry_msgs.msg import Vector3
 
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from strawlab_freeflight_experiments.topics import TOPIC_STAR_VELOCITY, \
      TOPIC_STAR_ROTATION_RATE, TOPIC_STAR_SIZE, \
      TOPIC_STAR_COLOR, TOPIC_BACKGROUND_COLOR

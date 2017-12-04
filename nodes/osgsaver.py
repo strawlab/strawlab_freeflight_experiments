@@ -12,7 +12,7 @@ import roslib
 roslib.load_manifest(PACKAGE)
 import rospy
 
-import flyvr.display_client
+import freemovr_engine.display_client
 import std_msgs.msg
 import geometry_msgs.msg
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -38,7 +38,7 @@ class Logger(nodelib.log.CsvLogger):
 class Node(object):
     def __init__(self, wait_for_flydra, use_tmpdir, continue_existing, pushover=False):
 
-        self.dsc = flyvr.display_client.DisplayServerProxy.set_stimulus_mode('StimulusOSGFile')
+        self.dsc = freemovr_engine.display_client.DisplayServerProxy.set_stimulus_mode('StimulusOSGFile')
 
         self.pub_stimulus_scale = rospy.Publisher("model_scale", geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
         self.pub_stimulus_centre = rospy.Publisher("model_pose", geometry_msgs.msg.Pose, latch=True, tcp_nodelay=True)

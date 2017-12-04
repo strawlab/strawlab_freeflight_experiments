@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import roslib
-roslib.load_manifest('flyvr')
+roslib.load_manifest('freemovr_engine')
 
 import rospy
 import geometry_msgs.msg
@@ -13,8 +13,8 @@ import argparse
 import numpy as np
 import scipy.misc
 
-import flyvr.srv
-import flyvr.display_client as display_client
+import freemovr_engine.srv
+import freemovr_engine.display_client as display_client
 
 def show_osgfile(fname,origin,scale):
     rospy.init_node('show_osgfile')

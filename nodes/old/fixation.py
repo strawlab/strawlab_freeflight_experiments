@@ -12,7 +12,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import UInt32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -273,7 +273,7 @@ class Node(object):
     def lock_on(self,obj,framenumber):
         with self.trackinglock:
             self.currently_locked_obj_id = obj.obj_id
-    
+
         rospy.loginfo('locked object %d at frame %d at %f,%f,%f' % (
                 self.currently_locked_obj_id,framenumber,self.fly.x,self.fly.y,self.fly.z))
 

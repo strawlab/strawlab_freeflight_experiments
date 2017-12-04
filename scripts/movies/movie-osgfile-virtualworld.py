@@ -40,8 +40,8 @@ import strawlab.constants
 import strawlab_freeflight_experiments.perturb as sfe_perturb
 from strawlab_freeflight_experiments.topics import *
 
-roslib.load_manifest('flyvr')
-import flyvr.display_client
+roslib.load_manifest('freemovr_engine')
+import freemovr_engine.display_client
 
 TARGET_OUT_W, TARGET_OUT_H = 1024, 768
 MARGIN = 0
@@ -78,9 +78,9 @@ class _SafePubMixin:
         msg.orientation.w = w
         pub.publish(msg)
 
-class StimulusCylinderAndModel(flyvr.display_client.StimulusSlave, _SafePubMixin):
+class StimulusCylinderAndModel(freemovr_engine.display_client.StimulusSlave, _SafePubMixin):
     def __init__(self, dsc, cyl_fname, radius, model_fname, model_oxyz):
-        flyvr.display_client.StimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
+        freemovr_engine.display_client.StimulusSlave.__init__(self, dsc, stimulus='StimulusCylinderAndModel')
 
         self.pub_rotation = rospy.Publisher(self.dsc.name+'/' + TOPIC_CYL_ROTATION,
                 std_msgs.msg.Float32, latch=True, tcp_nodelay=True)
@@ -140,9 +140,9 @@ class StimulusCylinderAndModel(flyvr.display_client.StimulusSlave, _SafePubMixin
         self.pub_scalar_safe(self.pub_model_filename, row, 'model_filename')
 
 
-class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
+class StimulusOSGFile(freemovr_engine.display_client.OSGFileStimulusSlave):
     def __init__(self, dsc, fname, oxyz, sxyz):
-        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc)
+        freemovr_engine.display_client.OSGFileStimulusSlave.__init__(self, dsc)
         self.set_model_filename(fname)
         self.set_model_origin(oxyz)
         self.set_model_scale(sxyz)
@@ -150,9 +150,9 @@ class StimulusOSGFile(flyvr.display_client.OSGFileStimulusSlave):
     def set_state(self, row):
         pass
 
-class StimulusStarField(flyvr.display_client.OSGFileStimulusSlave):
+class StimulusStarField(freemovr_engine.display_client.OSGFileStimulusSlave):
     def __init__(self, dsc, star_size):
-        flyvr.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusStarField')
+        freemovr_engine.display_client.OSGFileStimulusSlave.__init__(self, dsc, stimulus='StimulusStarField')
         self.pub_velocity = rospy.Publisher(
                                 self.dsc.name+'/' + TOPIC_STAR_VELOCITY,
                                 geometry_msgs.msg.Vector3, latch=True, tcp_nodelay=True)
@@ -220,7 +220,7 @@ def get_stimulus_from_condition(dsc, condition_obj):
 def get_vr_view(arena, vr_mode, condition, condition_obj):
     # easiest way to get these:
     #   rosservice call /ds_geometry/get_trackball_manipulator_state
-    msg = flyvr.msg.TrackballManipulatorState()
+    msg = freemovr_engine.msg.TrackballManipulatorState()
 
     if arena.name == 'fishbowl':
         return None
@@ -282,7 +282,7 @@ def get_vr_view(arena, vr_mode, condition, condition_obj):
             msg.center.y = -0.0946640968323
             msg.center.z = 0.282709181309
             msg.distance = 1.5655520953
-        
+
         return msg
 
 def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibration, framenumber, sml, plot, osgdesc, vr_panels):
@@ -297,7 +297,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
     osgslaves = {}
     for name in VR_PANELS:
         node = "/ds_%s" % name
-        dsc = flyvr.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
+        dsc = freemovr_engine.display_client.DisplayServerProxy(display_server_node_name=node,wait=True)
 
         if osgdesc:
             stimobj = get_stimulus_from_osgdesc(dsc, osgdesc)
@@ -305,7 +305,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
             stimobj = get_stimulus_from_condition(dsc, condition_obj)
         print "rendering vr",name,stimobj
 
-        renderers[name] = flyvr.display_client.RenderFrameSlave(dsc)
+        renderers[name] = freemovr_engine.display_client.RenderFrameSlave(dsc)
         osgslaves[name] = stimobj
 
     # setup camera position
@@ -495,7 +495,7 @@ def doit(combine, args, fmf_fname, obj_id, framenumber0, tmpdir, outdir, calibra
                             xhist, yhist, zhist, x, y, z,
                             arena)
 
-            #do the VR 
+            #do the VR
             for name in VR_PANELS:
                 renderers[name].set_pose(x=x,y=y,z=z)
                 osgslaves[name].set_state(dfrow)

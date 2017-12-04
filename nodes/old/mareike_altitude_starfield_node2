@@ -8,7 +8,7 @@ from geometry_msgs.msg import Vector3
 
 import rospy
 
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 
 # other imports
 import datetime
@@ -32,7 +32,7 @@ class Node(object):
         csv_fullpath = os.path.expanduser('~/FLYDRA')
         if not os.path.exists(csv_fullpath):
             os.makedirs(csv_fullpath)
-        now_unix = rospy.get_time() 
+        now_unix = rospy.get_time()
         now_realtime = datetime.datetime.fromtimestamp(now_unix).strftime('%Y%m%d_%H%M%S')
         csv_fname = 'DATA' + now_realtime + '.csv'
         csv_notes_fname = 'DATA' + now_realtime + '_notes.csv'
@@ -43,7 +43,7 @@ class Node(object):
             realtime = datetime.datetime.fromtimestamp(rostime).strftime('%Y%m%d_%H%M%S')
             print 'realtime', realtime
             1/0
-        
+
         ffa_radius = 0.5   # measurements of free flight arena
         ffa_z_min = 0.0
         ffa_z_max = 1.0
@@ -52,7 +52,7 @@ class Node(object):
         trigger_z_max = 0.8
         FPS = 100   # frames per second
         duration_stationary_phase = 1.0 # duration of stationary phase before moving starfield
-        
+
         # instance variables
         self.locked_on = False      # currently locked on to obj_id?
         self.locked_obj_id = 0      # currently tracked obj_id
@@ -74,7 +74,7 @@ class Node(object):
         self.trigger_z_max = trigger_z_max
         self.FPS = FPS
         self.duration_stationary_phase = duration_stationary_phase
-        
+
         # open new csv-file for saving metadata
         self.csv_file = open(os.path.join(self.csv_fullpath, self.csv_fname),'wb')
         self.csv_file.write('obj_id,trigger,speed\n')
@@ -165,7 +165,7 @@ class Node(object):
             self.locked_on = False
             self.locked_obj_id = 0
             self.start_time = 0.0
-            
+
 
         for packet in data.packets:
             framenumber = packet.framenumber

@@ -2,7 +2,7 @@
 """
 updated for fish
 
-TODO: 
+TODO:
 - add geometric filter for fishbowl
 	start_radius and stop_radius from center of shoere that is at 0.12
 """
@@ -21,7 +21,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose, Polygon
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -363,7 +363,7 @@ class Node(nodelib.node.Experiment):
         self.z0 = self._z00
         self.log.z0 = self.z0
 
-        self.pub_model_pose.publish( self.get_model_pose_msg() )        
+        self.pub_model_pose.publish( self.get_model_pose_msg() )
         self.pub_stimulus.publish( self.stimulus_filename )
         self.update()
 
@@ -388,7 +388,7 @@ class Node(nodelib.node.Experiment):
         self.log.z0 = self.z0
 
         self.pub_stimulus.publish( HOLD_COND )
-        self.update()        
+        self.update()
 
 def main():
     rospy.init_node("confinement")

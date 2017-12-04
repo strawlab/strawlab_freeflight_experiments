@@ -13,7 +13,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -173,7 +173,7 @@ class Node(nodelib.node.Experiment):
         self.log.model_x = self.model_x
         self.log.model_y = self.model_y
         self.log.model_z = self.model_z
-        
+
         rospy.loginfo('condition: %s (p=%.1f, svg=%s, rad locked=%.1f advance=%.1fpx)' % (self.condition.name,self.p_const,os.path.basename(self.svg_fn),self.rad_locked,self.advance_px))
 
     def get_v_rate(self,fly_z):

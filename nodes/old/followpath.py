@@ -14,7 +14,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import String, UInt32, Bool
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -191,7 +191,7 @@ class Node(object):
 
         self.srcpx_pub.publish(px,py,0)
         self.trgpx_pub.publish(target.p2.x,target.p2.y,0)
-                
+
         return msg,target,True
 
     def run(self):

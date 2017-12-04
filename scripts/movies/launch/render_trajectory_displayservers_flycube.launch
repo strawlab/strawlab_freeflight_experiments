@@ -1,5 +1,5 @@
 <launch>
-  <node name="ds_virtual_world" pkg="flyvr" type="display_server" args="--mode=virtual_world --observer_radius -0.015">
+  <node name="ds_virtual_world" pkg="freemovr_engine" type="display_server" args="--mode=virtual_world --observer_radius -0.015">
 
     <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
     <rosparam>
@@ -30,7 +30,7 @@ geom:
 
   </node>
 
-  <node name="ds_geometry" pkg="flyvr" type="display_server" args="--mode=geometry --observer_radius -0.015">
+  <node name="ds_geometry" pkg="freemovr_engine" type="display_server" args="--mode=geometry --observer_radius -0.015">
 
     <rosparam command="load" file="$(find strawlab_freeflight_experiments)/scripts/movies/launch/render_display_config.yaml" />
     <rosparam>

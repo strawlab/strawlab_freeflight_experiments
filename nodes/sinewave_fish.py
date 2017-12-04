@@ -12,7 +12,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import Int32, UInt32, Bool
 from geometry_msgs.msg import Vector3
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -185,7 +185,7 @@ class Node(nodelib.node.Experiment):
             self.log.framenumber = framenumber
             self.last_check_flying_time = now
             self.fly = obj.position
-        
+
         phase_velocity, msg = self._get_grating_msg( random.choice((-1.0,1.0)) )
         self.pub_grating_info.publish(msg)
         self.log.phase_velocity = phase_velocity
@@ -209,7 +209,7 @@ class Node(nodelib.node.Experiment):
         self.pub_grating_info.publish(msg)
         self.log.phase_velocity = phase_velocity
 
-        self.update()        
+        self.update()
 
 def main():
     rospy.init_node("confinement")

@@ -16,7 +16,7 @@ roslib.load_manifest('strawlab_freeflight_experiments')
 pkg_dir = roslib.packages.get_pkg_dir('strawlab_freeflight_experiments')
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String
 from geometry_msgs.msg import Vector3, Pose, Polygon, Point32
 
@@ -181,7 +181,7 @@ class Node(nodelib.node.Experiment):
 
         #HACK
         self.pub_cyl_height.publish(np.abs(5*self.rad_locked))
-        
+
         rospy.loginfo('condition: %s (%s, rad locked=%.1f)' % (self.condition.name,self.gain,self.rad_locked))
 
     def get_v_rate(self,fly_z):

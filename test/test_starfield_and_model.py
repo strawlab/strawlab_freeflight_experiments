@@ -12,7 +12,7 @@ import roslib; roslib.load_manifest(PKG)
 
 import rospy
 import rostest
-from flyvr.msg import ROSPath
+from freemovr_engine.msg import ROSPath
 
 @unittest.skip("skipping ros test")
 class TestStarfieldAndModel(unittest.TestCase):

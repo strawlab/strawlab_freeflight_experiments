@@ -13,7 +13,7 @@ import roslib.packages
 roslib.load_manifest(PACKAGE)
 
 import rospy
-import flyvr.display_client as display_client
+import freemovr_engine.display_client as display_client
 from std_msgs.msg import UInt32, Bool, Float32, String, Int32
 from geometry_msgs.msg import Vector3, Pose
 from ros_flydra.msg import flydra_mainbrain_super_packet
@@ -45,7 +45,7 @@ Z_MIN =  0.01
 Z_MAX =  0.38
 
 # time interval in seconds to check fly movement after lock on
-FLY_HEIGHT_CHECK_TIME = 0.5       
+FLY_HEIGHT_CHECK_TIME = 0.5
 
 # z range for fly tracking (dropped outside)
 # this range is only tested after the fly has been tracked for FLY_HEIGHT_CHECK_TIME seconds
@@ -275,7 +275,7 @@ class Node(nodelib.node.Experiment):
                         rospy.loginfo('WALL: Wall (Y = %.2f < Z_MINIMUM %.2f )' % (fly_y, Y_MINIMUM))
                     continue
 
-              
+
 
                 #distance accounting, give up on fly if it is not moving
                 self.fly_dist += math.sqrt((fly_x-self.last_fly_x)**2 +
