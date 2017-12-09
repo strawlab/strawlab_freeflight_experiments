@@ -34,19 +34,6 @@ FIND_PACKAGE(Poco)
 SET(JANSSON_FIND_REQUIRED 1)
 FIND_PACKAGE(jansson)
 
-SET(FREEMOVR_ENGINE_PATH "../freemovr_engine")
-SET(FREEMOVR_ENGINE_INCLUDE_PATH "${FREEMOVR_ENGINE_PATH}/include")
-
-FIND_LIBRARY(FREEMOVR_ENGINE_LIBRARY
-	NAMES freemovr_engine
-	PATHS "${FREEMOVR_ENGINE_PATH}/lib")
-
-IF (FREEMOVR_ENGINE_LIBRARY)
-  MESSAGE(STATUS "Found freemovr_engine: ${FREEMOVR_ENGINE_LIBRARY}")
-ELSE(FREEMOVR_ENGINE_LIBRARY)
-  MESSAGE(FATAL_ERROR "Could not find freemovr_engine library")
-ENDIF(FREEMOVR_ENGINE_LIBRARY)
-
 SET(OSG_LIBS ${OPENTHREADS_LIBRARIES} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGWIDGET_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGTEXT_LIBRARIES} ${OSGPARTICLE_LIBRARIES})
 
 catkin_python_setup()
@@ -62,37 +49,37 @@ catkin_package(
   CATKIN_DEPENDS message_runtime rospy
 )
 
-include_directories(
+include_directories(include
   ${catkin_INCLUDE_DIRS}
   )
 
 add_library(StimulusAltitudeEdge SHARED src/StimulusAltitudeEdge.cpp)
 target_link_libraries(StimulusAltitudeEdge ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusOSGFile SHARED src/StimulusOSGFile.cpp src/json2osg.cpp)
 target_link_libraries(StimulusOSGFile ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusStarField SHARED src/StimulusStarField.cpp)
 target_link_libraries(StimulusStarField ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusStarFieldAndModel SHARED src/StimulusStarFieldAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusStarFieldAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusCylinder SHARED src/StimulusCylinder.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinder ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusCylinderAndModel SHARED src/StimulusCylinderAndModel.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinderAndModel ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 add_library(StimulusCylinderGrating SHARED src/StimulusCylinderGrating.cpp src/json2osg.cpp)
 target_link_libraries(StimulusCylinderGrating ${OSG_LIBS} ${POCO_LIBRARIES}
-  ${JANSSON_LIBRARIES} ${FREEMOVR_ENGINE_LIBRARY})
+  ${JANSSON_LIBRARIES})
 
 SET(MY_CUDA_SOURCE_FILES
 	src/PtclKernels.cu
@@ -120,7 +107,7 @@ IF(OSG_COMPUTE_FOUND)
   )
   target_link_libraries(StimulusCUDAStarFieldAndModel
     ${OSG_LIBS} ${POCO_LIBRARIES} ${JANSSON_LIBRARIES} ${OSG_COMPUTE_LIBRARIES}
-    ${FREEMOVR_ENGINE_LIBRARY})
+    )
 ELSE(OSG_COMPUTE_FOUND)
   INCLUDE_DIRECTORIES(
     ${FREEMOVR_ENGINE_INCLUDE_PATH}
