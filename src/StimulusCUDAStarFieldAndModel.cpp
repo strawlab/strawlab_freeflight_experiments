@@ -5,6 +5,7 @@
 #include "json2osg.hpp"
 
 #include "Poco/ClassLibrary.h"
+#include "Poco/Format.h"
 
 #include <iostream>
 
@@ -31,6 +32,8 @@
 #include <osgCudaInit/Init>
 
 #include <jansson.h>
+
+using Poco::format;
 
 /*
 
@@ -426,9 +429,14 @@ void StimulusCUDAStarFieldAndModel::_load_stimulus_filename( std::string osg_fil
     _update_pat();
 
     // now load it with new contents
-    osg::Node* tmp = load_osg_file(osg_filename);
-    freemovr_assert(tmp!=NULL);
-    switch_node->addChild( tmp );
+    if (osg_filename!="/dev/null") {
+        osg::Node* tmp = load_osg_file(osg_filename);
+        if (tmp!=NULL) {
+            switch_node->addChild( tmp );
+        } else {
+            throw std::runtime_error(format("File %s not found",osg_filename));
+        }
+    }
     _group->addChild(switch_node);
 }
 
