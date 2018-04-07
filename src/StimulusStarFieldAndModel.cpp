@@ -101,7 +101,7 @@ private:
 class StimulusStarFieldAndModel: public StimulusInterface
 {
 public:
-    StimulusStarFieldAndModel();
+    StimulusStarFieldAndModel(std::string package_share_dir);
 
     std::string name() const { return "StimulusStarFieldAndModel"; }
     void post_init(bool slave);
@@ -134,7 +134,9 @@ private:
     void set_star_size(float v);
 };
 
-StimulusStarFieldAndModel::StimulusStarFieldAndModel() {
+StimulusStarFieldAndModel::StimulusStarFieldAndModel(std::string package_share_dir)
+    : StimulusInterface(package_share_dir)
+{
     _shooter = new ConstantShooter;
     _placer = new osgParticle::BoxPlacer;
     _vel_operator = new VelocityOperator;
@@ -308,8 +310,10 @@ std::string StimulusStarFieldAndModel::get_message_type(const std::string& topic
     return result;
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusStarFieldAndModel)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusStarFieldAndModel);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusStarFieldAndModelLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

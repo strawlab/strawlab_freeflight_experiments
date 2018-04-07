@@ -346,7 +346,7 @@ void ParticleNode::setAngularSizeFixed( bool is_fixed ) {
 class StimulusCUDAStarFieldAndModel: public StimulusInterface
 {
 public:
-    StimulusCUDAStarFieldAndModel();
+    StimulusCUDAStarFieldAndModel(std::string package_share_dir);
 
     std::string name() const { return "StimulusCUDAStarFieldAndModel"; }
     void post_init(bool slave);
@@ -391,7 +391,8 @@ private:
     freemovr_engine::BackgroundColorCallback *_bg_callback;
 };
 
-StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel() :
+StimulusCUDAStarFieldAndModel::StimulusCUDAStarFieldAndModel(std::string package_share_dir) :
+    StimulusInterface(package_share_dir),
     star_rotation_rate(0.0f), star_size(101.0f), particles_angular_size_fixed(false),
     bb_size(10.0f), num_particles(2500), dirty_particles(true) {
     _starColor = osg::Vec3f( 1.0, 1.0, 1.0 );
@@ -635,8 +636,10 @@ void StimulusCUDAStarFieldAndModel::set_background_color_callback(freemovr_engin
     }
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusCUDAStarFieldAndModel)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusCUDAStarFieldAndModel);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusCUDAStarFieldAndModelLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

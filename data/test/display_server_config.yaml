@@ -6,19 +6,19 @@ geom:
 tethered_mode: True
 ignore_missing_stimulus_plugins: True
 stimulus_plugins: 
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusStarField
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusStarFieldAndModel
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCUDAStarFieldAndModel
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusOSGFile
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCylinder
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCylinderAndModel
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCylinderGrating
 display:
   displayNum: 0

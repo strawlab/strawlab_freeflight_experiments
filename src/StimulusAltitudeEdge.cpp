@@ -22,7 +22,7 @@
 class StimulusAltitudeEdge: public StimulusInterface
 {
 public:
-    StimulusAltitudeEdge();
+    StimulusAltitudeEdge(std::string package_share_dir);
 
     std::string name() const { return "StimulusAltitudeEdge"; }
     void post_init(bool slave);
@@ -40,7 +40,7 @@ private:
 };
 
 
-StimulusAltitudeEdge::StimulusAltitudeEdge() : _edge_height(0.5) {
+StimulusAltitudeEdge::StimulusAltitudeEdge(std::string package_share_dir) : StimulusInterface(package_share_dir), _edge_height(0.5) {
 }
 
 void StimulusAltitudeEdge::post_init(bool slave) {
@@ -113,8 +113,10 @@ std::string StimulusAltitudeEdge::get_message_type(const std::string& topic_name
     return result;
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusAltitudeEdge)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusAltitudeEdge);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusAltitudeEdgeLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

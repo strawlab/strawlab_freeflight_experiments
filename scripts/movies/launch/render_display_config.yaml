@@ -22,11 +22,11 @@ gamma: 1.0
 red_max: false
 tethered_mode: false
 stimulus_plugins: 
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusOSGFile
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCylinderAndModel
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusCylinder
-- path: $(find strawlab_freeflight_experiments)/lib
+- package: strawlab_freeflight_experiments
   name: StimulusStarField

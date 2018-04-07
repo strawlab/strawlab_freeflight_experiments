@@ -38,7 +38,7 @@ typedef struct
 class StimulusCylinderAndModel: public StimulusInterface
 {
 public:
-    StimulusCylinderAndModel();
+    StimulusCylinderAndModel(std::string package_share_dir);
 
     void post_init(bool);
     std::vector<std::string> get_topic_names() const;
@@ -91,7 +91,8 @@ private:
     void set_cylinder_v_offset_rate(float vor);
 };
 
-StimulusCylinderAndModel::StimulusCylinderAndModel() :
+StimulusCylinderAndModel::StimulusCylinderAndModel(std::string package_share_dir) :
+    StimulusInterface(package_share_dir),
     _t0(-1),
     _angular_position(0),
     _angular_velocity(0),
@@ -412,8 +413,10 @@ void StimulusCylinderAndModel::load_model( std::string osg_filename ) {
     _virtual_world->addChild(_model_pat);
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusCylinderAndModel)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusCylinderAndModel);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusCylinderAndModelLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

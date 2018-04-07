@@ -30,7 +30,8 @@ class StimulusOSGFile: public StimulusInterface
 {
 public:
 
-StimulusOSGFile() :
+StimulusOSGFile(std::string package_share_dir) :
+    StimulusInterface(package_share_dir),
     model_scale(1.0,1.0,1.0),
     model_position(0.,0.,0.) {
     ;
@@ -204,9 +205,10 @@ private:
     osg::ref_ptr<osg::MatrixTransform> skybox_node;
 };
 
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusOSGFile);
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusOSGFile)
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusOSGFileLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

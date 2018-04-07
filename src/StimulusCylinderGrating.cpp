@@ -113,7 +113,7 @@ typedef struct
 class StimulusCylinderGrating: public StimulusInterface
 {
 public:
-    StimulusCylinderGrating();
+    StimulusCylinderGrating(std::string package_share_dir);
 
     std::vector<std::string> get_topic_names() const;
     void receive_json_message(const std::string& topic_name, const std::string& json_message);
@@ -141,7 +141,8 @@ private:
     void set_geometry_type( int value );
 };
 
-StimulusCylinderGrating::StimulusCylinderGrating() :
+StimulusCylinderGrating::StimulusCylinderGrating(std::string package_share_dir) :
+    StimulusInterface(package_share_dir),
     _t0(-1)
 {
     _virtual_world = create_virtual_world();
@@ -452,8 +453,10 @@ void StimulusCylinderGrating::set_grating_info(int i, GratingParams &new_values)
     }
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusCylinderGrating)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusCylinderGrating);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusCylinderGratingLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()

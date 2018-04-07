@@ -35,7 +35,7 @@ typedef struct
 class StimulusCylinder: public StimulusInterface
 {
 public:
-    StimulusCylinder();
+    StimulusCylinder(std::string package_share_dir);
 
     void post_init(bool);
     std::vector<std::string> get_topic_names() const;
@@ -82,7 +82,8 @@ private:
     void set_cylinder_v_offset_rate(float vor);
 };
 
-StimulusCylinder::StimulusCylinder() :
+StimulusCylinder::StimulusCylinder(std::string package_share_dir) :
+    StimulusInterface(package_share_dir),
     _t0(-1),
     _angular_position(0),
     _angular_velocity(0),
@@ -353,8 +354,10 @@ void StimulusCylinder::dirty_cylinder(void) {
     _shape->dirtyBound();
 }
 
-POCO_BEGIN_MANIFEST(StimulusInterface)
-POCO_EXPORT_CLASS(StimulusCylinder)
+MAKE_STIMULUS_INTERFACE_LOADER(StimulusCylinder);
+
+POCO_BEGIN_MANIFEST(StimulusInterfaceLoader)
+POCO_EXPORT_CLASS(StimulusCylinderLoader)
 POCO_END_MANIFEST
 
 void pocoInitializeLibrary()
