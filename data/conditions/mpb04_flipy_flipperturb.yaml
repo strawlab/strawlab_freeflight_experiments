@@ -30,7 +30,7 @@ perturbation_tone_10s_1hz_mag.4_conflict:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost3.osg|0.0|0.0|-0.1
     
 perturbation_tone_10s_1hz_mag.4_conflict-flipy:
@@ -41,7 +41,7 @@ perturbation_tone_10s_1hz_mag.4_conflict-flipy:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost3.osg|0.0|0.0|-0.1
     
 perturbation_tone_10s_1hz_mag.4_conflict-flipperturb:
@@ -52,7 +52,7 @@ perturbation_tone_10s_1hz_mag.4_conflict-flipperturb:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost3.osg|0.0|0.0|-0.1
     
 perturbation_tone_10s_1hz_mag.4_conflict-flipboth:
@@ -63,7 +63,7 @@ perturbation_tone_10s_1hz_mag.4_conflict-flipboth:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost3.osg|0.0|0.0|-0.1
     
     
@@ -75,7 +75,7 @@ perturbation_tone_10s_1hz_mag.4_just_background-flipy:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: transparentpost1.osg|0.0|0.0|-0.1
 
 perturbation_tone_10s_1hz_mag.4_just_background-flipperturb:
@@ -86,7 +86,7 @@ perturbation_tone_10s_1hz_mag.4_just_background-flipperturb:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: transparentpost1.osg|0.0|0.0|-0.1
     
 perturbation_tone_10s_1hz_mag.4_just_background-flipboth:
@@ -97,7 +97,7 @@ perturbation_tone_10s_1hz_mag.4_just_background-flipboth:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|180|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: transparentpost1.osg|0.0|0.0|-0.1
 
 perturbation_tone_10s_1hz_mag.4_just_background:
@@ -108,5 +108,5 @@ perturbation_tone_10s_1hz_mag.4_just_background:
     advance_threshold: 0.16
     z_gain: 0.18
     z_target: 0.2
-    perturb_desc: tone_rotation_rate|0.4|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
+    perturb_desc: tone_rotation_rate|2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: transparentpost1.osg|0.25|0.0|-0.1
