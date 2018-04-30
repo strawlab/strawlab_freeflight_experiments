@@ -37,7 +37,7 @@ infinity_rotation_conflict_justpost3.osg|-0.1|0.1|0.0 :
     perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: justpost3.osg|-0.1|-0.1|0.0
     
- infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|0.1|0.0 :
+infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|0.1|0.0 :
   
     cylinder_image: checkerboard16.png
     svg_path: infinity07-flipy.svg
@@ -63,7 +63,7 @@ infinity_rotation_conflict_justpost3.osg|-0.1|-0.1|0.0 :
     model_descriptor: justpost3.osg|-0.1|-0.1|0.0
     
     
- infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|-0.1|0.0 :
+infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|-0.1|0.0 :
   
     cylinder_image: checkerboard16.png
     svg_path: infinity07-flipy.svg
