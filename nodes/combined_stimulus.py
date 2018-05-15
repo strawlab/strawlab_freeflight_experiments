@@ -65,7 +65,7 @@ IMPOSSIBLE_OBJ_ID   = 0
 PI = np.pi
 TAU= 2*PI
 
-MAX_ROTATION_RATE = 3
+MAX_ROTATION_RATE = 15
 
 XFORM = flyflypath.transform.SVGTransform()
 
