@@ -3,7 +3,7 @@ infinity_rotation_transparent :
 
     cylinder_image: checkerboard16.png
     svg_path: infinity.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
@@ -16,7 +16,7 @@ infinity_rotation_flipsvg_transparent :
   
     cylinder_image: checkerboard16.png
     svg_path: infinity07-flipy.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
@@ -29,7 +29,7 @@ infinity_rotation_conflict_justpost3.osg|-0.1|0.1|0.0 :
 
     cylinder_image: checkerboard16.png
     svg_path: infinity.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
@@ -41,7 +41,7 @@ infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|0.1|0.0 :
   
     cylinder_image: checkerboard16.png
     svg_path: infinity07-flipy.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
@@ -54,7 +54,7 @@ infinity_rotation_conflict_justpost3.osg|-0.1|-0.1|0.0 :
 
     cylinder_image: checkerboard16.png
     svg_path: infinity.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
@@ -67,7 +67,7 @@ infinity_rotation_flipsvg_conflict_justpost3.osg|-0.1|-0.1|0.0 :
   
     cylinder_image: checkerboard16.png
     svg_path: infinity07-flipy.svg
-    gain: 0.3
+    gain: 1.5
     radius_when_locked: -5.0
     advance_threshold: 0.1
     z_gain: 0.18
