@@ -46,7 +46,7 @@ perturbation_tone_10s_1hz_mag_2_just_background:
     perturb_desc: tone_rotation_rate|2|10|0|1|0.05|0.97|0.98|0.98|0.99|0.99|1.0
     model_descriptor: invisible_rad02.osg|0.25|0.0|-0.1
 
-no-conflict-just-black-post:
+no_conflict_just_black_post:
     cylinder_image: checkerboard16.png
     svg_path: infinity07.svg
     gain: 0.0
