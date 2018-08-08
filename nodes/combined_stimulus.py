@@ -467,8 +467,9 @@ class Node(nodelib.node.Experiment):
 
         self.pub_model_filename.publish(MODEL_NO_FILE)
 
-        if (self.ratio_total > 3) and (old_id is not None):
-            self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
+        if old_id is not None:
+            if dt > 1.0:
+                self.save_cool_condition(old_id, note="Fly %s flew %.1f loops (in %.1fs)" % (old_id, self.ratio_total, dt))
 
         self.update()
 
