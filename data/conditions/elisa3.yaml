@@ -1,0 +1,14 @@
+starfield_translation_infinity_bg0:
+    advance_threshold: 0.1
+    background_color: [0.0, 0.0, 0.0]
+    bb_size: 10.0
+    star_translation_gain: 90.0
+    num_particles: 2500
+    particles_angular_size_fixed: False
+    star_color: [1.0, 1.0, 1.0]
+    star_rotation_rate: 0.0
+    star_size: 170.0
+    svg_path: infinity07.svg
+    z_gain: 50.0
+    z_target: 0.12
+

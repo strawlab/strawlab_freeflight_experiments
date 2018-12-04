@@ -1,0 +1,25 @@
+infinity_rotation_transparent :
+
+    cylinder_image: checkerboard16.png
+    svg_path: infinity.svg
+    gain: 1.5
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: transparentpost1.osg|-0.1|-0.1|0.0
+
+
+infinity_rotation_flipsvg_transparent :
+  
+    cylinder_image: checkerboard16.png
+    svg_path: infinity_flipped.svg
+    gain: 1.5
+    radius_when_locked: -5.0
+    advance_threshold: 0.1
+    z_gain: 0.18
+    z_target: 0.2
+    perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
+    model_descriptor: transparentpost1.osg|-0.1|0.1|0.0
+    
