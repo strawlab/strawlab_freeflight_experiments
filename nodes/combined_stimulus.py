@@ -22,7 +22,7 @@ import flyflypath.model
 import flyflypath.transform
 import nodelib.node
 import strawlab_freeflight_experiments.perturb as sfe_perturb
-import strawlab_freeflight_experiments.conditions as sfe_conditions
+import freeflight_analysis.conditions as sfe_conditions
 
 from strawlab_freeflight_experiments.topics import *
 

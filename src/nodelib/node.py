@@ -10,7 +10,7 @@ import rospy
 import std_msgs.msg
 import flycave.msg
 
-import strawlab_freeflight_experiments.conditions as sfe_conditions
+import freeflight_analysis.conditions as sfe_conditions
 import nodelib.log
 
 def get_and_parse_commandline():

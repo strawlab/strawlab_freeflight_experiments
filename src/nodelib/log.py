@@ -9,7 +9,7 @@ import roslib; roslib.load_manifest('strawlab_freeflight_experiments')
 
 import rospy
 import std_msgs.msg
-import strawlab_freeflight_experiments.conditions
+import freeflight_analysis.conditions as sfe_conditions
 
 class NoDataError(Exception):
     pass
@@ -164,7 +164,7 @@ class CsvLogger(object):
         if v is None:
             return
 
-        if not isinstance(v, strawlab_freeflight_experiments.conditions.Condition):
+        if not isinstance(v, sfe_conditions.Condition):
             raise ValueError("YOU MUST ASSIGN CONDITION OBJECT TO LOG")
 
         s = v.to_slash_separated()
