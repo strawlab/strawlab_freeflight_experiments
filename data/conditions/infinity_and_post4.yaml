@@ -34,7 +34,7 @@ infinity_rotation_conflict_justpost3.osg_-0.1_0.1_0.0 :
     z_gain: 0.18
     z_target: 0.2
     perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
-    model_descriptor: checkerboard_post05r.osg|-0.1|0.1|0.0
+    model_descriptor: check_16_rad05.osg|-0.1|0.1|0.0
     
 infinity_rotation_flipsvg_conflict_justpost3.osg_-0.1_0.1_0.0 :
   
@@ -46,7 +46,7 @@ infinity_rotation_flipsvg_conflict_justpost3.osg_-0.1_0.1_0.0 :
     z_gain: 0.18
     z_target: 0.2
     perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
-    model_descriptor: checkerboard_post05r.osg|-0.1|0.1|0.0
+    model_descriptor: check_16_rad05.osg|-0.1|0.1|0.0
 
 
 infinity_rotation_conflict_justpost3.osg_-0.1_-0.1_0.0 :
@@ -59,7 +59,7 @@ infinity_rotation_conflict_justpost3.osg_-0.1_-0.1_0.0 :
     z_gain: 0.18
     z_target: 0.2
     perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
-    model_descriptor: checkerboard_post05r.osg|-0.1|-0.1|0.0
+    model_descriptor: check_16_rad05.osg|-0.1|-0.1|0.0
     
     
 infinity_rotation_flipsvg_conflict_justpost3.osg_-0.1_-0.1_0.0 :
@@ -72,4 +72,4 @@ infinity_rotation_flipsvg_conflict_justpost3.osg_-0.1_-0.1_0.0 :
     z_gain: 0.18
     z_target: 0.2
     perturb_desc: step_rotation_rate|0|10|0.1|0.97|0.98|0.98|0.99|0.99|1.0
-    model_descriptor: checkerboard_post05r.osg|-0.1|-0.1|0.0
+    model_descriptor: check_16_rad05.osg|-0.1|-0.1|0.0
